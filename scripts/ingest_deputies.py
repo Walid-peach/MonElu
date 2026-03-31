@@ -1,16 +1,18 @@
 """
 ingest_deputies.py
-Fetches all current deputies from the Assemblée Nationale Open Data API
-and upserts them into the deputies table.
+Fetches all current deputies from the Assemblée Nationale Open Data portal
+(static ZIP export) and upserts them into the deputies table.
 
 Usage:
     python scripts/ingest_deputies.py
 """
 
+import io
+import json
 import logging
 import os
 import time
-from datetime import datetime
+import zipfile
 
 import psycopg2
 import psycopg2.extras
@@ -28,6 +30,12 @@ log = logging.getLogger(__name__)
 AN_API_BASE_URL = os.getenv("AN_API_BASE_URL", "https://data.assemblee-nationale.fr")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Static export — one ZIP, one JSON file per deputy
+DEPUTIES_ZIP_PATH = (
+    "/static/openData/repository/17/amo/deputes_actifs_mandats_actifs_organes"
+    "/AMO10_deputes_actifs_mandats_actifs_organes.json.zip"
+)
+
 # ---------------------------------------------------------------------------
 # HTTP helpers
 # ---------------------------------------------------------------------------
@@ -36,11 +44,11 @@ MAX_RETRIES = 5
 BACKOFF_BASE = 2  # seconds
 
 
-def get_with_retry(url: str, params: dict | None = None) -> dict:
-    """GET with exponential backoff on 429 / 5xx."""
+def download_with_retry(url: str) -> bytes:
+    """GET with exponential backoff on 429 / 5xx; returns raw bytes."""
     for attempt in range(MAX_RETRIES):
         try:
-            resp = requests.get(url, params=params, timeout=30)
+            resp = requests.get(url, timeout=60)
             if resp.status_code == 429:
                 wait = BACKOFF_BASE ** attempt
                 log.warning("Rate-limited (429). Retrying in %ss…", wait)
@@ -52,54 +60,34 @@ def get_with_retry(url: str, params: dict | None = None) -> dict:
                 time.sleep(wait)
                 continue
             resp.raise_for_status()
-            return resp.json()
+            return resp.content
         except requests.RequestException as exc:
             wait = BACKOFF_BASE ** attempt
             log.warning("Request failed (%s). Retrying in %ss…", exc, wait)
             time.sleep(wait)
-    raise RuntimeError(f"Failed to GET {url} after {MAX_RETRIES} attempts")
+    raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts")
 
 
 # ---------------------------------------------------------------------------
-# Pagination
+# Data fetch
 # ---------------------------------------------------------------------------
 
 def fetch_all_deputies() -> list[dict]:
-    """Paginate through /api/v2/acteurs/deputes and return all actor items."""
-    url = f"{AN_API_BASE_URL}/api/v2/acteurs/deputes"
-    page = 1
+    """Download the ZIP export and return a list of raw acteur dicts."""
+    url = f"{AN_API_BASE_URL}{DEPUTIES_ZIP_PATH}"
+    log.info("Downloading deputies ZIP from %s…", url)
+    raw = download_with_retry(url)
+
     all_items = []
-
-    while True:
-        log.info("Fetching page %d…", page)
-        data = get_with_retry(url, params={"page": page, "limit": 100})
-
-        # The AN API wraps results under different keys depending on the endpoint.
-        # Try common envelope keys before falling back to the root.
-        items = (
-            data.get("items")
-            or data.get("acteurs", {}).get("acteur")
-            or data.get("data")
-            or []
-        )
-        if isinstance(items, dict):
-            # Single-item page returned as a dict instead of a list
-            items = [items]
-
-        if not items:
-            break
-
-        all_items.extend(items)
-
-        # Pagination metadata (varies across AN API versions)
-        total = data.get("total") or data.get("totalItems") or 0
-        if total and len(all_items) >= total:
-            break
-        if len(items) < 100:
-            # Last page returned fewer than the page size
-            break
-
-        page += 1
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        actor_files = [n for n in zf.namelist() if n.startswith("json/acteur/") and n.endswith(".json")]
+        log.info("ZIP contains %d actor files.", len(actor_files))
+        for name in actor_files:
+            with zf.open(name) as f:
+                data = json.load(f)
+            # Each file is {"acteur": {...}}
+            acteur = data.get("acteur") or data
+            all_items.append(acteur)
 
     log.info("Total deputies fetched: %d", len(all_items))
     return all_items
