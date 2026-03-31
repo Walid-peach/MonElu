@@ -1,12 +1,18 @@
-.PHONY: start test dbt-docs
-
-# Shortcuts: make start, make test, make dbt-docs
+.PHONY: start stop ingest api psql
 
 start:
 	docker compose up -d
 
-test:
-	echo "Running tests..."
+stop:
+	docker compose down
 
-dbt-docs:
-	echo "Generating dbt docs..."
+ingest:
+	venv/bin/python3 scripts/ingest_deputies.py
+	venv/bin/python3 scripts/ingest_votes.py
+	venv/bin/python3 scripts/ingest_positions.py
+
+api:
+	venv/bin/uvicorn api.main:app --reload
+
+psql:
+	docker exec -it monelu_postgres psql -U monelu monelu

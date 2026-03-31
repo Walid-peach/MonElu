@@ -5,7 +5,7 @@ import psycopg2.extras
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Query
 
-from api.schemas import DeputyDetail, DeputyListResponse, DeputySummary
+from api.schemas import DeputyDetail, DeputyListResponse, DeputyScorecard, DeputySummary
 
 load_dotenv()
 
@@ -78,3 +78,50 @@ def get_deputy(deputy_id: str):
     if not row:
         raise HTTPException(status_code=404, detail="Deputy not found")
     return DeputyDetail(**row)
+
+
+@router.get("/{deputy_id}/scorecard", response_model=DeputyScorecard)
+def get_scorecard(deputy_id: str):
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT deputy_id, full_name FROM deputies WHERE deputy_id = %s", (deputy_id,))
+            deputy = cur.fetchone()
+            if not deputy:
+                raise HTTPException(status_code=404, detail="Deputy not found")
+
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*)                                             AS total_votes,
+                    COUNT(*) FILTER (WHERE position != 'nonVotant')     AS present_votes,
+                    COUNT(*) FILTER (WHERE position = 'pour')           AS votes_for,
+                    COUNT(*) FILTER (WHERE position = 'contre')         AS votes_against,
+                    COUNT(*) FILTER (WHERE position = 'abstention')     AS abstentions
+                FROM vote_positions
+                WHERE deputy_id = %s
+                """,
+                (deputy_id,),
+            )
+            stats = cur.fetchone()
+    finally:
+        conn.close()
+
+    total = stats["total_votes"] or 0
+    present = stats["present_votes"] or 0
+    votes_for = stats["votes_for"] or 0
+    votes_against = stats["votes_against"] or 0
+    abstentions = stats["abstentions"] or 0
+
+    return DeputyScorecard(
+        deputy_id=deputy["deputy_id"],
+        full_name=deputy["full_name"],
+        total_votes=total,
+        present_votes=present,
+        presence_rate=round(present / total, 4) if total else 0.0,
+        votes_for=votes_for,
+        votes_against=votes_against,
+        abstentions=abstentions,
+        votes_for_pct=round(votes_for / present, 4) if present else 0.0,
+        abstention_pct=round(abstentions / present, 4) if present else 0.0,
+    )
