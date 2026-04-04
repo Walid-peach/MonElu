@@ -61,6 +61,26 @@ def list_votes(
     )
 
 
+@router.get("/latest", response_model=list[VoteSummary])
+def latest_votes():
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT vote_id, voted_at, vote_title, result,
+                       votes_for, votes_against, abstentions, total_voters
+                FROM votes
+                ORDER BY voted_at DESC
+                LIMIT 10
+                """
+            )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    return [VoteSummary(**r) for r in rows]
+
+
 @router.get("/{vote_id}", response_model=VoteDetail)
 def get_vote(vote_id: str):
     conn = get_conn()

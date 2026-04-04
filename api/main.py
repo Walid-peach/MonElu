@@ -5,6 +5,7 @@ FastAPI application entry point for MonÉlu.
 
 import os
 
+import psycopg2
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,4 +47,17 @@ app.include_router(votes.router, prefix="/votes", tags=["Votes"])
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["Health"])
 def health() -> dict:
-    return {"status": "ok"}
+    database_url = os.getenv("DATABASE_URL")
+    try:
+        conn = psycopg2.connect(database_url)
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM deputies")
+            deputies = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM votes")
+            votes = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM vote_positions")
+            positions = cur.fetchone()[0]
+        conn.close()
+        return {"status": "ok", "deputies": deputies, "votes": votes, "positions": positions}
+    except Exception as exc:
+        return {"status": "degraded", "error": str(exc)}
