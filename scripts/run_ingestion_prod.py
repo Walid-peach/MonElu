@@ -9,6 +9,8 @@ Usage:
 
 import logging
 import os
+import subprocess
+import sys
 import time
 
 import psycopg2
@@ -22,6 +24,9 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# Resolve the project root (one level up from this script)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def row_count(conn, table: str) -> int:
     with conn.cursor() as cur:
@@ -29,14 +34,19 @@ def row_count(conn, table: str) -> int:
         return cur.fetchone()[0]
 
 
-def run_step(label: str, module_path: str) -> float:
-    """Import and run a script's main() function, returning elapsed seconds."""
-    import importlib
+def run_step(label: str, script: str) -> float:
+    """Run a script file as a subprocess, streaming its output. Returns elapsed seconds."""
+    script_path = os.path.join(PROJECT_ROOT, "scripts", script)
     log.info("━━━ Starting: %s ━━━", label)
     t0 = time.perf_counter()
-    mod = importlib.import_module(module_path)
-    mod.main()
+    result = subprocess.run(
+        [sys.executable, script_path],
+        cwd=PROJECT_ROOT,
+        env={**os.environ},
+    )
     elapsed = time.perf_counter() - t0
+    if result.returncode != 0:
+        raise RuntimeError(f"{label} failed with exit code {result.returncode}")
     log.info("━━━ Done: %s (%.1fs) ━━━", label, elapsed)
     return elapsed
 
@@ -48,9 +58,9 @@ def main() -> None:
 
     total_start = time.perf_counter()
 
-    t_deputies = run_step("Deputies", "scripts.ingest_deputies")
-    t_votes = run_step("Votes", "scripts.ingest_votes")
-    t_positions = run_step("Positions", "scripts.ingest_positions")
+    t_deputies = run_step("Deputies", "ingest_deputies.py")
+    t_votes = run_step("Votes", "ingest_votes.py")
+    t_positions = run_step("Positions", "ingest_positions.py")
 
     total_elapsed = time.perf_counter() - total_start
 
