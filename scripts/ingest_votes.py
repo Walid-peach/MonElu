@@ -4,9 +4,12 @@ Downloads the Scrutins ZIP export from the Assemblée Nationale open-data portal
 and upserts each scrutin into the votes table.
 
 Usage:
-    python scripts/ingest_votes.py
+    python scripts/ingest_votes.py                      # default: since 2025-01-01
+    python scripts/ingest_votes.py --since 2024-07-07   # full legislature 17
+    python scripts/ingest_votes.py --since 2026-01-01   # current year only
 """
 
+import argparse
 import io
 import json
 import logging
@@ -15,6 +18,7 @@ import time
 import zipfile
 
 import psycopg2
+import psycopg2.extras
 import requests
 from dotenv import load_dotenv
 
@@ -66,12 +70,14 @@ def download_with_retry(url: str) -> bytes:
 # Fetch
 # ---------------------------------------------------------------------------
 
-def fetch_all_scrutins() -> list[dict]:
+def fetch_all_scrutins(since: str | None = None) -> list[dict]:
+    """Download ZIP and return scrutins, optionally filtered to dateScrutin >= since."""
     url = f"{AN_BASE_URL}{SCRUTINS_ZIP_PATH}"
     log.info("Downloading scrutins ZIP from %s…", url)
     raw = download_with_retry(url)
 
     items = []
+    skipped = 0
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
         scrutin_files = [n for n in zf.namelist() if n.startswith("json/") and n.endswith(".json")]
         log.info("ZIP contains %d scrutin files.", len(scrutin_files))
@@ -79,9 +85,17 @@ def fetch_all_scrutins() -> list[dict]:
             with zf.open(name) as f:
                 data = json.load(f)
             scrutin = data.get("scrutin") or data
+            if since:
+                date_raw = (scrutin.get("dateScrutin") or "")[:10]
+                if date_raw and date_raw < since:
+                    skipped += 1
+                    continue
             items.append(scrutin)
 
-    log.info("Total scrutins loaded: %d", len(items))
+    if since:
+        log.info("Loaded %d scrutins since %s (skipped %d older).", len(items), since, skipped)
+    else:
+        log.info("Total scrutins loaded: %d", len(items))
     return items
 
 
@@ -181,10 +195,7 @@ def upsert_votes(records: list[dict]) -> None:
     try:
         with conn:
             with conn.cursor() as cur:
-                for i, rec in enumerate(records, start=1):
-                    cur.execute(UPSERT_SQL, rec)
-                    if i % 100 == 0:
-                        log.info("Upserted %d / %d votes…", i, len(records))
+                psycopg2.extras.execute_batch(cur, UPSERT_SQL, records, page_size=500)
         log.info("Upsert complete — %d votes written.", len(records))
     finally:
         conn.close()
@@ -195,11 +206,19 @@ def upsert_votes(records: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Ingest AN scrutins into MonÉlu DB")
+    parser.add_argument(
+        "--since",
+        default="2025-07-01",
+        help="Only ingest votes on or after this date (YYYY-MM-DD). Default: 2025-07-01",
+    )
+    args = parser.parse_args()
+
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
 
-    log.info("=== Starting vote ingestion ===")
-    raw_items = fetch_all_scrutins()
+    log.info("=== Starting vote ingestion (since %s) ===", args.since)
+    raw_items = fetch_all_scrutins(since=args.since)
 
     records = [r for item in raw_items if (r := parse_vote(item)) is not None]
     log.info("Parsed %d valid records (skipped %d unparseable).", len(records), len(raw_items) - len(records))

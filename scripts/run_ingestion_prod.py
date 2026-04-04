@@ -4,9 +4,12 @@ Runs all three ingestion steps in sequence: deputies → votes → positions.
 Designed to be triggered as a one-off Railway job or run locally.
 
 Usage:
-    python scripts/run_ingestion_prod.py
+    python scripts/run_ingestion_prod.py                      # default: since 2025-01-01
+    python scripts/run_ingestion_prod.py --since 2024-07-07   # full legislature 17
+    python scripts/run_ingestion_prod.py --since 2026-01-01   # current year only
 """
 
+import argparse
 import logging
 import os
 import subprocess
@@ -34,16 +37,13 @@ def row_count(conn, table: str) -> int:
         return cur.fetchone()[0]
 
 
-def run_step(label: str, script: str) -> float:
+def run_step(label: str, script: str, extra_args: list[str] | None = None) -> float:
     """Run a script file as a subprocess, streaming its output. Returns elapsed seconds."""
     script_path = os.path.join(PROJECT_ROOT, "scripts", script)
+    cmd = [sys.executable, script_path] + (extra_args or [])
     log.info("━━━ Starting: %s ━━━", label)
     t0 = time.perf_counter()
-    result = subprocess.run(
-        [sys.executable, script_path],
-        cwd=PROJECT_ROOT,
-        env={**os.environ},
-    )
+    result = subprocess.run(cmd, cwd=PROJECT_ROOT, env={**os.environ})
     elapsed = time.perf_counter() - t0
     if result.returncode != 0:
         raise RuntimeError(f"{label} failed with exit code {result.returncode}")
@@ -52,14 +52,23 @@ def run_step(label: str, script: str) -> float:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Run full MonÉlu ingestion pipeline")
+    parser.add_argument(
+        "--since",
+        default="2025-07-01",
+        help="Only ingest votes on or after this date (YYYY-MM-DD). Default: 2025-07-01",
+    )
+    args = parser.parse_args()
+
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise EnvironmentError("DATABASE_URL is not set.")
 
+    log.info("Ingestion window: since %s", args.since)
     total_start = time.perf_counter()
 
     t_deputies = run_step("Deputies", "ingest_deputies.py")
-    t_votes = run_step("Votes", "ingest_votes.py")
+    t_votes = run_step("Votes", "ingest_votes.py", ["--since", args.since])
     t_positions = run_step("Positions", "ingest_positions.py")
 
     total_elapsed = time.perf_counter() - total_start

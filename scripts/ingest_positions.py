@@ -37,6 +37,21 @@ BACKOFF_BASE = 2
 
 
 # ---------------------------------------------------------------------------
+# DB connection with retry (handles transient proxy drops on Railway)
+# ---------------------------------------------------------------------------
+
+def connect_with_retry() -> psycopg2.extensions.connection:
+    for attempt in range(MAX_RETRIES):
+        try:
+            return psycopg2.connect(DATABASE_URL)
+        except psycopg2.OperationalError as exc:
+            wait = BACKOFF_BASE ** attempt
+            log.warning("DB connection failed (%s). Retrying in %ss…", exc, wait)
+            time.sleep(wait)
+    raise RuntimeError(f"Could not connect to DB after {MAX_RETRIES} attempts")
+
+
+# ---------------------------------------------------------------------------
 # HTTP helper (same pattern as ingest_deputies / ingest_votes)
 # ---------------------------------------------------------------------------
 
@@ -152,9 +167,15 @@ ON CONFLICT (vote_id, deputy_id) DO UPDATE SET
 """
 
 
-def upsert_positions(records: list[dict], conn) -> None:
-    with conn.cursor() as cur:
-        psycopg2.extras.execute_batch(cur, UPSERT_SQL, records, page_size=500)
+def upsert_positions(records: list[dict]) -> None:
+    """Open a fresh connection per batch — avoids proxy timeouts on long-running ingestions."""
+    conn = connect_with_retry()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                psycopg2.extras.execute_batch(cur, UPSERT_SQL, records, page_size=500)
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -167,22 +188,21 @@ def main() -> None:
 
     raw = fetch_scrutin_zip()
 
-    conn = psycopg2.connect(DATABASE_URL)
-
     # Pre-load the set of known vote_ids and deputy_ids to skip orphan positions
     log.info("Loading known vote_ids and deputy_ids…")
+    conn = connect_with_retry()
     with conn.cursor() as cur:
         cur.execute("SELECT vote_id FROM votes")
         known_votes: set[str] = {r[0] for r in cur.fetchall()}
         cur.execute("SELECT deputy_id FROM deputies")
         known_deputies: set[str] = {r[0] for r in cur.fetchall()}
+    conn.close()
     log.info("Known votes: %d  Known deputies: %d", len(known_votes), len(known_deputies))
 
     log.info("=== Starting position ingestion ===")
     total_written = 0
     total_skipped = 0
     batch: list[dict] = []
-    batch_num = 0
 
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
         scrutin_files = [n for n in zf.namelist() if n.startswith("json/") and n.endswith(".json")]
@@ -200,7 +220,6 @@ def main() -> None:
                 continue
 
             positions = extract_positions(scrutin)
-            # Filter out positions for deputies not in our deputies table
             for pos in positions:
                 if pos["deputy_id"] in known_deputies:
                     batch.append(pos)
@@ -208,20 +227,16 @@ def main() -> None:
                     total_skipped += 1
 
             if len(batch) >= 2000:
-                batch_num += 1
-                with conn:
-                    upsert_positions(batch, conn)
+                upsert_positions(batch)
                 total_written += len(batch)
                 log.info("Upserted %d positions so far…", total_written)
                 batch = []
 
     # Flush remainder
     if batch:
-        with conn:
-            upsert_positions(batch, conn)
+        upsert_positions(batch)
         total_written += len(batch)
 
-    conn.close()
     log.info("Upsert complete — %d positions written, %d skipped.", total_written, total_skipped)
     log.info("=== Position ingestion finished ===")
 

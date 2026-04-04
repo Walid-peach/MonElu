@@ -199,10 +199,7 @@ def upsert_deputies(records: list[dict]) -> None:
     try:
         with conn:
             with conn.cursor() as cur:
-                for i, rec in enumerate(records, start=1):
-                    cur.execute(UPSERT_SQL, rec)
-                    if i % 50 == 0:
-                        log.info("Upserted %d / %d deputies…", i, len(records))
+                psycopg2.extras.execute_batch(cur, UPSERT_SQL, records, page_size=200)
         log.info("Upsert complete — %d deputies written.", len(records))
     finally:
         conn.close()
