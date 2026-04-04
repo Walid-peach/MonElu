@@ -97,18 +97,15 @@ def _votants(block) -> list[str]:
 def extract_positions(scrutin: dict) -> list[dict]:
     """
     Walk the ventilationVotes tree and return a flat list of:
-        { vote_id, deputy_id, position, voted_at }
+        { vote_id, deputy_id, position }
     position is normalised to: pour | contre | abstention | nonVotant
     """
     uid = scrutin.get("uid") or ""
-    date_raw = scrutin.get("dateScrutin") or ""
-    voted_at = date_raw[:10] if date_raw else None
-
-    if not uid or not voted_at:
+    if not uid:
         return []
 
     positions: list[dict] = []
-    seen: set[str] = set()  # (deputy_id) — one position per deputy per scrutin
+    seen: set[str] = set()  # one position per deputy per scrutin
 
     ventil = scrutin.get("ventilationVotes") or {}
     organe = ventil.get("organe") or {}
@@ -137,7 +134,6 @@ def extract_positions(scrutin: dict) -> list[dict]:
                     "vote_id": uid,
                     "deputy_id": deputy_id,
                     "position": position,
-                    "voted_at": voted_at,
                 })
 
     return positions
@@ -158,11 +154,10 @@ def fetch_scrutin_zip() -> bytes:
 # ---------------------------------------------------------------------------
 
 UPSERT_SQL = """
-INSERT INTO vote_positions (vote_id, deputy_id, position, voted_at, ingested_at)
-VALUES (%(vote_id)s, %(deputy_id)s, %(position)s, %(voted_at)s, NOW())
+INSERT INTO vote_positions (vote_id, deputy_id, position, ingested_at)
+VALUES (%(vote_id)s, %(deputy_id)s, %(position)s, NOW())
 ON CONFLICT (vote_id, deputy_id) DO UPDATE SET
     position    = EXCLUDED.position,
-    voted_at    = EXCLUDED.voted_at,
     ingested_at = NOW();
 """
 
