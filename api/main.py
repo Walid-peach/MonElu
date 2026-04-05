@@ -88,8 +88,8 @@ ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,  # public read-only API — no cookies or auth headers needed
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
@@ -311,4 +311,5 @@ def health() -> dict:
         conn.close()
         return {"status": "ok", "deputies": deputies, "votes": votes, "positions": positions}
     except Exception as exc:
-        return {"status": "degraded", "error": str(exc)}
+        logger.error("Health check DB error: %s", exc)
+        return {"status": "degraded", "error": "Database unavailable"}

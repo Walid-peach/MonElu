@@ -22,7 +22,7 @@ def get_conn():
 @router.get("/", response_model=DeputyListResponse)
 def list_deputies(
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=100_000),
     search: str = Query(None, description="Filter by name (case-insensitive)"),
     department: str = Query(None),
 ):

@@ -21,7 +21,7 @@ def get_conn():
 @router.get("/", response_model=VoteListResponse)
 def list_votes(
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=100_000),
     result: str = Query(None, description="Filter by result: adopté | rejeté"),
 ):
     conn = get_conn()
