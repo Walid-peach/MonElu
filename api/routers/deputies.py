@@ -3,8 +3,9 @@ import os
 import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
+from api.limiter import limiter
 from api.schemas import DeputyDetail, DeputyListResponse, DeputyScorecard, DeputySummary
 
 load_dotenv()
@@ -81,7 +82,8 @@ def get_deputy(deputy_id: str):
 
 
 @router.get("/{deputy_id}/scorecard", response_model=DeputyScorecard)
-def get_scorecard(deputy_id: str):
+@limiter.limit("10/minute")
+def get_scorecard(request: Request, deputy_id: str):
     conn = get_conn()
     try:
         with conn.cursor() as cur:

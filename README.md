@@ -19,6 +19,7 @@ The API tier (Railway) is stateless and auto-restarts on failure. All state live
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/` | HTML landing page — live stats, curl examples, links |
 | GET | `/deputies` | List all deputies (filter: `search`, `department`) |
 | GET | `/deputies/{id}` | Deputy profile |
 | GET | `/deputies/{id}/scorecard` | Presence rate, vote breakdown |
@@ -31,9 +32,25 @@ Interactive docs: `/docs`
 
 ---
 
+## Rate Limiting
+
+Implemented with [slowapi](https://github.com/laurentS/slowapi) (limits by remote IP).
+
+| Scope | Limit |
+|---|---|
+| All endpoints (global default) | 60 requests / minute |
+| `GET /deputies/{id}/scorecard` | 10 requests / minute |
+
+When a limit is exceeded the API returns HTTP 429 with:
+- JSON body: `{"error": "Too Many Requests", "detail": "..."}`
+- `Retry-After` header (seconds until window resets)
+- `X-RateLimit-Limit` and `X-RateLimit-Remaining` headers on every response
+
+---
+
 ## Stack
 
-FastAPI (Railway) · PostgreSQL + pgvector (Supabase) · Python 3.11
+FastAPI · slowapi · PostgreSQL + pgvector (Supabase) · Python 3.11 · Railway
 
 ---
 
@@ -139,6 +156,16 @@ make check-db    print table sizes, row counts, pgvector status
 
 ---
 
+## API modules
+
+| Module | What it does |
+|---|---|
+| `api/main.py` | App entry point — CORS, rate limiting, exception handlers, landing page, health check |
+| `api/limiter.py` | Shared slowapi `Limiter` instance (60 req/min default, IP-keyed) |
+| `api/routers/deputies.py` | Deputy list, profile, and scorecard endpoints |
+| `api/routers/votes.py` | Vote list, latest, and detail endpoints |
+| `api/schemas.py` | Pydantic response models |
+
 ## Ingestion Scripts
 
 | Script | What it does |
@@ -162,3 +189,15 @@ All scripts use exponential-backoff retry (5 attempts, base 2s) and upsert with 
 - **Yaël Braun-Pivet at 100% presence** — Présidente de l'AN, recorded on every scrutin by the AN data system.
 - **`rejeté` outnumbers `adopté`** — the 17th legislature has no stable majority; most amendments are rejected.
 - **Ingestion window** — production DB uses `--since 2025-07-01` (Supabase free tier). Run `--since 2024-07-07` for the full legislature.
+
+---
+
+## Error Handling
+
+All unhandled exceptions are caught by a global handler in `api/main.py`. The client always receives:
+
+```json
+{"error": "Internal server error", "status": 500}
+```
+
+The full traceback is written to the server log (`logging.error`) and never exposed in the response body.

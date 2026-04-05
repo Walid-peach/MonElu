@@ -44,3 +44,6 @@ data/processed/
 
 # Alembic pycache
 data/migrations/__pycache__/
+
+# Daily notes — local only
+notes/
