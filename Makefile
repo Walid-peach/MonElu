@@ -25,3 +25,6 @@ psql:
 
 check-db:
 	venv/bin/python3 scripts/check_db_size.py
+
+fix-deputies:
+	venv/bin/python3 scripts/update_party.py
