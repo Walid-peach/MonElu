@@ -29,6 +29,26 @@ def _count_tokens(text: str) -> int:
     return len(_enc.encode(text))
 
 
+def dept_preposition(dept_name: str) -> str:
+    if not dept_name:
+        return "de"
+    d = dept_name.strip()
+    if (
+        d.startswith("Hautes") or d.startswith("Bouches") or d.startswith("Alpes")
+        or d.startswith("Pyrénées") or d.startswith("Côtes") or d.startswith("Landes")
+        or d == "Yvelines" or d == "Vosges"
+    ):
+        return "des"
+    # plain "de" for proper nouns that resist contraction
+    no_contraction = {"Paris", "Mayotte", "Guadeloupe", "Martinique", "Guyane"}
+    if d in no_contraction:
+        return "de"
+    vowels = "AEIOUÀÂÉÈÊËÎÏÔÙÛÜaeiouàâéèêëîïôùûü"
+    if d[0] in vowels:
+        return "de l'"
+    return "du"
+
+
 def _get_conn():
     return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -124,8 +144,11 @@ def chunk_deputies() -> list[dict]:
         rate      = float(row["presence_rate"] or 0)
         rate_pct  = round(rate * 100, 1)
 
+        prep = dept_preposition(dept)
+        # "de l'" already ends with apostrophe — no extra space before the noun
+        sep = "" if prep.endswith("'") else " "
         content = (
-            f"{name} est député(e) de {dept}, membre du parti {party}.\n"
+            f"{name} est député(e) {prep}{sep}{dept}, membre du parti {party}.\n"
             f"Sur {total} votes enregistrés, il/elle a voté pour {pour} fois, "
             f"contre {contre} fois, abstention {abst} fois.\n"
             f"Taux de présence : {rate_pct}%."
