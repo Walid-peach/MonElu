@@ -20,7 +20,7 @@ from starlette.requests import Request
 
 logger = logging.getLogger(__name__)
 
-from api.limiter import limiter
+from api.limiter import limiter  # noqa: E402
 
 load_dotenv()
 
@@ -109,8 +109,18 @@ app.include_router(votes.router, prefix="/votes", tags=["Votes"])
 _GITHUB_URL = "https://github.com/Walid-peach/MonElu"
 
 _FR_MONTHS = [
-    "jan.", "fév.", "mar.", "avr.", "mai", "juin",
-    "juil.", "août", "sep.", "oct.", "nov.", "déc.",
+    "jan.",
+    "fév.",
+    "mar.",
+    "avr.",
+    "mai",
+    "juin",
+    "juil.",
+    "août",
+    "sep.",
+    "oct.",
+    "nov.",
+    "déc.",
 ]
 
 
@@ -589,9 +599,7 @@ def landing(request: Request) -> HTMLResponse:
     )
 
     try:
-        conn = psycopg2.connect(
-            database_url, cursor_factory=psycopg2.extras.RealDictCursor
-        )
+        conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.RealDictCursor)
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM deputies")
             n_deputies = f"{cur.fetchone()['count']:,}"

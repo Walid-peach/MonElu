@@ -1,0 +1,21 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (unused imports, undefined names)
+    "I",   # isort
+    "B",   # flake8-bugbear (common bugs)
+    "T20", # flake8-print (no stray print() in library code)
+]
+ignore = [
+    "E501", # line too long — handled by ruff-format
+    "B008", # do not perform function calls in default args (FastAPI uses this pattern)
+    "T201", # print() allowed — scripts use it intentionally
+]
+
+[lint.per-file-ignores]
+"scripts/*" = ["T201"]   # scripts print freely
+"rag/*"     = ["T201"]

@@ -43,24 +43,25 @@ BACKOFF_BASE = 2
 # HTTP helper
 # ---------------------------------------------------------------------------
 
+
 def download_with_retry(url: str) -> bytes:
     for attempt in range(MAX_RETRIES):
         try:
             resp = requests.get(url, timeout=60)
             if resp.status_code == 429:
-                wait = BACKOFF_BASE ** attempt
+                wait = BACKOFF_BASE**attempt
                 log.warning("Rate-limited (429). Retrying in %ss…", wait)
                 time.sleep(wait)
                 continue
             if resp.status_code >= 500:
-                wait = BACKOFF_BASE ** attempt
+                wait = BACKOFF_BASE**attempt
                 log.warning("Server error %s. Retrying in %ss…", resp.status_code, wait)
                 time.sleep(wait)
                 continue
             resp.raise_for_status()
             return resp.content
         except requests.RequestException as exc:
-            wait = BACKOFF_BASE ** attempt
+            wait = BACKOFF_BASE**attempt
             log.warning("Request failed (%s). Retrying in %ss…", exc, wait)
             time.sleep(wait)
     raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts")
@@ -69,6 +70,7 @@ def download_with_retry(url: str) -> bytes:
 # ---------------------------------------------------------------------------
 # Fetch
 # ---------------------------------------------------------------------------
+
 
 def fetch_all_scrutins(since: str | None = None) -> list[dict]:
     """Download ZIP and return scrutins, optionally filtered to dateScrutin >= since."""
@@ -102,6 +104,7 @@ def fetch_all_scrutins(since: str | None = None) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Transform
 # ---------------------------------------------------------------------------
+
 
 def _to_int(val) -> int | None:
     try:
@@ -205,6 +208,7 @@ def upsert_votes(records: list[dict]) -> None:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest AN scrutins into MonÉlu DB")
     parser.add_argument(
@@ -221,7 +225,11 @@ def main() -> None:
     raw_items = fetch_all_scrutins(since=args.since)
 
     records = [r for item in raw_items if (r := parse_vote(item)) is not None]
-    log.info("Parsed %d valid records (skipped %d unparseable).", len(records), len(raw_items) - len(records))
+    log.info(
+        "Parsed %d valid records (skipped %d unparseable).",
+        len(records),
+        len(raw_items) - len(records),
+    )
 
     upsert_votes(records)
     log.info("=== Vote ingestion finished ===")

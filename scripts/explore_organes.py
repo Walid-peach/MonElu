@@ -11,7 +11,6 @@ Prints raw JSON structure so we can identify correct field names before parsing.
 
 import io
 import json
-import os
 import sys
 import zipfile
 
@@ -27,13 +26,10 @@ CANDIDATES = [
     "/static/openData/repository/17/amo/deputes_actifs_mandats_actifs_organes"
     "/AMO10_deputes_actifs_mandats_actifs_organes.json.zip",
     # Dedicated organes export (17th legislature)
-    "/static/openData/repository/17/amo/tous_les_organes"
-    "/AMO30_tous_les_organes.json.zip",
+    "/static/openData/repository/17/amo/tous_les_organes" "/AMO30_tous_les_organes.json.zip",
     # Alternative naming
-    "/static/openData/repository/17/amo/tous_les_organes"
-    "/AMO20_tous_les_organes.json.zip",
-    "/static/openData/repository/17/amo/organes"
-    "/AMO30_organes.json.zip",
+    "/static/openData/repository/17/amo/tous_les_organes" "/AMO20_tous_les_organes.json.zip",
+    "/static/openData/repository/17/amo/organes" "/AMO30_organes.json.zip",
 ]
 
 
@@ -115,7 +111,7 @@ def inspect_zip(raw: bytes, label: str) -> None:
                 elif code_type:
                     other_types[code_type] = other_types.get(code_type, 0) + 1
 
-        print(f"\n  organe types found (sample):")
+        print("\n  organe types found (sample):")
         for t, c in sorted(other_types.items(), key=lambda x: -x[1])[:15]:
             print(f"    {t:<20} {c:>4} entries")
 
@@ -137,7 +133,7 @@ def inspect_zip(raw: bytes, label: str) -> None:
 
         if not gp_samples and not parpol_samples:
             # No GP found — print first 3 JSON files raw to understand structure
-            print(f"\n  No GP/PARPOL found. Printing first 3 JSON files raw:")
+            print("\n  No GP/PARPOL found. Printing first 3 JSON files raw:")
             count = 0
             for fname in names:
                 if not fname.endswith(".json"):
@@ -162,7 +158,7 @@ if __name__ == "__main__":
     found_label = None
 
     for path in CANDIDATES:
-        print(f"\nTrying candidate:")
+        print("\nTrying candidate:")
         raw = try_download(path)
         if raw:
             found_raw = raw
@@ -178,6 +174,7 @@ if __name__ == "__main__":
             print(f"Index page HTTP {r.status_code}")
             if r.status_code == 200:
                 import re
+
                 zips = re.findall(r'href="([^"]*\.zip)"', r.text)
                 print("ZIP files listed on index page:")
                 for z in zips:

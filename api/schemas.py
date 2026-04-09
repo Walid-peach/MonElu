@@ -8,10 +8,10 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ---------------------------------------------------------------------------
 # Shared config — all response models are read from DB rows (dicts/mappings)
 # ---------------------------------------------------------------------------
+
 
 class _Base(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -21,8 +21,10 @@ class _Base(BaseModel):
 # Deputies
 # ---------------------------------------------------------------------------
 
+
 class DeputySummary(_Base):
     """Lightweight deputy — used in list responses."""
+
     deputy_id: str
     full_name: str
     party: Optional[str] = None
@@ -34,6 +36,7 @@ class DeputySummary(_Base):
 
 class DeputyDetail(DeputySummary):
     """Full deputy profile — used in GET /deputies/{deputy_id}."""
+
     first_name: str
     last_name: str
     mandate_start: Optional[date] = None
@@ -43,6 +46,7 @@ class DeputyDetail(DeputySummary):
 
 class DeputyScorecard(_Base):
     """Computed voting stats for a single deputy."""
+
     deputy_id: str
     full_name: str
     total_votes: int = Field(description="Votes the deputy was eligible to participate in")
@@ -66,8 +70,10 @@ class DeputyListResponse(_Base):
 # Votes (scrutins)
 # ---------------------------------------------------------------------------
 
+
 class VoteSummary(_Base):
     """Lightweight vote — used in list responses."""
+
     vote_id: str
     voted_at: Optional[datetime] = None
     vote_title: str
@@ -80,6 +86,7 @@ class VoteSummary(_Base):
 
 class VotePosition(_Base):
     """A single deputy's position on a vote."""
+
     position_id: int
     deputy_id: str
     full_name: str
@@ -89,6 +96,7 @@ class VotePosition(_Base):
 
 class VoteDetail(VoteSummary):
     """Full vote — used in GET /votes/{vote_id}."""
+
     vote_type: Optional[str] = None
     dossier_id: Optional[str] = None
     ingested_at: Optional[datetime] = None

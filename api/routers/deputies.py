@@ -87,7 +87,9 @@ def get_scorecard(request: Request, deputy_id: str):
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT deputy_id, full_name FROM deputies WHERE deputy_id = %s", (deputy_id,))
+            cur.execute(
+                "SELECT deputy_id, full_name FROM deputies WHERE deputy_id = %s", (deputy_id,)
+            )
             deputy = cur.fetchone()
             if not deputy:
                 raise HTTPException(status_code=404, detail="Deputy not found")

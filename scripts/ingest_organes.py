@@ -38,7 +38,9 @@ def build_gp_map(zf: zipfile.ZipFile) -> dict[str, str]:
     Files are wrapped: {"organe": {...}} — must unwrap before reading fields.
     """
     gp_map = {}
-    organe_files = [n for n in zf.namelist() if n.startswith("json/organe/") and n.endswith(".json")]
+    organe_files = [
+        n for n in zf.namelist() if n.startswith("json/organe/") and n.endswith(".json")
+    ]
     for fname in organe_files:
         try:
             raw = json.loads(zf.read(fname))
@@ -61,7 +63,9 @@ def build_deputy_party_map(zf: zipfile.ZipFile, gp_map: dict[str, str]) -> dict[
     Priority: GP mandat > PARPOL mandat > None.
     """
     deputy_map: dict[str, str] = {}
-    acteur_files = [n for n in zf.namelist() if n.startswith("json/acteur/") and n.endswith(".json")]
+    acteur_files = [
+        n for n in zf.namelist() if n.startswith("json/acteur/") and n.endswith(".json")
+    ]
 
     for fname in acteur_files:
         try:
@@ -104,8 +108,6 @@ def build_deputy_party_map(zf: zipfile.ZipFile, gp_map: dict[str, str]) -> dict[
 
 
 def main():
-    import json as _json
-
     zf = download_zip()
 
     print("\nBuilding GP/PARPOL organe map …")
@@ -125,6 +127,7 @@ def main():
 
     # Party breakdown
     from collections import Counter
+
     breakdown = Counter(deputy_map.values())
     print("\n  Party breakdown:")
     for party, count in breakdown.most_common():

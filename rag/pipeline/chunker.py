@@ -34,9 +34,14 @@ def dept_preposition(dept_name: str) -> str:
         return "de"
     d = dept_name.strip()
     if (
-        d.startswith("Hautes") or d.startswith("Bouches") or d.startswith("Alpes")
-        or d.startswith("Pyrénées") or d.startswith("Côtes") or d.startswith("Landes")
-        or d == "Yvelines" or d == "Vosges"
+        d.startswith("Hautes")
+        or d.startswith("Bouches")
+        or d.startswith("Alpes")
+        or d.startswith("Pyrénées")
+        or d.startswith("Côtes")
+        or d.startswith("Landes")
+        or d == "Yvelines"
+        or d == "Vosges"
     ):
         return "des"
     # plain "de" for proper nouns that resist contraction
@@ -56,6 +61,7 @@ def _get_conn():
 # ---------------------------------------------------------------------------
 # Strategy A — Vote chunks
 # ---------------------------------------------------------------------------
+
 
 def _fmt_date(dt) -> str:
     """Format a date object as JJ/MM/AAAA."""
@@ -106,6 +112,7 @@ def chunk_votes() -> list[dict]:
 # Strategy B — Deputy summary chunks
 # ---------------------------------------------------------------------------
 
+
 def chunk_deputies() -> list[dict]:
     conn = _get_conn()
     chunks = []
@@ -134,15 +141,15 @@ def chunk_deputies() -> list[dict]:
         conn.close()
 
     for row in rows:
-        name      = row["full_name"] or "Député inconnu"
-        dept      = row["department"] or "département inconnu"
-        party     = row["party"] or "parti non renseigné"
-        total     = int(row["total_votes"] or 0)
-        pour      = int(row["pour_count"] or 0)
-        contre    = int(row["contre_count"] or 0)
-        abst      = int(row["abstention_count"] or 0)
-        rate      = float(row["presence_rate"] or 0)
-        rate_pct  = round(rate * 100, 1)
+        name = row["full_name"] or "Député inconnu"
+        dept = row["department"] or "département inconnu"
+        party = row["party"] or "parti non renseigné"
+        total = int(row["total_votes"] or 0)
+        pour = int(row["pour_count"] or 0)
+        contre = int(row["contre_count"] or 0)
+        abst = int(row["abstention_count"] or 0)
+        rate = float(row["presence_rate"] or 0)
+        rate_pct = round(rate * 100, 1)
 
         prep = dept_preposition(dept)
         # "de l'" already ends with apostrophe — no extra space before the noun
@@ -169,16 +176,17 @@ def chunk_deputies() -> list[dict]:
 # Combined
 # ---------------------------------------------------------------------------
 
+
 def chunk_all() -> list[dict]:
-    vote_chunks   = chunk_votes()
+    vote_chunks = chunk_votes()
     deputy_chunks = chunk_deputies()
 
     all_chunks = vote_chunks + deputy_chunks
 
     # Token accounting
     token_counts = [_count_tokens(c["content"]) for c in all_chunks]
-    total_tokens  = sum(token_counts)
-    avg_tokens    = total_tokens / len(token_counts) if token_counts else 0
+    total_tokens = sum(token_counts)
+    avg_tokens = total_tokens / len(token_counts) if token_counts else 0
 
     oversized = [
         (i, t, all_chunks[i]["metadata"].get("chunk_type"))
@@ -187,7 +195,7 @@ def chunk_all() -> list[dict]:
     ]
 
     print(f"\n{'='*50}")
-    print(f"  Chunker summary")
+    print("  Chunker summary")
     print(f"{'='*50}")
     print(f"  Vote chunks    : {len(vote_chunks):>6,}")
     print(f"  Deputy chunks  : {len(deputy_chunks):>6,}")
@@ -197,7 +205,8 @@ def chunk_all() -> list[dict]:
     if oversized:
         warnings.warn(
             f"{len(oversized)} chunk(s) exceed {TOKEN_WARN_THRESHOLD} tokens "
-            f"(max: {max(t for _, t, _ in oversized)} tokens)."
+            f"(max: {max(t for _, t, _ in oversized)} tokens).",
+            stacklevel=2,
         )
     else:
         print(f"  Token check    : OK — all chunks within {TOKEN_WARN_THRESHOLD}-token limit")
@@ -214,18 +223,18 @@ if __name__ == "__main__":
     import json
 
     print("Connecting to database and building chunks...")
-    vote_chunks   = chunk_votes()
+    vote_chunks = chunk_votes()
     deputy_chunks = chunk_deputies()
-    all_chunks    = vote_chunks + deputy_chunks
+    all_chunks = vote_chunks + deputy_chunks
 
     token_counts = [_count_tokens(c["content"]) for c in all_chunks]
     total_tokens = sum(token_counts)
-    avg_tokens   = total_tokens / len(token_counts) if token_counts else 0
+    avg_tokens = total_tokens / len(token_counts) if token_counts else 0
 
     oversized = [t for t in token_counts if t > TOKEN_WARN_THRESHOLD]
 
     print(f"\n{'='*56}")
-    print(f"  CHUNKER REPORT")
+    print("  CHUNKER REPORT")
     print(f"{'='*56}")
     print(f"  Vote chunks      : {len(vote_chunks):>6,}")
     print(f"  Deputy chunks    : {len(deputy_chunks):>6,}")
@@ -254,4 +263,4 @@ if __name__ == "__main__":
     # Estimated embedding cost (for reference — not running embeddings)
     cost_estimate = total_tokens * 0.00002 / 1000
     print(f"\n  Estimated embedding cost: ${cost_estimate:.4f}")
-    print(f"  (text-embedding-3-small @ $0.020 per 1M tokens)\n")
+    print("  (text-embedding-3-small @ $0.020 per 1M tokens)\n")

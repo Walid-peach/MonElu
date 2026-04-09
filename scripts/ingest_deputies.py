@@ -50,19 +50,19 @@ def download_with_retry(url: str) -> bytes:
         try:
             resp = requests.get(url, timeout=60)
             if resp.status_code == 429:
-                wait = BACKOFF_BASE ** attempt
+                wait = BACKOFF_BASE**attempt
                 log.warning("Rate-limited (429). Retrying in %ss…", wait)
                 time.sleep(wait)
                 continue
             if resp.status_code >= 500:
-                wait = BACKOFF_BASE ** attempt
+                wait = BACKOFF_BASE**attempt
                 log.warning("Server error %s. Retrying in %ss…", resp.status_code, wait)
                 time.sleep(wait)
                 continue
             resp.raise_for_status()
             return resp.content
         except requests.RequestException as exc:
-            wait = BACKOFF_BASE ** attempt
+            wait = BACKOFF_BASE**attempt
             log.warning("Request failed (%s). Retrying in %ss…", exc, wait)
             time.sleep(wait)
     raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts")
@@ -72,6 +72,7 @@ def download_with_retry(url: str) -> bytes:
 # Data fetch
 # ---------------------------------------------------------------------------
 
+
 def fetch_all_deputies() -> list[dict]:
     """Download the ZIP export and return a list of raw acteur dicts."""
     url = f"{AN_API_BASE_URL}{DEPUTIES_ZIP_PATH}"
@@ -80,7 +81,9 @@ def fetch_all_deputies() -> list[dict]:
 
     all_items = []
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
-        actor_files = [n for n in zf.namelist() if n.startswith("json/acteur/") and n.endswith(".json")]
+        actor_files = [
+            n for n in zf.namelist() if n.startswith("json/acteur/") and n.endswith(".json")
+        ]
         log.info("ZIP contains %d actor files.", len(actor_files))
         for name in actor_files:
             with zf.open(name) as f:
@@ -96,6 +99,7 @@ def fetch_all_deputies() -> list[dict]:
 # ---------------------------------------------------------------------------
 # Transformation
 # ---------------------------------------------------------------------------
+
 
 def parse_deputy(item: dict) -> dict | None:
     """
@@ -143,9 +147,7 @@ def parse_deputy(item: dict) -> dict | None:
         party = None
         party_short = organe_ref
 
-        photo_url = (
-            f"https://www.assemblee-nationale.fr/dyn/static/tribun/photos/{uid}.jpg"
-        )
+        photo_url = f"https://www.assemblee-nationale.fr/dyn/static/tribun/photos/{uid}.jpg"
 
         return {
             "deputy_id": uid,
@@ -209,6 +211,7 @@ def upsert_deputies(records: list[dict]) -> None:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
@@ -217,7 +220,11 @@ def main() -> None:
     raw_items = fetch_all_deputies()
 
     records = [r for item in raw_items if (r := parse_deputy(item)) is not None]
-    log.info("Parsed %d valid records (skipped %d unparseable).", len(records), len(raw_items) - len(records))
+    log.info(
+        "Parsed %d valid records (skipped %d unparseable).",
+        len(records),
+        len(raw_items) - len(records),
+    )
 
     upsert_deputies(records)
     log.info("=== Deputy ingestion finished ===")

@@ -40,12 +40,13 @@ BACKOFF_BASE = 2
 # DB connection with retry (handles transient proxy drops on Railway)
 # ---------------------------------------------------------------------------
 
+
 def connect_with_retry() -> psycopg2.extensions.connection:
     for attempt in range(MAX_RETRIES):
         try:
             return psycopg2.connect(DATABASE_URL)
         except psycopg2.OperationalError as exc:
-            wait = BACKOFF_BASE ** attempt
+            wait = BACKOFF_BASE**attempt
             log.warning("DB connection failed (%s). Retrying in %ss…", exc, wait)
             time.sleep(wait)
     raise RuntimeError(f"Could not connect to DB after {MAX_RETRIES} attempts")
@@ -55,24 +56,25 @@ def connect_with_retry() -> psycopg2.extensions.connection:
 # HTTP helper (same pattern as ingest_deputies / ingest_votes)
 # ---------------------------------------------------------------------------
 
+
 def download_with_retry(url: str) -> bytes:
     for attempt in range(MAX_RETRIES):
         try:
             resp = requests.get(url, timeout=60)
             if resp.status_code == 429:
-                wait = BACKOFF_BASE ** attempt
+                wait = BACKOFF_BASE**attempt
                 log.warning("Rate-limited (429). Retrying in %ss…", wait)
                 time.sleep(wait)
                 continue
             if resp.status_code >= 500:
-                wait = BACKOFF_BASE ** attempt
+                wait = BACKOFF_BASE**attempt
                 log.warning("Server error %s. Retrying in %ss…", resp.status_code, wait)
                 time.sleep(wait)
                 continue
             resp.raise_for_status()
             return resp.content
         except requests.RequestException as exc:
-            wait = BACKOFF_BASE ** attempt
+            wait = BACKOFF_BASE**attempt
             log.warning("Request failed (%s). Retrying in %ss…", exc, wait)
             time.sleep(wait)
     raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts")
@@ -81,6 +83,7 @@ def download_with_retry(url: str) -> bytes:
 # ---------------------------------------------------------------------------
 # Position extraction helpers
 # ---------------------------------------------------------------------------
+
 
 def _votants(block) -> list[str]:
     """Return a list of acteurRef strings from a pours/contres/abstentions block."""
@@ -130,11 +133,13 @@ def extract_positions(scrutin: dict) -> list[dict]:
                 if deputy_id in seen:
                     continue
                 seen.add(deputy_id)
-                positions.append({
-                    "vote_id": uid,
-                    "deputy_id": deputy_id,
-                    "position": position,
-                })
+                positions.append(
+                    {
+                        "vote_id": uid,
+                        "deputy_id": deputy_id,
+                        "position": position,
+                    }
+                )
 
     return positions
 
@@ -142,6 +147,7 @@ def extract_positions(scrutin: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Fetch ZIP (reuse same file if already cached)
 # ---------------------------------------------------------------------------
+
 
 def fetch_scrutin_zip() -> bytes:
     url = f"{AN_BASE_URL}{SCRUTINS_ZIP_PATH}"
@@ -176,6 +182,7 @@ def upsert_positions(records: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     if not DATABASE_URL:
