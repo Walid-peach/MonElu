@@ -55,6 +55,8 @@ FastAPI · slowapi · PostgreSQL + pgvector (Supabase) · Python 3.11 · Railway
 
 **Phase 2 additions:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
 
+**Code quality:** ruff (lint + format) · pre-commit
+
 ---
 
 ## Data Sources
@@ -214,6 +216,30 @@ rag/
 ```
 
 **Chunking stats:** 3,149 vote chunks + 577 deputy chunks = 3,726 total · avg 85.7 tokens/chunk · estimated embedding cost ~$0.006
+
+---
+
+## Code Quality
+
+Pre-commit hooks run automatically on every `git commit`. Install once after cloning:
+
+```bash
+pip install pre-commit ruff
+pre-commit install
+```
+
+| Hook | What it catches |
+|---|---|
+| `trailing-whitespace` | Stray spaces at line ends |
+| `end-of-file-fixer` | Files not ending with a newline |
+| `check-yaml` / `check-json` | Syntax errors in config files |
+| `check-merge-conflict` | Accidentally committed `<<<<<<` markers |
+| `check-added-large-files` | Files over 500 KB (prevents committing ZIPs or weights) |
+| `debug-statements` | Blocks `breakpoint()` / `pdb.set_trace()` |
+| `ruff` (lint + `--fix`) | Unused imports, undefined names, bugbear patterns, isort |
+| `ruff-format` | Black-compatible formatting |
+
+Lint rules are in `ruff.toml` — line length 100, `T201` (print) ignored for `scripts/` and `rag/`.
 
 ---
 
