@@ -125,4 +125,4 @@ One of:
 12. Final behavior:
    - Review the PR
    - Generate the structured review comment
-   - Post that review comment directly on the pull request
+   - Post that review comment directly on the pull request using the `mcp__github__pull_request_review_write` tool with `method: create` and `event: COMMENT`. If the MCP tool is unavailable, fall back to `gh pr review <number> --comment -b '<review>'`.
