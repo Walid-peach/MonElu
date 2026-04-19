@@ -122,7 +122,7 @@ One of:
    - Explicitly recommend splitting unrelated work
    - Call out accidental edits, debug code, commented-out code, temporary files, or generated noise
 
-12. Optimize for helpfulness.
-   - Write feedback the author can act on immediately
-   - Be direct, concise, and constructive
-   - Prioritize the issues that matter most for correctness, safety, and review speed
+12. Final behavior:
+   - Review the PR
+   - Generate the structured review comment
+   - Post that review comment directly on the pull request
