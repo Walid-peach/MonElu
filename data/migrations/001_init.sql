@@ -63,3 +63,30 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 CREATE INDEX IF NOT EXISTS idx_chunks_embedding
     ON document_chunks USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 100);
+
+-- ---------------------------------------------------------------------------
+-- Row-Level Security
+-- Affects direct Supabase REST API access only — psycopg2 (superuser role)
+-- bypasses RLS entirely, so the FastAPI app is unaffected.
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE deputies        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE votes           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vote_positions  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_chunks ENABLE ROW LEVEL SECURITY;
+
+-- Public read on civic data (AN open data — already public by design)
+DROP POLICY IF EXISTS "public_read_deputies"       ON deputies;
+DROP POLICY IF EXISTS "public_read_votes"          ON votes;
+DROP POLICY IF EXISTS "public_read_vote_positions" ON vote_positions;
+
+CREATE POLICY "public_read_deputies"
+    ON deputies FOR SELECT USING (true);
+
+CREATE POLICY "public_read_votes"
+    ON votes FOR SELECT USING (true);
+
+CREATE POLICY "public_read_vote_positions"
+    ON vote_positions FOR SELECT USING (true);
+
+-- document_chunks: no public policy — anon gets nothing (embeddings are internal)
