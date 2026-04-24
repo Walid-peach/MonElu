@@ -15,7 +15,7 @@ import numpy as np
 import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 from pgvector.psycopg2 import register_vector
 
 load_dotenv()
@@ -33,13 +33,15 @@ def _embed_batch(client: OpenAI, texts: list[str], max_retries: int = 3):
             embeddings = [item.embedding for item in response.data]
             tokens_used = response.usage.total_tokens
             return embeddings, tokens_used
-        except Exception as e:
-            if "429" in str(e) and attempt < max_retries - 1:
+        except RateLimitError:
+            if attempt < max_retries - 1:
                 wait = 2**attempt
                 print(f"  Rate limit — retrying in {wait}s...")
                 time.sleep(wait)
             else:
                 raise
+        except Exception:
+            raise
 
 
 def embed_and_store(chunks: list[dict], batch_size: int = 100) -> None:

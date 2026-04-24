@@ -1,6 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from typing import Literal
+
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from api.limiter import limiter
 from rag.chain.rag_chain import ask
 
 router = APIRouter()
@@ -14,7 +17,9 @@ class SearchRequest(BaseModel):
         description="Question en français sur l'activité parlementaire",
     )
     deputy_id: str | None = Field(None, description="Filtrer par député (optionnel)")
-    chunk_type: str | None = Field(None, description="'vote' ou 'deputy' (optionnel)")
+    chunk_type: Literal["vote", "deputy"] | None = Field(
+        None, description="'vote' ou 'deputy' (optionnel)"
+    )
 
 
 class SourceItem(BaseModel):
@@ -35,12 +40,13 @@ class SearchResponse(BaseModel):
     response_model=SearchResponse,
     summary="Posez une question sur les votes et les députés",
 )
-async def search(request: SearchRequest):
+@limiter.limit("10/minute")
+async def search(request: Request, body: SearchRequest):
     try:
         result = ask(
-            question=request.question,
-            deputy_id=request.deputy_id,
-            chunk_type=request.chunk_type,
+            question=body.question,
+            deputy_id=body.deputy_id,
+            chunk_type=body.chunk_type,
         )
         return result
     except Exception as e:
