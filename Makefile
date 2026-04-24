@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db
+.PHONY: start stop migrate ingest ingest-prod api psql check-db rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui
 
 start:
 	docker compose up -d
@@ -28,3 +28,21 @@ check-db:
 
 fix-deputies:
 	venv/bin/python3 scripts/update_party.py
+
+rag-index:
+	venv/bin/python3 -m rag.pipeline.index_manager build
+
+rag-stats:
+	venv/bin/python3 -m rag.pipeline.index_manager stats
+
+rag-clear:
+	venv/bin/python3 -m rag.pipeline.index_manager clear
+
+rag-test:
+	venv/bin/python3 -m rag.chain.rag_chain
+
+rag-eval:
+	venv/bin/python3 -m rag.experiments.mlflow_eval
+
+mlflow-ui:
+	venv/bin/mlflow ui --port 5001

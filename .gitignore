@@ -47,3 +47,6 @@ data/migrations/__pycache__/
 
 # Daily notes — local only
 notes/
+
+# MLflow — local experiment tracking, not source code
+mlruns/

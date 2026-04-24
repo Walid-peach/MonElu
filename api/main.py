@@ -90,7 +90,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,  # public read-only API — no cookies or auth headers needed
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -98,9 +98,11 @@ app.add_middleware(
 # Routers — imported here so they register their routes on the app
 # ---------------------------------------------------------------------------
 from api.routers import deputies, votes  # noqa: E402  (after app creation)
+from api.routers.search import router as search_router  # noqa: E402
 
 app.include_router(deputies.router, prefix="/deputies", tags=["Deputies"])
 app.include_router(votes.router, prefix="/votes", tags=["Votes"])
+app.include_router(search_router, prefix="/search", tags=["Search"])
 
 
 # ---------------------------------------------------------------------------
