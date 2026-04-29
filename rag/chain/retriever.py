@@ -20,12 +20,23 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 EMBEDDING_MODEL = "text-embedding-3-small"
 
 
+def detect_result_filter(question: str) -> str | None:
+    q = question.lower()
+    if any(w in q for w in ["adopté", "adoptés", "adoption", "passé", "passée"]):
+        return "adopté"
+    if any(w in q for w in ["rejeté", "rejetés", "rejet", "échoué"]):
+        return "rejeté"
+    return None
+
+
 def retrieve(
     question: str,
     k: int = 5,
     chunk_type: str = None,
     deputy_id: str = None,
 ) -> list[dict]:
+    result_filter = detect_result_filter(question)
+
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
     query_vector = np.array(response.data[0].embedding, dtype=np.float32)
@@ -44,6 +55,7 @@ def retrieve(
                 FROM document_chunks
                 WHERE (%s IS NULL OR metadata->>'chunk_type' = %s)
                   AND (%s IS NULL OR metadata->>'deputy_id' = %s)
+                  AND (%s IS NULL OR metadata->>'result' = %s)
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
                 """,
@@ -53,6 +65,8 @@ def retrieve(
                     chunk_type,
                     deputy_id,
                     deputy_id,
+                    result_filter,
+                    result_filter,
                     query_vector,
                     k,
                 ),
@@ -71,7 +85,9 @@ def retrieve(
     ]
 
     top_sim = results[0]["similarity"] if results else 0.0
-    print(f"Retrieved {len(results)} chunks — top similarity: {top_sim:.3f}")
+    print(
+        f"Retrieved {len(results)} chunks — top similarity: {top_sim:.3f} (result_filter={result_filter})"
+    )
     return results
 
 

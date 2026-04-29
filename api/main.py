@@ -700,7 +700,7 @@ _LANDING_HTML = """\
       <div class="rag-pills">
         <button class="rag-pill" onclick="fillQuestion(this)">Combien de députés appartiennent au Rassemblement National&nbsp;?</button>
         <button class="rag-pill" onclick="fillQuestion(this)">Quel est le taux de présence de Yaël Braun-Pivet&nbsp;?</button>
-        <button class="rag-pill" onclick="fillQuestion(this)">Quels sont les derniers votes adoptés à l'Assemblée&nbsp;?</button>
+        <button class="rag-pill" onclick="fillQuestion(this)">Combien de députés sont au groupe Rassemblement National&nbsp;?</button>
       </div>
     </div>
     <div class="rag-right">
