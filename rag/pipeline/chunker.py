@@ -173,6 +173,94 @@ def chunk_deputies() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Strategy C — Global stats chunk (1 chunk)
+# ---------------------------------------------------------------------------
+
+
+def chunk_global_stats() -> list[dict]:
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                  (SELECT COUNT(*) FROM deputies)                             AS total_deputies,
+                  (SELECT COUNT(*) FROM votes)                                AS total_votes,
+                  (SELECT COUNT(*) FROM vote_positions)                       AS total_positions,
+                  (SELECT COUNT(*) FROM votes WHERE result = 'adopté')        AS adopted,
+                  (SELECT COUNT(*) FROM votes WHERE result = 'rejeté')        AS rejected
+                """
+            )
+            stats = cur.fetchone()
+
+            cur.execute(
+                """
+                SELECT party, COUNT(*) AS count
+                FROM deputies
+                WHERE party IS NOT NULL
+                GROUP BY party
+                ORDER BY count DESC
+                """
+            )
+            parties = cur.fetchall()
+
+            cur.execute(
+                """
+                SELECT d.full_name, d.party, d.department,
+                       COUNT(vp.position_id) AS total_votes,
+                       ROUND(
+                           COUNT(vp.position_id)::numeric
+                           / NULLIF((SELECT COUNT(*) FROM votes), 0),
+                           3
+                       ) AS presence_rate
+                FROM deputies d
+                LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
+                WHERE d.full_name ILIKE '%Braun-Pivet%'
+                GROUP BY d.deputy_id
+                LIMIT 1
+                """
+            )
+            ybp = cur.fetchone()
+    finally:
+        conn.close()
+
+    total_dep = int(stats["total_deputies"] or 0)
+    total_votes = int(stats["total_votes"] or 0)
+    total_pos = int(stats["total_positions"] or 0)
+    adopted = int(stats["adopted"] or 0)
+    rejected = int(stats["rejected"] or 0)
+
+    party_lines = "\n".join(f"- {row['party']} : {int(row['count'])} députés" for row in parties)
+
+    ybp_block = ""
+    if ybp:
+        ybp_name = ybp["full_name"]
+        ybp_party = ybp["party"] or "parti non renseigné"
+        ybp_dept = ybp["department"] or "département inconnu"
+        ybp_votes = int(ybp["total_votes"] or 0)
+        ybp_rate = round(float(ybp["presence_rate"] or 0) * 100, 1)
+        prep = dept_preposition(ybp_dept)
+        sep = "" if prep.endswith("'") else " "
+        ybp_block = (
+            f"\n{ybp_name} est la Présidente de l'Assemblée Nationale.\n"
+            f"Son taux de présence est de {ybp_rate}% sur {ybp_votes} votes enregistrés.\n"
+            f"Elle est membre du parti {ybp_party}, députée {prep}{sep}{ybp_dept}."
+        )
+
+    content = (
+        f"MonÉlu suit {total_dep} députés de l'Assemblée Nationale française.\n"
+        f"Au total, {total_votes:,} votes ont été analysés.\n"
+        f"{total_pos:,} positions individuelles de vote sont enregistrées.\n"
+        f"Parmi les votes : {adopted:,} ont été adoptés et {rejected:,} ont été rejetés.\n"
+        f"\nRépartition par groupe parlementaire :\n{party_lines}"
+        f"{ybp_block}"
+    )
+
+    metadata = {"chunk_type": "global_stats"}
+    return [{"content": content, "metadata": metadata}]
+
+
+# ---------------------------------------------------------------------------
 # Combined
 # ---------------------------------------------------------------------------
 
@@ -180,8 +268,9 @@ def chunk_deputies() -> list[dict]:
 def chunk_all() -> list[dict]:
     vote_chunks = chunk_votes()
     deputy_chunks = chunk_deputies()
+    global_chunks = chunk_global_stats()
 
-    all_chunks = vote_chunks + deputy_chunks
+    all_chunks = vote_chunks + deputy_chunks + global_chunks
 
     # Token accounting
     token_counts = [_count_tokens(c["content"]) for c in all_chunks]
@@ -199,6 +288,7 @@ def chunk_all() -> list[dict]:
     print(f"{'='*50}")
     print(f"  Vote chunks    : {len(vote_chunks):>6,}")
     print(f"  Deputy chunks  : {len(deputy_chunks):>6,}")
+    print(f"  Global chunks  : {len(global_chunks):>6,}")
     print(f"  Total chunks   : {len(all_chunks):>6,}")
     print(f"  Avg tokens     : {avg_tokens:>6.1f}")
     print(f"  Total tokens   : {total_tokens:>6,}")
@@ -225,7 +315,8 @@ if __name__ == "__main__":
     print("Connecting to database and building chunks...")
     vote_chunks = chunk_votes()
     deputy_chunks = chunk_deputies()
-    all_chunks = vote_chunks + deputy_chunks
+    global_chunks = chunk_global_stats()
+    all_chunks = vote_chunks + deputy_chunks + global_chunks
 
     token_counts = [_count_tokens(c["content"]) for c in all_chunks]
     total_tokens = sum(token_counts)
@@ -238,6 +329,7 @@ if __name__ == "__main__":
     print(f"{'='*56}")
     print(f"  Vote chunks      : {len(vote_chunks):>6,}")
     print(f"  Deputy chunks    : {len(deputy_chunks):>6,}")
+    print(f"  Global chunks    : {len(global_chunks):>6,}")
     print(f"  Total chunks     : {len(all_chunks):>6,}")
     print(f"  Avg tokens/chunk : {avg_tokens:>6.1f}")
     print(f"  Total tokens     : {total_tokens:>6,}")
@@ -251,7 +343,6 @@ if __name__ == "__main__":
     print(f"Tokens: {_count_tokens(sample_vote['content'])}")
 
     print("\n--- SAMPLE: deputy chunk ---")
-    # Find Yaël Braun-Pivet for a meaningful sample
     braun_pivet = next(
         (c for c in deputy_chunks if "Braun-Pivet" in c["content"]),
         deputy_chunks[0],
@@ -260,7 +351,12 @@ if __name__ == "__main__":
     print(f"Metadata: {json.dumps(braun_pivet['metadata'], ensure_ascii=False, indent=2)}")
     print(f"Tokens: {_count_tokens(braun_pivet['content'])}")
 
-    # Estimated embedding cost (for reference — not running embeddings)
+    print("\n--- SAMPLE: global_stats chunk ---")
+    gs = global_chunks[0]
+    print(f"Content:\n{gs['content']}")
+    print(f"Metadata: {json.dumps(gs['metadata'], ensure_ascii=False, indent=2)}")
+    print(f"Tokens: {_count_tokens(gs['content'])}")
+
     cost_estimate = total_tokens * 0.00002 / 1000
     print(f"\n  Estimated embedding cost: ${cost_estimate:.4f}")
     print("  (text-embedding-3-small @ $0.020 per 1M tokens)\n")
