@@ -696,11 +696,11 @@ _LANDING_HTML = """\
     <div class="rag-left">
       <div class="rag-eyebrow">Intelligence artificielle</div>
       <h2 class="rag-title">Posez vos questions en français</h2>
-      <p class="rag-sub">Notre chatbot analyse 3&nbsp;726 documents législatifs et répond avec des sources vérifiables.</p>
+      <p class="rag-sub">Notre chatbot analyse 3&nbsp;739 documents législatifs et répond avec des sources vérifiables.</p>
       <div class="rag-pills">
-        <button class="rag-pill" onclick="fillQuestion(this)">Qui a voté contre la réforme des retraites&nbsp;?</button>
+        <button class="rag-pill" onclick="fillQuestion(this)">Combien de députés appartiennent au Rassemblement National&nbsp;?</button>
         <button class="rag-pill" onclick="fillQuestion(this)">Quel est le taux de présence de Yaël Braun-Pivet&nbsp;?</button>
-        <button class="rag-pill" onclick="fillQuestion(this)">Combien de députés RN ont voté pour le budget&nbsp;?</button>
+        <button class="rag-pill" onclick="fillQuestion(this)">Combien de députés sont au groupe Rassemblement National&nbsp;?</button>
       </div>
     </div>
     <div class="rag-right">
