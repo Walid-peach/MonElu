@@ -67,14 +67,14 @@ Assemblée Nationale Open Data (ZIPs)
 - `run_ingestion_prod.py` orchestrates the full pipeline for production runs
 
 **`rag/`** — Phase 2 semantic search (live)
-- `pipeline/chunker.py`: Generates text chunks — one per vote (French prose) and one per deputy (voting record summary). Uses tiktoken (cl100k_base) for token counting.
+- `pipeline/chunker.py`: Generates text chunks — four strategies: vote (one per scrutin), deputy (one per député), party (one per parliamentary group), global_stats (one aggregate overview). Uses tiktoken (cl100k_base) for token counting.
 - `pipeline/embedder.py`: Batched OpenAI embedding (100 chunks/batch), stores into `document_chunks` via pgvector. Assumes table is empty — callers must truncate first.
 - `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` always truncates before embedding to prevent duplicates.
-- `chain/retriever.py`: Cosine similarity retrieval via pgvector `<=>`. Supports `chunk_type` and `deputy_id` filters. Note: `register_vector` must receive a plain psycopg2 cursor, not a `RealDictCursor`.
+- `chain/retriever.py`: Cosine similarity retrieval via pgvector `<=>`. Supports `chunk_type`, `deputy_id`, and auto-detected `result` filters (`adopté`/`rejeté` from question keywords). Note: `register_vector` must receive a plain psycopg2 cursor, not a `RealDictCursor`.
 - `chain/prompts.py`: French civic assistant system prompt + RAG context template.
 - `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `llama-3.3-70b-versatile` (temperature=0.2).
 - `experiments/mlflow_eval.py`: 10 golden Q&A pairs, keyword scoring, k=3 vs k=5 MLflow experiment. Baseline score: 0.58.
-- 3,726 chunks in production: 3,149 vote + 577 deputy, avg 86 tokens, $0.0064 to embed.
+- 3,739 chunks in production: 3,149 vote + 577 deputy + 12 party + 1 global_stats, avg 86 tokens, $0.0064 to embed.
 
 **`data/migrations/001_init.sql`** — Full schema
 - Four tables: `deputies`, `votes`, `vote_positions`, `document_chunks` (pgvector)
