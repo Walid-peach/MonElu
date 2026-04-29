@@ -19,7 +19,7 @@ The API tier (Railway) is stateless and auto-restarts on failure. All state live
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | HTML landing page — live stats, latest votes, civic design |
+| GET | `/` | Landing page — editorial civic design, live DB stats, latest votes, RAG demo |
 | GET | `/deputies` | List all deputies (filter: `search`, `department`) |
 | GET | `/deputies/{id}` | Deputy profile |
 | GET | `/deputies/{id}/scorecard` | Presence rate, vote breakdown |
@@ -51,7 +51,7 @@ When a limit is exceeded the API returns HTTP 429 with:
 
 ## Stack
 
-FastAPI · slowapi · PostgreSQL + pgvector (Supabase) · Python 3.11 · Railway
+FastAPI · slowapi · PostgreSQL + pgvector (Supabase) · Python 3.11 · Railway · aiofiles (StaticFiles)
 
 **Phase 2 additions:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
 
@@ -175,7 +175,8 @@ make mlflow-ui      open MLflow experiment dashboard on port 5001
 
 | Module | What it does |
 |---|---|
-| `api/main.py` | App entry point — CORS, rate limiting, exception handlers, landing page, health check |
+| `api/main.py` | App entry point — CORS, rate limiting, exception handlers, landing page (full editorial redesign + inline SVG logo), health check |
+| `static/assemblee_nationale.jpg` | Hero photo served via `StaticFiles` at `/static` |
 | `api/limiter.py` | Shared slowapi `Limiter` instance (60 req/min default, IP-keyed) |
 | `api/routers/deputies.py` | Deputy list, profile, and scorecard endpoints |
 | `api/routers/votes.py` | Vote list, latest, and detail endpoints |
