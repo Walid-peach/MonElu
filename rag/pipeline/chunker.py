@@ -173,7 +173,73 @@ def chunk_deputies() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Strategy C — Global stats chunk (1 chunk)
+# Strategy C — Party summary chunks (1 chunk per parliamentary group)
+# ---------------------------------------------------------------------------
+
+
+def chunk_party_summaries() -> list[dict]:
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    d.party,
+                    COUNT(DISTINCT d.deputy_id) AS deputy_count,
+                    COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour')       AS total_pour,
+                    COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre')     AS total_contre,
+                    COUNT(vp.position_id) FILTER (WHERE vp.position = 'abstention') AS total_abstention,
+                    ROUND(AVG(
+                        CASE WHEN d2.total > 0
+                        THEN d2.present::numeric / d2.total
+                        ELSE 0 END
+                    ), 3) AS avg_presence
+                FROM deputies d
+                LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
+                LEFT JOIN (
+                    SELECT deputy_id,
+                           COUNT(*) AS total,
+                           COUNT(*) FILTER (WHERE position != 'nonVotant') AS present
+                    FROM vote_positions GROUP BY deputy_id
+                ) d2 ON d.deputy_id = d2.deputy_id
+                WHERE d.party IS NOT NULL
+                GROUP BY d.party
+                ORDER BY deputy_count DESC
+                """
+            )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    chunks = []
+    for row in rows:
+        party = row["party"]
+        n = int(row["deputy_count"] or 0)
+        pour = int(row["total_pour"] or 0)
+        contre = int(row["total_contre"] or 0)
+        abst = int(row["total_abstention"] or 0)
+        avg_p = round(float(row["avg_presence"] or 0) * 100, 1)
+
+        content = (
+            f'Le groupe parlementaire "{party}" compte {n} députés à l\'Assemblée Nationale.\n'
+            f"Sur l'ensemble des votes enregistrés, les membres de ce groupe ont voté :\n"
+            f"- Pour : {pour:,} fois\n"
+            f"- Contre : {contre:,} fois\n"
+            f"- Abstention : {abst:,} fois\n"
+            f"Taux de présence moyen du groupe : {avg_p}%."
+        )
+        metadata = {
+            "chunk_type": "party",
+            "party": party,
+            "deputy_count": n,
+        }
+        chunks.append({"content": content, "metadata": metadata})
+
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# Strategy D — Global stats chunk (1 chunk)
 # ---------------------------------------------------------------------------
 
 
@@ -268,9 +334,10 @@ def chunk_global_stats() -> list[dict]:
 def chunk_all() -> list[dict]:
     vote_chunks = chunk_votes()
     deputy_chunks = chunk_deputies()
+    party_chunks = chunk_party_summaries()
     global_chunks = chunk_global_stats()
 
-    all_chunks = vote_chunks + deputy_chunks + global_chunks
+    all_chunks = vote_chunks + deputy_chunks + party_chunks + global_chunks
 
     # Token accounting
     token_counts = [_count_tokens(c["content"]) for c in all_chunks]
@@ -288,6 +355,7 @@ def chunk_all() -> list[dict]:
     print(f"{'='*50}")
     print(f"  Vote chunks    : {len(vote_chunks):>6,}")
     print(f"  Deputy chunks  : {len(deputy_chunks):>6,}")
+    print(f"  Party chunks   : {len(party_chunks):>6,}")
     print(f"  Global chunks  : {len(global_chunks):>6,}")
     print(f"  Total chunks   : {len(all_chunks):>6,}")
     print(f"  Avg tokens     : {avg_tokens:>6.1f}")
