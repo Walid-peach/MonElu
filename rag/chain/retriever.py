@@ -55,7 +55,7 @@ def retrieve(
                 FROM document_chunks
                 WHERE (%s IS NULL OR metadata->>'chunk_type' = %s)
                   AND (%s IS NULL OR metadata->>'deputy_id' = %s)
-                  AND (%s IS NULL OR metadata->>'result' = %s)
+                  AND (%s IS NULL OR metadata->>'result' IS NULL OR metadata->>'result' = %s)
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
                 """,
