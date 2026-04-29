@@ -274,6 +274,8 @@ def _build_vote_row(row) -> str:
     )
 
 
+# All literal { } in CSS/JS below must be escaped as {{ }} because this string
+# is rendered via .format(). Format placeholders use single braces: {nav_icon}, etc.
 _LANDING_HTML = """\
 <!DOCTYPE html>
 <html lang="fr">
