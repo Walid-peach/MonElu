@@ -642,7 +642,7 @@ _LANDING_HTML = """\
     </div>
   </div>
   <div class="hero-right">
-    <img src="/static/assemble_nationale.png" alt="Assemblée Nationale" class="hero-img" />
+    <img src="/static/assemblee_nationale.jpg" alt="Assemblée Nationale" class="hero-img" />
     <div class="hero-img-overlay"></div>
     <div class="stats-card">
       <div class="stats-card-header">
