@@ -190,16 +190,13 @@ def chunk_party_summaries() -> list[dict]:
                     COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre')     AS total_contre,
                     COUNT(vp.position_id) FILTER (WHERE vp.position = 'abstention') AS total_abstention,
                     ROUND(AVG(
-                        CASE WHEN d2.total > 0
-                        THEN d2.present::numeric / d2.total
-                        ELSE 0 END
+                        d2.total::numeric / NULLIF((SELECT COUNT(*) FROM votes), 0)
                     ), 3) AS avg_presence
                 FROM deputies d
                 LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
                 LEFT JOIN (
                     SELECT deputy_id,
-                           COUNT(*) AS total,
-                           COUNT(*) FILTER (WHERE position != 'nonVotant') AS present
+                           COUNT(*) AS total
                     FROM vote_positions GROUP BY deputy_id
                 ) d2 ON d.deputy_id = d2.deputy_id
                 WHERE d.party IS NOT NULL
