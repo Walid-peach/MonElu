@@ -380,8 +380,9 @@ if __name__ == "__main__":
     print("Connecting to database and building chunks...")
     vote_chunks = chunk_votes()
     deputy_chunks = chunk_deputies()
+    party_chunks = chunk_party_summaries()
     global_chunks = chunk_global_stats()
-    all_chunks = vote_chunks + deputy_chunks + global_chunks
+    all_chunks = vote_chunks + deputy_chunks + party_chunks + global_chunks
 
     token_counts = [_count_tokens(c["content"]) for c in all_chunks]
     total_tokens = sum(token_counts)
@@ -394,6 +395,7 @@ if __name__ == "__main__":
     print(f"{'='*56}")
     print(f"  Vote chunks      : {len(vote_chunks):>6,}")
     print(f"  Deputy chunks    : {len(deputy_chunks):>6,}")
+    print(f"  Party chunks     : {len(party_chunks):>6,}")
     print(f"  Global chunks    : {len(global_chunks):>6,}")
     print(f"  Total chunks     : {len(all_chunks):>6,}")
     print(f"  Avg tokens/chunk : {avg_tokens:>6.1f}")
