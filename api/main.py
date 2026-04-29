@@ -117,7 +117,7 @@ app.include_router(search_router, prefix="/search", tags=["Search"])
 
 # Variant A — light background (navy/red/gray on transparent)
 _ICON_LIGHT = (
-    '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    '<svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">'
     # outer row r=19, 8 segs, navy/red alternating, α ∈ {-70,-50,-30,-10,10,30,50,70}
     '<g transform="translate(6.15 33.50) rotate(-70)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#0D1F3C"/></g>'
     '<g transform="translate(9.45 27.79) rotate(-50)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>'
@@ -147,7 +147,7 @@ _ICON_LIGHT = (
 
 # Variant B — dark background (navy→white, gray→rgba(255,255,255,0.4), red stays)
 _ICON_DARK = (
-    '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    '<svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">'
     '<g transform="translate(6.15 33.50) rotate(-70)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="white"/></g>'
     '<g transform="translate(9.45 27.79) rotate(-50)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>'
     '<g transform="translate(14.50 23.55) rotate(-30)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="white"/></g>'
@@ -593,28 +593,7 @@ _LANDING_HTML = """\
 <!-- NAV — Variant A logo (light) -->
 <nav class="nav">
   <a href="/" class="monelu-logo">
-    <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(6.15 33.50) rotate(-70)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#0D1F3C"/></g>
-      <g transform="translate(9.45 27.79) rotate(-50)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>
-      <g transform="translate(14.50 23.55) rotate(-30)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#0D1F3C"/></g>
-      <g transform="translate(20.70 21.29) rotate(-10)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>
-      <g transform="translate(27.30 21.29) rotate(10)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#0D1F3C"/></g>
-      <g transform="translate(33.50 23.55) rotate(30)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>
-      <g transform="translate(38.55 27.79) rotate(50)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#0D1F3C"/></g>
-      <g transform="translate(41.85 33.50) rotate(70)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>
-      <g transform="translate(13.35 32.54) rotate(-55)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="#9CA3AF"/></g>
-      <g transform="translate(16.92 29.10) rotate(-33)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="#0D1F3C"/></g>
-      <g transform="translate(21.52 27.24) rotate(-11)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="#9CA3AF"/></g>
-      <g transform="translate(26.48 27.24) rotate(11)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="#0D1F3C"/></g>
-      <g transform="translate(31.08 29.10) rotate(33)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="#9CA3AF"/></g>
-      <g transform="translate(34.65 32.54) rotate(55)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="#0D1F3C"/></g>
-      <g transform="translate(18.34 34.34) rotate(-45)"><rect x="-1.25" y="-1" width="2.5" height="2" rx="0.4" fill="#C9302C"/></g>
-      <g transform="translate(21.93 32.27) rotate(-15)"><rect x="-1.25" y="-1" width="2.5" height="2" rx="0.4" fill="#9CA3AF"/></g>
-      <g transform="translate(26.07 32.27) rotate(15)"><rect x="-1.25" y="-1" width="2.5" height="2" rx="0.4" fill="#C9302C"/></g>
-      <g transform="translate(29.66 34.34) rotate(45)"><rect x="-1.25" y="-1" width="2.5" height="2" rx="0.4" fill="#9CA3AF"/></g>
-      <circle cx="24" cy="40.5" r="1.8" fill="#0D1F3C"/>
-      <rect x="20" y="43" width="8" height="4" rx="1" fill="#0D1F3C"/>
-    </svg>
+    {nav_icon}
     <span class="logo-text">Mon<span class="logo-accent">Élu</span></span>
   </a>
   <div class="nav-links">
@@ -767,28 +746,7 @@ _LANDING_HTML = """\
   <div class="footer-grid">
     <div>
       <a href="/" class="monelu-logo monelu-logo-dark footer-logo-wrap">
-        <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <g transform="translate(6.15 33.50) rotate(-70)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="white"/></g>
-          <g transform="translate(9.45 27.79) rotate(-50)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>
-          <g transform="translate(14.50 23.55) rotate(-30)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="white"/></g>
-          <g transform="translate(20.70 21.29) rotate(-10)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>
-          <g transform="translate(27.30 21.29) rotate(10)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="white"/></g>
-          <g transform="translate(33.50 23.55) rotate(30)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>
-          <g transform="translate(38.55 27.79) rotate(50)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="white"/></g>
-          <g transform="translate(41.85 33.50) rotate(70)"><rect x="-2" y="-1.5" width="4" height="3" rx="0.5" fill="#C9302C"/></g>
-          <g transform="translate(13.35 32.54) rotate(-55)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="rgba(255,255,255,0.4)"/></g>
-          <g transform="translate(16.92 29.10) rotate(-33)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="white"/></g>
-          <g transform="translate(21.52 27.24) rotate(-11)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="rgba(255,255,255,0.4)"/></g>
-          <g transform="translate(26.48 27.24) rotate(11)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="white"/></g>
-          <g transform="translate(31.08 29.10) rotate(33)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="rgba(255,255,255,0.4)"/></g>
-          <g transform="translate(34.65 32.54) rotate(55)"><rect x="-1.75" y="-1.25" width="3.5" height="2.5" rx="0.5" fill="white"/></g>
-          <g transform="translate(18.34 34.34) rotate(-45)"><rect x="-1.25" y="-1" width="2.5" height="2" rx="0.4" fill="#C9302C"/></g>
-          <g transform="translate(21.93 32.27) rotate(-15)"><rect x="-1.25" y="-1" width="2.5" height="2" rx="0.4" fill="rgba(255,255,255,0.4)"/></g>
-          <g transform="translate(26.07 32.27) rotate(15)"><rect x="-1.25" y="-1" width="2.5" height="2" rx="0.4" fill="#C9302C"/></g>
-          <g transform="translate(29.66 34.34) rotate(45)"><rect x="-1.25" y="-1" width="2.5" height="2" rx="0.4" fill="rgba(255,255,255,0.4)"/></g>
-          <circle cx="24" cy="40.5" r="1.8" fill="white"/>
-          <rect x="20" y="43" width="8" height="4" rx="1" fill="white"/>
-        </svg>
+        {footer_icon}
         <span class="logo-text">Mon<span class="logo-accent">Élu</span></span>
       </a>
       <p class="footer-tagline">Une plateforme civique open source qui rend la démocratie plus transparente et accessible.</p>
@@ -942,6 +900,8 @@ def landing(request: Request) -> HTMLResponse:
         db_dot=db_dot,
         db_label=db_label,
         favicon_uri=_FAVICON_URI,
+        nav_icon=_ICON_LIGHT,
+        footer_icon=_ICON_DARK,
     )
     return HTMLResponse(content=html)
 
