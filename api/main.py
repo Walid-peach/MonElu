@@ -361,10 +361,10 @@ _LANDING_HTML = """\
       font-size: 15px; font-weight: 500; transition: background 0.15s, color 0.15s;
     }}
     .btn-secondary:hover {{ background: var(--navy); color: var(--white); }}
-    .hero-trust {{ display: flex; margin-top: 48px; flex-wrap: wrap; gap: 0; }}
+    .hero-trust {{ display: flex; margin-top: 48px; flex-wrap: nowrap; gap: 0; }}
     .trust-item {{
-      font-size: 12px; color: var(--gray-mid); padding: 0 16px;
-      border-right: 1px solid var(--border);
+      font-size: 11px; color: var(--gray-mid); padding: 0 16px;
+      border-right: 1px solid var(--border); white-space: nowrap;
     }}
     .trust-item:first-child {{ padding-left: 0; }}
     .trust-item:last-child {{ border-right: none; }}
