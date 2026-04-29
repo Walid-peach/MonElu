@@ -632,13 +632,12 @@ _LANDING_HTML = """\
     <h1 class="hero-headline">Les données parlementaires claires, neutres et accessibles.</h1>
     <p class="hero-sub">MonÉlu transforme les données officielles de l'Assemblée Nationale en informations compréhensibles pour tous.</p>
     <div class="hero-ctas">
-      <a href="/deputies" class="btn-primary">Découvrir les députés</a>
-      <a href="/votes" class="btn-secondary">Explorer les votes</a>
+      <a href="#search" class="btn-primary">Poser une question →</a>
+      <a href="/docs" class="btn-secondary">Documentation API</a>
     </div>
     <div class="hero-trust">
       <span class="trust-item">🛡 Données officielles · 100% transparentes</span>
       <span class="trust-item">⚖ Neutre &amp; indépendant · Sans parti pris</span>
-      <span class="trust-item">🔓 Accessible à tous · Gratuit et ouvert</span>
     </div>
   </div>
   <div class="hero-right">
