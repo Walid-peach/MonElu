@@ -324,6 +324,109 @@ def chunk_global_stats() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Strategy E — Notable deputy chunks (detailed vote-by-vote, top profiles)
+# ---------------------------------------------------------------------------
+
+NOTABLE_DEPUTIES: dict[str, dict] = {
+    "PA722190": {
+        "name": "Gabriel Attal",
+        "bio": "Ancien Premier ministre (janvier 2025).",
+    },
+    "PA720614": {
+        "name": "Marine Le Pen",
+        "bio": "Cheffe de file du Rassemblement National.",
+    },
+}
+
+
+def chunk_notable_deputies() -> list[dict]:
+    conn = _get_conn()
+    chunks = []
+    try:
+        with conn.cursor() as cur:
+            for deputy_id, info in NOTABLE_DEPUTIES.items():
+                # 15 most recent votes
+                cur.execute(
+                    """
+                    SELECT
+                        d.full_name, d.party, d.department,
+                        v.vote_id, v.vote_title, v.voted_at, v.result,
+                        vp.position
+                    FROM vote_positions vp
+                    JOIN votes v ON vp.vote_id = v.vote_id
+                    JOIN deputies d ON vp.deputy_id = d.deputy_id
+                    WHERE d.deputy_id = %s
+                    ORDER BY v.voted_at DESC
+                    LIMIT 15
+                    """,
+                    (deputy_id,),
+                )
+                recent_rows = cur.fetchall()
+                seen_ids = {r["vote_id"] for r in recent_rows}
+
+                # Up to 15 key legislative votes not already in the recent set
+                cur.execute(
+                    """
+                    SELECT
+                        d.full_name, d.party, d.department,
+                        v.vote_id, v.vote_title, v.voted_at, v.result,
+                        vp.position
+                    FROM vote_positions vp
+                    JOIN votes v ON vp.vote_id = v.vote_id
+                    JOIN deputies d ON vp.deputy_id = d.deputy_id
+                    WHERE d.deputy_id = %s
+                      AND (
+                        v.vote_title ILIKE '%PLFSS%'
+                        OR v.vote_title ILIKE '%projet de loi de finances%'
+                        OR v.vote_title ILIKE '%motion de censure%'
+                        OR v.vote_title ILIKE '%sécurité sociale%'
+                        OR v.vote_title ILIKE '%financement de la sécurité%'
+                        OR (v.vote_title ILIKE '%ensemble%' AND v.vote_title ILIKE '%projet de loi%')
+                      )
+                    ORDER BY v.voted_at DESC
+                    LIMIT 15
+                    """,
+                    (deputy_id,),
+                )
+                key_rows = [r for r in cur.fetchall() if r["vote_id"] not in seen_ids]
+
+                rows = recent_rows + key_rows
+                if not rows:
+                    continue
+
+                first = rows[0]
+                name = first["full_name"] or info["name"]
+                party = first["party"] or "parti non renseigné"
+                dept = first["department"] or "département inconnu"
+                prep = dept_preposition(dept)
+                sep = "" if prep.endswith("'") else " "
+
+                vote_lines = "\n".join(
+                    f"- {row['vote_title']} ({_fmt_date(row['voted_at'])}) : "
+                    f"{row['position']} — vote {row['result']}"
+                    for row in rows
+                )
+
+                content = (
+                    f"{name} est député(e) {prep}{sep}{dept}, "
+                    f"membre du parti {party}.\n"
+                    f"{info['bio']}\n\n"
+                    f"Ses votes récents :\n{vote_lines}"
+                )
+                metadata = {
+                    "chunk_type": "notable_deputy",
+                    "deputy_id": deputy_id,
+                    "full_name": name,
+                    "party": party,
+                }
+                chunks.append({"content": content, "metadata": metadata})
+    finally:
+        conn.close()
+
+    return chunks
+
+
+# ---------------------------------------------------------------------------
 # Combined
 # ---------------------------------------------------------------------------
 
@@ -333,8 +436,9 @@ def chunk_all() -> list[dict]:
     deputy_chunks = chunk_deputies()
     party_chunks = chunk_party_summaries()
     global_chunks = chunk_global_stats()
+    notable_chunks = chunk_notable_deputies()
 
-    all_chunks = vote_chunks + deputy_chunks + party_chunks + global_chunks
+    all_chunks = vote_chunks + deputy_chunks + party_chunks + global_chunks + notable_chunks
 
     # Token accounting
     token_counts = [_count_tokens(c["content"]) for c in all_chunks]
@@ -354,6 +458,7 @@ def chunk_all() -> list[dict]:
     print(f"  Deputy chunks  : {len(deputy_chunks):>6,}")
     print(f"  Party chunks   : {len(party_chunks):>6,}")
     print(f"  Global chunks  : {len(global_chunks):>6,}")
+    print(f"  Notable chunks : {len(notable_chunks):>6,}")
     print(f"  Total chunks   : {len(all_chunks):>6,}")
     print(f"  Avg tokens     : {avg_tokens:>6.1f}")
     print(f"  Total tokens   : {total_tokens:>6,}")
