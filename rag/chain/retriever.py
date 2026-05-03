@@ -20,6 +20,22 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 EMBEDDING_MODEL = "text-embedding-3-small"
 
 
+NOTABLE_DEPUTY_NAMES = {
+    "attal": "PA722190",
+    "gabriel attal": "PA722190",
+    "le pen": "PA720614",
+    "marine le pen": "PA720614",
+}
+
+
+def detect_notable_deputy(question: str) -> str | None:
+    q = question.lower()
+    for name, deputy_id in NOTABLE_DEPUTY_NAMES.items():
+        if name in q:
+            return deputy_id
+    return None
+
+
 def detect_result_filter(question: str) -> str | None:
     q = question.lower()
     if any(w in q for w in ["adopté", "adoptés", "adoption", "passé", "passée"]):
@@ -36,6 +52,7 @@ def retrieve(
     deputy_id: str = None,
 ) -> list[dict]:
     result_filter = detect_result_filter(question)
+    notable_id = detect_notable_deputy(question) if not deputy_id else None
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
@@ -48,6 +65,30 @@ def retrieve(
         with conn.cursor(cursor_factory=psycopg2.extensions.cursor) as plain_cur:
             register_vector(plain_cur)
         with conn.cursor() as cur:
+            # Inject the notable-deputy chunk first (bypasses IVFFlat recall gap)
+            pinned = []
+            if notable_id:
+                cur.execute(
+                    """
+                    SELECT content, metadata,
+                           1 - (embedding <=> %s::vector) AS similarity
+                    FROM document_chunks
+                    WHERE metadata->>'chunk_type' = 'notable_deputy'
+                      AND metadata->>'deputy_id' = %s
+                    """,
+                    (query_vector, notable_id),
+                )
+                for row in cur.fetchall():
+                    pinned.append(
+                        {
+                            "content": row["content"],
+                            "metadata": dict(row["metadata"]),
+                            "similarity": float(row["similarity"]),
+                        }
+                    )
+
+            semantic_k = k - len(pinned)
+            pinned_ids = {p["metadata"].get("deputy_id") for p in pinned}
             cur.execute("SET LOCAL ivfflat.probes = 10")
             cur.execute(
                 """
@@ -69,21 +110,23 @@ def retrieve(
                     result_filter,
                     result_filter,
                     query_vector,
-                    k,
+                    semantic_k + len(pinned),  # fetch extra to allow dedup
                 ),
             )
-            rows = cur.fetchall()
+            semantic_rows = [
+                {
+                    "content": row["content"],
+                    "metadata": dict(row["metadata"]),
+                    "similarity": float(row["similarity"]),
+                }
+                for row in cur.fetchall()
+                if row["metadata"].get("deputy_id") not in pinned_ids
+                or row["metadata"].get("chunk_type") != "notable_deputy"
+            ]
     finally:
         conn.close()
 
-    results = [
-        {
-            "content": row["content"],
-            "metadata": dict(row["metadata"]),
-            "similarity": float(row["similarity"]),
-        }
-        for row in rows
-    ]
+    results = (pinned + semantic_rows)[:k]
 
     top_sim = results[0]["similarity"] if results else 0.0
     print(
