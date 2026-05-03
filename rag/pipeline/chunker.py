@@ -364,31 +364,31 @@ def chunk_notable_deputies() -> list[dict]:
                 recent_rows = cur.fetchall()
                 seen_ids = {r["vote_id"] for r in recent_rows}
 
-                # Up to 15 key legislative votes not already in the recent set
-                cur.execute(
-                    """
-                    SELECT
-                        d.full_name, d.party, d.department,
-                        v.vote_id, v.vote_title, v.voted_at, v.result,
-                        vp.position
-                    FROM vote_positions vp
-                    JOIN votes v ON vp.vote_id = v.vote_id
-                    JOIN deputies d ON vp.deputy_id = d.deputy_id
-                    WHERE d.deputy_id = %s
-                      AND (
-                        v.vote_title ILIKE '%%PLFSS%%'
-                        OR v.vote_title ILIKE '%%projet de loi de finances%%'
-                        OR v.vote_title ILIKE '%%motion de censure%%'
-                        OR v.vote_title ILIKE '%%sécurité sociale%%'
-                        OR v.vote_title ILIKE '%%financement de la sécurité%%'
-                        OR (v.vote_title ILIKE '%%ensemble%%' AND v.vote_title ILIKE '%%projet de loi%%')
-                      )
-                    ORDER BY v.voted_at DESC
-                    LIMIT 15
-                    """,
-                    (deputy_id,),
-                )
-                key_rows = [r for r in cur.fetchall() if r["vote_id"] not in seen_ids]
+                # Most recent vote on each major legislation category (PLFSS, PLF, censure)
+                key_rows = []
+                for pattern in [
+                    "%%financement de la sécurité sociale%%",
+                    "%%projet de loi de finances%%",
+                    "%%motion de censure%%",
+                ]:
+                    cur.execute(
+                        """
+                        SELECT
+                            d.full_name, d.party, d.department,
+                            v.vote_id, v.vote_title, v.voted_at, v.result,
+                            vp.position
+                        FROM vote_positions vp
+                        JOIN votes v ON vp.vote_id = v.vote_id
+                        JOIN deputies d ON vp.deputy_id = d.deputy_id
+                        WHERE d.deputy_id = %s
+                          AND v.vote_title ILIKE %s
+                        ORDER BY v.voted_at DESC
+                        LIMIT 5
+                        """,
+                        (deputy_id, pattern),
+                    )
+                    key_rows += [r for r in cur.fetchall() if r["vote_id"] not in seen_ids]
+                    seen_ids.update(r["vote_id"] for r in key_rows)
 
                 rows = recent_rows + key_rows
                 if not rows:
