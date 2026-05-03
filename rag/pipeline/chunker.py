@@ -487,7 +487,8 @@ if __name__ == "__main__":
     deputy_chunks = chunk_deputies()
     party_chunks = chunk_party_summaries()
     global_chunks = chunk_global_stats()
-    all_chunks = vote_chunks + deputy_chunks + party_chunks + global_chunks
+    notable_chunks = chunk_notable_deputies()
+    all_chunks = vote_chunks + deputy_chunks + party_chunks + global_chunks + notable_chunks
 
     token_counts = [_count_tokens(c["content"]) for c in all_chunks]
     total_tokens = sum(token_counts)
@@ -502,6 +503,7 @@ if __name__ == "__main__":
     print(f"  Deputy chunks    : {len(deputy_chunks):>6,}")
     print(f"  Party chunks     : {len(party_chunks):>6,}")
     print(f"  Global chunks    : {len(global_chunks):>6,}")
+    print(f"  Notable chunks   : {len(notable_chunks):>6,}")
     print(f"  Total chunks     : {len(all_chunks):>6,}")
     print(f"  Avg tokens/chunk : {avg_tokens:>6.1f}")
     print(f"  Total tokens     : {total_tokens:>6,}")

@@ -22,9 +22,7 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 
 NOTABLE_DEPUTY_NAMES = {
     "attal": "PA722190",
-    "gabriel attal": "PA722190",
     "le pen": "PA720614",
-    "marine le pen": "PA720614",
 }
 
 
@@ -38,7 +36,7 @@ def detect_notable_deputy(question: str) -> str | None:
 
 def detect_result_filter(question: str) -> str | None:
     q = question.lower()
-    if any(w in q for w in ["adopté", "adoptés", "adoption", "passé", "passée"]):
+    if any(w in q for w in ["adopté", "adoptés", "adoption"]):
         return "adopté"
     if any(w in q for w in ["rejeté", "rejetés", "rejet", "échoué"]):
         return "rejeté"
@@ -110,7 +108,7 @@ def retrieve(
                     result_filter,
                     result_filter,
                     query_vector,
-                    semantic_k + len(pinned),  # fetch extra to allow dedup
+                    semantic_k + len(pinned),
                 ),
             )
             semantic_rows = [
