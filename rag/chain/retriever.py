@@ -48,6 +48,7 @@ def retrieve(
         with conn.cursor(cursor_factory=psycopg2.extensions.cursor) as plain_cur:
             register_vector(plain_cur)
         with conn.cursor() as cur:
+            cur.execute("SET LOCAL ivfflat.probes = 10")
             cur.execute(
                 """
                 SELECT content, metadata,
