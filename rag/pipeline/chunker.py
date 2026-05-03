@@ -376,12 +376,12 @@ def chunk_notable_deputies() -> list[dict]:
                     JOIN deputies d ON vp.deputy_id = d.deputy_id
                     WHERE d.deputy_id = %s
                       AND (
-                        v.vote_title ILIKE '%PLFSS%'
-                        OR v.vote_title ILIKE '%projet de loi de finances%'
-                        OR v.vote_title ILIKE '%motion de censure%'
-                        OR v.vote_title ILIKE '%sécurité sociale%'
-                        OR v.vote_title ILIKE '%financement de la sécurité%'
-                        OR (v.vote_title ILIKE '%ensemble%' AND v.vote_title ILIKE '%projet de loi%')
+                        v.vote_title ILIKE '%%PLFSS%%'
+                        OR v.vote_title ILIKE '%%projet de loi de finances%%'
+                        OR v.vote_title ILIKE '%%motion de censure%%'
+                        OR v.vote_title ILIKE '%%sécurité sociale%%'
+                        OR v.vote_title ILIKE '%%financement de la sécurité%%'
+                        OR (v.vote_title ILIKE '%%ensemble%%' AND v.vote_title ILIKE '%%projet de loi%%')
                       )
                     ORDER BY v.voted_at DESC
                     LIMIT 15
