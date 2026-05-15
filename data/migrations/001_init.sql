@@ -49,8 +49,12 @@ CREATE INDEX IF NOT EXISTS idx_deputies_party     ON deputies(party_short);
 
 -- ---------------------------------------------------------------------------
 -- Phase 2: semantic search via pgvector
--- Requires the vector extension (pre-installed on Supabase)
+-- Requires the vector extension (pre-installed on Supabase).
+-- This will fail loudly on environments where pgvector is not available —
+-- that is intentional: the embedding index cannot be created without it.
 -- ---------------------------------------------------------------------------
+
+CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS document_chunks (
     id          BIGSERIAL PRIMARY KEY,
