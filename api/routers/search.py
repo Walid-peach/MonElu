@@ -61,5 +61,6 @@ async def search(request: Request, body: SearchRequest):
     except Exception:
         logger.exception("RAG pipeline error for question %r", body.question)
         raise HTTPException(
-            status_code=500, detail="Service temporairement indisponible."
+            status_code=500,
+            detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
         ) from None
