@@ -4,7 +4,7 @@ Runs all three ingestion steps in sequence: deputies → votes → positions.
 Designed to be triggered as a one-off Railway job or run locally.
 
 Usage:
-    python scripts/run_ingestion_prod.py                      # default: since 2025-01-01
+    python scripts/run_ingestion_prod.py                      # default: rolling 12 months
     python scripts/run_ingestion_prod.py --since 2024-07-07   # full legislature 17
     python scripts/run_ingestion_prod.py --since 2026-01-01   # current year only
 """
@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import time
+from datetime import date, timedelta
 
 import psycopg2
 from dotenv import load_dotenv
@@ -55,8 +56,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run full MonÉlu ingestion pipeline")
     parser.add_argument(
         "--since",
-        default="2025-07-01",
-        help="Only ingest votes on or after this date (YYYY-MM-DD). Default: 2025-07-01",
+        default=(date.today() - timedelta(days=365)).isoformat(),
+        help="Only ingest votes on or after this date (YYYY-MM-DD). Default: rolling 12 months.",
     )
     args = parser.parse_args()
 

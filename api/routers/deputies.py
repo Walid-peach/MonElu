@@ -1,22 +1,10 @@
-import os
-
-import psycopg2
-import psycopg2.extras
-from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from api.db import get_conn
 from api.limiter import limiter
 from api.schemas import DeputyDetail, DeputyListResponse, DeputyScorecard, DeputySummary
 
-load_dotenv()
-
 router = APIRouter()
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-
-def get_conn():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
 
 
 @router.get("/", response_model=DeputyListResponse)
@@ -26,8 +14,7 @@ def list_deputies(
     search: str = Query(None, description="Filter by name (case-insensitive)"),
     department: str = Query(None),
 ):
-    conn = get_conn()
-    try:
+    with get_conn() as conn:
         with conn.cursor() as cur:
             filters = []
             params: list = []
@@ -55,8 +42,6 @@ def list_deputies(
                 params + [limit, offset],
             )
             rows = cur.fetchall()
-    finally:
-        conn.close()
 
     return DeputyListResponse(
         total=total,
@@ -68,13 +53,10 @@ def list_deputies(
 
 @router.get("/{deputy_id}", response_model=DeputyDetail)
 def get_deputy(deputy_id: str):
-    conn = get_conn()
-    try:
+    with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM deputies WHERE deputy_id = %s", (deputy_id,))
             row = cur.fetchone()
-    finally:
-        conn.close()
 
     if not row:
         raise HTTPException(status_code=404, detail="Deputy not found")
@@ -84,8 +66,7 @@ def get_deputy(deputy_id: str):
 @router.get("/{deputy_id}/scorecard", response_model=DeputyScorecard)
 @limiter.limit("10/minute")
 def get_scorecard(request: Request, deputy_id: str):
-    conn = get_conn()
-    try:
+    with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT deputy_id, full_name FROM deputies WHERE deputy_id = %s", (deputy_id,)
@@ -108,8 +89,6 @@ def get_scorecard(request: Request, deputy_id: str):
                 (deputy_id,),
             )
             stats = cur.fetchone()
-    finally:
-        conn.close()
 
     total = stats["total_votes"] or 0
     present = stats["present_votes"] or 0

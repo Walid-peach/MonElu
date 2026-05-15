@@ -9,6 +9,7 @@ Usage:
 
 import logging
 import os
+import sys
 
 import psycopg2
 import psycopg2.extras
@@ -34,9 +35,19 @@ def main() -> None:
     log.info("Connecting to database…")
     conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(sql)
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql)
+        except psycopg2.Error as exc:
+            if "vector" in str(exc).lower():
+                log.error(
+                    "pgvector extension is not available. "
+                    "Enable it on Supabase: Database → Extensions → search 'vector' → enable. "
+                    "On local Docker, use the pgvector/pgvector:pg15 image."
+                )
+                sys.exit(1)
+            raise
         log.info("Migration applied successfully.")
 
         # ── Table summary ────────────────────────────────────────────────────
@@ -62,12 +73,12 @@ def main() -> None:
         if ext:
             log.info("pgvector extension: INSTALLED")
         else:
-            log.warning(
+            log.error(
                 "pgvector extension is NOT installed. "
-                "The document_chunks table and embedding index were created but will not be "
-                "functional until pgvector is enabled. On Supabase: "
-                "Database → Extensions → search 'vector' → enable."
+                "Enable it on Supabase: Database → Extensions → search 'vector' → enable. "
+                "On local Docker, use the pgvector/pgvector:pg15 image."
             )
+            sys.exit(1)
 
     finally:
         conn.close()

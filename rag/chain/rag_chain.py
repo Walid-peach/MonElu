@@ -27,7 +27,7 @@ def ask(
 
     user_message = RAG_TEMPLATE.format(context=context, question=question)
 
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[

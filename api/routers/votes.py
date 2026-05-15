@@ -1,21 +1,9 @@
-import os
-
-import psycopg2
-import psycopg2.extras
-from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Query
 
+from api.db import get_conn
 from api.schemas import VoteDetail, VoteListResponse, VotePosition, VoteSummary
 
-load_dotenv()
-
 router = APIRouter()
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-
-def get_conn():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
 
 
 @router.get("/", response_model=VoteListResponse)
@@ -24,8 +12,7 @@ def list_votes(
     offset: int = Query(0, ge=0, le=100_000),
     result: str = Query(None, description="Filter by result: adopté | rejeté"),
 ):
-    conn = get_conn()
-    try:
+    with get_conn() as conn:
         with conn.cursor() as cur:
             filters = []
             params: list = []
@@ -50,8 +37,6 @@ def list_votes(
                 params + [limit, offset],
             )
             rows = cur.fetchall()
-    finally:
-        conn.close()
 
     return VoteListResponse(
         total=total,
@@ -63,8 +48,7 @@ def list_votes(
 
 @router.get("/latest", response_model=list[VoteSummary])
 def latest_votes():
-    conn = get_conn()
-    try:
+    with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -76,15 +60,12 @@ def latest_votes():
                 """
             )
             rows = cur.fetchall()
-    finally:
-        conn.close()
     return [VoteSummary(**r) for r in rows]
 
 
 @router.get("/{vote_id}", response_model=VoteDetail)
 def get_vote(vote_id: str):
-    conn = get_conn()
-    try:
+    with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM votes WHERE vote_id = %s", (vote_id,))
             vote = cur.fetchone()
@@ -103,8 +84,6 @@ def get_vote(vote_id: str):
                 (vote_id,),
             )
             position_rows = cur.fetchall()
-    finally:
-        conn.close()
 
     return VoteDetail(
         **vote,

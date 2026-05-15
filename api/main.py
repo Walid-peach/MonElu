@@ -8,9 +8,8 @@ import logging
 import os
 import re
 import traceback
+from contextlib import asynccontextmanager
 
-import psycopg2
-import psycopg2.extras
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,9 +21,18 @@ from starlette.requests import Request
 
 logger = logging.getLogger(__name__)
 
+from api.db import close_pool, get_conn, init_pool  # noqa: E402
 from api.limiter import limiter  # noqa: E402
 
 load_dotenv()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_pool()
+    yield
+    close_pool()
+
 
 app = FastAPI(
     title="MonÉlu API",
@@ -32,6 +40,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -861,34 +870,32 @@ _LANDING_HTML = """\
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def landing(request: Request) -> HTMLResponse:
-    database_url = os.getenv("DATABASE_URL")
     n_deputies = n_votes = n_positions = "—"
     db_dot = "#ef4444"
     db_label = "Base de données indisponible"
     latest_votes_html = '<div class="votes-empty">Données temporairement indisponibles</div>'
 
     try:
-        conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.RealDictCursor)
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM deputies")
-            n_deputies = f"{cur.fetchone()['count']:,}"
-            cur.execute("SELECT COUNT(*) FROM votes")
-            n_votes = f"{cur.fetchone()['count']:,}"
-            cur.execute("SELECT COUNT(*) FROM vote_positions")
-            n_positions = f"{cur.fetchone()['count']:,}"
-            cur.execute(
-                """
-                SELECT vote_title, result, voted_at,
-                       votes_for, votes_against, abstentions, total_voters
-                FROM votes
-                ORDER BY voted_at DESC
-                LIMIT 5
-                """
-            )
-            rows = cur.fetchall()
-            if rows:
-                latest_votes_html = "".join(_build_vote_row(r) for r in rows)
-        conn.close()
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM deputies")
+                n_deputies = f"{cur.fetchone()['count']:,}"
+                cur.execute("SELECT COUNT(*) FROM votes")
+                n_votes = f"{cur.fetchone()['count']:,}"
+                cur.execute("SELECT COUNT(*) FROM vote_positions")
+                n_positions = f"{cur.fetchone()['count']:,}"
+                cur.execute(
+                    """
+                    SELECT vote_title, result, voted_at,
+                           votes_for, votes_against, abstentions, total_voters
+                    FROM votes
+                    ORDER BY voted_at DESC
+                    LIMIT 5
+                    """
+                )
+                rows = cur.fetchall()
+                if rows:
+                    latest_votes_html = "".join(_build_vote_row(r) for r in rows)
         db_dot = "#4ade80"
         db_label = "Base de données opérationnelle"
     except Exception:
@@ -913,17 +920,15 @@ def landing(request: Request) -> HTMLResponse:
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["Health"])
 def health() -> dict:
-    database_url = os.getenv("DATABASE_URL")
     try:
-        conn = psycopg2.connect(database_url)
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM deputies")
-            deputies = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM votes")
-            votes = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM vote_positions")
-            positions = cur.fetchone()[0]
-        conn.close()
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM deputies")
+                deputies = cur.fetchone()["count"]
+                cur.execute("SELECT COUNT(*) FROM votes")
+                votes = cur.fetchone()["count"]
+                cur.execute("SELECT COUNT(*) FROM vote_positions")
+                positions = cur.fetchone()["count"]
         return {"status": "ok", "deputies": deputies, "votes": votes, "positions": positions}
     except Exception as exc:
         logger.error("Health check DB error: %s", exc)
