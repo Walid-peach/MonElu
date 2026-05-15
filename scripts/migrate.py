@@ -9,6 +9,7 @@ Usage:
 
 import logging
 import os
+import sys
 
 import psycopg2
 import psycopg2.extras
@@ -62,12 +63,12 @@ def main() -> None:
         if ext:
             log.info("pgvector extension: INSTALLED")
         else:
-            log.warning(
+            log.error(
                 "pgvector extension is NOT installed. "
-                "The document_chunks table and embedding index were created but will not be "
-                "functional until pgvector is enabled. On Supabase: "
-                "Database → Extensions → search 'vector' → enable."
+                "Enable it on Supabase: Database → Extensions → search 'vector' → enable. "
+                "On local Docker, use the pgvector/pgvector:pg15 image."
             )
+            sys.exit(1)
 
     finally:
         conn.close()

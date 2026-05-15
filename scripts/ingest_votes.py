@@ -4,7 +4,7 @@ Downloads the Scrutins ZIP export from the Assemblée Nationale open-data portal
 and upserts each scrutin into the votes table.
 
 Usage:
-    python scripts/ingest_votes.py                      # default: since 2025-01-01
+    python scripts/ingest_votes.py                      # default: rolling 12 months
     python scripts/ingest_votes.py --since 2024-07-07   # full legislature 17
     python scripts/ingest_votes.py --since 2026-01-01   # current year only
 """
@@ -16,6 +16,7 @@ import logging
 import os
 import time
 import zipfile
+from datetime import date, timedelta
 
 import psycopg2
 import psycopg2.extras
@@ -213,8 +214,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest AN scrutins into MonÉlu DB")
     parser.add_argument(
         "--since",
-        default="2025-07-01",
-        help="Only ingest votes on or after this date (YYYY-MM-DD). Default: 2025-07-01",
+        default=(date.today() - timedelta(days=365)).isoformat(),
+        help="Only ingest votes on or after this date (YYYY-MM-DD). Default: rolling 12 months.",
     )
     args = parser.parse_args()
 

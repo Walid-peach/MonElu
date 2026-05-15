@@ -1,5 +1,6 @@
 from typing import Literal
 
+import groq
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
@@ -49,5 +50,10 @@ async def search(request: Request, body: SearchRequest):
             chunk_type=body.chunk_type,
         )
         return result
+    except groq.APITimeoutError as e:
+        raise HTTPException(
+            status_code=504,
+            detail="Le service de recherche est temporairement indisponible. Réessayez dans quelques secondes.",
+        ) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"RAG pipeline error: {str(e)}") from e
