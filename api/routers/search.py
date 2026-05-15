@@ -1,3 +1,4 @@
+import logging
 from typing import Literal
 
 import groq
@@ -6,6 +7,8 @@ from pydantic import BaseModel, Field
 
 from api.limiter import limiter
 from rag.chain.rag_chain import ask
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -55,5 +58,9 @@ async def search(request: Request, body: SearchRequest):
             status_code=504,
             detail="Le service de recherche est temporairement indisponible. Réessayez dans quelques secondes.",
         ) from e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"RAG pipeline error: {str(e)}") from e
+    except Exception:
+        logger.exception("RAG pipeline error for question %r", body.question)
+        raise HTTPException(
+            status_code=500,
+            detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
+        ) from None
