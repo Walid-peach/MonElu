@@ -35,9 +35,19 @@ def main() -> None:
     log.info("Connecting to database…")
     conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(sql)
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql)
+        except psycopg2.Error as exc:
+            if "vector" in str(exc).lower():
+                log.error(
+                    "pgvector extension is not available. "
+                    "Enable it on Supabase: Database → Extensions → search 'vector' → enable. "
+                    "On local Docker, use the pgvector/pgvector:pg15 image."
+                )
+                sys.exit(1)
+            raise
         log.info("Migration applied successfully.")
 
         # ── Table summary ────────────────────────────────────────────────────
