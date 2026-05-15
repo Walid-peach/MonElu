@@ -24,11 +24,17 @@ def close_pool() -> None:
 
 @contextmanager
 def get_conn():
+    if _pool is None:
+        raise RuntimeError("DB pool is not initialized — call init_pool() first")
     conn = _pool.getconn()
+    broken = False
     try:
         yield conn
     except Exception:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            broken = True
         raise
     finally:
-        _pool.putconn(conn)
+        _pool.putconn(conn, close=broken)

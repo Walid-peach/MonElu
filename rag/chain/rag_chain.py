@@ -15,6 +15,8 @@ from rag.chain.retriever import retrieve
 
 load_dotenv()
 
+_groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
+
 
 def ask(
     question: str,
@@ -27,8 +29,7 @@ def ask(
 
     user_message = RAG_TEMPLATE.format(context=context, question=question)
 
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
-    response = client.chat.completions.create(
+    response = _groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},

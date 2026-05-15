@@ -53,7 +53,7 @@ Implemented with [slowapi](https://github.com/laurentS/slowapi), keyed by remote
 
 | Scope | Limit |
 |---|---|
-| Global default | 60 req / min |
+| Global default | 30 req / min |
 | `GET /deputies/{id}/scorecard` | 10 req / min |
 
 On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}` · `Retry-After` + `X-RateLimit-*` headers.

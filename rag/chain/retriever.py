@@ -5,6 +5,7 @@ Retrieves relevant chunks from document_chunks using cosine similarity
 via pgvector. The query is embedded with the same model used at index time.
 """
 
+import logging
 import os
 
 import numpy as np
@@ -13,6 +14,8 @@ import psycopg2.extras
 from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
+
+log = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -127,8 +130,11 @@ def retrieve(
     results = (pinned + semantic_rows)[:k]
 
     top_sim = results[0]["similarity"] if results else 0.0
-    print(
-        f"Retrieved {len(results)} chunks — top similarity: {top_sim:.3f} (result_filter={result_filter})"
+    log.debug(
+        "Retrieved %d chunks — top similarity: %.3f (result_filter=%s)",
+        len(results),
+        top_sim,
+        result_filter,
     )
     return results
 
