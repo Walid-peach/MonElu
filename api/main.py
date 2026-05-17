@@ -19,12 +19,12 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
 
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 from api.db import close_pool, get_conn, init_pool  # noqa: E402
 from api.limiter import limiter  # noqa: E402
-
-load_dotenv()
 
 
 @asynccontextmanager
