@@ -10,10 +10,10 @@ import os
 from dotenv import load_dotenv
 from groq import Groq
 
-from rag.chain.prompts import RAG_TEMPLATE, SYSTEM_PROMPT
-from rag.chain.retriever import retrieve
-
 load_dotenv()
+
+from rag.chain.prompts import RAG_TEMPLATE, SYSTEM_PROMPT  # noqa: E402
+from rag.chain.retriever import retrieve  # noqa: E402
 
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
 

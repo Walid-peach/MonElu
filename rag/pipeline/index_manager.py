@@ -16,10 +16,10 @@ import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
 
-from rag.pipeline.chunker import chunk_all
-from rag.pipeline.embedder import embed_and_store
-
 load_dotenv()
+
+from rag.pipeline.chunker import chunk_all  # noqa: E402
+from rag.pipeline.embedder import embed_and_store  # noqa: E402
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
