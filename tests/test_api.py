@@ -5,6 +5,8 @@ from unittest.mock import patch
 import groq
 import httpx
 
+import api.db as _db
+
 _DEPUTY_SUMMARY = {
     "deputy_id": "PA1",
     "full_name": "Jean Martin",
@@ -68,8 +70,6 @@ def test_health_ok(client, mock_cursor):
 
 
 def test_health_db_unavailable(client):
-    import api.db as _db
-
     with patch.object(_db, "_pool", None):
         resp = client.get("/health")
     assert resp.status_code == 200
