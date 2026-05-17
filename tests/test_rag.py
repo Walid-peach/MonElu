@@ -62,7 +62,7 @@ def test_ask_propagates_groq_timeout():
 
 
 def _make_retriever_mocks(semantic_rows: list[dict]):
-    """Return (mock_openai_client, mock_psycopg2_conn) patched for retrieve()."""
+    """Build (mock_openai_client, mock_psycopg2_conn) for use in retrieve() tests."""
     embedding_resp = MagicMock()
     embedding_resp.data = [MagicMock()]
     embedding_resp.data[0].embedding = [0.0] * 1536

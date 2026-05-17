@@ -1,5 +1,10 @@
 """Smoke tests for API routers — no real DB required."""
 
+from unittest.mock import patch
+
+import groq
+import httpx
+
 _DEPUTY_SUMMARY = {
     "deputy_id": "PA1",
     "full_name": "Jean Martin",
@@ -63,8 +68,6 @@ def test_health_ok(client, mock_cursor):
 
 
 def test_health_db_unavailable(client):
-    from unittest.mock import patch
-
     import api.db as _db
 
     with patch.object(_db, "_pool", None):
@@ -156,7 +159,7 @@ def test_latest_votes(client, mock_cursor):
     assert resp.status_code == 200
     items = resp.json()
     assert isinstance(items, list)
-    assert len(items) <= 10
+    assert len(items) == 5
 
 
 def test_get_vote_found(client, mock_cursor):
@@ -174,3 +177,15 @@ def test_get_vote_not_found(client, mock_cursor):
     mock_cursor.fetchone.return_value = None
     resp = client.get("/votes/NONEXISTENT")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Search (RAG)
+# ---------------------------------------------------------------------------
+
+
+def test_search_groq_timeout_returns_504(client):
+    exc = groq.APITimeoutError(request=httpx.Request("POST", "https://api.groq.com"))
+    with patch("api.routers.search.ask", side_effect=exc):
+        resp = client.post("/search/", json={"question": "Combien de députés RN ?"})
+    assert resp.status_code == 504
