@@ -2,11 +2,31 @@
 
 import hashlib
 import json
+import sys
+import types
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ingestion.utils.bronze_writer import BronzeWriter
+# Stub airflow so DAG modules can be imported without a real Airflow install.
+# Must happen before any import of ingestion.dags.*.
+_af = types.ModuleType("airflow")
+_af_ops = types.ModuleType("airflow.operators")
+_af_ops_py = types.ModuleType("airflow.operators.python")
+_af_ops_py.PythonOperator = MagicMock
+_af_ops_py.ShortCircuitOperator = MagicMock
+_dag_ctx = MagicMock()
+_dag_ctx.__enter__ = lambda s: s
+_dag_ctx.__exit__ = MagicMock(return_value=False)
+_af.DAG = MagicMock(return_value=_dag_ctx)
+for _name, _mod in [
+    ("airflow", _af),
+    ("airflow.operators", _af_ops),
+    ("airflow.operators.python", _af_ops_py),
+]:
+    sys.modules.setdefault(_name, _mod)
+
+from ingestion.utils.bronze_writer import BronzeWriter  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # BronzeWriter.read_by_key
