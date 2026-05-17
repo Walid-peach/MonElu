@@ -45,6 +45,12 @@ class BronzeWriter:
         print(f"Bronze written: s3://{self.bucket}/{key} ({len(data)} records)")
         return f"s3://{self.bucket}/{key}"
 
+    def read_by_key(self, path: str) -> list[dict]:
+        """Read a specific Bronze file by its full s3:// path (as returned by write())."""
+        key = path.removeprefix(f"s3://{self.bucket}/")
+        obj = self.s3.get_object(Bucket=self.bucket, Key=key)
+        return json.loads(obj["Body"].read())
+
     def read_latest(self, entity: str) -> list[dict]:
         """Read the most recent Bronze file for an entity."""
         prefix = f"{entity}/"

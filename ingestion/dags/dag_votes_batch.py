@@ -43,7 +43,8 @@ def fetch_votes(**context):
     votes = fetch_all_scrutins(since=since)
 
     writer = BronzeWriter()
-    current_hash = hashlib.md5(json.dumps(votes, sort_keys=True).encode()).hexdigest()
+    stable = sorted(votes, key=lambda v: v.get("uid", ""))
+    current_hash = hashlib.md5(json.dumps(stable, sort_keys=True).encode()).hexdigest()
     last_hash = writer.get_last_hash("votes")
 
     if current_hash == last_hash:
