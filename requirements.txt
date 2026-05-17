@@ -16,3 +16,6 @@ tiktoken==0.7.0
 mlflow==3.11.1
 pgvector==0.3.2
 numpy>=1.26.0
+# Phase 3 — Orchestration
+boto3>=1.34.0
+great-expectations==0.18.12
