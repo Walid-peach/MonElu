@@ -54,11 +54,10 @@ class BronzeWriter:
         )
         if "Contents" not in response:
             return []
-        latest = sorted(
-            response["Contents"],
-            key=lambda x: x["LastModified"],
-            reverse=True,
-        )[0]
+        contents = [o for o in response["Contents"] if not o["Key"].endswith("_last_hash.txt")]
+        if not contents:
+            return []
+        latest = sorted(contents, key=lambda x: x["LastModified"], reverse=True)[0]
         obj = self.s3.get_object(Bucket=self.bucket, Key=latest["Key"])
         return json.loads(obj["Body"].read())
 

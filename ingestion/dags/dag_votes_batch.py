@@ -4,7 +4,7 @@ import sys
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, ShortCircuitOperator
 
 sys.path.insert(0, "/opt/airflow")
 
@@ -31,13 +31,14 @@ def check_session_active(**context):
 
 
 def fetch_votes(**context):
-    """Download votes ZIP and parse JSON files."""
+    """Download votes ZIP for the last 7 days and parse JSON files."""
     from scripts.ingest_votes import fetch_all_scrutins
 
-    votes = fetch_all_scrutins()
+    since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
+    votes = fetch_all_scrutins(since=since)
     context["ti"].xcom_push(key="votes", value=votes)
     context["ti"].xcom_push(key="count", value=len(votes))
-    print(f"Fetched {len(votes)} votes")
+    print(f"Fetched {len(votes)} votes since {since}")
     return len(votes)
 
 
@@ -101,7 +102,7 @@ with DAG(
     catchup=False,
     tags=["monelu", "ingestion", "votes"],
 ) as dag:
-    t0 = PythonOperator(
+    t0 = ShortCircuitOperator(
         task_id="check_session_active",
         python_callable=check_session_active,
     )

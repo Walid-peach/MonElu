@@ -15,6 +15,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -23,7 +24,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
-        run: python scripts/run_ingestion_prod.py --since 2025-01-01
+        run: python scripts/run_ingestion_prod.py --since $(date -d '30 days ago' +%Y-%m-%d)
 
       - name: Rebuild RAG index
         env:
