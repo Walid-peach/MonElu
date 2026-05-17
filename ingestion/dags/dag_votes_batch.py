@@ -31,12 +31,30 @@ def check_session_active(**context):
 
 
 def fetch_votes(**context):
-    """Download votes ZIP for the last 7 days and parse JSON files."""
+    """
+    Download votes ZIP for the last 7 days, write raw data to Bronze, and push
+    only the S3 path via XCom. Avoids the 48 KB Airflow metadata-DB XCom limit
+    that would be hit if the full dataset were serialised directly.
+    """
+    from ingestion.utils.bronze_writer import BronzeWriter
     from scripts.ingest_votes import fetch_all_scrutins
 
     since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
     votes = fetch_all_scrutins(since=since)
-    context["ti"].xcom_push(key="votes", value=votes)
+
+    writer = BronzeWriter()
+    current_hash = hashlib.md5(json.dumps(votes, sort_keys=True).encode()).hexdigest()
+    last_hash = writer.get_last_hash("votes")
+
+    if current_hash == last_hash:
+        print("No changes detected — skipping Bronze write")
+        context["ti"].xcom_push(key="bronze_path", value=None)
+    else:
+        path = writer.write("votes", votes, context["ds"])
+        writer.save_hash("votes", current_hash)
+        context["ti"].xcom_push(key="bronze_path", value=path)
+        print(f"Bronze written: {path}")
+
     context["ti"].xcom_push(key="count", value=len(votes))
     print(f"Fetched {len(votes)} votes since {since}")
     return len(votes)
@@ -44,9 +62,16 @@ def fetch_votes(**context):
 
 def validate_votes(**context):
     """Run Great Expectations suite — fail DAG if validation fails."""
+    from ingestion.utils.bronze_writer import BronzeWriter
     from quality.expectations.votes_suite import validate_votes as gx_validate
 
-    votes = context["ti"].xcom_pull(key="votes", task_ids="fetch_votes")
+    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_votes")
+    if bronze_path is None:
+        print("No new Bronze data — skipping validation")
+        return
+
+    writer = BronzeWriter()
+    votes = writer.read_latest("votes")
     result = gx_validate(votes)
     if not result["success"]:
         raise ValueError(
@@ -56,31 +81,28 @@ def validate_votes(**context):
     print(f"GE validation passed: {result['evaluated']} checks")
 
 
-def check_and_write_bronze(**context):
-    """
-    Hash-based change detection.
-    Only write to Bronze if data has changed since last run.
-    """
-    from ingestion.utils.bronze_writer import BronzeWriter
-
-    votes = context["ti"].xcom_pull(key="votes", task_ids="fetch_votes")
-    writer = BronzeWriter()
-    current_hash = hashlib.md5(json.dumps(votes, sort_keys=True).encode()).hexdigest()
-    last_hash = writer.get_last_hash("votes")
-    if current_hash == last_hash:
-        print("No changes detected — skipping Bronze write")
+def write_bronze(**context):
+    """Bronze write already happened in fetch_votes — just log the path."""
+    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_votes")
+    if bronze_path is None:
+        print("No changes detected — Bronze write was skipped")
         return "skipped"
-    path = writer.write("votes", votes, context["ds"])
-    writer.save_hash("votes", current_hash)
-    print(f"Bronze written: {path}")
-    return path
+    print(f"Bronze path confirmed: {bronze_path}")
+    return bronze_path
 
 
 def upsert_postgres(**context):
-    """Upsert votes into PostgreSQL from XCom."""
+    """Upsert votes into PostgreSQL, reading from Bronze S3 instead of XCom."""
+    from ingestion.utils.bronze_writer import BronzeWriter
     from scripts.ingest_votes import upsert_votes
 
-    votes = context["ti"].xcom_pull(key="votes", task_ids="fetch_votes")
+    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_votes")
+    if bronze_path is None:
+        print("No new Bronze data — skipping Postgres upsert")
+        return
+
+    writer = BronzeWriter()
+    votes = writer.read_latest("votes")
     upsert_votes(votes)
     print(f"Upserted {len(votes)} votes to Postgres")
 
@@ -119,7 +141,7 @@ with DAG(
 
     t3 = PythonOperator(
         task_id="write_bronze",
-        python_callable=check_and_write_bronze,
+        python_callable=write_bronze,
     )
 
     t4 = PythonOperator(
