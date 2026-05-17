@@ -17,6 +17,7 @@ from pgvector.psycopg2 import register_vector
 
 log = logging.getLogger(__name__)
 
+# Must run before os.getenv() calls below so .env is loaded before module-level vars are set.
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
