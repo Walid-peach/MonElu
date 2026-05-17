@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio
 
 start:
 	docker compose up -d
@@ -46,3 +46,6 @@ rag-eval:
 
 mlflow-ui:
 	venv/bin/mlflow ui --port 5001
+
+setup-minio:
+	venv/bin/python3 scripts/setup_minio.py
