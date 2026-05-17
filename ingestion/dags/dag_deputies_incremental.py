@@ -48,13 +48,13 @@ def fetch_deputies(**context):
 
 def validate_deputies(**context):
     """Run Great Expectations suite — fail DAG if validation fails."""
-    from ingestion.utils.bronze_writer import BronzeWriter
-    from quality.expectations.deputies_suite import validate_deputies as gx_validate
-
     bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_deputies")
     if bronze_path is None:
         print("No new Bronze data — skipping validation")
         return
+
+    from ingestion.utils.bronze_writer import BronzeWriter
+    from quality.expectations.deputies_suite import validate_deputies as gx_validate
 
     writer = BronzeWriter()
     deputies = writer.read_by_key(bronze_path)

@@ -19,10 +19,17 @@ _dag_ctx = MagicMock()
 _dag_ctx.__enter__ = lambda s: s
 _dag_ctx.__exit__ = MagicMock(return_value=False)
 _af.DAG = MagicMock(return_value=_dag_ctx)
+_votes_suite = types.ModuleType("quality.expectations.votes_suite")
+_votes_suite.validate_votes = MagicMock()
+_deputies_suite = types.ModuleType("quality.expectations.deputies_suite")
+_deputies_suite.validate_deputies = MagicMock()
+
 for _name, _mod in [
     ("airflow", _af),
     ("airflow.operators", _af_ops),
     ("airflow.operators.python", _af_ops_py),
+    ("quality.expectations.votes_suite", _votes_suite),
+    ("quality.expectations.deputies_suite", _deputies_suite),
 ]:
     sys.modules.setdefault(_name, _mod)
 

@@ -63,13 +63,13 @@ def fetch_votes(**context):
 
 def validate_votes(**context):
     """Run Great Expectations suite — fail DAG if validation fails."""
-    from ingestion.utils.bronze_writer import BronzeWriter
-    from quality.expectations.votes_suite import validate_votes as gx_validate
-
     bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_votes")
     if bronze_path is None:
         print("No new Bronze data — skipping validation")
         return
+
+    from ingestion.utils.bronze_writer import BronzeWriter
+    from quality.expectations.votes_suite import validate_votes as gx_validate
 
     writer = BronzeWriter()
     votes = writer.read_by_key(bronze_path)
