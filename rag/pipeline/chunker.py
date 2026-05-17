@@ -16,6 +16,7 @@ import psycopg2.extras
 import tiktoken
 from dotenv import load_dotenv
 
+# Must run before os.getenv() calls below so .env is loaded before module-level vars are set.
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
