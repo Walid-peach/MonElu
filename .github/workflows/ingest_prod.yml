@@ -1,0 +1,36 @@
+name: MonÉlu Production Ingestion
+
+on:
+  schedule:
+    - cron: '0 */6 * * 1-5'  # Every 6 hours, weekdays only
+  workflow_dispatch:           # Manual trigger button
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run ingestion
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
+        run: python scripts/run_ingestion_prod.py --since 2025-01-01
+
+      - name: Rebuild RAG index
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python -m rag.pipeline.index_manager build
+
+      - name: Notify success
+        run: echo "Ingestion completed at $(date)"
