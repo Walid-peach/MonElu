@@ -112,18 +112,18 @@ def main():
 
     print("\nBuilding GP/PARPOL organe map …")
     gp_map = build_gp_map(zf)
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Organe map ({len(gp_map)} entries)")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     for uid, name in sorted(gp_map.items(), key=lambda x: x[1]):
         print(f"  {uid}  →  {name}")
 
     print("\nBuilding deputy → party map …")
     deputy_map = build_deputy_party_map(zf, gp_map)
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Deputy party map: {len(deputy_map)} deputies resolved")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
 
     # Party breakdown
     from collections import Counter

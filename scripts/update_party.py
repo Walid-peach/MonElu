@@ -174,9 +174,9 @@ def update_departments(conn) -> None:
 
 
 def print_summary(conn) -> None:
-    print(f"\n{'='*56}")
+    print(f"\n{'=' * 56}")
     print("  VERIFICATION")
-    print(f"{'='*56}")
+    print(f"{'=' * 56}")
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         print("\n  Party breakdown:")
