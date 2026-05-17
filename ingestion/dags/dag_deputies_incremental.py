@@ -17,11 +17,30 @@ default_args = {
 
 
 def fetch_deputies(**context):
-    """Download deputies ZIP and parse JSON files."""
+    """
+    Download deputies ZIP, write raw data to Bronze, and push only the S3 path
+    via XCom. Avoids the Airflow metadata-DB XCom size limit (~48 KB) that
+    would be hit by the full 577-deputy JSON payload (~150–300 KB).
+    """
+    from ingestion.utils.bronze_writer import BronzeWriter
     from scripts.ingest_deputies import fetch_all_deputies
 
     deputies = fetch_all_deputies()
-    context["ti"].xcom_push(key="deputies", value=deputies)
+
+    writer = BronzeWriter()
+    stable = sorted(deputies, key=lambda d: d.get("uid", ""))
+    current_hash = hashlib.md5(json.dumps(stable, sort_keys=True).encode()).hexdigest()
+    last_hash = writer.get_last_hash("deputies")
+
+    if current_hash == last_hash:
+        print("No changes detected — skipping Bronze write")
+        context["ti"].xcom_push(key="bronze_path", value=None)
+    else:
+        path = writer.write("deputies", deputies, context["ds"])
+        writer.save_hash("deputies", current_hash)
+        context["ti"].xcom_push(key="bronze_path", value=path)
+        print(f"Bronze written: {path}")
+
     context["ti"].xcom_push(key="count", value=len(deputies))
     print(f"Fetched {len(deputies)} deputies")
     return len(deputies)
@@ -29,9 +48,16 @@ def fetch_deputies(**context):
 
 def validate_deputies(**context):
     """Run Great Expectations suite — fail DAG if validation fails."""
+    from ingestion.utils.bronze_writer import BronzeWriter
     from quality.expectations.deputies_suite import validate_deputies as gx_validate
 
-    deputies = context["ti"].xcom_pull(key="deputies", task_ids="fetch_deputies")
+    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_deputies")
+    if bronze_path is None:
+        print("No new Bronze data — skipping validation")
+        return
+
+    writer = BronzeWriter()
+    deputies = writer.read_by_key(bronze_path)
     result = gx_validate(deputies)
     if not result["success"]:
         raise ValueError(
@@ -41,31 +67,28 @@ def validate_deputies(**context):
     print(f"GE validation passed: {result['evaluated']} checks")
 
 
-def check_and_write_bronze(**context):
-    """
-    Hash-based change detection.
-    Only write to Bronze if data has changed since last run.
-    """
-    from ingestion.utils.bronze_writer import BronzeWriter
-
-    deputies = context["ti"].xcom_pull(key="deputies", task_ids="fetch_deputies")
-    writer = BronzeWriter()
-    current_hash = hashlib.md5(json.dumps(deputies, sort_keys=True).encode()).hexdigest()
-    last_hash = writer.get_last_hash("deputies")
-    if current_hash == last_hash:
-        print("No changes detected — skipping Bronze write")
+def confirm_bronze(**context):
+    """Log the Bronze path written by fetch_deputies — the actual write happened there."""
+    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_deputies")
+    if bronze_path is None:
+        print("No changes detected — Bronze write was skipped")
         return "skipped"
-    path = writer.write("deputies", deputies, context["ds"])
-    writer.save_hash("deputies", current_hash)
-    print(f"Bronze written: {path}")
-    return path
+    print(f"Bronze path confirmed: {bronze_path}")
+    return bronze_path
 
 
 def upsert_postgres(**context):
-    """Upsert deputies into PostgreSQL from XCom."""
+    """Upsert deputies into PostgreSQL, reading from Bronze S3 instead of XCom."""
+    from ingestion.utils.bronze_writer import BronzeWriter
     from scripts.ingest_deputies import upsert_deputies
 
-    deputies = context["ti"].xcom_pull(key="deputies", task_ids="fetch_deputies")
+    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_deputies")
+    if bronze_path is None:
+        print("No new Bronze data — skipping Postgres upsert")
+        return
+
+    writer = BronzeWriter()
+    deputies = writer.read_by_key(bronze_path)
     upsert_deputies(deputies)
     print(f"Upserted {len(deputies)} deputies to Postgres")
 
@@ -90,8 +113,8 @@ with DAG(
     )
 
     t3 = PythonOperator(
-        task_id="write_bronze",
-        python_callable=check_and_write_bronze,
+        task_id="confirm_bronze",
+        python_callable=confirm_bronze,
     )
 
     t4 = PythonOperator(

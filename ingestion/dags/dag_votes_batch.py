@@ -72,7 +72,7 @@ def validate_votes(**context):
         return
 
     writer = BronzeWriter()
-    votes = writer.read_latest("votes")
+    votes = writer.read_by_key(bronze_path)
     result = gx_validate(votes)
     if not result["success"]:
         raise ValueError(
@@ -82,8 +82,8 @@ def validate_votes(**context):
     print(f"GE validation passed: {result['evaluated']} checks")
 
 
-def write_bronze(**context):
-    """Bronze write already happened in fetch_votes — just log the path."""
+def confirm_bronze(**context):
+    """Log the Bronze path written by fetch_votes — the actual write happened there."""
     bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_votes")
     if bronze_path is None:
         print("No changes detected — Bronze write was skipped")
@@ -103,7 +103,7 @@ def upsert_postgres(**context):
         return
 
     writer = BronzeWriter()
-    votes = writer.read_latest("votes")
+    votes = writer.read_by_key(bronze_path)
     upsert_votes(votes)
     print(f"Upserted {len(votes)} votes to Postgres")
 
@@ -141,8 +141,8 @@ with DAG(
     )
 
     t3 = PythonOperator(
-        task_id="write_bronze",
-        python_callable=write_bronze,
+        task_id="confirm_bronze",
+        python_callable=confirm_bronze,
     )
 
     t4 = PythonOperator(
