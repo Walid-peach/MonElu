@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes
 
 start:
 	docker compose up -d
@@ -46,3 +46,30 @@ rag-eval:
 
 mlflow-ui:
 	venv/bin/mlflow ui --port 5001
+
+setup-minio:
+	venv/bin/python3 scripts/setup_minio.py
+
+airflow-up:
+	docker compose up -d airflow-webserver airflow-scheduler
+
+airflow-down:
+	docker compose stop airflow-webserver airflow-scheduler airflow-init postgres-airflow
+
+airflow-logs:
+	docker compose logs -f airflow-scheduler
+
+minio-up:
+	docker compose up -d minio
+
+airflow-ui:
+	open http://localhost:8080
+
+minio-ui:
+	open http://localhost:9001
+
+dag-deputies:
+	docker compose exec airflow-scheduler airflow dags trigger deputies_incremental
+
+dag-votes:
+	docker compose exec airflow-scheduler airflow dags trigger votes_batch

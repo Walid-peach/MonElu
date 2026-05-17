@@ -50,3 +50,6 @@ notes/
 
 # MLflow — local experiment tracking, not source code
 mlruns/
+
+# Airflow runtime logs and symlinks
+logs/

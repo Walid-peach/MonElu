@@ -194,7 +194,7 @@ ON CONFLICT (vote_id) DO UPDATE SET
 """
 
 
-def upsert_votes(records: list[dict]) -> None:
+def _upsert_records(records: list[dict]) -> None:
     conn = psycopg2.connect(DATABASE_URL)
     try:
         with conn:
@@ -203,6 +203,23 @@ def upsert_votes(records: list[dict]) -> None:
         log.info("Upsert complete — %d votes written.", len(records))
     finally:
         conn.close()
+
+
+def fetch_all_votes(since: str | None = None) -> list[dict]:
+    """Alias for fetch_all_scrutins — DAG-friendly name."""
+    return fetch_all_scrutins(since=since)
+
+
+def upsert_votes(raw_items: list[dict]) -> int:
+    """Parse raw scrutin dicts and upsert into votes table. Returns count written."""
+    records = [r for item in raw_items if (r := parse_vote(item)) is not None]
+    log.info(
+        "Parsed %d valid records (skipped %d unparseable).",
+        len(records),
+        len(raw_items) - len(records),
+    )
+    _upsert_records(records)
+    return len(records)
 
 
 # ---------------------------------------------------------------------------
@@ -224,15 +241,7 @@ def main() -> None:
 
     log.info("=== Starting vote ingestion (since %s) ===", args.since)
     raw_items = fetch_all_scrutins(since=args.since)
-
-    records = [r for item in raw_items if (r := parse_vote(item)) is not None]
-    log.info(
-        "Parsed %d valid records (skipped %d unparseable).",
-        len(records),
-        len(raw_items) - len(records),
-    )
-
-    upsert_votes(records)
+    upsert_votes(raw_items)
     log.info("=== Vote ingestion finished ===")
 
 

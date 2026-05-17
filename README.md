@@ -17,6 +17,41 @@ MonÉlu is a civic transparency platform that makes the voting record of every d
 
 ---
 
+## Phase 3 — Orchestration & Bronze Layer
+
+### Local development
+
+```bash
+make airflow-up    # Start Airflow (webserver + scheduler)
+make minio-up      # Start MinIO (local S3)
+make setup-minio   # Create Bronze buckets
+make airflow-ui    # Open Airflow at localhost:8080
+make minio-ui      # Open MinIO at localhost:9001
+```
+
+### DAGs
+
+| DAG | Schedule | Description |
+|-----|----------|-------------|
+| `deputies_incremental` | Weekly Mon 6am | Deputies → GE → Bronze → Postgres |
+| `votes_batch` | Every 2h weekdays | Votes → GE → Bronze → Postgres → positions |
+
+### Production
+
+GitHub Actions runs ingestion every 6 hours on weekdays.
+Trigger manually: **GitHub → Actions → MonÉlu Production Ingestion → Run workflow**
+
+Required secrets (Settings → Secrets and variables → Actions):
+`DATABASE_URL` · `AN_API_BASE_URL` · `OPENAI_API_KEY` · `GROQ_API_KEY`
+
+### Bronze layer
+
+Raw data lands in MinIO at `s3://monelu-bronze/{entity}/year=Y/month=M/day=D/`
+
+Hash-based change detection — skips write if data unchanged since last run.
+
+---
+
 ## Architecture
 
 ```
@@ -65,6 +100,8 @@ On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}`
 **Core:** FastAPI · PostgreSQL + pgvector (Supabase) · Python 3.11 · Railway · slowapi
 
 **Phase 2:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
+
+**Phase 3:** Apache Airflow 2.8 · MinIO (S3-compatible Bronze) · Great Expectations 0.18 · GitHub Actions
 
 **Code quality:** ruff (lint + format) · pre-commit
 
@@ -124,6 +161,16 @@ make rag-clear      truncate document_chunks
 make rag-test       run 3 sample queries end-to-end
 make rag-eval       MLflow k=3 vs k=5 evaluation
 make mlflow-ui      MLflow dashboard at http://localhost:5001
+
+make airflow-up     start Airflow webserver + scheduler
+make airflow-down   stop all Airflow services
+make airflow-logs   tail scheduler logs
+make airflow-ui     Airflow UI at http://localhost:8080
+make minio-up       start MinIO
+make minio-ui       MinIO console at http://localhost:9001
+make setup-minio    create Bronze buckets (monelu-bronze, monelu-checkpoints)
+make dag-deputies   manually trigger deputies_incremental DAG
+make dag-votes      manually trigger votes_batch DAG
 ```
 
 ---
@@ -197,6 +244,22 @@ make mlflow-ui      MLflow dashboard at http://localhost:5001
 | `check_db_size.py` | Prints table sizes and DB storage usage |
 
 All scripts use exponential-backoff retry (5 attempts, 2 s base) and upsert via `ON CONFLICT ... DO UPDATE`.
+
+### Orchestration (`ingestion/`) — Phase 3
+
+```
+ingestion/
+├── dags/
+│   ├── dag_deputies_incremental.py   Weekly: fetch → GE validate → Bronze → Postgres
+│   └── dag_votes_batch.py            Bi-hourly: check session → fetch → GE → Bronze → Postgres → positions
+├── operators/                        (reserved for custom Airflow operators)
+└── utils/
+    └── bronze_writer.py              MinIO S3 writer — partitioned by date, hash-based deduplication
+quality/
+└── expectations/
+    ├── deputies_suite.py             GE suite: row count 500–600, uid not null
+    └── votes_suite.py                GE suite: row count, required columns, dateScrutin not null
+```
 
 ### RAG Pipeline (`rag/`) — Phase 2
 
