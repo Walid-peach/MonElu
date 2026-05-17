@@ -26,10 +26,10 @@ CANDIDATES = [
     "/static/openData/repository/17/amo/deputes_actifs_mandats_actifs_organes"
     "/AMO10_deputes_actifs_mandats_actifs_organes.json.zip",
     # Dedicated organes export (17th legislature)
-    "/static/openData/repository/17/amo/tous_les_organes" "/AMO30_tous_les_organes.json.zip",
+    "/static/openData/repository/17/amo/tous_les_organes/AMO30_tous_les_organes.json.zip",
     # Alternative naming
-    "/static/openData/repository/17/amo/tous_les_organes" "/AMO20_tous_les_organes.json.zip",
-    "/static/openData/repository/17/amo/organes" "/AMO30_organes.json.zip",
+    "/static/openData/repository/17/amo/tous_les_organes/AMO20_tous_les_organes.json.zip",
+    "/static/openData/repository/17/amo/organes/AMO30_organes.json.zip",
 ]
 
 
@@ -48,9 +48,9 @@ def try_download(path: str) -> bytes | None:
 
 
 def inspect_zip(raw: bytes, label: str) -> None:
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  ZIP contents — {label}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
         names = zf.namelist()
@@ -116,17 +116,17 @@ def inspect_zip(raw: bytes, label: str) -> None:
             print(f"    {t:<20} {c:>4} entries")
 
         if gp_samples:
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"  GP (Groupe Parlementaire) samples — {len(gp_samples)} found")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             for fname, item in gp_samples:
                 print(f"\n  File: {fname}")
                 print(json.dumps(item, ensure_ascii=False, indent=2)[:2000])
 
         if parpol_samples:
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"  PARPOL samples — {len(parpol_samples)} found")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             for fname, item in parpol_samples:
                 print(f"\n  File: {fname}")
                 print(json.dumps(item, ensure_ascii=False, indent=2)[:1000])

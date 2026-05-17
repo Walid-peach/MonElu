@@ -451,9 +451,9 @@ def chunk_all() -> list[dict]:
         if t > TOKEN_WARN_THRESHOLD
     ]
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("  Chunker summary")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     print(f"  Vote chunks    : {len(vote_chunks):>6,}")
     print(f"  Deputy chunks  : {len(deputy_chunks):>6,}")
     print(f"  Party chunks   : {len(party_chunks):>6,}")
@@ -470,7 +470,7 @@ def chunk_all() -> list[dict]:
         )
     else:
         print(f"  Token check    : OK — all chunks within {TOKEN_WARN_THRESHOLD}-token limit")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     return all_chunks
 
@@ -496,9 +496,9 @@ if __name__ == "__main__":
 
     oversized = [t for t in token_counts if t > TOKEN_WARN_THRESHOLD]
 
-    print(f"\n{'='*56}")
+    print(f"\n{'=' * 56}")
     print("  CHUNKER REPORT")
-    print(f"{'='*56}")
+    print(f"{'=' * 56}")
     print(f"  Vote chunks      : {len(vote_chunks):>6,}")
     print(f"  Deputy chunks    : {len(deputy_chunks):>6,}")
     print(f"  Party chunks     : {len(party_chunks):>6,}")
@@ -508,7 +508,7 @@ if __name__ == "__main__":
     print(f"  Avg tokens/chunk : {avg_tokens:>6.1f}")
     print(f"  Total tokens     : {total_tokens:>6,}")
     print(f"  Chunks > {TOKEN_WARN_THRESHOLD}t     : {len(oversized):>6,}")
-    print(f"{'='*56}")
+    print(f"{'=' * 56}")
 
     print("\n--- SAMPLE: vote chunk ---")
     sample_vote = vote_chunks[0]
