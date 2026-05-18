@@ -206,6 +206,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == "build":
+        if args.since:
+            from datetime import date as _date
+
+            try:
+                _date.fromisoformat(args.since)
+            except ValueError:
+                parser.error(f"--since must be YYYY-MM-DD, got: {args.since!r}")
         build_index(since=args.since)
     elif args.command == "stats":
         get_index_stats()

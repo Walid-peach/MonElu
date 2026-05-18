@@ -195,6 +195,14 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.since:
+        try:
+            from datetime import date as _date
+
+            _date.fromisoformat(args.since)
+        except ValueError:
+            parser.error(f"--since must be YYYY-MM-DD, got: {args.since!r}")
+
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
 
