@@ -42,15 +42,18 @@ jobs:
         run: pip install -r requirements-ingest.txt
 
       - name: Run ingestion
+        id: ingest
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
         run: python scripts/run_ingestion_prod.py --since $(date -d '30 days ago' +%Y-%m-%d)
 
       - name: Install RAG dependencies
+        if: steps.ingest.outputs.new_votes != '0'
         run: pip install -r requirements-rag.txt
 
       - name: Rebuild RAG index
+        if: steps.ingest.outputs.new_votes != '0'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
