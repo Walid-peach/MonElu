@@ -71,19 +71,31 @@ def _fmt_date(dt) -> str:
     return dt.strftime("%d/%m/%Y")
 
 
-def chunk_votes() -> list[dict]:
+def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
     conn = _get_conn()
     chunks = []
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT vote_id, vote_title, result, voted_at,
-                       votes_for, votes_against, abstentions, total_voters
-                FROM votes
-                ORDER BY voted_at DESC
-                """
-            )
+            if vote_ids:
+                cur.execute(
+                    """
+                    SELECT vote_id, vote_title, result, voted_at,
+                           votes_for, votes_against, abstentions, total_voters
+                    FROM votes
+                    WHERE vote_id = ANY(%s)
+                    ORDER BY voted_at DESC
+                    """,
+                    (list(vote_ids),),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT vote_id, vote_title, result, voted_at,
+                           votes_for, votes_against, abstentions, total_voters
+                    FROM votes
+                    ORDER BY voted_at DESC
+                    """
+                )
             rows = cur.fetchall()
     finally:
         conn.close()
