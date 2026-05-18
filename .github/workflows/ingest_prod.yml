@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Force IPv4 for Supabase connectivity
+        run: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+
       - name: Run ingestion
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
