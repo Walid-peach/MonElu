@@ -2,7 +2,7 @@ name: MonÉlu Production Ingestion
 
 on:
   schedule:
-    - cron: '0 */6 * * 1-5'  # Every 6 hours, weekdays only
+    - cron: '0 6 * * 1-5'  # Once per day at 06:00 UTC, weekdays only
   workflow_dispatch:           # Manual trigger button
 
 jobs:
