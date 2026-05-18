@@ -348,10 +348,12 @@ NOTABLE_DEPUTIES: dict[str, dict] = {
     "PA722190": {
         "name": "Gabriel Attal",
         "bio": "Ancien Premier ministre (janvier 2025).",
+        "keywords": ["attal"],
     },
     "PA720614": {
         "name": "Marine Le Pen",
         "bio": "Cheffe de file du Rassemblement National.",
+        "keywords": ["le pen"],
     },
 }
 
