@@ -16,8 +16,11 @@ venv/
 env/
 ENV/
 
-# Environment variables
+# Environment variables — never commit real credentials
 .env
+.env.local
+.env.*.local
+.env.production
 
 # IDE
 .idea/
