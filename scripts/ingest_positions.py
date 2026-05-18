@@ -4,9 +4,11 @@ Reads the same Scrutins ZIP and extracts individual deputy positions
 (pour / contre / abstention / nonVotant) into the vote_positions table.
 
 Usage:
-    python scripts/ingest_positions.py
+    python scripts/ingest_positions.py                    # all known votes
+    python scripts/ingest_positions.py --since 2026-04-18 # only votes on/after date
 """
 
+import argparse
 import io
 import json
 import logging
@@ -185,21 +187,36 @@ def upsert_positions(records: list[dict]) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Ingest deputy positions from scrutins ZIP")
+    parser.add_argument(
+        "--since",
+        default=None,
+        help="Only ingest positions for votes on/after this date (YYYY-MM-DD). Default: all known votes.",
+    )
+    args = parser.parse_args()
+
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
 
     raw = fetch_scrutin_zip()
 
-    # Pre-load the set of known vote_ids and deputy_ids to skip orphan positions
     log.info("Loading known vote_ids and deputy_ids…")
     conn = connect_with_retry()
     with conn.cursor() as cur:
-        cur.execute("SELECT vote_id FROM votes")
+        if args.since:
+            cur.execute("SELECT vote_id FROM votes WHERE date >= %s", (args.since,))
+        else:
+            cur.execute("SELECT vote_id FROM votes")
         known_votes: set[str] = {r[0] for r in cur.fetchall()}
         cur.execute("SELECT deputy_id FROM deputies")
         known_deputies: set[str] = {r[0] for r in cur.fetchall()}
     conn.close()
-    log.info("Known votes: %d  Known deputies: %d", len(known_votes), len(known_deputies))
+    log.info(
+        "Known votes: %d  Known deputies: %d%s",
+        len(known_votes),
+        len(known_deputies),
+        f"  (since {args.since})" if args.since else "",
+    )
 
     log.info("=== Starting position ingestion ===")
     total_written = 0

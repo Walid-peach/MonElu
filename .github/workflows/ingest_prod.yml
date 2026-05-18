@@ -34,15 +34,21 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+          cache-dependency-path: |
+            requirements-ingest.txt
+            requirements-rag.txt
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install ingestion dependencies
+        run: pip install -r requirements-ingest.txt
 
       - name: Run ingestion
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
         run: python scripts/run_ingestion_prod.py --since $(date -d '30 days ago' +%Y-%m-%d)
+
+      - name: Install RAG dependencies
+        run: pip install -r requirements-rag.txt
 
       - name: Rebuild RAG index
         env:

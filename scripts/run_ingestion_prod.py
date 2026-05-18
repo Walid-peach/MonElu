@@ -70,7 +70,7 @@ def main() -> None:
 
     t_deputies = run_step("Deputies", "ingest_deputies.py")
     t_votes = run_step("Votes", "ingest_votes.py", ["--since", args.since])
-    t_positions = run_step("Positions", "ingest_positions.py")
+    t_positions = run_step("Positions", "ingest_positions.py", ["--since", args.since])
 
     total_elapsed = time.perf_counter() - total_start
 
