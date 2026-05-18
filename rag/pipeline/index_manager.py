@@ -10,7 +10,6 @@ CLI:
 """
 
 import os
-import sys
 
 import psycopg2
 import psycopg2.extras
@@ -18,7 +17,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from rag.pipeline.chunker import chunk_all  # noqa: E402
+from rag.pipeline.chunker import (  # noqa: E402
+    chunk_all,
+    chunk_deputies,
+    chunk_global_stats,
+    chunk_notable_deputies,
+    chunk_party_summaries,
+    chunk_votes,
+)
 from rag.pipeline.embedder import embed_and_store  # noqa: E402
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -28,16 +34,105 @@ def _get_conn():
     return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
 
 
-def build_index() -> None:
-    """Truncate document_chunks, regenerate all chunks, embed and store."""
-    print("Clearing existing index...")
-    clear_index()
+def build_index(since: str | None = None) -> None:
+    """Build or incrementally update the document_chunks index.
 
-    print("Building chunks from database...")
-    chunks = chunk_all()
-    print(f"Starting embedding — {len(chunks)} chunks to process.\n")
+    Without `since`: full rebuild (truncate + re-embed everything).
+    With `since`: only embed new votes, refresh affected deputy chunks,
+    and always refresh the small aggregate chunks (party/global/notable).
+    """
+    if since is None:
+        print("Clearing existing index...")
+        clear_index()
+        print("Building chunks from database...")
+        chunks = chunk_all()
+        print(f"Starting embedding — {len(chunks)} chunks to process.\n")
+        embed_and_store(chunks)
+        return
 
-    embed_and_store(chunks)
+    # --- Incremental path ---
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            # Vote IDs present in votes but not yet in document_chunks
+            cur.execute(
+                """
+                SELECT v.vote_id
+                FROM votes v
+                WHERE v.voted_at >= %s
+                  AND NOT EXISTS (
+                      SELECT 1 FROM document_chunks dc
+                      WHERE dc.metadata->>'chunk_type' = 'vote'
+                        AND dc.metadata->>'vote_id' = v.vote_id
+                  )
+                """,
+                (since,),
+            )
+            new_vote_ids = {r["vote_id"] for r in cur.fetchall()}
+
+            if new_vote_ids:
+                cur.execute(
+                    "SELECT DISTINCT deputy_id FROM vote_positions WHERE vote_id = ANY(%s)",
+                    (list(new_vote_ids),),
+                )
+                affected_deputy_ids = {r["deputy_id"] for r in cur.fetchall()}
+            else:
+                affected_deputy_ids = set()
+    finally:
+        conn.close()
+
+    chunks: list[dict] = []
+
+    if new_vote_ids:
+        print(
+            f"New votes to index: {len(new_vote_ids)}  Affected deputies: {len(affected_deputy_ids)}"
+        )
+        chunks += chunk_votes(vote_ids=new_vote_ids)
+        # Delete stale deputy chunks and rebuild for affected deputies only
+        _delete_chunks_by_ids("deputy", "deputy_id", affected_deputy_ids)
+        chunks += chunk_deputies(deputy_ids=affected_deputy_ids)
+    else:
+        print(f"No new votes since {since} — skipping vote and deputy chunks.")
+
+    # Aggregate chunks are always small (~15 total) and always stale after a run
+    _delete_aggregate_chunks()
+    chunks += chunk_party_summaries()
+    chunks += chunk_global_stats()
+    chunks += chunk_notable_deputies()
+
+    if chunks:
+        print(f"Embedding {len(chunks)} chunks...\n")
+        embed_and_store(chunks)
+    else:
+        print("Nothing to embed.")
+
+
+def _delete_chunks_by_ids(chunk_type: str, id_key: str, ids: set[str]) -> None:
+    if not ids:
+        return
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM document_chunks WHERE metadata->>'chunk_type' = %s AND metadata->>%s = ANY(%s)",
+                (chunk_type, id_key, list(ids)),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _delete_aggregate_chunks() -> None:
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM document_chunks WHERE metadata->>'chunk_type' = ANY(%s)",
+                (["party", "global_stats", "notable_deputy"],),
+            )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def clear_index() -> None:
@@ -93,10 +188,33 @@ def get_index_stats() -> None:
 
 
 if __name__ == "__main__":
-    commands = {"build": build_index, "stats": get_index_stats, "clear": clear_index}
+    import argparse
 
-    if len(sys.argv) != 2 or sys.argv[1] not in commands:
-        print(f"Usage: python -m rag.pipeline.index_manager [{' | '.join(commands)}]")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(prog="rag.pipeline.index_manager")
+    sub = parser.add_subparsers(dest="command", required=True)
 
-    commands[sys.argv[1]]()
+    build_p = sub.add_parser("build", help="Build or incrementally update the index")
+    build_p.add_argument(
+        "--since",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Incremental mode: only embed votes on/after this date",
+    )
+    sub.add_parser("stats", help="Print chunk counts by type")
+    sub.add_parser("clear", help="Truncate document_chunks")
+
+    args = parser.parse_args()
+
+    if args.command == "build":
+        if args.since:
+            from datetime import date as _date
+
+            try:
+                _date.fromisoformat(args.since)
+            except ValueError:
+                parser.error(f"--since must be YYYY-MM-DD, got: {args.since!r}")
+        build_index(since=args.since)
+    elif args.command == "stats":
+        get_index_stats()
+    elif args.command == "clear":
+        clear_index()

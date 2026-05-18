@@ -71,19 +71,31 @@ def _fmt_date(dt) -> str:
     return dt.strftime("%d/%m/%Y")
 
 
-def chunk_votes() -> list[dict]:
+def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
     conn = _get_conn()
     chunks = []
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT vote_id, vote_title, result, voted_at,
-                       votes_for, votes_against, abstentions, total_voters
-                FROM votes
-                ORDER BY voted_at DESC
-                """
-            )
+            if vote_ids:
+                cur.execute(
+                    """
+                    SELECT vote_id, vote_title, result, voted_at,
+                           votes_for, votes_against, abstentions, total_voters
+                    FROM votes
+                    WHERE vote_id = ANY(%s)
+                    ORDER BY voted_at DESC
+                    """,
+                    (list(vote_ids),),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT vote_id, vote_title, result, voted_at,
+                           votes_for, votes_against, abstentions, total_voters
+                    FROM votes
+                    ORDER BY voted_at DESC
+                    """
+                )
             rows = cur.fetchall()
     finally:
         conn.close()
@@ -114,13 +126,10 @@ def chunk_votes() -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def chunk_deputies() -> list[dict]:
+def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
     conn = _get_conn()
     chunks = []
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
+    _DEPUTY_SELECT = """
                 SELECT d.deputy_id, d.full_name, d.party, d.department,
                        COUNT(vp.position_id) AS total_votes,
                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour')       AS pour_count,
@@ -133,10 +142,17 @@ def chunk_deputies() -> list[dict]:
                        ) AS presence_rate
                 FROM deputies d
                 LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
-                GROUP BY d.deputy_id
-                ORDER BY d.full_name
                 """
-            )
+    try:
+        with conn.cursor() as cur:
+            if deputy_ids:
+                cur.execute(
+                    _DEPUTY_SELECT
+                    + "WHERE d.deputy_id = ANY(%s) GROUP BY d.deputy_id ORDER BY d.full_name",
+                    (list(deputy_ids),),
+                )
+            else:
+                cur.execute(_DEPUTY_SELECT + "GROUP BY d.deputy_id ORDER BY d.full_name")
             rows = cur.fetchall()
     finally:
         conn.close()
