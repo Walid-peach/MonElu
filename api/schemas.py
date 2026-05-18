@@ -50,7 +50,9 @@ class DeputyScorecard(_Base):
     deputy_id: str
     full_name: str
     total_votes: int = Field(description="Votes the deputy was eligible to participate in")
-    present_votes: int = Field(description="Votes where position is not 'absent'")
+    present_votes: int = Field(
+        description="Votes where position is not 'nonVotant' (present in chamber but did not vote)"
+    )
     presence_rate: float = Field(description="present_votes / total_votes, 0–1")
     votes_for: int
     votes_against: int
