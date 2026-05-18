@@ -39,7 +39,17 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Force IPv4 for Supabase connectivity
-        run: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          HOST=$(python3 -c "from urllib.parse import urlparse; import os; print(urlparse(os.environ['DATABASE_URL']).hostname)")
+          IPV4=$(dig +short A "$HOST" | grep -E '^[0-9]+\.' | head -1)
+          if [ -n "$IPV4" ]; then
+            echo "$IPV4 $HOST" | sudo tee -a /etc/hosts
+            echo "Mapped $HOST → $IPV4"
+          else
+            echo "::warning::Could not resolve $HOST to an IPv4 address"
+          fi
 
       - name: Run ingestion
         env:
