@@ -23,6 +23,21 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Startup secret validation — warn loudly if keys are missing or placeholder
+# ---------------------------------------------------------------------------
+_PLACEHOLDER_PREFIXES = ("sk-...", "gsk_...", "your-", "changeme", "")
+
+
+def _warn_if_placeholder(var: str, value: str | None) -> None:
+    if not value or any(value.strip().startswith(p) for p in _PLACEHOLDER_PREFIXES):
+        logger.warning("⚠️  %s is not set or looks like a placeholder — RAG features may fail", var)
+
+
+_warn_if_placeholder("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
+_warn_if_placeholder("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
+_warn_if_placeholder("DATABASE_URL", os.getenv("DATABASE_URL"))
+
 from api.db import close_pool, get_conn, init_pool  # noqa: E402
 from api.limiter import limiter  # noqa: E402
 
