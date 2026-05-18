@@ -41,7 +41,9 @@ jobs:
       - name: Run ingestion
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
+          # AN_API_BASE_URL is intentionally omitted — the script defaults to
+          # https://data.assemblee-nationale.fr. Injecting an unset secret
+          # would pass an empty string and override that default.
         run: python scripts/run_ingestion_prod.py --since $(date -d '30 days ago' +%Y-%m-%d)
 
       - name: Rebuild RAG index
