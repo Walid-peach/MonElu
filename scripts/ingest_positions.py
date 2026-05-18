@@ -204,7 +204,7 @@ def main() -> None:
     conn = connect_with_retry()
     with conn.cursor() as cur:
         if args.since:
-            cur.execute("SELECT vote_id FROM votes WHERE date >= %s", (args.since,))
+            cur.execute("SELECT vote_id FROM votes WHERE voted_at >= %s", (args.since,))
         else:
             cur.execute("SELECT vote_id FROM votes")
         known_votes: set[str] = {r[0] for r in cur.fetchall()}
