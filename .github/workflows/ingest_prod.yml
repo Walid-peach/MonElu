@@ -11,6 +11,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate required secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          missing=()
+          [ -z "$DATABASE_URL" ]   && missing+=(DATABASE_URL)
+          [ -z "$OPENAI_API_KEY" ] && missing+=(OPENAI_API_KEY)
+          [ -z "$GROQ_API_KEY" ]   && missing+=(GROQ_API_KEY)
+          # AN_API_BASE_URL is optional — the script has a hardcoded fallback
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
+            echo "Add them at: Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          echo "All required secrets are present."
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
