@@ -126,13 +126,14 @@ def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def chunk_deputies() -> list[dict]:
+def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
     conn = _get_conn()
     chunks = []
     try:
         with conn.cursor() as cur:
+            filter_clause = "WHERE d.deputy_id = ANY(%s)" if deputy_ids else ""
             cur.execute(
-                """
+                f"""
                 SELECT d.deputy_id, d.full_name, d.party, d.department,
                        COUNT(vp.position_id) AS total_votes,
                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour')       AS pour_count,
@@ -145,9 +146,11 @@ def chunk_deputies() -> list[dict]:
                        ) AS presence_rate
                 FROM deputies d
                 LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
+                {filter_clause}
                 GROUP BY d.deputy_id
                 ORDER BY d.full_name
-                """
+                """,
+                (list(deputy_ids),) if deputy_ids else (),
             )
             rows = cur.fetchall()
     finally:
