@@ -10,7 +10,6 @@ CLI:
 """
 
 import os
-import sys
 
 import psycopg2
 import psycopg2.extras
@@ -189,10 +188,26 @@ def get_index_stats() -> None:
 
 
 if __name__ == "__main__":
-    commands = {"build": build_index, "stats": get_index_stats, "clear": clear_index}
+    import argparse
 
-    if len(sys.argv) != 2 or sys.argv[1] not in commands:
-        print(f"Usage: python -m rag.pipeline.index_manager [{' | '.join(commands)}]")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(prog="rag.pipeline.index_manager")
+    sub = parser.add_subparsers(dest="command", required=True)
 
-    commands[sys.argv[1]]()
+    build_p = sub.add_parser("build", help="Build or incrementally update the index")
+    build_p.add_argument(
+        "--since",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Incremental mode: only embed votes on/after this date",
+    )
+    sub.add_parser("stats", help="Print chunk counts by type")
+    sub.add_parser("clear", help="Truncate document_chunks")
+
+    args = parser.parse_args()
+
+    if args.command == "build":
+        build_index(since=args.since)
+    elif args.command == "stats":
+        get_index_stats()
+    elif args.command == "clear":
+        clear_index()

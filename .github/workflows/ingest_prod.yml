@@ -55,7 +55,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: python -m rag.pipeline.index_manager build
+        run: python -m rag.pipeline.index_manager build --since $(date -d '30 days ago' +%Y-%m-%d)
 
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
