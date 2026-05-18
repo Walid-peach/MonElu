@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes venv
 
 start:
 	docker compose up -d
@@ -73,3 +73,6 @@ dag-deputies:
 
 dag-votes:
 	docker compose exec airflow-scheduler airflow dags trigger votes_batch
+
+venv:
+	python3.12 -m venv venv && venv/bin/pip install -r requirements.txt -r requirements-ingest.txt -r requirements-rag.txt
