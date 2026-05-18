@@ -68,6 +68,10 @@ def main() -> None:
     log.info("Ingestion window: since %s", args.since)
     total_start = time.perf_counter()
 
+    conn = psycopg2.connect(database_url)
+    votes_before = row_count(conn, "votes")
+    conn.close()
+
     t_deputies = run_step("Deputies", "ingest_deputies.py")
     t_votes = run_step("Votes", "ingest_votes.py", ["--since", args.since])
     t_positions = run_step("Positions", "ingest_positions.py", ["--since", args.since])
@@ -79,6 +83,14 @@ def main() -> None:
     n_votes = row_count(conn, "votes")
     n_positions = row_count(conn, "vote_positions")
     conn.close()
+
+    new_votes = n_votes - votes_before
+    log.info("New votes ingested this run: %d", new_votes)
+
+    github_output = os.getenv("GITHUB_OUTPUT")
+    if github_output:
+        with open(github_output, "a") as f:
+            f.write(f"new_votes={new_votes}\n")
 
     log.info("")
     log.info("╔══════════════════════════════════════╗")
