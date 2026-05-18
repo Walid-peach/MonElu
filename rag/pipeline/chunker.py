@@ -359,88 +359,103 @@ NOTABLE_DEPUTIES: dict[str, dict] = {
 
 
 def chunk_notable_deputies() -> list[dict]:
+    deputy_ids = list(NOTABLE_DEPUTIES.keys())
+    if not deputy_ids:
+        return []
+
     conn = _get_conn()
-    chunks = []
     try:
         with conn.cursor() as cur:
-            for deputy_id, info in NOTABLE_DEPUTIES.items():
-                # 15 most recent votes
-                cur.execute(
-                    """
-                    SELECT
-                        d.full_name, d.party, d.department,
-                        v.vote_id, v.vote_title, v.voted_at, v.result,
-                        vp.position
-                    FROM vote_positions vp
-                    JOIN votes v ON vp.vote_id = v.vote_id
-                    JOIN deputies d ON vp.deputy_id = d.deputy_id
-                    WHERE d.deputy_id = %s
-                    ORDER BY v.voted_at DESC
-                    LIMIT 15
-                    """,
-                    (deputy_id,),
-                )
-                recent_rows = cur.fetchall()
-                seen_ids = {r["vote_id"] for r in recent_rows}
-
-                # Most recent vote on each major legislation category (PLFSS, PLF, censure)
-                key_rows = []
-                for pattern in [
-                    "%%financement de la sécurité sociale%%",
-                    "%%projet de loi de finances%%",
-                    "%%motion de censure%%",
-                ]:
-                    cur.execute(
-                        """
-                        SELECT
-                            d.full_name, d.party, d.department,
-                            v.vote_id, v.vote_title, v.voted_at, v.result,
-                            vp.position
-                        FROM vote_positions vp
-                        JOIN votes v ON vp.vote_id = v.vote_id
-                        JOIN deputies d ON vp.deputy_id = d.deputy_id
-                        WHERE d.deputy_id = %s
-                          AND v.vote_title ILIKE %s
+            cur.execute(
+                """
+                SELECT
+                    vp.deputy_id,
+                    d.full_name, d.party, d.department,
+                    v.vote_id, v.vote_title, v.voted_at, v.result, vp.position,
+                    CASE
+                        WHEN v.vote_title ILIKE '%%financement de la sécurité sociale%%' THEN 'plfss'
+                        WHEN v.vote_title ILIKE '%%projet de loi de finances%%'           THEN 'plf'
+                        WHEN v.vote_title ILIKE '%%motion de censure%%'                   THEN 'censure'
+                        ELSE NULL
+                    END AS key_category,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY vp.deputy_id ORDER BY v.voted_at DESC
+                    ) AS recent_rn,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY vp.deputy_id,
+                        CASE
+                            WHEN v.vote_title ILIKE '%%financement de la sécurité sociale%%' THEN 'plfss'
+                            WHEN v.vote_title ILIKE '%%projet de loi de finances%%'           THEN 'plf'
+                            WHEN v.vote_title ILIKE '%%motion de censure%%'                   THEN 'censure'
+                            ELSE NULL
+                        END
                         ORDER BY v.voted_at DESC
-                        LIMIT 5
-                        """,
-                        (deputy_id, pattern),
-                    )
-                    key_rows += [r for r in cur.fetchall() if r["vote_id"] not in seen_ids]
-                    seen_ids.update(r["vote_id"] for r in key_rows)
-
-                rows = recent_rows + key_rows
-                if not rows:
-                    continue
-
-                first = rows[0]
-                name = first["full_name"] or info["name"]
-                party = first["party"] or "parti non renseigné"
-                dept = first["department"] or "département inconnu"
-                prep = dept_preposition(dept)
-                sep = "" if prep.endswith("'") else " "
-
-                vote_lines = "\n".join(
-                    f"- {row['vote_title']} ({_fmt_date(row['voted_at'])}) : "
-                    f"{row['position']} — vote {row['result']}"
-                    for row in rows
-                )
-
-                content = (
-                    f"{name} est député(e) {prep}{sep}{dept}, "
-                    f"membre du parti {party}.\n"
-                    f"{info['bio']}\n\n"
-                    f"Ses votes récents :\n{vote_lines}"
-                )
-                metadata = {
-                    "chunk_type": "notable_deputy",
-                    "deputy_id": deputy_id,
-                    "full_name": name,
-                    "party": party,
-                }
-                chunks.append({"content": content, "metadata": metadata})
+                    ) AS cat_rn
+                FROM vote_positions vp
+                JOIN votes v ON vp.vote_id = v.vote_id
+                JOIN deputies d ON vp.deputy_id = d.deputy_id
+                WHERE vp.deputy_id = ANY(%s)
+                ORDER BY vp.deputy_id, v.voted_at DESC
+                """,
+                (deputy_ids,),
+            )
+            all_rows = cur.fetchall()
     finally:
         conn.close()
+
+    # Group rows by deputy then apply per-deputy limits client-side
+    by_deputy: dict[str, list] = {did: [] for did in deputy_ids}
+    for row in all_rows:
+        by_deputy[row["deputy_id"]].append(row)
+
+    chunks: list[dict] = []
+    for deputy_id, rows in by_deputy.items():
+        info = NOTABLE_DEPUTIES[deputy_id]
+        seen_vote_ids: set[str] = set()
+        selected: list[dict] = []
+
+        for row in rows:
+            if row["recent_rn"] <= 15 and row["vote_id"] not in seen_vote_ids:
+                selected.append(row)
+                seen_vote_ids.add(row["vote_id"])
+
+        for row in rows:
+            if (
+                row["key_category"] is not None
+                and row["cat_rn"] <= 5
+                and row["vote_id"] not in seen_vote_ids
+            ):
+                selected.append(row)
+                seen_vote_ids.add(row["vote_id"])
+
+        if not selected:
+            continue
+
+        first = selected[0]
+        name = first["full_name"] or info["name"]
+        party = first["party"] or "parti non renseigné"
+        dept = first["department"] or "département inconnu"
+        prep = dept_preposition(dept)
+        sep = "" if prep.endswith("'") else " "
+
+        vote_lines = "\n".join(
+            f"- {row['vote_title']} ({_fmt_date(row['voted_at'])}) : "
+            f"{row['position']} — vote {row['result']}"
+            for row in selected
+        )
+        content = (
+            f"{name} est député(e) {prep}{sep}{dept}, "
+            f"membre du parti {party}.\n"
+            f"{info['bio']}\n\n"
+            f"Ses votes récents :\n{vote_lines}"
+        )
+        metadata = {
+            "chunk_type": "notable_deputy",
+            "deputy_id": deputy_id,
+            "full_name": name,
+            "party": party,
+        }
+        chunks.append({"content": content, "metadata": metadata})
 
     return chunks
 
