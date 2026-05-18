@@ -12,6 +12,14 @@ repos:
         args: [--maxkb=500]
       - id: debug-statements        # blocks accidental breakpoint() / pdb
 
+  # Secret detection — blocks API keys, tokens, credentials from being committed
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: \.env\.example$
+
   # Ruff — lint + format (replaces flake8, isort, black)
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.9
