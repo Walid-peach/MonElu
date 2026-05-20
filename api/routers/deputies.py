@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query
+from starlette.requests import Request
 
 from api.db import get_conn
 from api.limiter import limiter
