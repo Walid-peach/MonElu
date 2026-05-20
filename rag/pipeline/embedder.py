@@ -18,6 +18,8 @@ from dotenv import load_dotenv
 from openai import OpenAI, RateLimitError
 from pgvector.psycopg2 import register_vector
 
+from rag.db_utils import connect_with_retry
+
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -58,7 +60,7 @@ def embed_and_store(chunks: list[dict], batch_size: int = 100) -> None:
         texts = [c["content"] for c in batch]
         embeddings, tokens_used = _embed_batch(client, texts)
 
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = connect_with_retry(DATABASE_URL)
         try:
             register_vector(conn)
             with conn.cursor() as cur:

@@ -163,7 +163,7 @@ def parse_deputy(item: dict) -> dict | None:
             "photo_url": photo_url,
         }
     except Exception as exc:
-        log.debug("Could not parse deputy item: %s — %s", item, exc)
+        log.warning("Could not parse deputy item (uid=%s): %s", item.get("uid"), exc)
         return None
 
 
@@ -210,11 +210,17 @@ def _upsert_records(records: list[dict]) -> None:
 def upsert_deputies(raw_items: list[dict]) -> int:
     """Parse raw acteur dicts and upsert into deputies table. Returns count written."""
     records = [r for item in raw_items if (r := parse_deputy(item)) is not None]
-    log.info(
-        "Parsed %d valid records (skipped %d unparseable).",
-        len(records),
-        len(raw_items) - len(records),
-    )
+    skipped = len(raw_items) - len(records)
+    skip_rate = skipped / len(raw_items) if raw_items else 0.0
+    log.info("Parsed %d valid records (skipped %d unparseable).", len(records), skipped)
+    if skip_rate > 0.05:
+        log.error(
+            "High parse failure rate: %d/%d records skipped (%.0f%%). "
+            "Check the AN data format for unexpected changes.",
+            skipped,
+            len(raw_items),
+            skip_rate * 100,
+        )
     _upsert_records(records)
     return len(records)
 
