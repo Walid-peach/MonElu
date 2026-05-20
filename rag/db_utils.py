@@ -32,3 +32,4 @@ def connect_with_retry(database_url: str, **kwargs) -> psycopg2.extensions.conne
                 _MAX_RETRIES,
             )
             time.sleep(wait)
+    raise RuntimeError("connect_with_retry: exhausted retries without raising")
