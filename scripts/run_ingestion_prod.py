@@ -19,6 +19,7 @@ from datetime import date, timedelta
 
 import psycopg2
 from dotenv import load_dotenv
+from psycopg2 import sql
 
 load_dotenv()
 
@@ -39,7 +40,7 @@ def row_count(conn, table: str) -> int:
     if table not in _ALLOWED_TABLES:
         raise ValueError(f"Unknown table: {table!r}")
     with conn.cursor() as cur:
-        cur.execute(f"SELECT COUNT(*) FROM {table}")
+        cur.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table)))
         return cur.fetchone()[0]
 
 
