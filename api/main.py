@@ -116,7 +116,7 @@ app.add_exception_handler(Exception, _unhandled_exception_handler)
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
-ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+ALLOWED_ORIGINS = [o for o in os.getenv("CORS_ORIGINS", "").split(",") if o]
 
 app.add_middleware(
     CORSMiddleware,

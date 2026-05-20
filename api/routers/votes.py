@@ -1,13 +1,17 @@
 from fastapi import APIRouter, HTTPException, Query
+from starlette.requests import Request
 
 from api.db import get_conn
+from api.limiter import limiter
 from api.schemas import VoteDetail, VoteListResponse, VotePosition, VoteSummary
 
 router = APIRouter()
 
 
 @router.get("/", response_model=VoteListResponse)
+@limiter.limit("30/minute")
 def list_votes(
+    request: Request,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0, le=100_000),
     result: str = Query(None, description="Filter by result: adopté | rejeté"),
@@ -47,7 +51,8 @@ def list_votes(
 
 
 @router.get("/latest", response_model=list[VoteSummary])
-def latest_votes():
+@limiter.limit("30/minute")
+def latest_votes(request: Request):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -64,7 +69,8 @@ def latest_votes():
 
 
 @router.get("/{vote_id}", response_model=VoteDetail)
-def get_vote(vote_id: str):
+@limiter.limit("30/minute")
+def get_vote(request: Request, vote_id: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM votes WHERE vote_id = %s", (vote_id,))
