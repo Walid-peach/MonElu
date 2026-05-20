@@ -9,7 +9,9 @@ router = APIRouter()
 
 
 @router.get("/", response_model=DeputyListResponse)
+@limiter.limit("30/minute")
 def list_deputies(
+    request: Request,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0, le=100_000),
     search: str = Query(None, description="Filter by name (case-insensitive)"),
@@ -53,7 +55,8 @@ def list_deputies(
 
 
 @router.get("/{deputy_id}", response_model=DeputyDetail)
-def get_deputy(deputy_id: str):
+@limiter.limit("30/minute")
+def get_deputy(request: Request, deputy_id: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM deputies WHERE deputy_id = %s", (deputy_id,))
