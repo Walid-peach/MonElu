@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
 
+from rag.db_utils import connect_with_retry
+
 log = logging.getLogger(__name__)
 
 # Must run before os.getenv() calls below so .env is loaded before module-level vars are set.
@@ -60,7 +62,7 @@ def retrieve(
     response = client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
     query_vector = np.array(response.data[0].embedding, dtype=np.float32)
 
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    conn = connect_with_retry(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         # register_vector must receive a plain cursor — RealDictCursor breaks
         # its internal dict(fetchall()) unpacking

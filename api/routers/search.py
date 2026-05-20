@@ -52,7 +52,12 @@ async def search(request: Request, body: SearchRequest):
             deputy_id=body.deputy_id,
             chunk_type=body.chunk_type,
         )
-        return result
+        return SearchResponse(
+            answer=result["answer"],
+            question=result["question"],
+            chunks_retrieved=result["chunks_retrieved"],
+            sources=[SourceItem(**s) for s in result["sources"]],
+        )
     except groq.APITimeoutError as e:
         raise HTTPException(
             status_code=504,
