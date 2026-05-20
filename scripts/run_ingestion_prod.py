@@ -32,7 +32,12 @@ log = logging.getLogger(__name__)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+_ALLOWED_TABLES = {"deputies", "votes", "vote_positions", "document_chunks"}
+
+
 def row_count(conn, table: str) -> int:
+    if table not in _ALLOWED_TABLES:
+        raise ValueError(f"Unknown table: {table!r}")
     with conn.cursor() as cur:
         cur.execute(f"SELECT COUNT(*) FROM {table}")
         return cur.fetchone()[0]
