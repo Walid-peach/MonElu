@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from psycopg2 import sql
 from starlette.requests import Request
 
 from api.db import get_conn
@@ -13,31 +14,33 @@ router = APIRouter()
 def list_votes(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0, le=100_000),
+    offset: int = Query(0, ge=0, le=10_000),
     result: str = Query(None, description="Filter by result: adopté | rejeté"),
 ):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            filters = []
+            conditions: list[sql.Composable] = []
             params: list = []
 
             if result:
-                filters.append("result = %s")
+                conditions.append(sql.SQL("result = %s"))
                 params.append(result)
 
-            where = ("WHERE " + " AND ".join(filters)) if filters else ""
+            where = (
+                sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
+                if conditions
+                else sql.SQL("")
+            )
 
-            cur.execute(f"SELECT COUNT(*) FROM votes {where}", params)
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM votes") + where, params)
             total = cur.fetchone()["count"]
 
             cur.execute(
-                f"""
-                SELECT vote_id, voted_at, vote_title, result,
-                       votes_for, votes_against, abstentions, total_voters
-                FROM votes {where}
-                ORDER BY voted_at DESC
-                LIMIT %s OFFSET %s
-                """,
+                sql.SQL(
+                    "SELECT vote_id, voted_at, vote_title, result,"
+                    " votes_for, votes_against, abstentions, total_voters"
+                    " FROM votes {} ORDER BY voted_at DESC LIMIT %s OFFSET %s"
+                ).format(where),
                 params + [limit, offset],
             )
             rows = cur.fetchall()
