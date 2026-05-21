@@ -939,6 +939,7 @@ def landing(request: Request) -> HTMLResponse:
 @app.get("/health", tags=["Health"])
 def health() -> JSONResponse:
     services: dict[str, str] = {}
+    deputies = votes = positions = None
 
     try:
         with get_conn() as conn:
@@ -953,7 +954,6 @@ def health() -> JSONResponse:
     except Exception as exc:
         logger.error("Health check DB error: %s", exc)
         services["db"] = "degraded"
-        deputies = votes = positions = None
 
     services["openai"] = "degraded" if _is_placeholder(os.getenv("OPENAI_API_KEY")) else "ok"
     services["groq"] = "degraded" if _is_placeholder(os.getenv("GROQ_API_KEY")) else "ok"
