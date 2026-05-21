@@ -1,6 +1,7 @@
 """Smoke tests for API routers — no real DB required."""
 
-from unittest.mock import patch
+import asyncio
+from unittest.mock import MagicMock, patch
 
 import groq
 import httpx
@@ -60,10 +61,17 @@ _POSITION = {
 
 def test_health_ok(client, mock_cursor):
     mock_cursor.fetchone.side_effect = [{"count": 577}, {"count": 821}, {"count": 289_411}]
-    resp = client.get("/health")
+    with patch.dict(
+        "os.environ",
+        {"OPENAI_API_KEY": "sk-real", "GROQ_API_KEY": "gsk_real"},  # pragma: allowlist secret
+    ):
+        resp = client.get("/health")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
+    assert data["db"] == "ok"
+    assert data["openai"] == "ok"
+    assert data["groq"] == "ok"
     assert data["deputies"] == 577
     assert data["votes"] == 821
     assert data["positions"] == 289_411
@@ -72,8 +80,9 @@ def test_health_ok(client, mock_cursor):
 def test_health_db_unavailable(client):
     with patch.object(_db, "_pool", None):
         resp = client.get("/health")
-    assert resp.status_code == 200
+    assert resp.status_code == 207
     assert resp.json()["status"] == "degraded"
+    assert resp.json()["db"] == "degraded"
 
 
 # ---------------------------------------------------------------------------
@@ -189,3 +198,91 @@ def test_search_groq_timeout_returns_504(client):
     with patch("api.routers.search.ask", side_effect=exc):
         resp = client.post("/search/", json={"question": "Combien de députés RN ?"})
     assert resp.status_code == 504
+
+
+# ---------------------------------------------------------------------------
+# Edge cases — boundary conditions (issue #57)
+# ---------------------------------------------------------------------------
+
+
+def test_scorecard_zero_votes(client, mock_cursor):
+    """Deputy who has never voted — division-by-zero guards must yield 0.0."""
+    mock_cursor.fetchone.side_effect = [
+        {"deputy_id": "PA99", "full_name": "Nouveau Député"},
+        {
+            "total_votes": 0,
+            "present_votes": 0,
+            "votes_for": 0,
+            "votes_against": 0,
+            "abstentions": 0,
+        },
+    ]
+    resp = client.get("/deputies/PA99/scorecard")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["presence_rate"] == 0.0
+    assert data["votes_for_pct"] == 0.0
+    assert data["abstention_pct"] == 0.0
+
+
+def test_search_empty_chunks(client):
+    """ask() returning zero chunks must yield 200 with an empty sources list, not 500."""
+    empty = {"answer": "Aucune information.", "question": "?", "chunks_retrieved": 0, "sources": []}
+    with patch("api.routers.search.ask", return_value=empty):
+        resp = client.post("/search/", json={"question": "Question sans résultat ?"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["chunks_retrieved"] == 0
+    assert data["sources"] == []
+
+
+def test_list_deputies_offset_exceeds_max(client):
+    """offset > 10_000 is rejected by FastAPI query validation."""
+    resp = client.get("/deputies/?offset=10001")
+    assert resp.status_code == 422
+
+
+def test_list_votes_offset_exceeds_max(client):
+    """offset > 10_000 is rejected by FastAPI query validation."""
+    resp = client.get("/votes/?offset=10001")
+    assert resp.status_code == 422
+
+
+def test_rate_limit_handler_includes_retry_after():
+    """429 response from _rate_limit_handler must carry a Retry-After header."""
+    from limits import parse as parse_limit
+    from slowapi.errors import RateLimitExceeded
+    from starlette.requests import Request as StarletteRequest
+
+    from api.main import _rate_limit_handler
+
+    limit_item = parse_limit("30/minute")
+    mock_limit = MagicMock()
+    mock_limit.limit = limit_item
+
+    exc = RateLimitExceeded(mock_limit)
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/deputies/",
+        "headers": [],
+        "query_string": b"",
+    }
+    request = StarletteRequest(scope)
+
+    response = asyncio.run(_rate_limit_handler(request, exc))
+    assert response.status_code == 429
+    assert "Retry-After" in response.headers
+    assert int(response.headers["Retry-After"]) == 60
+
+
+def test_health_degraded_when_openai_key_is_placeholder(client, mock_cursor):
+    """Health endpoint returns 207 and marks openai=degraded when key is a placeholder."""
+    mock_cursor.fetchone.side_effect = [{"count": 577}, {"count": 821}, {"count": 289_411}]
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-..."}):  # pragma: allowlist secret
+        resp = client.get("/health")
+    assert resp.status_code == 207
+    data = resp.json()
+    assert data["status"] == "degraded"
+    assert data["openai"] == "degraded"
+    assert data["db"] == "ok"
