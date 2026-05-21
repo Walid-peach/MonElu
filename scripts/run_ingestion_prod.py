@@ -104,27 +104,30 @@ def main() -> None:
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
         n_positions = row_count(lock_conn, "vote_positions")
+
+        new_votes = n_votes - votes_before
+        log.info("New votes ingested this run: %d", new_votes)
+
+        github_output = os.getenv("GITHUB_OUTPUT")
+        if github_output:
+            with open(github_output, "a") as f:
+                f.write(f"new_votes={new_votes}\n")
+
+        log.info("")
+        log.info("╔══════════════════════════════════════╗")
+        log.info("║         INGESTION COMPLETE           ║")
+        log.info("╠══════════════════════════════════════╣")
+        log.info("║  Deputies  : %6d   (%5.1fs)      ║", n_deputies, t_deputies)
+        log.info("║  Votes     : %6d   (%5.1fs)      ║", n_votes, t_votes)
+        log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
+        log.info("╠══════════════════════════════════════╣")
+        log.info("║  Total time: %.1fs                   ║", total_elapsed)
+        log.info("╚══════════════════════════════════════╝")
+    except Exception:
+        log.error("Ingestion failed — see above for details.")
+        raise
     finally:
         lock_conn.close()
-
-    new_votes = n_votes - votes_before
-    log.info("New votes ingested this run: %d", new_votes)
-
-    github_output = os.getenv("GITHUB_OUTPUT")
-    if github_output:
-        with open(github_output, "a") as f:
-            f.write(f"new_votes={new_votes}\n")
-
-    log.info("")
-    log.info("╔══════════════════════════════════════╗")
-    log.info("║         INGESTION COMPLETE           ║")
-    log.info("╠══════════════════════════════════════╣")
-    log.info("║  Deputies  : %6d   (%5.1fs)      ║", n_deputies, t_deputies)
-    log.info("║  Votes     : %6d   (%5.1fs)      ║", n_votes, t_votes)
-    log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
-    log.info("╠══════════════════════════════════════╣")
-    log.info("║  Total time: %.1fs                   ║", total_elapsed)
-    log.info("╚══════════════════════════════════════╝")
 
 
 if __name__ == "__main__":
