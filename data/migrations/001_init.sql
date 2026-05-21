@@ -46,6 +46,8 @@ CREATE INDEX IF NOT EXISTS idx_positions_vote     ON vote_positions(vote_id);
 CREATE INDEX IF NOT EXISTS idx_vote_positions_pos ON vote_positions(position);
 CREATE INDEX IF NOT EXISTS idx_votes_voted_at     ON votes(voted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_deputies_party     ON deputies(party_short);
+CREATE INDEX IF NOT EXISTS idx_deputies_full_name ON deputies(full_name);
+CREATE INDEX IF NOT EXISTS idx_votes_vote_title   ON votes(vote_title);
 
 -- ---------------------------------------------------------------------------
 -- Phase 2: semantic search via pgvector
@@ -67,6 +69,8 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 CREATE INDEX IF NOT EXISTS idx_chunks_embedding
     ON document_chunks USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 100);
+
+CREATE INDEX IF NOT EXISTS idx_chunks_created_at  ON document_chunks(created_at);
 
 -- ---------------------------------------------------------------------------
 -- Row-Level Security
