@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from psycopg2 import sql
 from starlette.requests import Request
 
 from api.db import get_conn
@@ -13,35 +14,37 @@ router = APIRouter()
 def list_deputies(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0, le=100_000),
+    offset: int = Query(0, ge=0, le=10_000),
     search: str = Query(None, description="Filter by name (case-insensitive)"),
     department: str = Query(None),
 ):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            filters = []
+            conditions: list[sql.Composable] = []
             params: list = []
 
             if search:
-                filters.append("full_name ILIKE %s")
+                conditions.append(sql.SQL("full_name ILIKE %s"))
                 params.append(f"%{search}%")
             if department:
-                filters.append("department = %s")
+                conditions.append(sql.SQL("department = %s"))
                 params.append(department)
 
-            where = ("WHERE " + " AND ".join(filters)) if filters else ""
+            where = (
+                sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
+                if conditions
+                else sql.SQL("")
+            )
 
-            cur.execute(f"SELECT COUNT(*) FROM deputies {where}", params)
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM deputies") + where, params)
             total = cur.fetchone()["count"]
 
             cur.execute(
-                f"""
-                SELECT deputy_id, full_name, party, party_short,
-                       department, circonscription, photo_url
-                FROM deputies {where}
-                ORDER BY last_name, first_name
-                LIMIT %s OFFSET %s
-                """,
+                sql.SQL("""
+                    SELECT deputy_id, full_name, party, party_short,
+                           department, circonscription, photo_url
+                    FROM deputies {} ORDER BY last_name, first_name LIMIT %s OFFSET %s
+                """).format(where),
                 params + [limit, offset],
             )
             rows = cur.fetchall()
