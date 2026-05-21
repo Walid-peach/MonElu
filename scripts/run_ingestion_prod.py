@@ -32,8 +32,16 @@ log = logging.getLogger(__name__)
 # Resolve the project root (one level up from this script)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Arbitrary app-specific key — must be unique across all pg_advisory_lock callers in this DB.
+_INGESTION_LOCK_KEY = 7_391_204
 
 _ALLOWED_TABLES = {"deputies", "votes", "vote_positions", "document_chunks"}
+
+
+def _try_acquire_lock(conn) -> bool:
+    with conn.cursor() as cur:
+        cur.execute("SELECT pg_try_advisory_lock(%s)", (_INGESTION_LOCK_KEY,))
+        return cur.fetchone()[0]
 
 
 def row_count(conn, table: str) -> int:
@@ -72,42 +80,54 @@ def main() -> None:
         raise EnvironmentError("DATABASE_URL is not set.")
 
     log.info("Ingestion window: since %s", args.since)
+
+    # Hold this connection open for the full pipeline — advisory lock is session-scoped
+    # and auto-releases when the connection closes.
+    lock_conn = psycopg2.connect(database_url)
+    if not _try_acquire_lock(lock_conn):
+        log.warning("Another ingestion job is already running — exiting to avoid conflicts.")
+        lock_conn.close()
+        sys.exit(0)
+
+    log.info("Advisory lock acquired (key=%d).", _INGESTION_LOCK_KEY)
     total_start = time.perf_counter()
 
-    conn = psycopg2.connect(database_url)
-    votes_before = row_count(conn, "votes")
-    conn.close()
+    try:
+        votes_before = row_count(lock_conn, "votes")
 
-    t_deputies = run_step("Deputies", "ingest_deputies.py")
-    t_votes = run_step("Votes", "ingest_votes.py", ["--since", args.since])
-    t_positions = run_step("Positions", "ingest_positions.py", ["--since", args.since])
+        t_deputies = run_step("Deputies", "ingest_deputies.py")
+        t_votes = run_step("Votes", "ingest_votes.py", ["--since", args.since])
+        t_positions = run_step("Positions", "ingest_positions.py", ["--since", args.since])
 
-    total_elapsed = time.perf_counter() - total_start
+        total_elapsed = time.perf_counter() - total_start
 
-    conn = psycopg2.connect(database_url)
-    n_deputies = row_count(conn, "deputies")
-    n_votes = row_count(conn, "votes")
-    n_positions = row_count(conn, "vote_positions")
-    conn.close()
+        n_deputies = row_count(lock_conn, "deputies")
+        n_votes = row_count(lock_conn, "votes")
+        n_positions = row_count(lock_conn, "vote_positions")
 
-    new_votes = n_votes - votes_before
-    log.info("New votes ingested this run: %d", new_votes)
+        new_votes = n_votes - votes_before
+        log.info("New votes ingested this run: %d", new_votes)
 
-    github_output = os.getenv("GITHUB_OUTPUT")
-    if github_output:
-        with open(github_output, "a") as f:
-            f.write(f"new_votes={new_votes}\n")
+        github_output = os.getenv("GITHUB_OUTPUT")
+        if github_output:
+            with open(github_output, "a") as f:
+                f.write(f"new_votes={new_votes}\n")
 
-    log.info("")
-    log.info("╔══════════════════════════════════════╗")
-    log.info("║         INGESTION COMPLETE           ║")
-    log.info("╠══════════════════════════════════════╣")
-    log.info("║  Deputies  : %6d   (%5.1fs)      ║", n_deputies, t_deputies)
-    log.info("║  Votes     : %6d   (%5.1fs)      ║", n_votes, t_votes)
-    log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
-    log.info("╠══════════════════════════════════════╣")
-    log.info("║  Total time: %.1fs                   ║", total_elapsed)
-    log.info("╚══════════════════════════════════════╝")
+        log.info("")
+        log.info("╔══════════════════════════════════════╗")
+        log.info("║         INGESTION COMPLETE           ║")
+        log.info("╠══════════════════════════════════════╣")
+        log.info("║  Deputies  : %6d   (%5.1fs)      ║", n_deputies, t_deputies)
+        log.info("║  Votes     : %6d   (%5.1fs)      ║", n_votes, t_votes)
+        log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
+        log.info("╠══════════════════════════════════════╣")
+        log.info("║  Total time: %.1fs                   ║", total_elapsed)
+        log.info("╚══════════════════════════════════════╝")
+    except Exception:
+        log.error("Ingestion failed — see above for details.")
+        raise
+    finally:
+        lock_conn.close()
 
 
 if __name__ == "__main__":
