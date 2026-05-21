@@ -220,6 +220,7 @@ def test_scorecard_zero_votes(client, mock_cursor):
     resp = client.get("/deputies/PA99/scorecard")
     assert resp.status_code == 200
     data = resp.json()
+    assert data["total_votes"] == 0
     assert data["presence_rate"] == 0.0
     assert data["votes_for_pct"] == 0.0
     assert data["abstention_pct"] == 0.0
