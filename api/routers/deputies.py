@@ -40,11 +40,11 @@ def list_deputies(
             total = cur.fetchone()["count"]
 
             cur.execute(
-                sql.SQL(
-                    "SELECT deputy_id, full_name, party, party_short,"
-                    " department, circonscription, photo_url"
-                    " FROM deputies {} ORDER BY last_name, first_name LIMIT %s OFFSET %s"
-                ).format(where),
+                sql.SQL("""
+                    SELECT deputy_id, full_name, party, party_short,
+                           department, circonscription, photo_url
+                    FROM deputies {} ORDER BY last_name, first_name LIMIT %s OFFSET %s
+                """).format(where),
                 params + [limit, offset],
             )
             rows = cur.fetchall()

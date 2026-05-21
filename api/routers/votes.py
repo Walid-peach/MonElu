@@ -36,11 +36,11 @@ def list_votes(
             total = cur.fetchone()["count"]
 
             cur.execute(
-                sql.SQL(
-                    "SELECT vote_id, voted_at, vote_title, result,"
-                    " votes_for, votes_against, abstentions, total_voters"
-                    " FROM votes {} ORDER BY voted_at DESC LIMIT %s OFFSET %s"
-                ).format(where),
+                sql.SQL("""
+                    SELECT vote_id, voted_at, vote_title, result,
+                           votes_for, votes_against, abstentions, total_voters
+                    FROM votes {} ORDER BY voted_at DESC LIMIT %s OFFSET %s
+                """).format(where),
                 params + [limit, offset],
             )
             rows = cur.fetchall()
