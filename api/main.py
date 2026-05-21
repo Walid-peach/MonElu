@@ -6,7 +6,6 @@ FastAPI application entry point for MonÉlu.
 import base64
 import logging
 import os
-import re
 import traceback
 from contextlib import asynccontextmanager
 
@@ -29,12 +28,16 @@ logger = logging.getLogger(__name__)
 _PLACEHOLDER_PREFIXES = ("sk-...", "gsk_...", "your-", "changeme")
 
 
-def _warn_if_placeholder(var: str, value: str | None, *, context: str = "RAG features") -> None:
-    if (
+def _is_placeholder(value: str | None) -> bool:
+    return (
         not value
         or not value.strip()
         or any(value.strip().startswith(p) for p in _PLACEHOLDER_PREFIXES)
-    ):
+    )
+
+
+def _warn_if_placeholder(var: str, value: str | None, *, context: str = "RAG features") -> None:
+    if _is_placeholder(value):
         logger.warning("⚠️  %s is not set or looks like a placeholder — %s may fail", var, context)
 
 
@@ -73,18 +76,14 @@ app.add_middleware(SlowAPIMiddleware)
 
 async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
     """Return a clear 429 JSON response with Retry-After and rate-limit headers."""
-    detail = str(exc.detail)
-    retry_after = 60
-    match = re.search(r"per (\d+) (second|minute|hour)", detail)
-    if match:
-        num, unit = int(match.group(1)), match.group(2)
-        retry_after = num * {"second": 1, "minute": 60, "hour": 3600}[unit]
+    limit_item = exc.limit.limit
+    retry_after = limit_item.GRANULARITY.seconds * (limit_item.multiples or 1)
 
     response = JSONResponse(
         status_code=429,
         content={
             "error": "Too Many Requests",
-            "detail": f"Rate limit exceeded: {detail}. Retry after {retry_after} seconds.",
+            "detail": f"Rate limit exceeded: {exc.detail}. Retry after {retry_after} seconds.",
         },
         headers={"Retry-After": str(retry_after)},
     )
@@ -938,7 +937,10 @@ def landing(request: Request) -> HTMLResponse:
 # Health check
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["Health"])
-def health() -> dict:
+def health() -> JSONResponse:
+    services: dict[str, str] = {}
+    deputies = votes = positions = None
+
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -948,7 +950,17 @@ def health() -> dict:
                 votes = cur.fetchone()["count"]
                 cur.execute("SELECT COUNT(*) FROM vote_positions")
                 positions = cur.fetchone()["count"]
-        return {"status": "ok", "deputies": deputies, "votes": votes, "positions": positions}
+        services["db"] = "ok"
     except Exception as exc:
         logger.error("Health check DB error: %s", exc)
-        return {"status": "degraded", "error": "Database unavailable"}
+        services["db"] = "degraded"
+
+    services["openai"] = "degraded" if _is_placeholder(os.getenv("OPENAI_API_KEY")) else "ok"
+    services["groq"] = "degraded" if _is_placeholder(os.getenv("GROQ_API_KEY")) else "ok"
+
+    all_ok = all(v == "ok" for v in services.values())
+    body: dict = {"status": "ok" if all_ok else "degraded", **services}
+    if services["db"] == "ok":
+        body.update({"deputies": deputies, "votes": votes, "positions": positions})
+
+    return JSONResponse(content=body, status_code=200 if all_ok else 207)
