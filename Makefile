@@ -51,6 +51,7 @@ setup-minio:
 	venv/bin/python3 scripts/setup_minio.py
 
 airflow-up:
+	@if [ -z "$$AIRFLOW_FERNET_KEY" ]; then echo "WARNING: AIRFLOW_FERNET_KEY is unset — using the public dev default. Set it in .env before deploying to production."; fi
 	docker compose up -d airflow-webserver airflow-scheduler
 
 airflow-down:
