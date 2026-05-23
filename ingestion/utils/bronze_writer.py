@@ -17,6 +17,16 @@ class BronzeWriter:
             aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
         )
         self.bucket = "monelu-bronze"
+        self._ensure_bucket()
+
+    def _ensure_bucket(self) -> None:
+        try:
+            self.s3.head_bucket(Bucket=self.bucket)
+        except ClientError as e:
+            if e.response["Error"]["Code"] in ("404", "NoSuchBucket"):
+                self.s3.create_bucket(Bucket=self.bucket)
+            else:
+                raise
 
     def write(self, entity: str, data: list[dict], run_date: str = None) -> str:
         """
@@ -47,7 +57,8 @@ class BronzeWriter:
 
     def read_by_key(self, path: str) -> list[dict]:
         """Read a specific Bronze file by its full s3:// path (as returned by write())."""
-        key = path.removeprefix(f"s3://{self.bucket}/")
+        prefix = f"s3://{self.bucket}/"
+        key = path[len(prefix) :] if path.startswith(prefix) else path
         obj = self.s3.get_object(Bucket=self.bucket, Key=key)
         return json.loads(obj["Body"].read())
 

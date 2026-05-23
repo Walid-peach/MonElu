@@ -8,6 +8,8 @@ Usage:
     python scripts/ingest_positions.py --since 2026-04-18 # only votes on/after date
 """
 
+from __future__ import annotations
+
 import argparse
 import io
 import json
@@ -203,16 +205,28 @@ def main() -> None:
         except ValueError:
             parser.error(f"--since must be YYYY-MM-DD, got: {args.since!r}")
 
+    run(since=args.since)
+
+
+def run(since: str | None = None) -> None:
+    """Programmatic entry point for Airflow — skips argparse."""
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
+    if since:
+        from datetime import date as _date
+
+        try:
+            _date.fromisoformat(since)
+        except ValueError as exc:
+            raise ValueError(f"since must be YYYY-MM-DD, got: {since!r}") from exc
 
     raw = fetch_scrutin_zip()
 
     log.info("Loading known vote_ids and deputy_ids…")
     conn = connect_with_retry()
     with conn.cursor() as cur:
-        if args.since:
-            cur.execute("SELECT vote_id FROM votes WHERE voted_at >= %s", (args.since,))
+        if since:
+            cur.execute("SELECT vote_id FROM votes WHERE voted_at >= %s", (since,))
         else:
             cur.execute("SELECT vote_id FROM votes")
         known_votes: set[str] = {r[0] for r in cur.fetchall()}
@@ -223,7 +237,7 @@ def main() -> None:
         "Known votes: %d  Known deputies: %d%s",
         len(known_votes),
         len(known_deputies),
-        f"  (since {args.since})" if args.since else "",
+        f"  (since {since})" if since else "",
     )
 
     log.info("=== Starting position ingestion ===")
@@ -240,7 +254,6 @@ def main() -> None:
                 data = json.load(f)
             scrutin = data.get("scrutin") or data
 
-            # Skip if this vote wasn't ingested (FK constraint)
             vote_id = scrutin.get("uid") or ""
             if vote_id not in known_votes:
                 total_skipped += 1
@@ -259,7 +272,6 @@ def main() -> None:
                 log.info("Upserted %d positions so far…", total_written)
                 batch = []
 
-    # Flush remainder
     if batch:
         upsert_positions(batch)
         total_written += len(batch)

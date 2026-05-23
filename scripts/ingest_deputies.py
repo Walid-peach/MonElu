@@ -7,6 +7,8 @@ Usage:
     python scripts/ingest_deputies.py
 """
 
+from __future__ import annotations
+
 import io
 import json
 import logging
