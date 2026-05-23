@@ -69,8 +69,23 @@ jobs:
           DBT_DBNAME: ${{ secrets.DBT_DBNAME }}
         run: |
           pip install dbt-postgres==1.8.0
-          cd transform && dbt deps && dbt run --target prod
-          dbt test --target prod
+          cat > transform/profiles.yml <<EOF
+          transform:
+            target: prod
+            outputs:
+              prod:
+                type: postgres
+                host: "${DBT_HOST}"
+                port: ${DBT_PORT}
+                user: "${DBT_USER}"
+                password: "${DBT_PASSWORD}"
+                dbname: "${DBT_DBNAME}"
+                schema: analytics
+                threads: 4
+                connect_timeout: 10
+          EOF
+          cd transform && dbt deps && dbt run --profiles-dir . --target prod
+          dbt test --profiles-dir . --target prod
 
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
