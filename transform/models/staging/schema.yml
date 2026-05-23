@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: stg_deputies
+    description: "Cleaned and renamed deputy profiles"
+    columns:
+      - name: deputy_id
+        tests: [not_null, unique]
+      - name: full_name
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+
+  - name: stg_votes
+    description: "Cleaned and typed vote records"
+    columns:
+      - name: vote_id
+        tests: [not_null, unique]
+      - name: voted_at
+        tests: [not_null]
+      - name: result
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['adopté', 'rejeté']
+      - name: is_adopted
+        tests: [not_null]
+
+  - name: stg_vote_positions
+    description: "Cleaned individual vote positions"
+    columns:
+      - name: position_id
+        tests: [not_null, unique]
+      - name: position
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['pour', 'contre', 'abstention', 'nonvotant']
+      - name: vote_id
+        tests:
+          - relationships:
+              to: ref('stg_votes')
+              field: vote_id
+      - name: deputy_id
+        tests:
+          - relationships:
+              to: ref('stg_deputies')
+              field: deputy_id
