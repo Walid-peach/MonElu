@@ -2,7 +2,7 @@ name: dbt docs
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'transform/**'
 

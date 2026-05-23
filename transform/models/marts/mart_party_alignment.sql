@@ -6,10 +6,6 @@ positions as (
     select * from {{ ref('stg_vote_positions') }}
 ),
 
-votes as (
-    select * from {{ ref('stg_votes') }}
-),
-
 -- majority position per party per vote
 party_vote_majority as (
     select
