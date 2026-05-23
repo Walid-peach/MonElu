@@ -22,7 +22,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['adopté', 'rejeté']
+              arguments:
+                values: ['adopté', 'rejeté']
       - name: is_adopted
         tests: [not_null]
 
@@ -35,14 +36,17 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['pour', 'contre', 'abstention', 'nonvotant']
+              arguments:
+                values: ['pour', 'contre', 'abstention', 'nonvotant']
       - name: vote_id
         tests:
           - relationships:
-              to: ref('stg_votes')
-              field: vote_id
+              arguments:
+                to: ref('stg_votes')
+                field: vote_id
       - name: deputy_id
         tests:
           - relationships:
-              to: ref('stg_deputies')
-              field: deputy_id
+              arguments:
+                to: ref('stg_deputies')
+                field: deputy_id

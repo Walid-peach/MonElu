@@ -5,9 +5,10 @@ models:
     description: "One row per deputy — presence rate, vote breakdown, party info"
     tests:
       - dbt_utils.recency:
-          datepart: day
-          field: updated_at
-          interval: 1
+          arguments:
+            datepart: day
+            field: updated_at
+            interval: 1
     columns:
       - name: deputy_id
         tests: [not_null, unique]
@@ -15,20 +16,23 @@ models:
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 1
+              arguments:
+                min_value: 0
+                max_value: 1
       - name: votes_for_pct
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 1
+              arguments:
+                min_value: 0
+                max_value: 1
       - name: abstention_pct
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 1
+              arguments:
+                min_value: 0
+                max_value: 1
       - name: total_votes_cast
         tests: [not_null]
 
@@ -41,12 +45,14 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['adopté', 'rejeté']
+              arguments:
+                values: ['adopté', 'rejeté']
       - name: pct_pour
         tests:
           - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 1
+              arguments:
+                min_value: 0
+                max_value: 1
 
   - name: mart_party_alignment
     description: "Deputy alignment with party majority vote"
@@ -57,11 +63,13 @@ models:
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 1
+              arguments:
+                min_value: 0
+                max_value: 1
       - name: dissident_rate
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 1
+              arguments:
+                min_value: 0
+                max_value: 1
