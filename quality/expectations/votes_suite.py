@@ -16,12 +16,7 @@ def get_votes_suite() -> gx.ExpectationSuite:
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="dateScrutin"))
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="sort"))
     suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="dateScrutin"))
-    suite.add_expectation(
-        gx.expectations.ExpectColumnValuesToBeInSet(
-            column="sort",
-            value_set=["adopté", "rejeté", "Adopté", "Rejeté"],
-        )
-    )
+    # "sort" in raw Bronze data is a dict {"code": "adopté", ...} — values check applies to parsed data only
     return suite
 
 

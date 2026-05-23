@@ -17,6 +17,13 @@ class BronzeWriter:
             aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
         )
         self.bucket = "monelu-bronze"
+        self._ensure_bucket()
+
+    def _ensure_bucket(self) -> None:
+        try:
+            self.s3.head_bucket(Bucket=self.bucket)
+        except ClientError:
+            self.s3.create_bucket(Bucket=self.bucket)
 
     def write(self, entity: str, data: list[dict], run_date: str = None) -> str:
         """

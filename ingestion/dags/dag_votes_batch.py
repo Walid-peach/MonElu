@@ -42,7 +42,14 @@ def fetch_votes(**context):
     votes = fetch_all_scrutins(since=since)
 
     writer = BronzeWriter()
-    stable = sorted(votes, key=lambda v: v.get("uid", ""))
+
+    def _uid_key(v):
+        uid = v.get("uid", "")
+        if isinstance(uid, dict):
+            return uid.get("#text", "")
+        return str(uid) if uid else ""
+
+    stable = sorted(votes, key=_uid_key)
     current_hash = hashlib.md5(json.dumps(stable, sort_keys=True).encode()).hexdigest()
     last_hash = writer.get_last_hash("votes")
 
@@ -108,10 +115,11 @@ def upsert_postgres(**context):
 
 
 def trigger_positions(**context):
-    """Run full positions ingestion after votes are upserted."""
-    from scripts.ingest_positions import main as ingest_positions_main
+    """Run positions ingestion for the last 7 days after votes are upserted."""
+    from scripts.ingest_positions import run as ingest_positions_run
 
-    ingest_positions_main()
+    since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
+    ingest_positions_run(since=since)
     print("Positions ingestion complete")
 
 

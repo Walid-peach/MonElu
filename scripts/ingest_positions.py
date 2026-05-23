@@ -8,6 +8,8 @@ Usage:
     python scripts/ingest_positions.py --since 2026-04-18 # only votes on/after date
 """
 
+from __future__ import annotations
+
 import argparse
 import io
 import json
@@ -260,6 +262,71 @@ def main() -> None:
                 batch = []
 
     # Flush remainder
+    if batch:
+        upsert_positions(batch)
+        total_written += len(batch)
+
+    log.info("Upsert complete — %d positions written, %d skipped.", total_written, total_skipped)
+    log.info("=== Position ingestion finished ===")
+
+
+def run(since: str | None = None) -> None:
+    """Programmatic entry point for Airflow — skips argparse."""
+    if not DATABASE_URL:
+        raise EnvironmentError("DATABASE_URL is not set.")
+
+    raw = fetch_scrutin_zip()
+
+    log.info("Loading known vote_ids and deputy_ids…")
+    conn = connect_with_retry()
+    with conn.cursor() as cur:
+        if since:
+            cur.execute("SELECT vote_id FROM votes WHERE voted_at >= %s", (since,))
+        else:
+            cur.execute("SELECT vote_id FROM votes")
+        known_votes: set[str] = {r[0] for r in cur.fetchall()}
+        cur.execute("SELECT deputy_id FROM deputies")
+        known_deputies: set[str] = {r[0] for r in cur.fetchall()}
+    conn.close()
+    log.info(
+        "Known votes: %d  Known deputies: %d%s",
+        len(known_votes),
+        len(known_deputies),
+        f"  (since {since})" if since else "",
+    )
+
+    log.info("=== Starting position ingestion ===")
+    total_written = 0
+    total_skipped = 0
+    batch: list[dict] = []
+
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        scrutin_files = [n for n in zf.namelist() if n.startswith("json/") and n.endswith(".json")]
+        log.info("ZIP contains %d scrutin files.", len(scrutin_files))
+
+        for name in scrutin_files:
+            with zf.open(name) as f:
+                data = json.load(f)
+            scrutin = data.get("scrutin") or data
+
+            vote_id = scrutin.get("uid") or ""
+            if vote_id not in known_votes:
+                total_skipped += 1
+                continue
+
+            positions = extract_positions(scrutin)
+            for pos in positions:
+                if pos["deputy_id"] in known_deputies:
+                    batch.append(pos)
+                else:
+                    total_skipped += 1
+
+            if len(batch) >= 2000:
+                upsert_positions(batch)
+                total_written += len(batch)
+                log.info("Upserted %d positions so far…", total_written)
+                batch = []
+
     if batch:
         upsert_positions(batch)
         total_written += len(batch)
