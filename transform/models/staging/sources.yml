@@ -1,0 +1,63 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw tables ingested from Assemblée Nationale open data"
+    schema: public
+    tables:
+      - name: deputies
+        description: "577 French deputies — profiles, party, department"
+        columns:
+          - name: deputy_id
+            description: "Unique deputy identifier (e.g. PA722190)"
+            tests:
+              - not_null
+              - unique
+          - name: full_name
+            tests:
+              - not_null
+          - name: party
+            description: "Parliamentary group name"
+          - name: department
+            description: "Full department name (e.g. Yvelines)"
+
+      - name: votes
+        description: "All parliamentary votes (scrutins)"
+        columns:
+          - name: vote_id
+            tests:
+              - not_null
+              - unique
+          - name: voted_at
+            tests:
+              - not_null
+          - name: result
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['adopté', 'rejeté']
+
+      - name: vote_positions
+        description: "Individual deputy positions on each vote"
+        columns:
+          - name: position_id
+            tests:
+              - not_null
+              - unique
+          - name: vote_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw', 'votes')
+                  field: vote_id
+          - name: deputy_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw', 'deputies')
+                  field: deputy_id
+          - name: position
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['pour', 'contre', 'abstention', 'nonVotant']
