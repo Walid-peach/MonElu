@@ -10,9 +10,8 @@ sys.path.insert(0, "/opt/airflow")
 
 default_args = {
     "owner": "monelu",
-    "retries": 3,
-    "retry_delay": timedelta(minutes=5),
-    "retry_exponential_backoff": True,
+    "retries": 1,
+    "retry_delay": timedelta(seconds=30),
 }
 
 
@@ -28,7 +27,14 @@ def fetch_deputies(**context):
     deputies = fetch_all_deputies()
 
     writer = BronzeWriter()
-    stable = sorted(deputies, key=lambda d: d.get("uid", ""))
+
+    def _uid_key(d):
+        uid = d.get("uid", "")
+        if isinstance(uid, dict):
+            return uid.get("#text", "")
+        return str(uid) if uid else ""
+
+    stable = sorted(deputies, key=_uid_key)
     current_hash = hashlib.md5(json.dumps(stable, sort_keys=True).encode()).hexdigest()
     last_hash = writer.get_last_hash("deputies")
 

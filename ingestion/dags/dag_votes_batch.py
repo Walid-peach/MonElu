@@ -10,9 +10,8 @@ sys.path.insert(0, "/opt/airflow")
 
 default_args = {
     "owner": "monelu",
-    "retries": 3,
-    "retry_delay": timedelta(minutes=5),
-    "retry_exponential_backoff": True,
+    "retries": 1,
+    "retry_delay": timedelta(seconds=30),
 }
 
 
