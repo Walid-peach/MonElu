@@ -9,9 +9,6 @@ positions as (
 vote_stats as (
     select
         vote_id,
-        count(*) filter (where position = 'pour')       as position_pour_count,
-        count(*) filter (where position = 'contre')     as position_contre_count,
-        count(*) filter (where position = 'abstention') as position_abstention_count,
         count(distinct deputy_id)                       as deputies_with_position
     from positions
     group by vote_id
