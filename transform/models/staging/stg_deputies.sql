@@ -9,7 +9,6 @@ renamed as (
         first_name,
         last_name,
         party,
-        party                                    as party_short,
         department,
         mandate_start::timestamp                 as mandate_started_at,
         mandate_end::timestamp                   as mandate_ended_at,
