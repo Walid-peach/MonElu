@@ -54,7 +54,8 @@ class BronzeWriter:
 
     def read_by_key(self, path: str) -> list[dict]:
         """Read a specific Bronze file by its full s3:// path (as returned by write())."""
-        key = path.removeprefix(f"s3://{self.bucket}/")
+        prefix = f"s3://{self.bucket}/"
+        key = path[len(prefix) :] if path.startswith(prefix) else path
         obj = self.s3.get_object(Bucket=self.bucket, Key=key)
         return json.loads(obj["Body"].read())
 
