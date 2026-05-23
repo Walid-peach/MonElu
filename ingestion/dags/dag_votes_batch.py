@@ -88,16 +88,6 @@ def validate_votes(**context):
     print(f"GE validation passed: {result['evaluated']} checks")
 
 
-def confirm_bronze(**context):
-    """Log the Bronze path written by fetch_votes — the actual write happened there."""
-    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_votes")
-    if bronze_path is None:
-        print("No changes detected — Bronze write was skipped")
-        return "skipped"
-    print(f"Bronze path confirmed: {bronze_path}")
-    return bronze_path
-
-
 def upsert_postgres(**context):
     """Upsert votes into PostgreSQL, reading from Bronze S3 instead of XCom."""
     from ingestion.utils.bronze_writer import BronzeWriter
@@ -116,6 +106,11 @@ def upsert_postgres(**context):
 
 def trigger_positions(**context):
     """Run positions ingestion for the last 7 days after votes are upserted."""
+    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_votes")
+    if bronze_path is None:
+        print("No new votes — skipping positions ingestion")
+        return
+
     from scripts.ingest_positions import run as ingest_positions_run
 
     since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -148,18 +143,13 @@ with DAG(
     )
 
     t3 = PythonOperator(
-        task_id="confirm_bronze",
-        python_callable=confirm_bronze,
-    )
-
-    t4 = PythonOperator(
         task_id="upsert_postgres",
         python_callable=upsert_postgres,
     )
 
-    t5 = PythonOperator(
+    t4 = PythonOperator(
         task_id="trigger_positions",
         python_callable=trigger_positions,
     )
 
-    t0 >> t1 >> t2 >> t3 >> t4 >> t5
+    t0 >> t1 >> t2 >> t3 >> t4

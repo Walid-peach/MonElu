@@ -22,8 +22,11 @@ class BronzeWriter:
     def _ensure_bucket(self) -> None:
         try:
             self.s3.head_bucket(Bucket=self.bucket)
-        except ClientError:
-            self.s3.create_bucket(Bucket=self.bucket)
+        except ClientError as e:
+            if e.response["Error"]["Code"] in ("404", "NoSuchBucket"):
+                self.s3.create_bucket(Bucket=self.bucket)
+            else:
+                raise
 
     def write(self, entity: str, data: list[dict], run_date: str = None) -> str:
         """

@@ -73,16 +73,6 @@ def validate_deputies(**context):
     print(f"GE validation passed: {result['evaluated']} checks")
 
 
-def confirm_bronze(**context):
-    """Log the Bronze path written by fetch_deputies — the actual write happened there."""
-    bronze_path = context["ti"].xcom_pull(key="bronze_path", task_ids="fetch_deputies")
-    if bronze_path is None:
-        print("No changes detected — Bronze write was skipped")
-        return "skipped"
-    print(f"Bronze path confirmed: {bronze_path}")
-    return bronze_path
-
-
 def upsert_postgres(**context):
     """Upsert deputies into PostgreSQL, reading from Bronze S3 instead of XCom."""
     from ingestion.utils.bronze_writer import BronzeWriter
@@ -119,13 +109,8 @@ with DAG(
     )
 
     t3 = PythonOperator(
-        task_id="confirm_bronze",
-        python_callable=confirm_bronze,
-    )
-
-    t4 = PythonOperator(
         task_id="upsert_postgres",
         python_callable=upsert_postgres,
     )
 
-    t1 >> t2 >> t3 >> t4
+    t1 >> t2 >> t3

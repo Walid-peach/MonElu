@@ -205,75 +205,20 @@ def main() -> None:
         except ValueError:
             parser.error(f"--since must be YYYY-MM-DD, got: {args.since!r}")
 
-    if not DATABASE_URL:
-        raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
-
-    raw = fetch_scrutin_zip()
-
-    log.info("Loading known vote_ids and deputy_ids…")
-    conn = connect_with_retry()
-    with conn.cursor() as cur:
-        if args.since:
-            cur.execute("SELECT vote_id FROM votes WHERE voted_at >= %s", (args.since,))
-        else:
-            cur.execute("SELECT vote_id FROM votes")
-        known_votes: set[str] = {r[0] for r in cur.fetchall()}
-        cur.execute("SELECT deputy_id FROM deputies")
-        known_deputies: set[str] = {r[0] for r in cur.fetchall()}
-    conn.close()
-    log.info(
-        "Known votes: %d  Known deputies: %d%s",
-        len(known_votes),
-        len(known_deputies),
-        f"  (since {args.since})" if args.since else "",
-    )
-
-    log.info("=== Starting position ingestion ===")
-    total_written = 0
-    total_skipped = 0
-    batch: list[dict] = []
-
-    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
-        scrutin_files = [n for n in zf.namelist() if n.startswith("json/") and n.endswith(".json")]
-        log.info("ZIP contains %d scrutin files.", len(scrutin_files))
-
-        for name in scrutin_files:
-            with zf.open(name) as f:
-                data = json.load(f)
-            scrutin = data.get("scrutin") or data
-
-            # Skip if this vote wasn't ingested (FK constraint)
-            vote_id = scrutin.get("uid") or ""
-            if vote_id not in known_votes:
-                total_skipped += 1
-                continue
-
-            positions = extract_positions(scrutin)
-            for pos in positions:
-                if pos["deputy_id"] in known_deputies:
-                    batch.append(pos)
-                else:
-                    total_skipped += 1
-
-            if len(batch) >= 2000:
-                upsert_positions(batch)
-                total_written += len(batch)
-                log.info("Upserted %d positions so far…", total_written)
-                batch = []
-
-    # Flush remainder
-    if batch:
-        upsert_positions(batch)
-        total_written += len(batch)
-
-    log.info("Upsert complete — %d positions written, %d skipped.", total_written, total_skipped)
-    log.info("=== Position ingestion finished ===")
+    run(since=args.since)
 
 
 def run(since: str | None = None) -> None:
     """Programmatic entry point for Airflow — skips argparse."""
     if not DATABASE_URL:
-        raise EnvironmentError("DATABASE_URL is not set.")
+        raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
+    if since:
+        from datetime import date as _date
+
+        try:
+            _date.fromisoformat(since)
+        except ValueError as exc:
+            raise ValueError(f"since must be YYYY-MM-DD, got: {since!r}") from exc
 
     raw = fetch_scrutin_zip()
 
