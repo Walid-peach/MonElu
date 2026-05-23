@@ -1,0 +1,40 @@
+name: dbt docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'transform/**'
+
+jobs:
+  dbt-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dbt
+        run: pip install dbt-postgres==1.8.0
+
+      - name: Install dbt packages
+        run: cd transform && dbt deps
+
+      - name: Generate dbt docs
+        env:
+          DBT_HOST: ${{ secrets.DBT_HOST }}
+          DBT_PORT: ${{ secrets.DBT_PORT }}
+          DBT_USER: ${{ secrets.DBT_USER }}
+          DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
+          DBT_DBNAME: ${{ secrets.DBT_DBNAME }}
+        run: cd transform && dbt docs generate --target prod
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: transform/target
+          destination_dir: dbt-docs

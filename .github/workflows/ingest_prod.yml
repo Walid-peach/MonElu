@@ -60,5 +60,17 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python -m rag.pipeline.index_manager build --since $(date -d '30 days ago' +%Y-%m-%d)
 
+      - name: Run dbt transformations
+        env:
+          DBT_HOST: ${{ secrets.DBT_HOST }}
+          DBT_PORT: ${{ secrets.DBT_PORT }}
+          DBT_USER: ${{ secrets.DBT_USER }}
+          DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
+          DBT_DBNAME: ${{ secrets.DBT_DBNAME }}
+        run: |
+          pip install dbt-postgres==1.8.0
+          cd transform && dbt deps && dbt run --target prod
+          dbt test --target prod
+
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
