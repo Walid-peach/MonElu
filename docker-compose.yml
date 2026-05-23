@@ -77,6 +77,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - ./ingestion/dags:/opt/airflow/dags
+      - ./ingestion:/opt/airflow/ingestion
       - ./ingestion/operators:/opt/airflow/operators
       - ./ingestion/utils:/opt/airflow/utils
       - ./quality:/opt/airflow/quality
@@ -111,6 +112,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - ./ingestion/dags:/opt/airflow/dags
+      - ./ingestion:/opt/airflow/ingestion
       - ./ingestion/operators:/opt/airflow/operators
       - ./ingestion/utils:/opt/airflow/utils
       - ./quality:/opt/airflow/quality
@@ -152,6 +154,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - ./ingestion/dags:/opt/airflow/dags
+      - ./ingestion:/opt/airflow/ingestion
       - ./ingestion/operators:/opt/airflow/operators
       - ./ingestion/utils:/opt/airflow/utils
       - ./quality:/opt/airflow/quality
