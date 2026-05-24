@@ -955,6 +955,18 @@ def health() -> JSONResponse:
         logger.error("Health check DB error: %s", exc)
         services["db"] = "degraded"
 
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_deputy_scorecard")
+                scorecard_rows = cur.fetchone()["count"]
+                cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_vote_summary")
+                vote_summary_rows = cur.fetchone()["count"]
+        services["dbt_marts"] = "ok"
+    except Exception:
+        scorecard_rows = vote_summary_rows = None
+        services["dbt_marts"] = "degraded"
+
     services["openai"] = "degraded" if _is_placeholder(os.getenv("OPENAI_API_KEY")) else "ok"
     services["groq"] = "degraded" if _is_placeholder(os.getenv("GROQ_API_KEY")) else "ok"
 
@@ -962,5 +974,7 @@ def health() -> JSONResponse:
     body: dict = {"status": "ok" if all_ok else "degraded", **services}
     if services["db"] == "ok":
         body.update({"deputies": deputies, "votes": votes, "positions": positions})
+    if services["dbt_marts"] == "ok":
+        body.update({"mart_scorecards": scorecard_rows, "mart_vote_summaries": vote_summary_rows})
 
     return JSONResponse(content=body, status_code=200 if all_ok else 207)
