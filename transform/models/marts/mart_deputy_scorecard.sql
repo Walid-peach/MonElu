@@ -10,6 +10,10 @@ total_votes as (
     select count(*) as total from {{ ref('stg_votes') }}
 ),
 
+last_ingested as (
+    select max(ingested_at) as ingested_at from {{ ref('stg_vote_positions') }}
+),
+
 deputy_stats as (
     select
         p.deputy_id,
@@ -61,12 +65,13 @@ final as (
             else 0
         end                                                  as abstention_pct,
 
-        -- metadata
-        now()                                                as updated_at
+        -- metadata: reflects last ingest, not query time — makes recency test meaningful
+        l.ingested_at                                        as updated_at
 
     from deputies d
     left join deputy_stats s on d.deputy_id = s.deputy_id
     cross join total_votes t
+    cross join last_ingested l
 )
 
 select * from final
