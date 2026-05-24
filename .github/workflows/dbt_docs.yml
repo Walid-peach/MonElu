@@ -18,7 +18,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dbt
-        run: pip install dbt-postgres==1.8.0
+        run: pip install "dbt-core==1.9.*" "dbt-postgres==1.9.*"
 
       - name: Create dbt profiles.yml
         env:
@@ -35,7 +35,7 @@ jobs:
               prod:
                 type: postgres
                 host: "${DBT_HOST}"
-                port: ${DBT_PORT}
+                port: ${DBT_PORT:-6543}
                 user: "${DBT_USER}"
                 password: "${DBT_PASSWORD}"
                 dbname: "${DBT_DBNAME}"
