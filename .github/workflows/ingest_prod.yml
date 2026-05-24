@@ -60,7 +60,11 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python -m rag.pipeline.index_manager build --since $(date -d '30 days ago' +%Y-%m-%d)
 
-      - name: Run dbt transformations
+      - name: Install dbt
+        if: steps.ingest.outputs.new_votes != '0'
+        run: pip install --no-pre "dbt-core>=1.9,<1.10" "dbt-postgres>=1.9,<1.10"
+
+      - name: Write dbt profiles.yml
         if: steps.ingest.outputs.new_votes != '0'
         env:
           DBT_HOST: ${{ secrets.DBT_HOST }}
@@ -69,7 +73,6 @@ jobs:
           DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
           DBT_DBNAME: ${{ secrets.DBT_DBNAME }}
         run: |
-          pip install dbt-postgres==1.8.0
           cat > transform/profiles.yml <<EOF
           transform:
             target: prod
@@ -77,7 +80,7 @@ jobs:
               prod:
                 type: postgres
                 host: "${DBT_HOST}"
-                port: ${DBT_PORT}
+                port: ${DBT_PORT:-5432}
                 user: "${DBT_USER}"
                 password: "${DBT_PASSWORD}"
                 dbname: "${DBT_DBNAME}"
@@ -85,7 +88,13 @@ jobs:
                 threads: 4
                 connect_timeout: 10
           EOF
-          cd transform && dbt deps && dbt run --profiles-dir . --target prod
+
+      - name: Run dbt transformations
+        if: steps.ingest.outputs.new_votes != '0'
+        run: |
+          cd transform
+          dbt deps --profiles-dir .
+          dbt run --profiles-dir . --target prod
           dbt test --profiles-dir . --target prod
 
       - name: Notify success
