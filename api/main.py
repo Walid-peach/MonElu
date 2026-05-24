@@ -906,7 +906,7 @@ def landing(request: Request) -> HTMLResponse:
                     """
                     SELECT vote_title, result, voted_at,
                            votes_for, votes_against, abstentions, total_voters
-                    FROM votes
+                    FROM analytics_marts.mart_vote_summary
                     ORDER BY voted_at DESC
                     LIMIT 5
                     """

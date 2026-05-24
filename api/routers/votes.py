@@ -32,14 +32,17 @@ def list_votes(
                 else sql.SQL("")
             )
 
-            cur.execute(sql.SQL("SELECT COUNT(*) FROM votes") + where, params)
+            cur.execute(
+                sql.SQL("SELECT COUNT(*) FROM analytics_marts.mart_vote_summary") + where,
+                params,
+            )
             total = cur.fetchone()["count"]
 
             cur.execute(
                 sql.SQL("""
                     SELECT vote_id, voted_at, vote_title, result,
                            votes_for, votes_against, abstentions, total_voters
-                    FROM votes {} ORDER BY voted_at DESC LIMIT %s OFFSET %s
+                    FROM analytics_marts.mart_vote_summary {} ORDER BY voted_at DESC LIMIT %s OFFSET %s
                 """).format(where),
                 params + [limit, offset],
             )
@@ -62,7 +65,7 @@ def latest_votes(request: Request):
                 """
                 SELECT vote_id, voted_at, vote_title, result,
                        votes_for, votes_against, abstentions, total_voters
-                FROM votes
+                FROM analytics_marts.mart_vote_summary
                 ORDER BY voted_at DESC
                 LIMIT 10
                 """
@@ -76,7 +79,10 @@ def latest_votes(request: Request):
 def get_vote(request: Request, vote_id: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM votes WHERE vote_id = %s", (vote_id,))
+            cur.execute(
+                "SELECT * FROM analytics_marts.mart_vote_summary WHERE vote_id = %s",
+                (vote_id,),
+            )
             vote = cur.fetchone()
             if not vote:
                 raise HTTPException(status_code=404, detail="Vote not found")

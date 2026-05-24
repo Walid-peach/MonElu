@@ -1,0 +1,58 @@
+name: dbt docs
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'transform/**'
+
+jobs:
+  dbt-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dbt
+        run: pip install dbt-postgres==1.8.0
+
+      - name: Create dbt profiles.yml
+        env:
+          DBT_HOST: ${{ secrets.DBT_HOST }}
+          DBT_PORT: ${{ secrets.DBT_PORT }}
+          DBT_USER: ${{ secrets.DBT_USER }}
+          DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
+          DBT_DBNAME: ${{ secrets.DBT_DBNAME }}
+        run: |
+          cat > transform/profiles.yml <<EOF
+          transform:
+            target: prod
+            outputs:
+              prod:
+                type: postgres
+                host: "${DBT_HOST}"
+                port: ${DBT_PORT}
+                user: "${DBT_USER}"
+                password: "${DBT_PASSWORD}"
+                dbname: "${DBT_DBNAME}"
+                schema: analytics
+                threads: 4
+                connect_timeout: 10
+          EOF
+
+      - name: Install dbt packages
+        run: cd transform && dbt deps
+
+      - name: Generate dbt docs
+        run: cd transform && dbt docs generate --profiles-dir . --target prod
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: transform/target
+          destination_dir: dbt-docs

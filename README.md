@@ -14,6 +14,56 @@ MonÉlu is a civic transparency platform that makes the voting record of every d
 | **Phase 1** — Data platform | **Live** | Full ingestion pipeline, REST API, deputy profiles, vote records, scorecards |
 | **Phase 2** — Intelligence layer | **Live** | Semantic search over the legislative corpus (RAG, pgvector, Groq LLM) |
 | **Phase 3** — Pipeline infrastructure | *In progress* | Production-grade data orchestration and automated refresh pipelines |
+| **Phase 4** — dbt transformation layer | **Live** | Silver staging models, Gold mart tables, 25+ automated tests, FastAPI reads from marts |
+
+---
+
+## Phase 4 — dbt Transformation Layer
+
+A full dbt project (`transform/`) sits between raw ingestion and the FastAPI layer. Every 6 hours the pipeline runs: ingest → dbt → RAG rebuild → API serves fresh Gold data.
+
+### Layers
+
+| Layer | Schema | Materialisation | Models |
+|---|---|---|---|
+| **Silver** (staging) | `analytics_staging` | View | `stg_deputies`, `stg_votes`, `stg_vote_positions` |
+| **Gold** (marts) | `analytics_marts` | Table | `mart_deputy_scorecard`, `mart_vote_summary`, `mart_party_alignment` |
+
+### What FastAPI reads
+
+| Endpoint | Source |
+|---|---|
+| `GET /deputies/{id}/scorecard` | `analytics_marts.mart_deputy_scorecard` |
+| `GET /votes` · `GET /votes/latest` | `analytics_marts.mart_vote_summary` |
+| `GET /votes/{id}` | `analytics_marts.mart_vote_summary` + raw `vote_positions` |
+| Landing page latest votes | `analytics_marts.mart_vote_summary` |
+
+### Local dbt workflow
+
+```bash
+make dbt-run       # run all models (staging + marts)
+make dbt-test      # run all 57 tests
+make dbt-docs      # generate docs + serve at http://localhost:8082
+make dbt-lineage   # open lineage graph in browser
+make dbt-clean     # remove compiled artifacts
+```
+
+### Tests — 57 total
+
+| Category | Count |
+|---|---|
+| Source freshness + not_null + unique (raw) | 16 |
+| Staging not_null + unique + accepted_values + relationships | 16 |
+| Mart not_null + unique + `dbt_utils.accepted_range` | 21 |
+| Mart recency (`updated_at` within 1 day) | 1 |
+| Source tests re-run with staging | 3 |
+
+### Production deployment
+
+dbt runs automatically after every ingestion in `.github/workflows/ingest_prod.yml`.
+Required GitHub secrets: `DBT_HOST` · `DBT_PORT` · `DBT_USER` · `DBT_PASSWORD` · `DBT_DBNAME`
+
+dbt docs are published to GitHub Pages on every push to `main` that touches `transform/`.
 
 ---
 
@@ -103,6 +153,8 @@ On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}`
 
 **Phase 3:** Apache Airflow 2.8 · MinIO (S3-compatible Bronze) · Great Expectations 0.18 · GitHub Actions
 
+**Phase 4:** dbt 1.12 · dbt_utils · `analytics_staging` + `analytics_marts` schemas · 57 automated tests
+
 **Code quality:** ruff (lint + format) · pre-commit
 
 ---
@@ -171,6 +223,12 @@ make minio-ui       MinIO console at http://localhost:9001
 make setup-minio    create Bronze buckets (monelu-bronze, monelu-checkpoints)
 make dag-deputies   manually trigger deputies_incremental DAG
 make dag-votes      manually trigger votes_batch DAG
+
+make dbt-run        run all dbt models (staging → marts)
+make dbt-test       run all 57 dbt tests
+make dbt-docs       generate + serve docs at http://localhost:8082
+make dbt-lineage    open lineage graph in browser
+make dbt-clean      remove compiled dbt artifacts
 ```
 
 ---

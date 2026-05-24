@@ -76,42 +76,25 @@ def get_scorecard(request: Request, deputy_id: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT deputy_id, full_name FROM deputies WHERE deputy_id = %s", (deputy_id,)
-            )
-            deputy = cur.fetchone()
-            if not deputy:
-                raise HTTPException(status_code=404, detail="Deputy not found")
-
-            cur.execute(
                 """
                 SELECT
-                    COUNT(*)                                             AS total_votes,
-                    COUNT(*) FILTER (WHERE position != 'nonVotant')     AS present_votes,
-                    COUNT(*) FILTER (WHERE position = 'pour')           AS votes_for,
-                    COUNT(*) FILTER (WHERE position = 'contre')         AS votes_against,
-                    COUNT(*) FILTER (WHERE position = 'abstention')     AS abstentions
-                FROM vote_positions
+                    deputy_id,
+                    full_name,
+                    total_votes_cast                          AS total_votes,
+                    (total_votes_cast - total_nonvotant)      AS present_votes,
+                    presence_rate,
+                    total_pour                                AS votes_for,
+                    total_contre                              AS votes_against,
+                    total_abstention                          AS abstentions,
+                    votes_for_pct,
+                    abstention_pct
+                FROM analytics_marts.mart_deputy_scorecard
                 WHERE deputy_id = %s
                 """,
                 (deputy_id,),
             )
-            stats = cur.fetchone()
+            row = cur.fetchone()
 
-    total = stats["total_votes"] or 0
-    present = stats["present_votes"] or 0
-    votes_for = stats["votes_for"] or 0
-    votes_against = stats["votes_against"] or 0
-    abstentions = stats["abstentions"] or 0
-
-    return DeputyScorecard(
-        deputy_id=deputy["deputy_id"],
-        full_name=deputy["full_name"],
-        total_votes=total,
-        present_votes=present,
-        presence_rate=round(present / total, 4) if total else 0.0,
-        votes_for=votes_for,
-        votes_against=votes_against,
-        abstentions=abstentions,
-        votes_for_pct=round(votes_for / present, 4) if present else 0.0,
-        abstention_pct=round(abstentions / present, 4) if present else 0.0,
-    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Deputy not found")
+    return DeputyScorecard(**row)
