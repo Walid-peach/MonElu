@@ -10,6 +10,10 @@ majority as (
     select * from "postgres"."analytics_intermediate"."int_party_vote_majority"
 ),
 
+last_ingested as (
+    select max(ingested_at) as ingested_at from "postgres"."analytics_staging"."stg_vote_positions"
+),
+
 deputy_alignment as (
     select
         d.deputy_id,
@@ -52,8 +56,9 @@ final as (
             then round(dissident_votes::numeric / total_votes, 4)
             else 0
         end                                                 as dissident_rate,
-        now()                                               as updated_at
+        l.ingested_at                                       as updated_at
     from deputy_alignment
+    cross join last_ingested l
 )
 
 select * from final
