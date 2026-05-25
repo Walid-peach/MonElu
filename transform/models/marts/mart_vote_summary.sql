@@ -6,6 +6,10 @@ positions as (
     select * from {{ ref('stg_vote_positions') }}
 ),
 
+last_ingested as (
+    select max(ingested_at) as ingested_at from {{ ref('stg_votes') }}
+),
+
 vote_stats as (
     select
         vote_id,
@@ -46,10 +50,11 @@ final as (
             else 0
         end                                             as pct_contre,
 
-        now()                                           as updated_at
+        l.ingested_at                                   as updated_at
 
     from votes v
     left join vote_stats s on v.vote_id = s.vote_id
+    cross join last_ingested l
 )
 
 select * from final

@@ -57,6 +57,10 @@ sources:
                   to: source('raw', 'deputies')
                   field: deputy_id
           - name: position
+            description: >
+              Raw AN value — camelCase 'nonVotant' is intentional here.
+              stg_vote_positions normalises to lowercase; the staging schema
+              test uses 'nonvotant' to match the transformed value.
             tests:
               - not_null
               - accepted_values:
