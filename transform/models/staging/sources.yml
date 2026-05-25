@@ -35,8 +35,7 @@ sources:
             tests:
               - not_null
               - accepted_values:
-                  arguments:
-                    values: ['adopté', 'rejeté']
+                  values: ['adopté', 'rejeté']
 
       - name: vote_positions
         description: "Individual deputy positions on each vote"
@@ -49,19 +48,16 @@ sources:
             tests:
               - not_null
               - relationships:
-                  arguments:
-                    to: source('raw', 'votes')
-                    field: vote_id
+                  to: source('raw', 'votes')
+                  field: vote_id
           - name: deputy_id
             tests:
               - not_null
               - relationships:
-                  arguments:
-                    to: source('raw', 'deputies')
-                    field: deputy_id
+                  to: source('raw', 'deputies')
+                  field: deputy_id
           - name: position
             tests:
               - not_null
               - accepted_values:
-                  arguments:
-                    values: ['pour', 'contre', 'abstention', 'nonVotant']
+                  values: ['pour', 'contre', 'abstention', 'nonVotant']
