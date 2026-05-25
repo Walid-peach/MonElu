@@ -20,7 +20,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dbt
-        run: pip install --no-pre "dbt-core>=1.9,<1.10" "dbt-postgres>=1.9,<1.10"
+        run: pip install "dbt-core>=1.9,<1.10" "dbt-postgres>=1.9,<1.10"
 
       - name: Create dbt profiles.yml
         env:
