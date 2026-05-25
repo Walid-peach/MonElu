@@ -7,7 +7,7 @@ positions as (
 ),
 
 last_ingested as (
-    select max(ingested_at) as ingested_at from {{ ref('stg_vote_positions') }}
+    select max(ingested_at) as ingested_at from {{ ref('stg_votes') }}
 ),
 
 vote_stats as (
