@@ -3,6 +3,12 @@ from contextlib import contextmanager
 
 import psycopg2.extras
 import psycopg2.pool
+from fastapi import HTTPException
+
+MART_UNAVAILABLE = HTTPException(
+    status_code=503,
+    detail="Analytics layer unavailable — dbt marts not found. Run `dbt run` to build them.",
+)
 
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 

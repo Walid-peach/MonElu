@@ -3,16 +3,11 @@ from fastapi import APIRouter, HTTPException, Query
 from psycopg2 import sql
 from starlette.requests import Request
 
-from api.db import get_conn
+from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter
 from api.schemas import VoteDetail, VoteListResponse, VotePosition, VoteSummary
 
 router = APIRouter()
-
-_MART_UNAVAILABLE = HTTPException(
-    status_code=503,
-    detail="Analytics layer unavailable — dbt marts not found. Run `dbt run` to build them.",
-)
 
 
 @router.get("/", response_model=VoteListResponse)
@@ -55,7 +50,7 @@ def list_votes(
                 )
                 rows = cur.fetchall()
     except psycopg2.errors.UndefinedTable:
-        raise _MART_UNAVAILABLE from None
+        raise MART_UNAVAILABLE from None
 
     return VoteListResponse(
         total=total,
@@ -82,7 +77,7 @@ def latest_votes(request: Request):
                 )
                 rows = cur.fetchall()
     except psycopg2.errors.UndefinedTable:
-        raise _MART_UNAVAILABLE from None
+        raise MART_UNAVAILABLE from None
     return [VoteSummary(**r) for r in rows]
 
 
@@ -113,7 +108,7 @@ def get_vote(request: Request, vote_id: str):
                 )
                 position_rows = cur.fetchall()
     except psycopg2.errors.UndefinedTable:
-        raise _MART_UNAVAILABLE from None
+        raise MART_UNAVAILABLE from None
 
     return VoteDetail(
         **vote,
