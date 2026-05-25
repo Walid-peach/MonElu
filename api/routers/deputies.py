@@ -1,8 +1,9 @@
+import psycopg2.errors
 from fastapi import APIRouter, HTTPException, Query
 from psycopg2 import sql
 from starlette.requests import Request
 
-from api.db import get_conn
+from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter
 from api.schemas import DeputyDetail, DeputyListResponse, DeputyScorecard, DeputySummary
 
@@ -73,27 +74,30 @@ def get_deputy(request: Request, deputy_id: str):
 @router.get("/{deputy_id}/scorecard", response_model=DeputyScorecard)
 @limiter.limit("10/minute")
 def get_scorecard(request: Request, deputy_id: str):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT
-                    deputy_id,
-                    full_name,
-                    total_votes_cast                          AS total_votes,
-                    (total_votes_cast - total_nonvotant)      AS present_votes,
-                    presence_rate,
-                    total_pour                                AS votes_for,
-                    total_contre                              AS votes_against,
-                    total_abstention                          AS abstentions,
-                    votes_for_pct,
-                    abstention_pct
-                FROM analytics_marts.mart_deputy_scorecard
-                WHERE deputy_id = %s
-                """,
-                (deputy_id,),
-            )
-            row = cur.fetchone()
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        deputy_id,
+                        full_name,
+                        total_votes_cast                          AS total_votes,
+                        (total_votes_cast - total_nonvotant)      AS present_votes,
+                        presence_rate,
+                        total_pour                                AS votes_for,
+                        total_contre                              AS votes_against,
+                        total_abstention                          AS abstentions,
+                        votes_for_pct,
+                        abstention_pct
+                    FROM analytics_marts.mart_deputy_scorecard
+                    WHERE deputy_id = %s
+                    """,
+                    (deputy_id,),
+                )
+                row = cur.fetchone()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
 
     if not row:
         raise HTTPException(status_code=404, detail="Deputy not found")

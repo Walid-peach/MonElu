@@ -9,6 +9,7 @@ import os
 import traceback
 from contextlib import asynccontextmanager
 
+import psycopg2.errors
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -958,9 +959,29 @@ def health() -> JSONResponse:
     services["openai"] = "degraded" if _is_placeholder(os.getenv("OPENAI_API_KEY")) else "ok"
     services["groq"] = "degraded" if _is_placeholder(os.getenv("GROQ_API_KEY")) else "ok"
 
+    # all_ok excludes dbt_marts — marts are absent on every fresh deploy and
+    # degrade gracefully; their absence should not trip Railway's health check.
     all_ok = all(v == "ok" for v in services.values())
+
+    scorecard_rows = vote_summary_rows = None
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_deputy_scorecard")
+                scorecard_rows = cur.fetchone()["count"]
+                cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_vote_summary")
+                vote_summary_rows = cur.fetchone()["count"]
+        services["dbt_marts"] = "ok"
+    except psycopg2.errors.UndefinedTable:
+        services["dbt_marts"] = "degraded"
+    except Exception as exc:
+        logger.warning("Health check mart check error: %s", exc)
+        services["dbt_marts"] = "degraded"
+
     body: dict = {"status": "ok" if all_ok else "degraded", **services}
     if services["db"] == "ok":
         body.update({"deputies": deputies, "votes": votes, "positions": positions})
+    if services["dbt_marts"] == "ok":
+        body.update({"mart_scorecards": scorecard_rows, "mart_vote_summaries": vote_summary_rows})
 
     return JSONResponse(content=body, status_code=200 if all_ok else 207)
