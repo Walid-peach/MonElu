@@ -13,3 +13,43 @@ jobs:
       - run: pip install ruff
       - run: ruff check .
       - run: ruff format --check .
+
+  dbt-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-dbt-${{ hashFiles('requirements-dev.txt') }}
+
+      - name: Install dbt
+        run: pip install "dbt-core>=1.9,<1.10" "dbt-postgres>=1.9,<1.10"
+
+      - name: Create profiles.yml
+        run: |
+          cat > transform/profiles.yml <<'EOF'
+          transform:
+            target: ci
+            outputs:
+              ci:
+                type: postgres
+                host: localhost
+                port: 5432
+                user: ci
+                password: ""
+                dbname: ci
+                schema: analytics
+                threads: 4
+          EOF
+
+      - name: Install dbt packages
+        run: cd transform && dbt deps
+
+      - name: Compile dbt models
+        run: cd transform && dbt compile --profiles-dir . --target ci
