@@ -23,12 +23,17 @@ jobs:
         with:
           python-version: "3.11"
 
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-dbt-${{ hashFiles('requirements-dev.txt') }}
+
       - name: Install dbt
         run: pip install --no-pre "dbt-core>=1.9,<1.10" "dbt-postgres>=1.9,<1.10"
 
       - name: Create profiles.yml
         run: |
-          cat > transform/profiles.yml <<EOF
+          cat > transform/profiles.yml <<'EOF'
           transform:
             target: ci
             outputs:
