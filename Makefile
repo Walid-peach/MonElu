@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes dag-alerts venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean alerts-run alerts-test
 
 start:
 	docker compose up -d
@@ -74,6 +74,15 @@ dag-deputies:
 
 dag-votes:
 	docker compose exec airflow-scheduler airflow dags trigger votes_batch
+
+dag-alerts:
+	docker compose exec airflow-scheduler airflow dags trigger vote_alerts
+
+alerts-run:
+	venv/bin/python3 scripts/run_alerts.py
+
+alerts-test:
+	venv/bin/python3 scripts/run_alerts.py 525600
 
 venv:
 	python3.12 -m venv venv && venv/bin/pip install -r requirements.txt -r requirements-ingest.txt -r requirements-rag.txt

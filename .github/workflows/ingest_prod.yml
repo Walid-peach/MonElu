@@ -16,12 +16,14 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
         run: |
           missing=()
-          [ -z "$DATABASE_URL" ]   && missing+=(DATABASE_URL)
-          [ -z "$OPENAI_API_KEY" ] && missing+=(OPENAI_API_KEY)
-          [ -z "$GROQ_API_KEY" ]   && missing+=(GROQ_API_KEY)
-          # AN_API_BASE_URL is optional — the script has a hardcoded fallback
+          [ -z "$DATABASE_URL" ]      && missing+=(DATABASE_URL)
+          [ -z "$OPENAI_API_KEY" ]    && missing+=(OPENAI_API_KEY)
+          [ -z "$GROQ_API_KEY" ]      && missing+=(GROQ_API_KEY)
+          [ -z "$SENDGRID_API_KEY" ]  && missing+=(SENDGRID_API_KEY)
+          # AN_API_BASE_URL and SENDGRID_FROM_EMAIL are optional — scripts have fallbacks
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
             echo "Add them at: Settings → Secrets and variables → Actions"
@@ -96,6 +98,14 @@ jobs:
           dbt deps --profiles-dir .
           dbt run --profiles-dir . --target prod
           dbt test --profiles-dir . --target prod
+
+      - name: Run vote alerts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+        run: python scripts/run_alerts.py 360
+        # 360 minutes = 6 hours (matches cron interval)
 
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
