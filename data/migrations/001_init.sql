@@ -115,6 +115,10 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     confirmation_token UUID DEFAULT gen_random_uuid()
 );
 
+-- Required for ON CONFLICT (email) DO UPDATE in the subscribe endpoint
+ALTER TABLE subscriptions
+    ADD CONSTRAINT IF NOT EXISTS subscriptions_email_unique UNIQUE (email);
+
 CREATE INDEX IF NOT EXISTS idx_subscriptions_email
     ON subscriptions(email);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_active
