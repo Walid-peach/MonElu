@@ -116,8 +116,15 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 
 -- Required for ON CONFLICT (email) DO UPDATE in the subscribe endpoint
-ALTER TABLE subscriptions
-    ADD CONSTRAINT IF NOT EXISTS subscriptions_email_unique UNIQUE (email);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'subscriptions_email_unique'
+    ) THEN
+        ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_email_unique UNIQUE (email);
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_email
     ON subscriptions(email);
