@@ -37,10 +37,10 @@ def get_conn():
     broken = False
     try:
         yield conn
-    except psycopg2.OperationalError:
-        # Connection-level failure (severed socket, server restart): always discard.
-        # rollback() can return successfully on a dead socket, so we cannot rely on
-        # it raising to detect a broken connection here.
+    except (psycopg2.OperationalError, psycopg2.InterfaceError):
+        # Connection-level failure (severed socket, server restart, closed connection):
+        # always discard. rollback() can return successfully on a dead socket, so we
+        # cannot rely on it raising to detect a broken connection here.
         broken = True
         try:
             conn.rollback()
