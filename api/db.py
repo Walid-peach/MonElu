@@ -1,6 +1,7 @@
 import os
 from contextlib import contextmanager
 
+import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 from fastapi import HTTPException
@@ -36,6 +37,16 @@ def get_conn():
     broken = False
     try:
         yield conn
+    except (psycopg2.OperationalError, psycopg2.InterfaceError):
+        # Connection-level failure (severed socket, server restart, closed connection):
+        # always discard. rollback() can return successfully on a dead socket, so we
+        # cannot rely on it raising to detect a broken connection here.
+        broken = True
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
     except Exception:
         try:
             conn.rollback()
