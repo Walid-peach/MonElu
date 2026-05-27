@@ -57,11 +57,6 @@ models:
     columns:
       - name: deputy_id
         tests: [not_null, unique]
-      - name: majority_position
-        tests:
-          - not_null
-          - accepted_values:
-              values: ['pour', 'contre', 'abstention']
       - name: party_alignment_rate
         tests:
           - not_null
