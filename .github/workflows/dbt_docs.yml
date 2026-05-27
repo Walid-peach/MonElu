@@ -30,21 +30,29 @@ jobs:
           DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
           DBT_DBNAME: ${{ secrets.DBT_DBNAME }}
         run: |
-          cat > transform/profiles.yml <<EOF
-          transform:
+          python3 <<'PYEOF'
+          import os, pathlib
+          port = int(os.environ.get("DBT_PORT") or "5432")
+          host = os.environ["DBT_HOST"]
+          user = os.environ["DBT_USER"]
+          password = os.environ["DBT_PASSWORD"]
+          dbname = os.environ["DBT_DBNAME"]
+          content = f"""transform:
             target: prod
             outputs:
               prod:
                 type: postgres
-                host: "${DBT_HOST}"
-                port: ${DBT_PORT:-5432}
-                user: "${DBT_USER}"
-                password: "${DBT_PASSWORD}"
-                dbname: "${DBT_DBNAME}"
+                host: "{host}"
+                port: {port}
+                user: "{user}"
+                password: "{password}"
+                dbname: "{dbname}"
                 schema: analytics
                 threads: 4
                 connect_timeout: 10
-          EOF
+          """
+          pathlib.Path("transform/profiles.yml").write_text(content)
+          PYEOF
 
       - name: Install dbt packages
         run: cd transform && dbt deps
