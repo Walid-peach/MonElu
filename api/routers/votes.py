@@ -15,7 +15,7 @@ router = APIRouter()
 def list_votes(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0, le=10_000),
+    offset: int = Query(0, ge=0, le=2_000),
     result: str = Query(None, description="Filter by result: adopté | rejeté"),
 ):
     try:

@@ -15,7 +15,7 @@ router = APIRouter()
 def list_deputies(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0, le=10_000),
+    offset: int = Query(0, ge=0, le=2_000),
     search: str = Query(None, description="Filter by name (case-insensitive)"),
     department: str = Query(None),
 ):
