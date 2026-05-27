@@ -282,7 +282,7 @@ def _build_vote_row(row) -> str:
     vf = row.get("votes_for") or 0
     vc = row.get("votes_against") or 0
     ab = row.get("abstentions") or 0
-    total = row.get("total_voters") or (vf + vc)
+    total = row.get("total_voters") or (vf + vc + ab)
     pour_pct = round(vf / total * 100) if total > 0 else 0
     contre_pct = round(vc / total * 100) if total > 0 else 0
 
