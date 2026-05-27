@@ -15,6 +15,46 @@ MonÉlu is a civic transparency platform that makes the voting record of every d
 | **Phase 2** — Intelligence layer | **Live** | Semantic search over the legislative corpus (RAG, pgvector, Groq LLM) |
 | **Phase 3** — Pipeline infrastructure | *In progress* | Production-grade data orchestration and automated refresh pipelines |
 | **Phase 4** — dbt transformation layer | **Live** | Silver staging models, Gold mart tables, 25+ automated tests, FastAPI reads from marts |
+| **Phase 5** — Vote alert system | *In progress* | Email alerts when tracked deputies vote, SendGrid dispatch, Airflow + GitHub Actions triggers |
+
+---
+
+## Phase 5 — Vote Alert System
+
+Subscribe to receive email alerts when your deputies vote.
+
+### Subscribe
+
+```
+POST /alerts/subscribe
+{"email": "you@example.com", "deputy_ids": ["PA722190"]}
+```
+
+### How it works
+
+1. Subscribe with email + deputy IDs
+2. Confirm via email link
+3. GitHub Actions checks for new votes every 6h
+4. Airflow DAG checks every 5min on session days (local dev)
+5. Alert email sent via SendGrid within minutes of a vote
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/alerts/subscribe` | Subscribe to alerts for specific deputies |
+| `GET` | `/alerts/confirm?token=…` | Confirm email subscription |
+| `DELETE` | `/alerts/unsubscribe?email=…` | Unsubscribe from all alerts |
+| `GET` | `/alerts/stats` | Subscriber counts and total alerts sent |
+
+### Required secrets
+
+Add to GitHub Actions (Settings → Secrets and variables → Actions):
+
+| Secret | Description |
+|--------|-------------|
+| `SENDGRID_API_KEY` | SendGrid API key |
+| `SENDGRID_FROM_EMAIL` | Verified sender email (e.g. `alertes@monelu.fr`) |
 
 ---
 

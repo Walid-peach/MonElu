@@ -1,3 +1,4 @@
 psycopg2-binary>=2.9.10
 requests==2.32.2
 python-dotenv==1.0.1
+sendgrid==6.11.0

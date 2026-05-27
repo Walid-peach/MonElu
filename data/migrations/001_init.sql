@@ -98,3 +98,49 @@ CREATE POLICY "public_read_vote_positions"
     ON vote_positions FOR SELECT USING (true);
 
 -- document_chunks: no public policy — anon gets nothing (embeddings are internal)
+
+-- ---------------------------------------------------------------------------
+-- Phase 5: real-time vote alerts
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+    subscription_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email              VARCHAR(255) NOT NULL,
+    deputy_ids         TEXT[] NOT NULL DEFAULT '{}',
+    themes             TEXT[] NOT NULL DEFAULT '{}',
+    is_active          BOOLEAN DEFAULT TRUE,
+    created_at         TIMESTAMP DEFAULT NOW(),
+    last_alerted_at    TIMESTAMP,
+    confirmed          BOOLEAN DEFAULT FALSE,
+    confirmation_token UUID DEFAULT gen_random_uuid()
+);
+
+-- Required for ON CONFLICT (email) DO UPDATE in the subscribe endpoint
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'subscriptions_email_unique'
+    ) THEN
+        ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_email_unique UNIQUE (email);
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_email
+    ON subscriptions(email);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_active
+    ON subscriptions(is_active) WHERE is_active = TRUE;
+
+CREATE TABLE IF NOT EXISTS alert_log (
+    alert_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subscription_id  UUID REFERENCES subscriptions(subscription_id),
+    vote_id          VARCHAR(50) NOT NULL,
+    deputy_id        VARCHAR(50),
+    sent_at          TIMESTAMP DEFAULT NOW(),
+    email_status     VARCHAR(20) DEFAULT 'sent'
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_log_vote
+    ON alert_log(vote_id);
+CREATE INDEX IF NOT EXISTS idx_alert_log_subscription
+    ON alert_log(subscription_id);

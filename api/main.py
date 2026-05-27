@@ -122,7 +122,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -130,11 +130,13 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------------------------
 from api.routers import deputies, votes  # noqa: E402
+from api.routers.alerts import router as alerts_router  # noqa: E402
 from api.routers.search import router as search_router  # noqa: E402
 
 app.include_router(deputies.router, prefix="/deputies", tags=["Deputies"])
 app.include_router(votes.router, prefix="/votes", tags=["Votes"])
 app.include_router(search_router, prefix="/search", tags=["Search"])
+app.include_router(alerts_router, prefix="/alerts", tags=["Alerts"])
 
 
 # ---------------------------------------------------------------------------
@@ -709,10 +711,27 @@ _LANDING_HTML = """\
         <div class="feature-title">Analyses claires</div>
         <p class="feature-desc">Taux de présence, alignement partisan, historique complet — les chiffres bruts sans interprétation.</p>
       </div>
-      <div class="feature-card muted">
+      <div class="feature-card">
         <span class="feature-icon">🔔</span>
-        <div class="feature-title">Alertes à venir</div>
-        <p class="feature-desc">Bientôt : recevez une notification dès que votre député vote. Phase 3 du projet.</p>
+        <div class="feature-title">Alertes en temps réel</div>
+        <p class="feature-desc">Recevez un email dès que votre député vote.</p>
+        <form id="alert-form" style="margin-top: 16px;">
+          <input type="email" id="alert-email"
+                 placeholder="votre@email.fr"
+                 style="width: 100%; padding: 8px 12px; border: 1px solid #E0DED9;
+                        border-radius: 4px; font-size: 14px; margin-bottom: 8px;">
+          <input type="text" id="alert-deputy"
+                 placeholder="ID député (ex: PA722190)"
+                 style="width: 100%; padding: 8px 12px; border: 1px solid #E0DED9;
+                        border-radius: 4px; font-size: 14px; margin-bottom: 8px;">
+          <button type="button" onclick="subscribeAlert()"
+                  style="width: 100%; padding: 10px; background: #C9302C;
+                         color: white; border: none; border-radius: 4px;
+                         font-size: 14px; cursor: pointer;">
+            S'abonner aux alertes
+          </button>
+          <p id="alert-msg" style="font-size: 12px; margin-top: 8px; color: #666;"></p>
+        </form>
       </div>
     </div>
   </div>
@@ -880,6 +899,34 @@ _LANDING_HTML = """\
       askQuestion();
     }}
   }});
+
+  async function subscribeAlert() {{
+    const email = document.getElementById('alert-email').value;
+    const deputyId = document.getElementById('alert-deputy').value;
+    const msg = document.getElementById('alert-msg');
+    if (!email || !deputyId) {{
+      msg.textContent = 'Email et ID député requis.';
+      return;
+    }}
+    msg.textContent = 'Envoi en cours...';
+    try {{
+      const res = await fetch('/alerts/subscribe', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{email, deputy_ids: [deputyId]}})
+      }});
+      const data = await res.json();
+      if (res.ok) {{
+        msg.textContent = '✅ ' + data.message;
+        msg.style.color = '#3B6D11';
+      }} else {{
+        msg.textContent = '❌ ' + (data.detail || 'Erreur');
+        msg.style.color = '#A32D2D';
+      }}
+    }} catch(e) {{
+      msg.textContent = '❌ Service indisponible.';
+    }}
+  }}
 </script>
 
 </body>
