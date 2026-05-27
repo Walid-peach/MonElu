@@ -2,7 +2,12 @@ version: 2
 
 models:
   - name: int_party_vote_majority
-    description: "Majority position per party per vote — one row per (party, vote_id)"
+    description: >
+      Majority position per party per vote — one row per (party, vote_id).
+      Only pour, contre, and abstention positions are counted; nonvotant is
+      excluded by design. Parties that cast exclusively nonvotant on a given
+      vote produce no row, and those deputies are excluded from
+      mart_party_alignment totals for that vote.
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [party, vote_id]
