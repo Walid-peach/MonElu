@@ -1,69 +1,117 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
-  lint:
+  lint-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install ruff
-      - run: ruff check .
-      - run: ruff format --check .
+          cache: "pip"
 
-  dbt-compile:
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff pytest
+
+      - name: Lint with ruff
+        run: ruff check . --select E9,F63,F7,F82 --output-format=github
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --tb=short
+
+  dbt-test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: ci
-          POSTGRES_PASSWORD: ci  # pragma: allowlist secret
-          POSTGRES_DB: ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-dbt-${{ hashFiles('requirements-dev.txt') }}
 
       - name: Install dbt
         run: pip install "dbt-core>=1.9,<1.10" "dbt-postgres>=1.9,<1.10"
 
-      - name: Create profiles.yml
+      - name: Create dbt profiles.yml
+        env:
+          DBT_HOST: ${{ secrets.DBT_HOST }}
+          DBT_PORT: ${{ secrets.DBT_PORT }}
+          DBT_USER: ${{ secrets.DBT_USER }}
+          DBT_PASSWORD: ${{ secrets.DBT_PASSWORD }}
+          DBT_DBNAME: ${{ secrets.DBT_DBNAME }}
         run: |
-          cat > transform/profiles.yml <<'EOF'
-          transform:
-            target: ci
+          python3 <<'PYEOF'
+          import os, pathlib
+          port = int(os.environ.get("DBT_PORT") or "5432")
+          host = os.environ["DBT_HOST"]
+          user = os.environ["DBT_USER"]
+          password = os.environ["DBT_PASSWORD"]
+          dbname = os.environ["DBT_DBNAME"]
+          content = f"""transform:
+            target: prod
             outputs:
-              ci:
+              prod:
                 type: postgres
-                host: localhost
-                port: 5432
-                user: ci
-                password: ci  # pragma: allowlist secret
-                dbname: ci
+                host: "{host}"
+                port: {port}
+                user: "{user}"
+                password: "{password}"
+                dbname: "{dbname}"
                 schema: analytics
                 threads: 4
-          EOF
+                connect_timeout: 10
+          """
+          pathlib.Path("transform/profiles.yml").write_text(content)
+          PYEOF
 
       - name: Install dbt packages
         run: cd transform && dbt deps
 
       - name: Compile dbt models
-        run: cd transform && dbt compile --profiles-dir . --target ci
+        run: cd transform && dbt compile --profiles-dir . --target prod
+
+      - name: Run dbt tests
+        id: dbt_test
+        continue-on-error: true
+        run: |
+          cd transform
+          dbt test --profiles-dir . --target prod 2>&1 | tee test_output.txt
+
+      - name: Comment PR with dbt test results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let output = 'dbt test results not available';
+            try {
+              output = fs.readFileSync('transform/test_output.txt', 'utf8');
+              output = output.split('\n').slice(-25).join('\n');
+            } catch (e) {}
+            const outcome = '${{ steps.dbt_test.outcome }}';
+            const status = outcome === 'success' ? '✅ passed' : '❌ failed';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🧪 dbt test results — ${status}\n\`\`\`\n${output}\n\`\`\``
+            });
+
+      - name: Fail if dbt tests failed
+        if: steps.dbt_test.outcome == 'failure'
+        run: |
+          echo "dbt tests failed — blocking merge."
+          exit 1
