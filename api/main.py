@@ -940,6 +940,7 @@ def landing(request: Request) -> HTMLResponse:
 def health() -> JSONResponse:
     services: dict[str, str] = {}
     deputies = votes = positions = None
+    last_ingestion = None
 
     try:
         with get_conn() as conn:
@@ -950,6 +951,10 @@ def health() -> JSONResponse:
                 votes = cur.fetchone()["count"]
                 cur.execute("SELECT COUNT(*) FROM vote_positions")
                 positions = cur.fetchone()["count"]
+                cur.execute("SELECT MAX(voted_at) AS last_vote FROM votes")
+                row = cur.fetchone()
+                if row and row["last_vote"]:
+                    last_ingestion = row["last_vote"].isoformat()
         services["db"] = "ok"
     except Exception as exc:
         logger.error("Health check DB error: %s", exc)
@@ -961,6 +966,13 @@ def health() -> JSONResponse:
     all_ok = all(v == "ok" for v in services.values())
     body: dict = {"status": "ok" if all_ok else "degraded", **services}
     if services["db"] == "ok":
-        body.update({"deputies": deputies, "votes": votes, "positions": positions})
+        body.update(
+            {
+                "last_ingestion": last_ingestion,
+                "deputies": deputies,
+                "votes": votes,
+                "positions": positions,
+            }
+        )
 
     return JSONResponse(content=body, status_code=200 if all_ok else 207)
