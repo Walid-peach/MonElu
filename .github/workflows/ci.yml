@@ -95,7 +95,7 @@ jobs:
         continue-on-error: true
         run: |
           cd transform
-          dbt test --profiles-dir . --target prod 2>&1 | tee test_output.txt
+          dbt test --profiles-dir . --target prod --no-use-colors 2>&1 | tee test_output.txt
 
       - name: Comment PR with dbt test results
         if: always() && github.event_name == 'pull_request'
