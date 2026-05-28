@@ -25,14 +25,14 @@ select
     most_recent,
     cast(
 
-    now() + ((interval '1 day') * (-1))
+    now() + ((interval '1 day') * (-4))
 
  as timestamp) as threshold
 
 from recency
 where most_recent < cast(
 
-    now() + ((interval '1 day') * (-1))
+    now() + ((interval '1 day') * (-4))
 
  as timestamp)
 
