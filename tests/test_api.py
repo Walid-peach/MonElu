@@ -8,7 +8,7 @@ import groq
 import httpx
 
 import api.db as _db
-from api.routers.votes import _encode_cursor
+from api.routers.votes import _decode_cursor, _encode_cursor
 
 _DEPUTY_SUMMARY = {
     "deputy_id": "PA1",
@@ -167,23 +167,33 @@ def test_list_votes(client, mock_cursor):
 
 
 def test_list_votes_returns_next_cursor(client, mock_cursor):
-    """A full page hands back an opaque next_cursor for keyset paging."""
-    row = {**_VOTE_SUMMARY, "voted_at": datetime(2024, 7, 16, 15, 0, 0)}
+    """A full page hands back an opaque next_cursor that round-trips to its keyset."""
+    ts = datetime(2024, 7, 16, 15, 0, 0)
+    row = {**_VOTE_SUMMARY, "voted_at": ts, "vote_id": "VTANR5L17V1"}
     mock_cursor.fetchone.return_value = {"count": 5_000}
     mock_cursor.fetchall.return_value = [row]  # one row == limit=1 → full page
     resp = client.get("/votes/?limit=1")
     assert resp.status_code == 200
-    assert resp.json()["next_cursor"] is not None
+    cursor = resp.json()["next_cursor"]
+    assert cursor is not None
+    assert _decode_cursor(cursor) == (ts, "VTANR5L17V1")
 
 
 def test_list_votes_before_cursor_overrides_offset(client, mock_cursor):
-    """A valid before= cursor reaches votes beyond the offset ceiling."""
-    token = _encode_cursor(datetime(2024, 7, 16, 15, 0, 0), "VTANR5L17V1")
+    """A valid before= cursor drives the keyset predicate and zeroes the offset."""
+    ts = datetime(2024, 7, 16, 15, 0, 0)
+    token = _encode_cursor(ts, "VTANR5L17V1")
     mock_cursor.fetchone.return_value = {"count": 5_000}
     mock_cursor.fetchall.return_value = [_VOTE_SUMMARY]
-    resp = client.get(f"/votes/?before={token}")
+    resp = client.get(f"/votes/?before={token}&offset=100")
     assert resp.status_code == 200
     assert resp.json()["total"] == 5_000
+    # The SELECT (last execute call) must carry the decoded cursor values, and the
+    # offset must be zeroed because keyset paging supersedes it.
+    select_params = mock_cursor.execute.call_args.args[1]
+    assert ts in select_params
+    assert "VTANR5L17V1" in select_params
+    assert select_params[-1] == 0
 
 
 def test_list_votes_invalid_cursor_rejected(client):
