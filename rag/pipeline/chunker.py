@@ -11,7 +11,6 @@ Each chunk is {"content": str, "metadata": dict}.
 import json
 import os
 import warnings
-from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
@@ -20,6 +19,8 @@ from dotenv import load_dotenv
 
 # Must run before os.getenv() calls below so .env is loaded before module-level vars are set.
 load_dotenv()
+
+from rag.constants import NOTABLE_DEPUTIES  # noqa: E402
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 TOKEN_WARN_THRESHOLD = 500
@@ -345,10 +346,6 @@ def chunk_global_stats() -> list[dict]:
 # ---------------------------------------------------------------------------
 # Strategy E — Notable deputy chunks (detailed vote-by-vote, top profiles)
 # ---------------------------------------------------------------------------
-
-NOTABLE_DEPUTIES: dict[str, dict] = json.loads(
-    (Path(__file__).parent.parent / "notable_deputies.json").read_text()
-)
 
 
 def chunk_notable_deputies() -> list[dict]:

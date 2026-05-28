@@ -5,10 +5,8 @@ Retrieves relevant chunks from document_chunks using cosine similarity
 via pgvector. The query is embedded with the same model used at index time.
 """
 
-import json
 import logging
 import os
-from pathlib import Path
 
 import numpy as np
 import psycopg2
@@ -17,7 +15,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
 
-from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES
+from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES, NOTABLE_DEPUTY_NAMES
 from rag.db_utils import connect_with_retry
 
 log = logging.getLogger(__name__)
@@ -26,14 +24,6 @@ log = logging.getLogger(__name__)
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-_NOTABLE_DEPUTIES: dict = json.loads(
-    (Path(__file__).parent.parent / "notable_deputies.json").read_text()
-)
-# Map each keyword → deputy_id for fast question matching
-NOTABLE_DEPUTY_NAMES: dict[str, str] = {
-    kw: dep_id for dep_id, info in _NOTABLE_DEPUTIES.items() for kw in info["keywords"]
-}
 
 
 def detect_notable_deputy(question: str) -> str | None:
