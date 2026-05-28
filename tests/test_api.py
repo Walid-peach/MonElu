@@ -1,12 +1,14 @@
 """Smoke tests for API routers — no real DB required."""
 
 import asyncio
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import groq
 import httpx
 
 import api.db as _db
+from api.routers.votes import _decode_cursor, _encode_cursor
 
 _DEPUTY_SUMMARY = {
     "deputy_id": "PA1",
@@ -160,6 +162,44 @@ def test_list_votes(client, mock_cursor):
     assert "total" in data
     assert "items" in data
     assert len(data["items"]) == 1
+    # Partial page (1 row < default limit) → no further pages.
+    assert data["next_cursor"] is None
+
+
+def test_list_votes_returns_next_cursor(client, mock_cursor):
+    """A full page hands back an opaque next_cursor that round-trips to its keyset."""
+    ts = datetime(2024, 7, 16, 15, 0, 0)
+    row = {**_VOTE_SUMMARY, "voted_at": ts, "vote_id": "VTANR5L17V1"}
+    mock_cursor.fetchone.return_value = {"count": 5_000}
+    mock_cursor.fetchall.return_value = [row]  # one row == limit=1 → full page
+    resp = client.get("/votes/?limit=1")
+    assert resp.status_code == 200
+    cursor = resp.json()["next_cursor"]
+    assert cursor is not None
+    assert _decode_cursor(cursor) == (ts, "VTANR5L17V1")
+
+
+def test_list_votes_before_cursor_overrides_offset(client, mock_cursor):
+    """A valid before= cursor drives the keyset predicate and zeroes the offset."""
+    ts = datetime(2024, 7, 16, 15, 0, 0)
+    token = _encode_cursor(ts, "VTANR5L17V1")
+    mock_cursor.fetchone.return_value = {"count": 5_000}
+    mock_cursor.fetchall.return_value = [_VOTE_SUMMARY]
+    resp = client.get(f"/votes/?before={token}&offset=100")
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 5_000
+    # The SELECT (last execute call) must carry the decoded cursor values, and the
+    # offset must be zeroed because keyset paging supersedes it.
+    select_params = mock_cursor.execute.call_args.args[1]
+    assert ts in select_params
+    assert "VTANR5L17V1" in select_params
+    assert select_params[-1] == 0
+
+
+def test_list_votes_invalid_cursor_rejected(client):
+    """A malformed before= cursor returns 422, not 500."""
+    resp = client.get("/votes/?before=not-a-valid-cursor")
+    assert resp.status_code == 422
 
 
 def test_latest_votes(client, mock_cursor):
@@ -244,8 +284,8 @@ def test_list_deputies_offset_exceeds_max(client):
 
 
 def test_list_votes_offset_exceeds_max(client):
-    """offset > 10_000 is rejected by FastAPI query validation."""
-    resp = client.get("/votes/?offset=10001")
+    """offset > 2_000 is rejected by query validation (use ?before= cursor instead)."""
+    resp = client.get("/votes/?offset=2001")
     assert resp.status_code == 422
 
 

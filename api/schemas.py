@@ -110,3 +110,8 @@ class VoteListResponse(_Base):
     limit: int
     offset: int
     items: list[VoteSummary]
+    next_cursor: Optional[str] = Field(
+        default=None,
+        description="Opaque keyset cursor — pass as ?before= to fetch the next page; "
+        "null when there are no more rows.",
+    )
