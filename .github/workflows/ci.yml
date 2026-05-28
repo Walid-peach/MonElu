@@ -8,6 +8,13 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    # Dummy values so importing api.main (which builds OpenAI/Groq clients at
+    # import time via the shared tests/conftest.py) succeeds. Unit tests never
+    # call these services; the clients only validate that a key is present.
+    env:
+      OPENAI_API_KEY: "sk-ci-placeholder"  # pragma: allowlist secret
+      GROQ_API_KEY: "gsk-ci-placeholder"  # pragma: allowlist secret
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"  # pragma: allowlist secret
     steps:
       - uses: actions/checkout@v4
 
