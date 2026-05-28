@@ -49,7 +49,11 @@ models:
               max_value: 1
 
   - name: mart_party_alignment
-    description: "Deputy alignment with party majority vote"
+    description: >
+      Deputy alignment with party majority vote. Only votes where the deputy
+      cast pour, contre, or abstention are counted; nonvotant votes are
+      excluded. Deputies whose party cast exclusively nonvotant on a vote are
+      not counted for that vote, which can slightly inflate alignment rates.
     columns:
       - name: deputy_id
         tests: [not_null, unique]
