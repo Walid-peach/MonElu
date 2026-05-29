@@ -18,12 +18,12 @@ from dotenv import load_dotenv
 from openai import OpenAI, RateLimitError
 from pgvector.psycopg2 import register_vector
 
+from rag.constants import EMBEDDING_MODEL
 from rag.db_utils import connect_with_retry
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-EMBEDDING_MODEL = "text-embedding-3-small"
 COST_PER_1M_TOKENS = 0.020  # USD
 
 

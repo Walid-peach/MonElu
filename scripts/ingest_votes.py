@@ -9,6 +9,8 @@ Usage:
     python scripts/ingest_votes.py --since 2026-01-01   # current year only
 """
 
+from __future__ import annotations
+
 import argparse
 import io
 import json

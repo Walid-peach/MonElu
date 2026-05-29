@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes venv
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean
 
 start:
 	docker compose up -d
@@ -51,6 +51,7 @@ setup-minio:
 	venv/bin/python3 scripts/setup_minio.py
 
 airflow-up:
+	@if [ -z "$$AIRFLOW_FERNET_KEY" ]; then echo "WARNING: AIRFLOW_FERNET_KEY is unset — using the public dev default. Set it in .env before deploying to production."; fi
 	docker compose up -d airflow-webserver airflow-scheduler
 
 airflow-down:
@@ -76,3 +77,18 @@ dag-votes:
 
 venv:
 	python3.12 -m venv venv && venv/bin/pip install -r requirements.txt -r requirements-ingest.txt -r requirements-rag.txt
+
+dbt-run:
+	cd transform && dbt run --profiles-dir .
+
+dbt-test:
+	cd transform && dbt test --profiles-dir .
+
+dbt-docs:
+	cd transform && dbt docs generate --profiles-dir . && dbt docs serve --port 8082 --profiles-dir .
+
+dbt-lineage:
+	open http://localhost:8082
+
+dbt-clean:
+	cd transform && dbt clean --profiles-dir .

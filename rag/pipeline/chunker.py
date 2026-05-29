@@ -8,8 +8,10 @@ Produces two types of text chunks for embedding:
 Each chunk is {"content": str, "metadata": dict}.
 """
 
+import json
 import os
 import warnings
+from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
@@ -344,18 +346,9 @@ def chunk_global_stats() -> list[dict]:
 # Strategy E — Notable deputy chunks (detailed vote-by-vote, top profiles)
 # ---------------------------------------------------------------------------
 
-NOTABLE_DEPUTIES: dict[str, dict] = {
-    "PA722190": {
-        "name": "Gabriel Attal",
-        "bio": "Ancien Premier ministre (janvier 2025).",
-        "keywords": ["attal"],
-    },
-    "PA720614": {
-        "name": "Marine Le Pen",
-        "bio": "Cheffe de file du Rassemblement National.",
-        "keywords": ["le pen"],
-    },
-}
+NOTABLE_DEPUTIES: dict[str, dict] = json.loads(
+    (Path(__file__).parent.parent / "notable_deputies.json").read_text()
+)
 
 
 def chunk_notable_deputies() -> list[dict]:

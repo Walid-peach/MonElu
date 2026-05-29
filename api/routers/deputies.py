@@ -1,7 +1,9 @@
+import psycopg2.errors
 from fastapi import APIRouter, HTTPException, Query
+from psycopg2 import sql
 from starlette.requests import Request
 
-from api.db import get_conn
+from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter
 from api.schemas import DeputyDetail, DeputyListResponse, DeputyScorecard, DeputySummary
 
@@ -13,35 +15,37 @@ router = APIRouter()
 def list_deputies(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0, le=100_000),
+    offset: int = Query(0, ge=0, le=2_000),
     search: str = Query(None, description="Filter by name (case-insensitive)"),
     department: str = Query(None),
 ):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            filters = []
+            conditions: list[sql.Composable] = []
             params: list = []
 
             if search:
-                filters.append("full_name ILIKE %s")
+                conditions.append(sql.SQL("full_name ILIKE %s"))
                 params.append(f"%{search}%")
             if department:
-                filters.append("department = %s")
+                conditions.append(sql.SQL("department = %s"))
                 params.append(department)
 
-            where = ("WHERE " + " AND ".join(filters)) if filters else ""
+            where = (
+                sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
+                if conditions
+                else sql.SQL("")
+            )
 
-            cur.execute(f"SELECT COUNT(*) FROM deputies {where}", params)
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM deputies") + where, params)
             total = cur.fetchone()["count"]
 
             cur.execute(
-                f"""
-                SELECT deputy_id, full_name, party, party_short,
-                       department, circonscription, photo_url
-                FROM deputies {where}
-                ORDER BY last_name, first_name
-                LIMIT %s OFFSET %s
-                """,
+                sql.SQL("""
+                    SELECT deputy_id, full_name, party, party_short,
+                           department, circonscription, photo_url
+                    FROM deputies {} ORDER BY last_name, first_name LIMIT %s OFFSET %s
+                """).format(where),
                 params + [limit, offset],
             )
             rows = cur.fetchall()
@@ -70,45 +74,31 @@ def get_deputy(request: Request, deputy_id: str):
 @router.get("/{deputy_id}/scorecard", response_model=DeputyScorecard)
 @limiter.limit("10/minute")
 def get_scorecard(request: Request, deputy_id: str):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT deputy_id, full_name FROM deputies WHERE deputy_id = %s", (deputy_id,)
-            )
-            deputy = cur.fetchone()
-            if not deputy:
-                raise HTTPException(status_code=404, detail="Deputy not found")
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        deputy_id,
+                        full_name,
+                        total_votes_cast                          AS total_votes,
+                        (total_votes_cast - total_nonvotant)      AS present_votes,
+                        presence_rate,
+                        total_pour                                AS votes_for,
+                        total_contre                              AS votes_against,
+                        total_abstention                          AS abstentions,
+                        votes_for_pct,
+                        abstention_pct
+                    FROM analytics_marts.mart_deputy_scorecard
+                    WHERE deputy_id = %s
+                    """,
+                    (deputy_id,),
+                )
+                row = cur.fetchone()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
 
-            cur.execute(
-                """
-                SELECT
-                    COUNT(*)                                             AS total_votes,
-                    COUNT(*) FILTER (WHERE position != 'nonVotant')     AS present_votes,
-                    COUNT(*) FILTER (WHERE position = 'pour')           AS votes_for,
-                    COUNT(*) FILTER (WHERE position = 'contre')         AS votes_against,
-                    COUNT(*) FILTER (WHERE position = 'abstention')     AS abstentions
-                FROM vote_positions
-                WHERE deputy_id = %s
-                """,
-                (deputy_id,),
-            )
-            stats = cur.fetchone()
-
-    total = stats["total_votes"] or 0
-    present = stats["present_votes"] or 0
-    votes_for = stats["votes_for"] or 0
-    votes_against = stats["votes_against"] or 0
-    abstentions = stats["abstentions"] or 0
-
-    return DeputyScorecard(
-        deputy_id=deputy["deputy_id"],
-        full_name=deputy["full_name"],
-        total_votes=total,
-        present_votes=present,
-        presence_rate=round(present / total, 4) if total else 0.0,
-        votes_for=votes_for,
-        votes_against=votes_against,
-        abstentions=abstentions,
-        votes_for_pct=round(votes_for / present, 4) if present else 0.0,
-        abstention_pct=round(abstentions / present, 4) if present else 0.0,
-    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Deputy not found")
+    return DeputyScorecard(**row)
