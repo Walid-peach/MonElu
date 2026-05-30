@@ -8,6 +8,12 @@ variable "vpc_cidr" {
   type        = string
 }
 
+variable "admin_cidr" {
+  description = "CIDR allowed to reach admin ports (SSH, Airflow UI). Empty string disables both rules."
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Common tags applied to all resources"
   type        = map(string)

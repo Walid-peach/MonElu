@@ -19,14 +19,31 @@ variable "db_username" {
   default     = "monelu"
 }
 
-# Production: this must come from AWS Secrets Manager, never hardcoded.
-# Use manage_master_user_password = true (RDS-managed Secrets Manager rotation)
-# or pass the secret ARN and retrieve it with aws_secretsmanager_secret_version.
+# Production: use manage_master_user_password = true (RDS-managed Secrets Manager
+# rotation) or pass the value via TF_VAR_db_password from a secrets store.
+# No default — Terraform will refuse to plan without an explicit value.
 variable "db_password" {
-  description = "PostgreSQL master password — use Secrets Manager in production"
+  description = "PostgreSQL master password — must be supplied via Secrets Manager or env var, never hardcoded"
   type        = string
   sensitive   = true
-  default     = "changeme-replace-with-secrets-manager"
+}
+
+variable "multi_az" {
+  description = "Enable Multi-AZ for automatic failover (set true in prod)"
+  type        = bool
+  default     = false
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot on destroy (set false in prod to protect against data loss)"
+  type        = bool
+  default     = true
+}
+
+variable "deletion_protection" {
+  description = "Prevent accidental destruction via terraform destroy (set true in prod)"
+  type        = bool
+  default     = false
 }
 
 variable "vpc_id" {
