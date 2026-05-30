@@ -1,0 +1,7 @@
+aws_region            = "eu-west-3"
+environment           = "dev"
+project               = "monelu"
+db_instance_class     = "db.t3.micro"
+airflow_instance_type = "t3.medium"
+spark_instance_type   = "t3.xlarge"
+kafka_instance_type   = "kafka.t3.small"
