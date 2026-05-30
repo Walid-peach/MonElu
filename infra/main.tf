@@ -26,6 +26,7 @@ module "rds" {
   name_prefix         = local.name_prefix
   instance_class      = var.db_instance_class
   db_name             = var.db_name
+  db_password         = var.db_password
   vpc_id              = module.networking.vpc_id
   subnet_ids          = module.networking.private_subnet_ids
   security_group_ids  = [module.networking.db_security_group_id]

@@ -25,4 +25,4 @@ jobs:
         run: cd infra && terraform init -backend=false
 
       - name: Terraform validate
-        run: cd infra && terraform validate
+        run: cd infra && terraform validate -var="db_password=ci-validate-only"  # pragma: allowlist secret

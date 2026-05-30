@@ -34,6 +34,12 @@ variable "db_name" {
   default     = "monelu"
 }
 
+variable "db_password" {
+  description = "PostgreSQL master password — must be supplied via Secrets Manager or TF_VAR_db_password env var, never hardcoded"
+  type        = string
+  sensitive   = true
+}
+
 variable "airflow_instance_type" {
   description = "EC2 instance type for Airflow"
   type        = string
