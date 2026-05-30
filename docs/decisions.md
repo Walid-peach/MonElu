@@ -219,10 +219,9 @@ DB writes.
 
 ## ADR-011 — Hash-based change detection in Bronze layer
 **Date:** Phase 3
-**Status:** Active
+**Status:** Planned — not yet implemented. Current production scheduler is GitHub Actions, not Airflow (see ADR-006).
 
-**Decision:** Airflow DAGs compute MD5 hash of each downloaded ZIP before
-writing to Bronze Delta Lake. If hash matches last run, skip the write.
+**Decision:** When Airflow is promoted to production (see ADR-006 migration path), DAGs should compute an MD5 hash of each downloaded ZIP before writing to a Bronze storage layer. If the hash matches the last run, skip the write.
 
 **Reason:** The AN exports the full dataset every time — no incremental
 endpoint exists. Without change detection, every DAG run would re-ingest
