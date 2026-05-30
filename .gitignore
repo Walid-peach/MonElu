@@ -56,3 +56,11 @@ mlruns/
 
 # Airflow runtime logs and symlinks
 logs/
+
+# Terraform — keep tfvars.example tracked, ignore everything else
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/*.tfstate
+infra/*.tfstate.*
+infra/terraform.tfvars
+infra/.terraform.tfstate.lock.info

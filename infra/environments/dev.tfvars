@@ -1,0 +1,7 @@
+aws_region            = "eu-west-3"
+environment           = "dev"
+project               = "monelu"
+vpc_cidr              = "10.0.0.0/16"
+db_instance_class     = "db.t3.micro"
+airflow_instance_type = "t3.medium"
+spark_instance_type   = "t3.xlarge"

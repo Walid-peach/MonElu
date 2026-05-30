@@ -1,0 +1,8 @@
+aws_region            = "eu-west-3"
+environment           = "dev"
+project               = "monelu"
+db_name               = "monelu"
+db_instance_class     = "db.t3.micro"
+airflow_instance_type = "t3.medium"
+spark_instance_type   = "t3.xlarge"
+# admin_cidr          = "x.x.x.x/32"  # set to your IP to open SSH + Airflow UI

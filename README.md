@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/Walid-peach/MonElu/actions/workflows/ci.yml/badge.svg)](https://github.com/Walid-peach/MonElu/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Walid-peach/MonElu/actions/workflows/deploy.yml/badge.svg)](https://github.com/Walid-peach/MonElu/actions/workflows/deploy.yml)
+[![Terraform](https://github.com/Walid-peach/MonElu/actions/workflows/terraform.yml/badge.svg)](https://github.com/Walid-peach/MonElu/actions/workflows/terraform.yml)
 [![dbt docs](https://github.com/Walid-peach/MonElu/actions/workflows/dbt_docs.yml/badge.svg)](https://github.com/Walid-peach/MonElu/actions/workflows/dbt_docs.yml)
 
 > Every vote. Every deputy. In plain French.
@@ -350,11 +351,37 @@ rag/
 |----------|---------|--------------|
 | `ci.yml` | Every PR to `master` | ruff lint + pytest + dbt compile + dbt test (posts results as a PR comment) |
 | `deploy.yml` | Merge to `master` | dbt run + test against prod |
+| `terraform.yml` | Every PR touching `infra/**` | terraform fmt + init + validate (no credentials needed) |
 | `ingest_prod.yml` | Every 6h on weekdays | Ingest votes + rebuild RAG index |
 | `dbt_docs.yml` | Push to `master` | Deploy lineage docs to GitHub Pages |
 
 All PRs must pass CI before merge — see [`docs/branch_protection.md`](docs/branch_protection.md)
 for the enforced branch protection rules.
+
+---
+
+## Infrastructure (Terraform)
+
+Full AWS stack defined as code in `infra/`. Currently validate-only
+(not applied — deployment planned for production phase).
+
+| Module | Resources |
+|--------|-----------|
+| networking | VPC, 2 public + 2 private subnets, IGW, NAT gateway, 2 security groups |
+| s3 | 4 buckets: bronze, silver, gold, artifacts (versioned, encrypted, public access blocked) |
+| rds | PostgreSQL 15 + pgvector, 20 GB gp3, 7-day backups |
+| ec2 | Airflow + Spark instances (Ubuntu 24.04, Docker on boot, S3 IAM profile) |
+
+### Validate locally
+
+```bash
+cd infra
+terraform init -backend=false
+terraform validate
+# Success! The configuration is valid.
+```
+
+Estimated production cost (eu-west-3): ~$130/month (dev sizing).
 
 ---
 

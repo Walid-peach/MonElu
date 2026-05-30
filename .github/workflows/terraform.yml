@@ -1,0 +1,30 @@
+name: Terraform
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "infra/**"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Terraform fmt check
+        run: cd infra && terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: cd infra && terraform init -backend=false
+
+      - name: Terraform validate
+        env:
+          TF_VAR_db_password: ci-validate-only  # pragma: allowlist secret
+        run: cd infra && terraform validate
