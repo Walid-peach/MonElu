@@ -45,3 +45,27 @@ variable "spark_instance_type" {
   type        = string
   default     = "t3.xlarge"
 }
+
+variable "admin_cidr" {
+  description = "CIDR allowed to reach admin ports (SSH port 22, Airflow UI port 8080). Leave empty to keep those ports closed."
+  type        = string
+  default     = ""
+}
+
+variable "db_multi_az" {
+  description = "Enable RDS Multi-AZ (set true in prod)"
+  type        = bool
+  default     = false
+}
+
+variable "db_skip_final_snapshot" {
+  description = "Skip RDS final snapshot on destroy (set false in prod)"
+  type        = bool
+  default     = true
+}
+
+variable "db_deletion_protection" {
+  description = "Enable RDS deletion protection (set true in prod)"
+  type        = bool
+  default     = false
+}
