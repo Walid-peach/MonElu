@@ -13,7 +13,7 @@ resource "aws_vpc" "main" {
 }
 
 # ---------------------------------------------------------------------------
-# Subnets — 2 public (Airflow/Spark), 2 private (RDS/MSK)
+# Subnets — 2 public (IGW/NAT), 2 private (RDS, EC2)
 # ---------------------------------------------------------------------------
 resource "aws_subnet" "public" {
   count                   = 2
@@ -95,20 +95,28 @@ resource "aws_security_group" "app" {
   vpc_id      = aws_vpc.main.id
   description = "EC2 instances — Airflow and Spark"
 
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  # SSH — only opened when admin_cidr is explicitly set; empty string disables the rule.
+  dynamic "ingress" {
+    for_each = var.admin_cidr != "" ? [var.admin_cidr] : []
+    content {
+      description = "SSH from admin CIDR"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
   }
 
-  ingress {
-    description = "Airflow web UI"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  # Airflow web UI — only opened when admin_cidr is explicitly set.
+  dynamic "ingress" {
+    for_each = var.admin_cidr != "" ? [var.admin_cidr] : []
+    content {
+      description = "Airflow web UI from admin CIDR"
+      from_port   = 8080
+      to_port     = 8080
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
   }
 
   egress {

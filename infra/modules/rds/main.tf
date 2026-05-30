@@ -43,14 +43,11 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids = var.security_group_ids
   parameter_group_name   = aws_db_parameter_group.postgres15.name
 
-  # Cost: multi_az = false for dev. Set to true in prod for automatic failover.
-  multi_az = false
+  multi_az = var.multi_az
 
   backup_retention_period = 7
-  skip_final_snapshot     = true
-
-  # Set to true in prod to prevent accidental drops via terraform destroy.
-  deletion_protection = false
+  skip_final_snapshot     = var.skip_final_snapshot
+  deletion_protection     = var.deletion_protection
 
   tags = merge(var.tags, { Name = "${var.name_prefix}-postgres" })
 }
