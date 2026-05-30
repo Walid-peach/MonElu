@@ -1,7 +1,7 @@
-aws_region            = "eu-west-3"
-environment           = "prod"
-project               = "monelu"
-vpc_cidr              = "10.1.0.0/16"
+aws_region  = "eu-west-3"
+environment = "prod"
+project     = "monelu"
+vpc_cidr    = "10.1.0.0/16"
 
 # Production sizing — larger instances for throughput and reliability.
 # Also enable multi_az = true in the rds module before applying to prod.
