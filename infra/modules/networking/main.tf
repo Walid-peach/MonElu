@@ -152,39 +152,3 @@ resource "aws_security_group" "db" {
     create_before_destroy = true
   }
 }
-
-# msk — MSK Kafka: accepts broker traffic only from the app SG
-resource "aws_security_group" "msk" {
-  name_prefix = "${var.name_prefix}-msk-"
-  vpc_id      = aws_vpc.main.id
-  description = "MSK Kafka — inbound from app SG only"
-
-  ingress {
-    description     = "Kafka plaintext from app"
-    from_port       = 9092
-    to_port         = 9092
-    protocol        = "tcp"
-    security_groups = [aws_security_group.app.id]
-  }
-
-  ingress {
-    description     = "Kafka TLS from app"
-    from_port       = 9094
-    to_port         = 9094
-    protocol        = "tcp"
-    security_groups = [aws_security_group.app.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(var.tags, { Name = "${var.name_prefix}-msk-sg" })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}

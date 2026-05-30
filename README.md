@@ -367,11 +367,10 @@ Full AWS stack defined as code in `infra/`. Currently validate-only
 
 | Module | Resources |
 |--------|-----------|
-| networking | VPC, 2 public + 2 private subnets, IGW, NAT gateway, 3 security groups |
+| networking | VPC, 2 public + 2 private subnets, IGW, NAT gateway, 2 security groups |
 | s3 | 4 buckets: bronze, silver, gold, artifacts (versioned, encrypted, public access blocked) |
 | rds | PostgreSQL 15 + pgvector, 20 GB gp3, 7-day backups |
 | ec2 | Airflow + Spark instances (Ubuntu 24.04, Docker on boot, S3 IAM profile) |
-| kafka | MSK cluster — 2 brokers, Kafka 3.6.0 (future streaming phase) |
 
 ### Validate locally
 

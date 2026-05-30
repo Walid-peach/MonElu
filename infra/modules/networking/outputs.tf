@@ -22,8 +22,3 @@ output "db_security_group_id" {
   description = "Security group ID for RDS (inbound from app SG only)"
   value       = aws_security_group.db.id
 }
-
-output "msk_security_group_id" {
-  description = "Security group ID for MSK (inbound from app SG only)"
-  value       = aws_security_group.msk.id
-}
