@@ -45,9 +45,3 @@ variable "spark_instance_type" {
   type        = string
   default     = "t3.xlarge"
 }
-
-variable "kafka_instance_type" {
-  description = "MSK broker instance type"
-  type        = string
-  default     = "kafka.t3.small"
-}
