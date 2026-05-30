@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code when working with code in this repository.
 
+> **Before writing any code, read [`docs/decisions.md`](docs/decisions.md).**
+> It documents every real architectural decision made during the build.
+> If anything here contradicts that file, the ADRs take precedence.
+
 ## Project Overview
 
 **MonÉlu** is a civic transparency platform exposing the complete voting record of every deputy in the French Assemblée Nationale (17th legislature, since 2024-07-07). The tagline is "Every vote. Every deputy. In plain French."
