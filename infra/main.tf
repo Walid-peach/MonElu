@@ -41,13 +41,3 @@ module "ec2" {
   security_group_ids    = [module.networking.app_security_group_id]
   tags                  = local.common_tags
 }
-
-module "kafka" {
-  source             = "./modules/kafka"
-  name_prefix        = local.name_prefix
-  instance_type      = var.kafka_instance_type
-  vpc_id             = module.networking.vpc_id
-  subnet_ids         = module.networking.private_subnet_ids
-  security_group_ids = [module.networking.app_security_group_id]
-  tags               = local.common_tags
-}
