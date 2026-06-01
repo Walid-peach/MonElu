@@ -14,7 +14,7 @@ variable "spark_instance_type" {
 }
 
 variable "subnet_id" {
-  description = "Public subnet ID for the EC2 instances"
+  description = "Subnet ID for the EC2 instances"
   type        = string
 }
 

@@ -8,7 +8,7 @@ output "spark_instance_id" {
   value       = aws_instance.spark.id
 }
 
-output "airflow_public_ip" {
-  description = "Public IP of the Airflow instance"
-  value       = aws_instance.airflow.public_ip
+output "airflow_private_ip" {
+  description = "Private IP of the Airflow instance (use SSM Session Manager or a bastion for access)"
+  value       = aws_instance.airflow.private_ip
 }

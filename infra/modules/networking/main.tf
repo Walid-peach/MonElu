@@ -95,11 +95,13 @@ resource "aws_security_group" "app" {
   vpc_id      = aws_vpc.main.id
   description = "EC2 instances — Airflow and Spark"
 
-  # SSH — only opened when admin_cidr is explicitly set; empty string disables the rule.
+  # SSH — only opened when admin_cidr is set (e.g., VPN or bastion CIDR). Instances are
+  # in a private subnet so this rule is only reachable via an internal network path.
+  # For zero-port access use SSM Session Manager (enabled via IAM policy on the EC2 role).
   dynamic "ingress" {
     for_each = var.admin_cidr != "" ? [var.admin_cidr] : []
     content {
-      description = "SSH from admin CIDR"
+      description = "SSH from admin CIDR (VPN/bastion only)"
       from_port   = 22
       to_port     = 22
       protocol    = "tcp"
@@ -107,11 +109,11 @@ resource "aws_security_group" "app" {
     }
   }
 
-  # Airflow web UI — only opened when admin_cidr is explicitly set.
+  # Airflow web UI — same constraint; only reachable via internal network path.
   dynamic "ingress" {
     for_each = var.admin_cidr != "" ? [var.admin_cidr] : []
     content {
-      description = "Airflow web UI from admin CIDR"
+      description = "Airflow web UI from admin CIDR (VPN/bastion only)"
       from_port   = 8080
       to_port     = 8080
       protocol    = "tcp"
