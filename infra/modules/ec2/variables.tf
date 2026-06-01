@@ -13,11 +13,6 @@ variable "spark_instance_type" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "VPC ID where instances are deployed"
-  type        = string
-}
-
 variable "subnet_id" {
   description = "Public subnet ID for the EC2 instances"
   type        = string
