@@ -27,7 +27,6 @@ module "rds" {
   instance_class      = var.db_instance_class
   db_name             = var.db_name
   db_password         = var.db_password
-  vpc_id              = module.networking.vpc_id
   subnet_ids          = module.networking.private_subnet_ids
   security_group_ids  = [module.networking.db_security_group_id]
   multi_az            = var.db_multi_az
@@ -41,7 +40,6 @@ module "ec2" {
   name_prefix           = local.name_prefix
   airflow_instance_type = var.airflow_instance_type
   spark_instance_type   = var.spark_instance_type
-  vpc_id                = module.networking.vpc_id
   subnet_id             = module.networking.private_subnet_ids[0]
   security_group_ids    = [module.networking.app_security_group_id]
   s3_bucket_arns        = module.s3.bucket_arns

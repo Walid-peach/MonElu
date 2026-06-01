@@ -46,11 +46,6 @@ variable "deletion_protection" {
   default     = false
 }
 
-variable "vpc_id" {
-  description = "VPC ID where RDS is deployed"
-  type        = string
-}
-
 variable "subnet_ids" {
   description = "Private subnet IDs for the DB subnet group"
   type        = list(string)
