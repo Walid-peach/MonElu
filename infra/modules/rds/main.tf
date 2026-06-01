@@ -8,8 +8,8 @@ resource "aws_db_subnet_group" "main" {
 # pgvector requires no special parameter group — the extension is installed
 # via CREATE EXTENSION in SQL after provisioning.
 resource "aws_db_parameter_group" "postgres15" {
-  name   = "${var.name_prefix}-pg15"
-  family = "postgres15"
+  name_prefix = "${var.name_prefix}-pg15-"
+  family      = "postgres15"
 
   parameter {
     name         = "shared_preload_libraries"
@@ -18,6 +18,10 @@ resource "aws_db_parameter_group" "postgres15" {
   }
 
   tags = merge(var.tags, { Name = "${var.name_prefix}-pg15" })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_db_instance" "main" {
