@@ -44,5 +44,6 @@ module "ec2" {
   vpc_id                = module.networking.vpc_id
   subnet_id             = module.networking.private_subnet_ids[0]
   security_group_ids    = [module.networking.app_security_group_id]
+  s3_bucket_arns        = module.s3.bucket_arns
   tags                  = local.common_tags
 }

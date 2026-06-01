@@ -45,16 +45,7 @@ resource "aws_iam_role_policy" "s3_access" {
         "s3:DeleteObject",
         "s3:ListBucket",
       ]
-      Resource = [
-        "arn:aws:s3:::${var.name_prefix}-bronze",
-        "arn:aws:s3:::${var.name_prefix}-bronze/*",
-        "arn:aws:s3:::${var.name_prefix}-silver",
-        "arn:aws:s3:::${var.name_prefix}-silver/*",
-        "arn:aws:s3:::${var.name_prefix}-gold",
-        "arn:aws:s3:::${var.name_prefix}-gold/*",
-        "arn:aws:s3:::${var.name_prefix}-artifacts",
-        "arn:aws:s3:::${var.name_prefix}-artifacts/*",
-      ]
+      Resource = flatten([for arn in var.s3_bucket_arns : [arn, "${arn}/*"]])
     }]
   })
 }

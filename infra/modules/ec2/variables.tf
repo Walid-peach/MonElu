@@ -28,6 +28,11 @@ variable "security_group_ids" {
   type        = list(string)
 }
 
+variable "s3_bucket_arns" {
+  description = "ARNs of the S3 buckets the EC2 instances need read/write access to"
+  type        = list(string)
+}
+
 variable "tags" {
   description = "Common tags applied to all resources"
   type        = map(string)
