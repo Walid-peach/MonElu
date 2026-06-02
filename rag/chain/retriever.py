@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
 
-from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES, NOTABLE_DEPUTY_NAMES
+from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES
 from rag.db_utils import connect_with_retry
 
 log = logging.getLogger(__name__)
@@ -26,10 +26,34 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-def detect_notable_deputy(question: str) -> str | None:
-    q = question.lower()
-    for name, deputy_id in NOTABLE_DEPUTY_NAMES.items():
-        if name in q:
+def get_notable_deputy_ids() -> dict:
+    """
+    Fetch all notable_deputy chunk deputy_ids from document_chunks.
+    Returns {deputy_id: full_name} for all indexed notable deputies.
+    """
+    with psycopg2.connect(DATABASE_URL) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT
+                    metadata->>'deputy_id' as deputy_id,
+                    metadata->>'full_name' as full_name
+                FROM document_chunks
+                WHERE metadata->>'chunk_type' = 'notable_deputy'
+            """
+            )
+            return {r["deputy_id"]: r["full_name"] for r in cur.fetchall()}
+
+
+def detect_notable_deputy(question: str, notable_map: dict) -> str | None:
+    """
+    Check if the question mentions a notable deputy by name.
+    Returns deputy_id if found, None otherwise.
+    """
+    q_lower = question.lower()
+    for deputy_id, full_name in notable_map.items():
+        parts = full_name.lower().split()
+        if any(part in q_lower for part in parts if len(part) > 3):
             return deputy_id
     return None
 
