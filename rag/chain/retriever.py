@@ -74,7 +74,14 @@ def retrieve(
     deputy_id: str = None,
 ) -> list[dict]:
     result_filter = detect_result_filter(question)
-    notable_id = detect_notable_deputy(question) if not deputy_id else None
+
+    notable_id = None
+    if not deputy_id:
+        notable_map = get_notable_deputy_ids()
+        notable_id = detect_notable_deputy(question, notable_map)
+        if notable_id:
+            log.debug("[retriever] Notable deputy pinned: %s", notable_map[notable_id])
+            print(f"[retriever] Notable deputy pinned: {notable_map[notable_id]}")
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
