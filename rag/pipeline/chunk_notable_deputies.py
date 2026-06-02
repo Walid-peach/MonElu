@@ -127,8 +127,7 @@ def build_chunk(deputy: dict, votes: list[dict]) -> str:
     presence = deputy.get("presence_pct") or 0
 
     lines = [
-        f"{deputy['full_name']} est député(e) {dept_prep(dept)} {dept}, "
-        f"membre du parti {party}.",
+        f"{deputy['full_name']} est député(e) {dept_prep(dept)} {dept}, membre du parti {party}.",
         f"Sur {deputy['total_votes']} votes enregistrés : "
         f"{deputy['pour']} pour, {deputy['contre']} contre, "
         f"{deputy['abstention']} abstentions.",
@@ -219,7 +218,7 @@ def build_notable_deputy_index(n: int = 100) -> dict:
             }
             embed_and_store_chunk(content, metadata, client)
             stats["new"] += 1
-            print(f"[{i+1}/{len(deputies)}] Embedded: {full_name}")
+            print(f"[{i + 1}/{len(deputies)}] Embedded: {full_name}")
         except Exception as e:
             stats["errors"] += 1
             print(f"Error on {full_name}: {e}")

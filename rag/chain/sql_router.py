@@ -132,7 +132,7 @@ FORMATTERS = {
     "party_presence_rate": lambda rows: (
         "Taux de présence moyen par groupe parlementaire :\n"
         + "\n".join(
-            f"- {r['party']} : {r['avg_presence_pct']}% " f"({r['deputies']} députés)" for r in rows
+            f"- {r['party']} : {r['avg_presence_pct']}% ({r['deputies']} députés)" for r in rows
         )
     ),
     "vote_result_count": lambda rows: (
