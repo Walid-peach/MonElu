@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean
 
 start:
 	docker compose up -d
@@ -43,6 +43,21 @@ rag-test:
 
 rag-eval:
 	venv/bin/python3 -m rag.experiments.mlflow_eval
+
+rag-notable:
+	venv/bin/python3 -m rag.pipeline.chunk_notable_deputies
+
+rag-test-sql:
+	venv/bin/python3 -c "\
+from rag.chain.sql_router import route; \
+questions = [\
+  'Combien de députés appartiennent à chaque groupe parlementaire ?',\
+  'Quel groupe parlementaire s abstient le plus ?',\
+  'Quel est le taux de présence moyen par parti ?',\
+  'Combien de votes ont été adoptés et rejetés ?',\
+  'Quel est le taux de présence de Yaël Braun-Pivet ?',\
+]; \
+[print(f'Q: {q}') or print(f'SQL: {route(q) is not None}') or print('---') for q in questions]"
 
 mlflow-ui:
 	venv/bin/mlflow ui --port 5001
