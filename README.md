@@ -19,92 +19,10 @@ MonÉlu is a civic transparency platform that makes the voting record of every d
 |-------|--------|----------------|
 | **Phase 1** — Data platform | **Live** | Full ingestion pipeline, REST API, deputy profiles, vote records, scorecards |
 | **Phase 2** — Intelligence layer | **Live** | Semantic search over the legislative corpus (RAG, pgvector, Groq LLM) |
-| **Phase 3** — Pipeline infrastructure | *In progress* | Production-grade data orchestration and automated refresh pipelines |
-| **Phase 4** — dbt transformation layer | **Live** | Silver staging models, Gold mart tables, 25+ automated tests, FastAPI reads from marts |
-
----
-
-## Phase 4 — dbt Transformation Layer
-
-A full dbt project (`transform/`) sits between raw ingestion and the FastAPI layer. Every 6 hours the pipeline runs: ingest → dbt → RAG rebuild → API serves fresh Gold data.
-
-### Layers
-
-| Layer | Schema | Materialisation | Models |
-|---|---|---|---|
-| **Silver** (staging) | `analytics_staging` | View | `stg_deputies`, `stg_votes`, `stg_vote_positions` |
-| **Gold** (marts) | `analytics_marts` | Table | `mart_deputy_scorecard`, `mart_vote_summary`, `mart_party_alignment` |
-
-### What FastAPI reads
-
-| Endpoint | Source |
-|---|---|
-| `GET /deputies/{id}/scorecard` | `analytics_marts.mart_deputy_scorecard` |
-| `GET /votes` · `GET /votes/latest` | `analytics_marts.mart_vote_summary` |
-| `GET /votes/{id}` | `analytics_marts.mart_vote_summary` + raw `vote_positions` |
-| Landing page latest votes | `analytics_marts.mart_vote_summary` |
-
-### Local dbt workflow
-
-```bash
-make dbt-run       # run all models (staging + marts)
-make dbt-test      # run all 57 tests
-make dbt-docs      # generate docs + serve at http://localhost:8082
-make dbt-lineage   # open lineage graph in browser
-make dbt-clean     # remove compiled artifacts
-```
-
-### Tests — 57 total
-
-| Category | Count |
-|---|---|
-| Source freshness + not_null + unique (raw) | 16 |
-| Staging not_null + unique + accepted_values + relationships | 16 |
-| Mart not_null + unique + `dbt_utils.accepted_range` | 21 |
-| Mart recency (`updated_at` within 1 day) | 1 |
-| Source tests re-run with staging | 3 |
-
-### Production deployment
-
-dbt runs automatically after every ingestion in `.github/workflows/ingest_prod.yml`.
-Required GitHub secrets: `DBT_HOST` · `DBT_PORT` · `DBT_USER` · `DBT_PASSWORD` · `DBT_DBNAME`
-
-dbt docs are published to GitHub Pages on every push to `main` that touches `transform/`.
-
----
-
-## Phase 3 — Orchestration & Bronze Layer
-
-### Local development
-
-```bash
-make airflow-up    # Start Airflow (webserver + scheduler)
-make minio-up      # Start MinIO (local S3)
-make setup-minio   # Create Bronze buckets
-make airflow-ui    # Open Airflow at localhost:8080
-make minio-ui      # Open MinIO at localhost:9001
-```
-
-### DAGs
-
-| DAG | Schedule | Description |
-|-----|----------|-------------|
-| `deputies_incremental` | Weekly Mon 6am | Deputies → GE → Bronze → Postgres |
-| `votes_batch` | Every 2h weekdays | Votes → GE → Bronze → Postgres → positions |
-
-### Production
-
-GitHub Actions runs ingestion every 6 hours on weekdays.
-Trigger manually: **GitHub → Actions → MonÉlu Production Ingestion → Run workflow**
-
-Required secrets (Settings → Secrets and variables → Actions):
-`DATABASE_URL` · `AN_API_BASE_URL` · `OPENAI_API_KEY` · `GROQ_API_KEY`
-
-### Bronze layer
-
-Raw data lands in MinIO at `s3://monelu-bronze/{entity}/year=Y/month=M/day=D/`
-
-Hash-based change detection — skips write if data unchanged since last run.
+| **Phase 3** — Automated refresh | **Live** | GitHub Actions daily cron — ingest + dbt run + RAG re-index |
+| **Phase 4** — dbt transformation layer | **Live** | Staging → intermediate → marts; lineage docs on GitHub Pages |
+| **Phase 5** — AWS infrastructure | **Deferred** | Terraform IaC written and validate-passing in `infra/`; not applied — Railway + Supabase cover current load |
+| **Phase 6** — CI/CD | **Live** | PR gates (ruff, pytest, dbt test bot), deploy workflow, Terraform validate |
 
 ---
 
@@ -112,13 +30,14 @@ Hash-based change detection — skips write if data unchanged since last run.
 
 ```
 Assemblée Nationale Open Data (ZIP exports)
-  → Ingestion pipeline  (fetch · parse · upsert with retry)
-  → PostgreSQL + pgvector on Supabase  (deputies · votes · positions · embeddings)
-  → FastAPI on Railway  (stateless, auto-restart)
-  → JSON API  /  HTML landing page  /  POST /search (RAG)
+  → scripts/ingest_*.py          fetch · parse · upsert with exponential-backoff retry
+  → Supabase PostgreSQL          deputies · votes · vote_positions · document_chunks
+  → dbt (GitHub Actions)         staging → intermediate → analytics_marts
+  → api/routers/                 direct psycopg2, RealDictCursor, parameterized SQL
+  → Railway (FastAPI)            JSON API · HTML landing page · POST /search (RAG)
 ```
 
-The API tier is fully stateless. All state lives in Supabase (managed Postgres with pgvector). Railway restarts the service on failure; the health endpoint returns live DB counts on every check.
+The API tier is fully stateless. All state lives in Supabase (managed Postgres with pgvector). Railway restarts on failure; `/health` returns live DB counts on every check.
 
 ---
 
@@ -133,7 +52,7 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 | GET | `/votes` | List votes (`result` filter) |
 | GET | `/votes/latest` | Last 10 votes |
 | GET | `/votes/{id}` | Vote detail + all individual positions |
-| GET | `/health` | API status + live record counts |
+| GET | `/health` | API status + live record counts + dbt mart row counts |
 | POST | `/search` | Natural language query over the legislative corpus *(Phase 2)* |
 
 ---
@@ -144,7 +63,7 @@ Implemented with [slowapi](https://github.com/laurentS/slowapi), keyed by remote
 
 | Scope | Limit |
 |---|---|
-| Global default | 30 req / min |
+| Global default | 60 req / min |
 | `GET /deputies/{id}/scorecard` | 10 req / min |
 
 On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}` · `Retry-After` + `X-RateLimit-*` headers.
@@ -153,13 +72,11 @@ On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}`
 
 ## Stack
 
-**Core:** FastAPI · PostgreSQL + pgvector (Supabase) · Python 3.11 · Railway · slowapi
+**Core:** FastAPI · PostgreSQL 15 + pgvector (Supabase) · Python 3.11 · Railway · slowapi
 
-**Phase 2:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
+**Phase 2 — RAG:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
 
-**Phase 3:** Apache Airflow 2.8 · MinIO (S3-compatible Bronze) · Great Expectations 0.18 · GitHub Actions
-
-**Phase 4:** dbt 1.12 · dbt_utils · `analytics_staging` + `analytics_marts` schemas · 57 automated tests
+**Phase 4 — Transform:** dbt 1.12 · dbt_utils · `analytics_staging` + `analytics_marts` schemas
 
 **Code quality:** ruff (lint + format) · pre-commit
 
@@ -168,12 +85,12 @@ On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}`
 ## Data Sources
 
 Assemblée Nationale Open Data — `data.assemblee-nationale.fr`
-Static ZIP exports only (no REST API available from the source).
+Static ZIP exports only — no REST API exists at the source (see ADR-010).
 
 | Dataset | File |
 |---|---|
 | Deputies + organes (active, 17th legislature) | `AMO10_deputes_actifs_mandats_actifs_organes.json.zip` |
-| Votes (scrutins, since 2025-07-01) | `Scrutins.json.zip` |
+| Votes (scrutins, since 2025-07-01 in prod) | `Scrutins.json.zip` |
 
 ---
 
@@ -193,8 +110,8 @@ cp .env.example .env        # set DATABASE_URL, OPENAI_API_KEY, GROQ_API_KEY
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
 
-make start      # start local Postgres
-make migrate    # apply schema
+make start      # start local Postgres + pgAdmin
+make migrate    # apply schema (001_init.sql)
 make ingest     # deputies → votes → positions
 make fix-deputies
 make api        # → http://localhost:8000/docs
@@ -203,11 +120,11 @@ make api        # → http://localhost:8000/docs
 ### Makefile reference
 
 ```
-make start          docker compose up -d
+make start          docker compose up -d (Postgres + pgAdmin)
 make stop           docker compose down
 make migrate        apply 001_init.sql to DATABASE_URL
 make ingest         full local ingestion (deputies → votes → positions)
-make ingest-prod    production ingestion (--since 2025-01-01)
+make ingest-prod    production ingestion (last 3 months)
 make fix-deputies   resolve party names + expand department codes
 make api            uvicorn api.main:app --reload
 make psql           psql into the running Postgres container
@@ -220,21 +137,98 @@ make rag-test       run 3 sample queries end-to-end
 make rag-eval       MLflow k=3 vs k=5 evaluation
 make mlflow-ui      MLflow dashboard at http://localhost:5001
 
-make airflow-up     start Airflow webserver + scheduler
-make airflow-down   stop all Airflow services
-make airflow-logs   tail scheduler logs
-make airflow-ui     Airflow UI at http://localhost:8080
-make minio-up       start MinIO
-make minio-ui       MinIO console at http://localhost:9001
-make setup-minio    create Bronze buckets (monelu-bronze, monelu-checkpoints)
-make dag-deputies   manually trigger deputies_incremental DAG
-make dag-votes      manually trigger votes_batch DAG
-
 make dbt-run        run all dbt models (staging → marts)
-make dbt-test       run all 57 dbt tests
+make dbt-test       run all dbt tests
 make dbt-docs       generate + serve docs at http://localhost:8082
 make dbt-lineage    open lineage graph in browser
 make dbt-clean      remove compiled dbt artifacts
+```
+
+> **Note:** Airflow and MinIO run locally only (Docker) and are not part of the production stack. See ADR-006.
+
+---
+
+## Phase 4 — dbt Transformation Layer
+
+A full dbt project (`transform/`) sits between raw ingestion and the FastAPI layer.
+
+### Layers
+
+| Layer | Schema | Materialisation | Models |
+|---|---|---|---|
+| **Staging** | `analytics_staging` | View | `stg_deputies`, `stg_votes`, `stg_vote_positions` |
+| **Marts** | `analytics_marts` | Table | `mart_deputy_scorecard`, `mart_vote_summary` |
+
+### What FastAPI reads
+
+| Endpoint | Source |
+|---|---|
+| `GET /deputies/{id}/scorecard` | `analytics_marts.mart_deputy_scorecard` |
+| `GET /votes` · `GET /votes/latest` | `analytics_marts.mart_vote_summary` |
+| `GET /votes/{id}` | `analytics_marts.mart_vote_summary` + raw `vote_positions` |
+| Landing page latest votes | `analytics_marts.mart_vote_summary` |
+
+### Production deployment
+
+dbt runs automatically on every merge to `master` via `deploy.yml`, and after every ingestion in `ingest_prod.yml`.
+Lineage docs are published to GitHub Pages on push to `master` touching `transform/`.
+
+Required GitHub secrets: `DBT_HOST` · `DBT_PORT` · `DBT_USER` · `DBT_PASSWORD` · `DBT_DBNAME`
+
+---
+
+## CI/CD
+
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| `ci.yml` | Every PR to `master` | ruff lint + pytest + dbt compile + dbt test (posts results as PR comment) |
+| `deploy.yml` | Merge to `master` | dbt run + test against prod Supabase |
+| `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest votes + deputies + rebuild RAG index |
+| `dbt_docs.yml` | Push to `master` touching `transform/` | Deploy lineage docs to GitHub Pages |
+| `terraform.yml` | PRs touching `infra/` | terraform fmt + init + validate (no credentials needed) |
+
+All PRs must pass CI before merge — see [`docs/branch_protection.md`](docs/branch_protection.md).
+
+---
+
+## RAG Pipeline (Phase 2)
+
+```
+rag/
+├── pipeline/
+│   ├── chunker.py        Five chunk strategies: vote, deputy, party, global_stats, notable_deputy
+│   ├── embedder.py       Batched OpenAI embedding (100 chunks/batch) → document_chunks
+│   └── index_manager.py  CLI: build / stats / clear
+├── chain/
+│   ├── retriever.py      pgvector cosine similarity (ivfflat.probes=10, notable deputy pinning)
+│   ├── prompts.py        French civic assistant system prompt + RAG template
+│   └── rag_chain.py      ask() — retrieve → format → Groq LLM
+└── experiments/
+    └── mlflow_eval.py    10 golden Q&A pairs, keyword scoring, k=3 vs k=5 experiment
+```
+
+**Index stats:** 3,741 chunks · avg 87 tokens · ~$0.0065 to embed · $0 per query (question embedding only)
+
+Notable deputy pinning (Attal, Le Pen, etc.) bypasses IVFFlat for known deputy names to fix recall gaps — see ADR-008.
+
+---
+
+## Infrastructure (Terraform — validate-only)
+
+Full AWS stack defined as code in `infra/`. Not applied — see ADR-003 and ADR-004.
+
+| Module | Resources |
+|--------|-----------|
+| networking | VPC, 2 public + 2 private subnets, IGW, NAT gateway, 2 security groups |
+| s3 | 4 buckets: bronze, silver, gold, artifacts (versioned, encrypted, public access blocked) |
+| rds | PostgreSQL 15 + pgvector, 20 GB gp3, 7-day backups |
+| ec2 | Airflow + Spark instances (Ubuntu 24.04, Docker on boot, S3 IAM profile) |
+
+```bash
+cd infra
+terraform init -backend=false
+terraform validate
+# Success! The configuration is valid.
 ```
 
 ---
@@ -309,79 +303,15 @@ make dbt-clean      remove compiled dbt artifacts
 
 All scripts use exponential-backoff retry (5 attempts, 2 s base) and upsert via `ON CONFLICT ... DO UPDATE`.
 
-### Orchestration (`ingestion/`) — Phase 3
-
-```
-ingestion/
-├── dags/
-│   ├── dag_deputies_incremental.py   Weekly: fetch → GE validate → Bronze → Postgres
-│   └── dag_votes_batch.py            Bi-hourly: check session → fetch → GE → Bronze → Postgres → positions
-├── operators/                        (reserved for custom Airflow operators)
-└── utils/
-    └── bronze_writer.py              MinIO S3 writer — partitioned by date, hash-based deduplication
-quality/
-└── expectations/
-    ├── deputies_suite.py             GE suite: row count 500–600, uid not null
-    └── votes_suite.py                GE suite: row count, required columns, dateScrutin not null
-```
-
-### RAG Pipeline (`rag/`) — Phase 2
-
-```
-rag/
-├── pipeline/
-│   ├── chunker.py        Five chunk strategies: vote, deputy, party, global_stats, notable_deputy
-│   ├── embedder.py       Batched OpenAI embedding (100 chunks/batch) → document_chunks
-│   └── index_manager.py  CLI: build / stats / clear
-├── chain/
-│   ├── retriever.py      pgvector cosine similarity (ivfflat.probes=10, notable deputy pinning)
-│   ├── prompts.py        French civic assistant system prompt + RAG template
-│   └── rag_chain.py      ask() — retrieve → format → Groq LLM
-└── experiments/
-    └── mlflow_eval.py    10 golden Q&A pairs, keyword scoring, k=3 vs k=5 experiment
-```
-
-**Index stats:** 3,741 chunks · avg 87 tokens · $0.0065 to embed
-
 ---
 
-## CI/CD
+## Security
 
-| Workflow | Trigger | What it does |
-|----------|---------|--------------|
-| `ci.yml` | Every PR to `master` | ruff lint + pytest + dbt compile + dbt test (posts results as a PR comment) |
-| `deploy.yml` | Merge to `master` | dbt run + test against prod |
-| `terraform.yml` | Every PR touching `infra/**` | terraform fmt + init + validate (no credentials needed) |
-| `ingest_prod.yml` | Every 6h on weekdays | Ingest votes + rebuild RAG index |
-| `dbt_docs.yml` | Push to `master` | Deploy lineage docs to GitHub Pages |
-
-All PRs must pass CI before merge — see [`docs/branch_protection.md`](docs/branch_protection.md)
-for the enforced branch protection rules.
-
----
-
-## Infrastructure (Terraform)
-
-Full AWS stack defined as code in `infra/`. Currently validate-only
-(not applied — deployment planned for production phase).
-
-| Module | Resources |
-|--------|-----------|
-| networking | VPC, 2 public + 2 private subnets, IGW, NAT gateway, 2 security groups |
-| s3 | 4 buckets: bronze, silver, gold, artifacts (versioned, encrypted, public access blocked) |
-| rds | PostgreSQL 15 + pgvector, 20 GB gp3, 7-day backups |
-| ec2 | Airflow + Spark instances (Ubuntu 24.04, Docker on boot, S3 IAM profile) |
-
-### Validate locally
-
-```bash
-cd infra
-terraform init -backend=false
-terraform validate
-# Success! The configuration is valid.
-```
-
-Estimated production cost (eu-west-3): ~$130/month (dev sizing).
+- **CORS:** `allow_credentials=False`, `allow_methods=["GET"]` — public read-only API
+- **Input validation:** `limit` capped at 200, `offset` at 100,000 on all list endpoints
+- **Error handling:** Global 500 handler returns a generic message — no tracebacks or DSNs in responses
+- **Rate limiting:** 60 req/min global, 10 req/min on scorecard, keyed by IP
+- **No secrets in git:** All credentials via environment variables; `.env` is gitignored
 
 ---
 
@@ -407,22 +337,12 @@ Lint config: `ruff.toml` — line length 100, `T201` (print) allowed in `scripts
 
 ---
 
-## Security
-
-- **CORS:** `allow_credentials=False`, `allow_methods=["GET"]` — public read-only API
-- **Input validation:** `limit` capped at 200, `offset` at 100,000 on all list endpoints
-- **Error handling:** Global 500 handler returns a generic message — no tracebacks or DSNs in responses
-- **Rate limiting:** 60 req/min global, 10 req/min on scorecard, by IP
-- **No secrets in git:** All credentials via environment variables; `.env` is gitignored
-
----
-
 ## Data Notes
 
 - **`nonVotant` ≠ `abstention`** — present in chamber but did not vote; excluded from `presence_rate`
 - **Yaël Braun-Pivet at 100% presence** — Présidente de l'AN, recorded on every scrutin by the AN data system
 - **`rejeté` outnumbers `adopté`** — the 17th legislature has no stable majority
-- **Party names** — resolved from `Organes.json` GP mandats; 575/577 deputies covered
+- **Party names** — resolved from `Organes.json` GP mandats; 575/577 deputies covered (2 have no active parliamentary group — expected edge case)
 - **Department names** — full text (`"78"` → `"Yvelines"`) for all 96 metropolitan + DOM departments
 - **Ingestion window** — production DB holds votes from `2025-07-01` (Supabase free tier); run `--since 2024-07-07` locally for the full legislature
 
