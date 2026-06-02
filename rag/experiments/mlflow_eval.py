@@ -130,11 +130,15 @@ def run_config(label: str, k: int, use_sql_router: bool) -> dict:
             mlflow.log_param("citation_prompt", "enabled")
             mlflow.log_param("notable_deputies", "top_100")
 
-            for qa in GOLDEN_QA:
+            total = len(GOLDEN_QA)
+            for i, qa in enumerate(GOLDEN_QA, 1):
+                print(f"  [{i}/{total}] {qa['label']} ...", flush=True)
                 result = _rag_chain.ask(qa["question"])
+                src = "SQL" if result.get("data_source") == "SQL" else "RAG"
                 if result.get("data_source") == "SQL":
                     sql_count += 1
                 score = keyword_score(result["answer"], qa["keywords"])
+                print(f"         → {src}  score={score:.2f}", flush=True)
                 results.append(score)
                 top_sim = result["sources"][0].get("similarity", 0) if result.get("sources") else 0
                 similarities.append(top_sim)
