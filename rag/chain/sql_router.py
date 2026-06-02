@@ -17,7 +17,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 PATTERNS = [
-    (r"combien de dép", "deputy_count_by_party"),
+    (r"combien de dép.*(groupe|parti)", "deputy_count_by_party"),
     (r"combien.*groupe|combien.*parti", "deputy_count_by_party"),
     (r"(quel groupe|quel parti).*(abstien|abstention|plus d.abstention)", "party_abstention_rate"),
     (r"(qui|quel).*(abstient|abstentions).*(plus|davantage|le plus)", "party_abstention_rate"),
@@ -117,7 +117,7 @@ SQL_QUERIES = {
 
 FORMATTERS = {
     "deputy_count_by_party": lambda rows: (
-        "Répartition des 577 députés par groupe parlementaire :\n"
+        f"Répartition des {sum(r['count'] for r in rows)} députés par groupe parlementaire :\n"
         + "\n".join(f"- {r['party']} : {r['count']} députés" for r in rows)
     ),
     "party_abstention_rate": lambda rows: (
