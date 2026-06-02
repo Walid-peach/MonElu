@@ -48,12 +48,14 @@ def get_notable_deputy_ids() -> dict:
 def detect_notable_deputy(question: str, notable_map: dict) -> str | None:
     """
     Check if the question mentions a notable deputy by name.
+    Matches on last name only (final word of full_name) to avoid false positives
+    from common French words that happen to be first names (marine, jean, etc.).
     Returns deputy_id if found, None otherwise.
     """
     q_lower = question.lower()
     for deputy_id, full_name in notable_map.items():
-        parts = full_name.lower().split()
-        if any(part in q_lower for part in parts if len(part) > 3):
+        last_name = full_name.lower().split()[-1]
+        if len(last_name) > 3 and last_name in q_lower:
             return deputy_id
     return None
 
