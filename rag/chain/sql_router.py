@@ -157,14 +157,18 @@ def detect_intent(question: str) -> str | None:
 
 
 def run_sql_query(intent: str) -> list[dict]:
-    """Run the SQL query for a detected intent."""
+    """Run the SQL query for a detected intent. Returns [] on any failure so route() falls back to RAG."""
     sql = SQL_QUERIES.get(intent)
     if not sql:
         return []
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(sql)
-            return [dict(r) for r in cur.fetchall()]
+    try:
+        with psycopg2.connect(DATABASE_URL) as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql)
+                return [dict(r) for r in cur.fetchall()]
+    except Exception as exc:
+        print(f"[SQL router] query failed for intent={intent}: {exc}")
+        return []
 
 
 def route(question: str) -> dict | None:
