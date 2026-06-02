@@ -5,7 +5,6 @@ Run standalone: python -m rag.pipeline.chunk_notable_deputies
 """
 
 import os
-import sys
 
 import numpy as np
 import psycopg2
@@ -13,8 +12,6 @@ import psycopg2.extras
 from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 load_dotenv()
 
