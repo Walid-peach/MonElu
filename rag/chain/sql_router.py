@@ -17,6 +17,29 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Maps lowercase department name keywords → department code stored in DB
+CODE_TO_DEPT_NAME = {
+    "78": "Yvelines",
+    "59": "Nord",
+    "75": "Paris",
+    "69": "Rhône",
+    "13": "Bouches-du-Rhône",
+    "33": "Gironde",
+    "92": "Hauts-de-Seine",
+    "93": "Seine-Saint-Denis",
+    "94": "Val-de-Marne",
+    "95": "Val-d'Oise",
+    "91": "Essonne",
+    "77": "Seine-et-Marne",
+    "42": "Loire",
+    "38": "Isère",
+    "34": "Hérault",
+    "83": "Var",
+    "06": "Alpes-Maritimes",
+    "31": "Haute-Garonne",
+    "67": "Bas-Rhin",
+    "57": "Moselle",
+}
+
 DEPT_NAME_TO_CODE = {
     "yvelines": "78",
     "nord": "59",
@@ -201,7 +224,8 @@ SQL_QUERIES = {
 FORMATTERS = {
     "deputy_by_department": lambda rows: (
         (
-            f"{len(rows)} député(s) pour le département {rows[0]['department']} :\n"
+            f"{len(rows)} député(s) dans les {CODE_TO_DEPT_NAME.get(rows[0]['department'], rows[0]['department'])} "
+            f"(département {rows[0]['department']}) :\n"
             + "\n".join(f"- {r['full_name']} ({r['party'] or 'parti non renseigné'})" for r in rows)
         )
         if rows
