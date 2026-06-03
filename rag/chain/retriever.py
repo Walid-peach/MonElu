@@ -7,6 +7,7 @@ via pgvector. The query is embedded with the same model used at index time.
 
 import logging
 import os
+from functools import lru_cache
 
 import numpy as np
 import psycopg2
@@ -26,6 +27,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
+@lru_cache(maxsize=1)
 def get_notable_deputy_ids() -> dict:
     """
     Fetch all notable_deputy chunk deputy_ids from document_chunks.
@@ -83,7 +85,6 @@ def retrieve(
         notable_id = detect_notable_deputy(question, notable_map)
         if notable_id:
             log.debug("[retriever] Notable deputy pinned: %s", notable_map[notable_id])
-            print(f"[retriever] Notable deputy pinned: {notable_map[notable_id]}")
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
