@@ -12,8 +12,13 @@ from groq import Groq
 
 load_dotenv()
 
+from rag.chain.hybrid_retriever import retrieve_hybrid  # noqa: E402
 from rag.chain.prompts import RAG_TEMPLATE, SYSTEM_PROMPT  # noqa: E402
-from rag.chain.retriever import retrieve  # noqa: E402
+from rag.chain.retriever import (  # noqa: E402
+    detect_notable_deputy,
+    detect_result_filter,
+    get_notable_deputy_ids,
+)
 from rag.chain.sql_router import route as sql_route  # noqa: E402
 from rag.constants import LLM_MODEL  # noqa: E402
 
@@ -30,7 +35,21 @@ def ask(
     if sql_result is not None:
         return sql_result
 
-    chunks = retrieve(question, k=5, deputy_id=deputy_id, chunk_type=chunk_type)
+    # B1 — notable deputy pinning before hybrid retrieval
+    if deputy_id is None:
+        notable_map = get_notable_deputy_ids()
+        detected = detect_notable_deputy(question, notable_map)
+        if detected:
+            deputy_id = detected
+
+    result_filter = detect_result_filter(question)
+    chunks = retrieve_hybrid(
+        question,
+        k=5,
+        chunk_type=chunk_type,
+        deputy_id=deputy_id,
+        result_filter=result_filter,
+    )
 
     context = "\n\n---\n\n".join([c["content"] for c in chunks])
 
