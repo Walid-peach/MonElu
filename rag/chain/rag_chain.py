@@ -79,11 +79,16 @@ def ask(
         max_tokens=1024,
     )
 
+    clean_answer, confidence = extract_confidence(response.choices[0].message.content)
     return {
-        "answer": response.choices[0].message.content,
+        "answer": clean_answer,
         "sources": chunks,
         "question": question,
         "chunks_retrieved": len(chunks),
+        "query_type": "rag",
+        "confidence": confidence,
+        "data_source": "RAG",
+        "caveat": None,
     }
 
 
