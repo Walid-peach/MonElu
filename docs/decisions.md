@@ -250,6 +250,29 @@ PgBouncer transaction mode breaks some local psycopg2 features.
 
 ---
 
+## ADR-013 — BM25 hybrid retrieval reverted
+**Date:** RAG Phase B
+**Status:** Final
+
+**Decision:** BM25 hybrid retrieval (hybrid_retriever.py) is not
+used as the default retriever. Cosine similarity (retriever.py)
+remains the default.
+
+**Reason:** MLflow eval showed BM25 hybrid scored 0.844 vs 0.911
+for cosine on 15 golden questions. Regression driven by noisy
+reranking on questions where cosine was already correct.
+
+**Root cause of eval failures:** Data coverage gaps and missing
+SQL router patterns — not retrieval algorithm quality.
+Fixing 4 SQL patterns raised score from 0.622 to 0.911 with
+zero retrieval changes.
+
+**When to revisit:** If semantic multi-hop questions become a real
+failure mode after Phase C chunks are added (law summaries,
+temporal chunks). hybrid_retriever.py is ready to re-enable.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
