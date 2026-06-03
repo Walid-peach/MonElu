@@ -273,6 +273,26 @@ temporal chunks). hybrid_retriever.py is ready to re-enable.
 
 ---
 
+## ADR-014 — RAG Phase C deferred
+**Date:** Post Phase B
+**Status:** Deferred
+
+**Decision:** Phase C (query decomposition, answer verification,
+Cohere reranking) not built.
+
+**Reason:** Phase B reached 0.911 keyword score — production quality
+for a portfolio RAG. Remaining gap (0.5 on "122" RN deputies) is a
+local data artifact, not present on production.
+
+**What Phase C would add:** query decomposition (+0.03-0.05),
+answer verification (hallucination detection), Cohere reranking.
+Estimated 5-7 days effort for marginal gain.
+
+**Trigger to build:** Real users reporting specific failure patterns
+that Phase A + B don't cover.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
