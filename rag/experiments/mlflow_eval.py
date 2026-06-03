@@ -41,7 +41,7 @@ GOLDEN_QA = [
     },
     {
         "question": "Combien de députés sont suivis ?",
-        "keywords": ["577"],
+        "keywords": ["596"],
         "label": "Total députés",
     },
     {
@@ -56,7 +56,7 @@ GOLDEN_QA = [
     },
     {
         "question": "Combien de votes ont eu lieu depuis janvier 2025 ?",
-        "keywords": ["3149", "3 149"],
+        "keywords": ["4073"],
         "label": "Volume votes 2025",
     },
     {

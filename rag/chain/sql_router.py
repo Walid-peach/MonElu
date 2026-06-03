@@ -89,6 +89,7 @@ PATTERNS = [
     # total deputy count
     (r"combien.*député.*(total|suivis|enregistrés|au total|en tout)", "deputy_total_count"),
     # party / group counts
+    (r"quel (parti|groupe).*(plus de|le plus).*(député|élu)", "deputy_count_by_party"),
     (r"combien de dép.*(groupe|parti)", "deputy_count_by_party"),
     (r"combien.*groupe|combien.*parti", "deputy_count_by_party"),
     # abstention rate
