@@ -6,6 +6,7 @@ Groq llama-3.3-70b-versatile.
 """
 
 import os
+import re
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -23,6 +24,19 @@ from rag.chain.sql_router import route as sql_route  # noqa: E402
 from rag.constants import LLM_MODEL  # noqa: E402
 
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
+
+_CONFIDENCE_PATTERN = re.compile(r"\[Confiance\s*:\s*(ÉLEVÉ|MOYEN|FAIBLE)\]", re.IGNORECASE)
+
+
+def extract_confidence(answer: str) -> tuple[str, str]:
+    """Extract [Confiance : NIVEAU] tag from answer if present.
+    Returns (clean_answer, confidence_level)."""
+    match = _CONFIDENCE_PATTERN.search(answer)
+    if match:
+        level = match.group(1).upper()
+        clean = _CONFIDENCE_PATTERN.sub("", answer).strip()
+        return clean, level
+    return answer, "MEDIUM"
 
 
 def ask(
