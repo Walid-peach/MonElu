@@ -45,9 +45,10 @@ def ask(
         return sql_result
 
     # B1 hybrid retrieval available in rag/chain/hybrid_retriever.py
-    # Reverted to cosine-only: hybrid scored 0.622 vs 0.656 for cosine
-    # on the 15-question eval. Remaining gaps are data-coverage issues,
-    # not retrieval quality issues. Re-evaluate after Phase C chunks added.
+    # Reverted to cosine-only: after SQL routing fixes, hybrid scored 0.644
+    # vs 0.911 for cosine on the 15-question eval. Gaps were data-coverage
+    # issues (missing SQL patterns), not retrieval quality. Re-evaluate
+    # after Phase C chunks are added.
     chunks = retrieve(question, k=5, chunk_type=chunk_type, deputy_id=deputy_id)
 
     context = "\n\n---\n\n".join([c["content"] for c in chunks])

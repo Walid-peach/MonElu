@@ -16,30 +16,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Maps lowercase department name keywords → department code stored in DB
-CODE_TO_DEPT_NAME = {
-    "78": "Yvelines",
-    "59": "Nord",
-    "75": "Paris",
-    "69": "Rhône",
-    "13": "Bouches-du-Rhône",
-    "33": "Gironde",
-    "92": "Hauts-de-Seine",
-    "93": "Seine-Saint-Denis",
-    "94": "Val-de-Marne",
-    "95": "Val-d'Oise",
-    "91": "Essonne",
-    "77": "Seine-et-Marne",
-    "42": "Loire",
-    "38": "Isère",
-    "34": "Hérault",
-    "83": "Var",
-    "06": "Alpes-Maritimes",
-    "31": "Haute-Garonne",
-    "67": "Bas-Rhin",
-    "57": "Moselle",
-}
-
+# Department name keywords (lowercase) → numeric code stored in DB
 DEPT_NAME_TO_CODE = {
     "yvelines": "78",
     "nord": "59",
@@ -62,6 +39,9 @@ DEPT_NAME_TO_CODE = {
     "bas-rhin": "67",
     "moselle": "57",
 }
+
+# Derived reverse map: numeric code → display name for formatter output
+CODE_TO_DEPT_NAME = {code: name.title() for name, code in DEPT_NAME_TO_CODE.items()}
 
 _DEPT_PATTERN = re.compile(
     r"\b(" + "|".join(re.escape(k) for k in DEPT_NAME_TO_CODE) + r")\b",
@@ -305,15 +285,16 @@ def route(question: str) -> dict | None:
 
     print(f"[SQL router] intent={intent} — bypassing RAG")
 
-    # Department queries need the detected code as a parameter
+    # Department queries need the detected code as a parameter.
+    # If no department name is detected, fall back to RAG — a vague
+    # "deputies by department" question is better handled there than
+    # with a broken or meaningless ranking.
     if intent == "deputy_by_department":
         dept_code = detect_department(question)
-        if dept_code:
-            rows = run_sql_query("deputy_by_department", {"dept": dept_code})
-            formatter_key = "deputy_by_department"
-        else:
-            rows = run_sql_query("deputy_by_department_all")
-            formatter_key = "deputy_count_by_party"
+        if not dept_code:
+            return None
+        rows = run_sql_query("deputy_by_department", {"dept": dept_code})
+        formatter_key = "deputy_by_department"
     else:
         rows = run_sql_query(intent)
         formatter_key = intent

@@ -118,7 +118,6 @@ def _bm25_rerank(
         "[hybrid] top-3 hybrid scores: %s",
         [r["hybrid_score"] for r in ranked[:3]],
     )
-    print(f"[hybrid] top-3 hybrid scores: {[r['hybrid_score'] for r in ranked[:3]]}")
     return ranked[:k]
 
 

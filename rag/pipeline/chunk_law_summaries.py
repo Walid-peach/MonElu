@@ -106,7 +106,9 @@ def already_indexed(vote_id: str) -> bool:
 
 
 def embed_and_store(content: str, metadata: dict, client: OpenAI) -> None:
-    """Embed one chunk and upsert into document_chunks."""
+    """Embed one chunk and insert into document_chunks.
+    Callers must check already_indexed() before calling — document_chunks
+    has no unique constraint so duplicate prevention is the caller's job."""
     response = client.embeddings.create(input=[content], model=EMBEDDING_MODEL)
     embedding = np.array(response.data[0].embedding, dtype=np.float32)
 
@@ -119,7 +121,6 @@ def embed_and_store(content: str, metadata: dict, client: OpenAI) -> None:
                 """
                 INSERT INTO document_chunks (content, metadata, embedding)
                 VALUES (%s, %s, %s)
-                ON CONFLICT DO NOTHING
                 """,
                 (content, psycopg2.extras.Json(metadata), embedding),
             )

@@ -3,9 +3,9 @@ rag/experiments/mlflow_eval.py
 
 Evaluates the RAG pipeline against 15 golden Q&A pairs using keyword scoring.
 Runs three MLflow configs:
-  - baseline_no_sql: k=5, SQL router disabled (monkey-patched out of ask())
-  - phase_a_k5:      k=5, SQL router + citation prompt
-  - phase_a_k3:      k=3, SQL router + citation prompt
+  - phase_a_k5:      k=5, SQL router + cosine retrieval (Phase A baseline)
+  - phase_b_hybrid:  k=5, SQL router + BM25 hybrid retrieval (Phase B experiment)
+  - phase_b_final:   k=5, SQL router + cosine + law_summary chunks (Phase B shipped)
 """
 
 import mlflow
@@ -131,7 +131,7 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
 
     try:
         mlflow.set_experiment("monelu-rag-eval")
-        with mlflow.start_run(run_name=f"phase-a-{label}"):
+        with mlflow.start_run(run_name=f"monelu-rag-{label}"):
             mlflow.log_param("k", k)
             mlflow.log_param("llm", "llama-3.3-70b-versatile")
             mlflow.log_param("embedding_model", "text-embedding-3-small")
