@@ -253,7 +253,7 @@ def detect_intent(question: str) -> str | None:
     return None
 
 
-def run_sql_query(intent: str) -> list[dict]:
+def run_sql_query(intent: str, params: dict | None = None) -> list[dict]:
     """Run the SQL query for a detected intent. Returns [] on any failure so route() falls back to RAG."""
     sql = SQL_QUERIES.get(intent)
     if not sql:
@@ -261,7 +261,7 @@ def run_sql_query(intent: str) -> list[dict]:
     try:
         with psycopg2.connect(DATABASE_URL) as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(sql)
+                cur.execute(sql, params)
                 return [dict(r) for r in cur.fetchall()]
     except Exception as exc:
         print(f"[SQL router] query failed for intent={intent}: {exc}")
@@ -279,11 +279,24 @@ def route(question: str) -> dict | None:
         return None
 
     print(f"[SQL router] intent={intent} — bypassing RAG")
-    rows = run_sql_query(intent)
+
+    # Department queries need the detected code as a parameter
+    if intent == "deputy_by_department":
+        dept_code = detect_department(question)
+        if dept_code:
+            rows = run_sql_query("deputy_by_department", {"dept": dept_code})
+            formatter_key = "deputy_by_department"
+        else:
+            rows = run_sql_query("deputy_by_department_all")
+            formatter_key = "deputy_count_by_party"
+    else:
+        rows = run_sql_query(intent)
+        formatter_key = intent
+
     if not rows:
         return None
 
-    formatter = FORMATTERS.get(intent)
+    formatter = FORMATTERS.get(formatter_key)
     answer_text = formatter(rows) if formatter else str(rows)
 
     return {
