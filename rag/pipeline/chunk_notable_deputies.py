@@ -152,20 +152,18 @@ def build_chunk(deputy: dict, votes: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def already_indexed(deputy_id: str) -> bool:
-    """Check if a notable_deputy chunk already exists."""
+def get_already_indexed_ids() -> set:
+    """Fetch all deputy_ids that already have a notable_deputy chunk — single query."""
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT 1 FROM document_chunks
-                WHERE metadata->>'deputy_id' = %s
-                  AND metadata->>'chunk_type' = 'notable_deputy'
-                LIMIT 1
-            """,
-                (deputy_id,),
+                SELECT DISTINCT metadata->>'deputy_id'
+                FROM document_chunks
+                WHERE metadata->>'chunk_type' = 'notable_deputy'
+            """
             )
-            return cur.fetchone() is not None
+            return {row[0] for row in cur.fetchall()}
 
 
 def embed_and_store_chunk(content: str, metadata: dict, client: OpenAI) -> None:
@@ -190,6 +188,7 @@ def build_notable_deputy_index(n: int = 100) -> dict:
     """Main function — build chunks for top N deputies."""
     client = OpenAI(api_key=OPENAI_API_KEY)
     deputies = get_top_deputies(n)
+    already_indexed = get_already_indexed_ids()
 
     stats = {"new": 0, "skipped": 0, "errors": 0}
     notable_map = {}
@@ -199,7 +198,7 @@ def build_notable_deputy_index(n: int = 100) -> dict:
         full_name = dep["full_name"]
         notable_map[deputy_id] = full_name
 
-        if already_indexed(deputy_id):
+        if deputy_id in already_indexed:
             stats["skipped"] += 1
             continue
 
@@ -219,6 +218,16 @@ def build_notable_deputy_index(n: int = 100) -> dict:
         except Exception as e:
             stats["errors"] += 1
             print(f"Error on {full_name}: {e}")
+
+    # Clear the retriever cache so the newly-embedded deputies are picked up
+    # on the next retrieve() call without a process restart.
+    if stats["new"] > 0:
+        try:
+            from rag.chain.retriever import get_notable_deputy_ids
+
+            get_notable_deputy_ids.cache_clear()
+        except Exception:
+            pass
 
     return {"stats": stats, "notable_map": notable_map}
 
