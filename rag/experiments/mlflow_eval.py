@@ -99,21 +99,40 @@ def keyword_score(answer: str, keywords: list[str]) -> float:
     return found / len(keywords)
 
 
-def run_config(label: str, k: int, use_sql_router: bool) -> dict:
-    # Monkey-patch the imported name inside rag_chain so ask() sees the change
+def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "hybrid") -> dict:
+    from rag.chain.retriever import retrieve as _retrieve_cosine
+
+    # Monkey-patch the imported names inside rag_chain so ask() sees the changes
     original_sql_route = _rag_chain.sql_route
-    original_retrieve = _rag_chain.retrieve
+    original_retrieve_hybrid = _rag_chain.retrieve_hybrid
 
     if not use_sql_router:
         _rag_chain.sql_route = lambda q: None
 
-    # Wrap retrieve to enforce k override when k != 5 (ask() hardcodes k=5)
-    if k != 5:
+    # Swap retriever based on type, and enforce k override if needed
+    if retriever_type == "cosine":
 
-        def _retrieve_with_k(question, k=k, deputy_id=None, chunk_type=None):
-            return original_retrieve(question, k=k, deputy_id=deputy_id, chunk_type=chunk_type)
+        def _cosine_with_k(
+            question, k=k, chunk_type=None, deputy_id=None, result_filter=None, alpha=0.5
+        ):
+            return _retrieve_cosine(question, k=k, deputy_id=deputy_id, chunk_type=chunk_type)
 
-        _rag_chain.retrieve = _retrieve_with_k
+        _rag_chain.retrieve_hybrid = _cosine_with_k
+    elif k != 5:
+        original_hybrid = original_retrieve_hybrid
+
+        def _hybrid_with_k(
+            question, k=k, chunk_type=None, deputy_id=None, result_filter=None, alpha=0.5
+        ):
+            return original_hybrid(
+                question,
+                k=k,
+                chunk_type=chunk_type,
+                deputy_id=deputy_id,
+                result_filter=result_filter,
+            )
+
+        _rag_chain.retrieve_hybrid = _hybrid_with_k
 
     results = []
     sql_count = 0
@@ -163,7 +182,7 @@ def run_config(label: str, k: int, use_sql_router: bool) -> dict:
 
     finally:
         _rag_chain.sql_route = original_sql_route
-        _rag_chain.retrieve = original_retrieve
+        _rag_chain.retrieve_hybrid = original_retrieve_hybrid
 
     return {
         "label": label,
