@@ -199,6 +199,20 @@ SQL_QUERIES = {
 }
 
 FORMATTERS = {
+    "deputy_by_department": lambda rows: (
+        (
+            f"{len(rows)} député(s) pour le département {rows[0]['department']} :\n"
+            + "\n".join(f"- {r['full_name']} ({r['party'] or 'parti non renseigné'})" for r in rows)
+        )
+        if rows
+        else "Aucun député trouvé pour ce département."
+    ),
+    "deputy_total_count": lambda rows: (f"MonÉlu suit {rows[0]['total']} députés au total."),
+    "vote_total_count": lambda rows: (
+        f"MonÉlu a analysé {rows[0]['total']} votes au total "
+        f"(du {rows[0]['from_date']} au {rows[0]['to_date']}). "
+        f"{rows[0]['adopted']} adoptés, {rows[0]['rejected']} rejetés."
+    ),
     "deputy_count_by_party": lambda rows: (
         f"Répartition des {sum(r['count'] for r in rows)} députés par groupe parlementaire :\n"
         + "\n".join(f"- {r['party']} : {r['count']} députés" for r in rows)
