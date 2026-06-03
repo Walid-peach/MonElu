@@ -196,30 +196,30 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
 
 if __name__ == "__main__":
     configs = [
-        ("baseline_no_sql", 5, False),
-        ("phase_a_k5", 5, True),
-        ("phase_a_k3", 3, True),
+        ("phase_a_k5", 5, True, "cosine"),
+        ("phase_b_hybrid", 5, True, "hybrid"),
     ]
 
     results = {}
-    for label, k, use_sql in configs:
-        print(f"\nRunning {label} (k={k}, sql_router={'on' if use_sql else 'off'})...")
-        results[label] = run_config(label, k, use_sql)
+    for label, k, use_sql, retriever in configs:
+        print(
+            f"\nRunning {label} (k={k}, sql={'on' if use_sql else 'off'}, retriever={retriever})..."
+        )
+        results[label] = run_config(label, k, use_sql, retriever)
 
     best = max(results, key=lambda lbl: results[lbl]["score"])
 
-    print("\n" + "=" * 44)
-    print("  MonÉlu RAG — Phase A Optimization Results")
-    print("=" * 44)
-    print(f"  Baseline (no SQL router):  score = {results['baseline_no_sql']['score']:.2f}")
-    print(f"  Config A (k=5 + SQL):      score = {results['phase_a_k5']['score']:.2f}")
-    print(f"  Config B (k=3 + SQL):      score = {results['phase_a_k3']['score']:.2f}")
-    print(f"  SQL routed questions:       {results['phase_a_k5']['sql_routed']}/15")
+    print("\n" + "=" * 52)
+    print("  MonÉlu RAG — Phase A vs Phase B")
+    print("=" * 52)
+    print(f"  Phase A (k=5, cosine):       score = {results['phase_a_k5']['score']:.3f}")
+    print(f"  Phase B (k=5, hybrid BM25):  score = {results['phase_b_hybrid']['score']:.3f}")
+    print(f"  SQL routed questions:         {results['phase_a_k5']['sql_routed']}/15")
     print(f"  Best config: {best}")
-    print("=" * 44)
+    print("=" * 52)
 
-    print("\n  Per-question breakdown (Config A — k=5 + SQL):")
-    for pq in results["phase_a_k5"]["per_question"]:
+    print("\n  Per-question breakdown (Phase B — hybrid BM25):")
+    for pq in results["phase_b_hybrid"]["per_question"]:
         total = len(pq["keywords"])
         found = len(pq["found"])
         routing = "[SQL]" if pq["sql_routed"] else "     "
