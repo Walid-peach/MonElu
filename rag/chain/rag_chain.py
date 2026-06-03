@@ -14,6 +14,7 @@ load_dotenv()
 
 from rag.chain.prompts import RAG_TEMPLATE, SYSTEM_PROMPT  # noqa: E402
 from rag.chain.retriever import retrieve  # noqa: E402
+from rag.chain.sql_router import route as sql_route  # noqa: E402
 from rag.constants import LLM_MODEL  # noqa: E402
 
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
@@ -24,6 +25,11 @@ def ask(
     deputy_id: str = None,
     chunk_type: str = None,
 ) -> dict:
+    # A1 — try SQL router first
+    sql_result = sql_route(question)
+    if sql_result is not None:
+        return sql_result
+
     chunks = retrieve(question, k=5, deputy_id=deputy_id, chunk_type=chunk_type)
 
     context = "\n\n---\n\n".join([c["content"] for c in chunks])

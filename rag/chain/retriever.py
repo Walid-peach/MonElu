@@ -7,6 +7,7 @@ via pgvector. The query is embedded with the same model used at index time.
 
 import logging
 import os
+from functools import lru_cache
 
 import numpy as np
 import psycopg2
@@ -15,7 +16,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
 
-from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES, NOTABLE_DEPUTY_NAMES
+from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES
 from rag.db_utils import connect_with_retry
 
 log = logging.getLogger(__name__)
@@ -26,10 +27,37 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-def detect_notable_deputy(question: str) -> str | None:
-    q = question.lower()
-    for name, deputy_id in NOTABLE_DEPUTY_NAMES.items():
-        if name in q:
+@lru_cache(maxsize=1)
+def get_notable_deputy_ids() -> dict:
+    """
+    Fetch all notable_deputy chunk deputy_ids from document_chunks.
+    Returns {deputy_id: full_name} for all indexed notable deputies.
+    """
+    with psycopg2.connect(DATABASE_URL) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT
+                    metadata->>'deputy_id' as deputy_id,
+                    metadata->>'full_name' as full_name
+                FROM document_chunks
+                WHERE metadata->>'chunk_type' = 'notable_deputy'
+            """
+            )
+            return {r["deputy_id"]: r["full_name"] for r in cur.fetchall()}
+
+
+def detect_notable_deputy(question: str, notable_map: dict) -> str | None:
+    """
+    Check if the question mentions a notable deputy by name.
+    Matches on last name only (final word of full_name) to avoid false positives
+    from common French words that happen to be first names (marine, jean, etc.).
+    Returns deputy_id if found, None otherwise.
+    """
+    q_lower = question.lower()
+    for deputy_id, full_name in notable_map.items():
+        last_name = full_name.lower().split()[-1]
+        if len(last_name) > 3 and last_name in q_lower:
             return deputy_id
     return None
 
@@ -50,7 +78,13 @@ def retrieve(
     deputy_id: str = None,
 ) -> list[dict]:
     result_filter = detect_result_filter(question)
-    notable_id = detect_notable_deputy(question) if not deputy_id else None
+
+    notable_id = None
+    if not deputy_id:
+        notable_map = get_notable_deputy_ids()
+        notable_id = detect_notable_deputy(question, notable_map)
+        if notable_id:
+            log.debug("[retriever] Notable deputy pinned: %s", notable_map[notable_id])
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
