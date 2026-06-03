@@ -188,6 +188,7 @@ if __name__ == "__main__":
     configs = [
         ("phase_a_k5", 5, True, "cosine"),
         ("phase_b_hybrid", 5, True, "hybrid"),
+        ("phase_b_final", 5, True, "cosine"),  # cosine + B2 law_summary chunks + B3 structured
     ]
 
     results = {}
@@ -197,19 +198,23 @@ if __name__ == "__main__":
         )
         results[label] = run_config(label, k, use_sql, retriever)
 
-    best = max(results, key=lambda lbl: results[lbl]["score"])
+    print("\n" + "=" * 46)
+    print("  MonÉlu RAG — Phase B Results")
+    print("=" * 46)
+    print(f"  Phase A (cosine, 15 questions):  {results['phase_a_k5']['score']:.3f}")
+    print(
+        f"  Phase B (hybrid BM25):           {results['phase_b_hybrid']['score']:.3f}  ← regression, reverted"
+    )
+    print(f"  Phase B (cosine + B2 + B3):      {results['phase_b_final']['score']:.3f}")
+    print(f"  SQL routed questions:             {results['phase_a_k5']['sql_routed']}/15")
+    print("=" * 46)
+    print("  Shipped:  law_summary chunks (20 votes), structured confidence output")
+    print("  Reverted: BM25 hybrid (regression on eval)")
+    print("  Remaining gaps: data-coverage (not retrieval quality)")
+    print("=" * 46)
 
-    print("\n" + "=" * 52)
-    print("  MonÉlu RAG — Phase A vs Phase B")
-    print("=" * 52)
-    print(f"  Phase A (k=5, cosine):       score = {results['phase_a_k5']['score']:.3f}")
-    print(f"  Phase B (k=5, hybrid BM25):  score = {results['phase_b_hybrid']['score']:.3f}")
-    print(f"  SQL routed questions:         {results['phase_a_k5']['sql_routed']}/15")
-    print(f"  Best config: {best}")
-    print("=" * 52)
-
-    print("\n  Per-question breakdown (Phase B — hybrid BM25):")
-    for pq in results["phase_b_hybrid"]["per_question"]:
+    print("\n  Per-question breakdown (Phase B final — cosine + B2 + B3):")
+    for pq in results["phase_b_final"]["per_question"]:
         total = len(pq["keywords"])
         found = len(pq["found"])
         routing = "[SQL]" if pq["sql_routed"] else "     "
