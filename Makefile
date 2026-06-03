@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui setup-minio airflow-up airflow-down airflow-logs minio-up airflow-ui minio-ui dag-deputies dag-votes venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean
 
 start:
 	docker compose up -d
@@ -46,6 +46,9 @@ rag-eval:
 
 rag-notable:
 	venv/bin/python3 -m rag.pipeline.chunk_notable_deputies
+
+rag-laws:
+	venv/bin/python3 -m rag.pipeline.chunk_law_summaries
 
 rag-test-sql:
 	venv/bin/python3 -c "\

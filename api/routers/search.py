@@ -37,6 +37,10 @@ class SearchResponse(BaseModel):
     question: str
     chunks_retrieved: int
     sources: list[SourceItem]
+    query_type: str = "rag"
+    confidence: str = "MEDIUM"
+    data_source: str = "RAG"
+    caveat: str | None = None
 
 
 @router.post(
@@ -56,7 +60,11 @@ async def search(request: Request, body: SearchRequest):
             answer=result["answer"],
             question=result["question"],
             chunks_retrieved=result["chunks_retrieved"],
-            sources=[SourceItem(**s) for s in result["sources"]],
+            sources=[SourceItem(**s) for s in result.get("sources", [])],
+            query_type=result.get("query_type", "rag"),
+            confidence=result.get("confidence", "MEDIUM"),
+            data_source=result.get("data_source", "RAG"),
+            caveat=result.get("caveat"),
         )
     except groq.APITimeoutError as e:
         raise HTTPException(

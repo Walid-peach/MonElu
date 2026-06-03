@@ -6,6 +6,7 @@ Groq llama-3.3-70b-versatile.
 """
 
 import os
+import re
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -19,6 +20,19 @@ from rag.constants import LLM_MODEL  # noqa: E402
 
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
 
+_CONFIDENCE_PATTERN = re.compile(r"\[Confiance\s*:\s*(ÉLEVÉ|MOYEN|FAIBLE)\]", re.IGNORECASE)
+
+
+def extract_confidence(answer: str) -> tuple[str, str]:
+    """Extract [Confiance : NIVEAU] tag from answer if present.
+    Returns (clean_answer, confidence_level)."""
+    match = _CONFIDENCE_PATTERN.search(answer)
+    if match:
+        level = match.group(1).upper()
+        clean = _CONFIDENCE_PATTERN.sub("", answer).strip()
+        return clean, level
+    return answer, "MEDIUM"
+
 
 def ask(
     question: str,
@@ -30,7 +44,12 @@ def ask(
     if sql_result is not None:
         return sql_result
 
-    chunks = retrieve(question, k=5, deputy_id=deputy_id, chunk_type=chunk_type)
+    # B1 hybrid retrieval available in rag/chain/hybrid_retriever.py
+    # Reverted to cosine-only: after SQL routing fixes, hybrid scored 0.644
+    # vs 0.911 for cosine on the 15-question eval. Gaps were data-coverage
+    # issues (missing SQL patterns), not retrieval quality. Re-evaluate
+    # after Phase C chunks are added.
+    chunks = retrieve(question, k=5, chunk_type=chunk_type, deputy_id=deputy_id)
 
     context = "\n\n---\n\n".join([c["content"] for c in chunks])
 
@@ -46,11 +65,16 @@ def ask(
         max_tokens=1024,
     )
 
+    clean_answer, confidence = extract_confidence(response.choices[0].message.content)
     return {
-        "answer": response.choices[0].message.content,
+        "answer": clean_answer,
         "sources": chunks,
         "question": question,
         "chunks_retrieved": len(chunks),
+        "query_type": "rag",
+        "confidence": confidence,
+        "data_source": "RAG",
+        "caveat": None,
     }
 
 

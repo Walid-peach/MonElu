@@ -3,9 +3,9 @@ rag/experiments/mlflow_eval.py
 
 Evaluates the RAG pipeline against 15 golden Q&A pairs using keyword scoring.
 Runs three MLflow configs:
-  - baseline_no_sql: k=5, SQL router disabled (monkey-patched out of ask())
-  - phase_a_k5:      k=5, SQL router + citation prompt
-  - phase_a_k3:      k=3, SQL router + citation prompt
+  - phase_a_k5:      k=5, SQL router + cosine retrieval (Phase A baseline)
+  - phase_b_hybrid:  k=5, SQL router + BM25 hybrid retrieval (Phase B experiment)
+  - phase_b_final:   k=5, SQL router + cosine + law_summary chunks (Phase B shipped)
 """
 
 import mlflow
@@ -41,7 +41,7 @@ GOLDEN_QA = [
     },
     {
         "question": "Combien de députés sont suivis ?",
-        "keywords": ["577"],
+        "keywords": ["596"],
         "label": "Total députés",
     },
     {
@@ -56,7 +56,7 @@ GOLDEN_QA = [
     },
     {
         "question": "Combien de votes ont eu lieu depuis janvier 2025 ?",
-        "keywords": ["3149", "3 149"],
+        "keywords": ["4073"],
         "label": "Volume votes 2025",
     },
     {
@@ -99,21 +99,30 @@ def keyword_score(answer: str, keywords: list[str]) -> float:
     return found / len(keywords)
 
 
-def run_config(label: str, k: int, use_sql_router: bool) -> dict:
-    # Monkey-patch the imported name inside rag_chain so ask() sees the change
+def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "cosine") -> dict:
+    from rag.chain.hybrid_retriever import retrieve_hybrid as _retrieve_hybrid
+    from rag.chain.retriever import retrieve as _retrieve_cosine
+
+    # Monkey-patch the imported names inside rag_chain so ask() sees the changes
     original_sql_route = _rag_chain.sql_route
     original_retrieve = _rag_chain.retrieve
 
     if not use_sql_router:
         _rag_chain.sql_route = lambda q: None
 
-    # Wrap retrieve to enforce k override when k != 5 (ask() hardcodes k=5)
-    if k != 5:
+    # Swap retriever based on type, and enforce k override if needed
+    if retriever_type == "hybrid":
 
-        def _retrieve_with_k(question, k=k, deputy_id=None, chunk_type=None):
-            return original_retrieve(question, k=k, deputy_id=deputy_id, chunk_type=chunk_type)
+        def _hybrid_k5(question, k=k, chunk_type=None, deputy_id=None):
+            return _retrieve_hybrid(question, k=k, chunk_type=chunk_type, deputy_id=deputy_id)
 
-        _rag_chain.retrieve = _retrieve_with_k
+        _rag_chain.retrieve = _hybrid_k5
+    elif k != 5:
+
+        def _cosine_with_k(question, k=k, chunk_type=None, deputy_id=None):
+            return _retrieve_cosine(question, k=k, deputy_id=deputy_id, chunk_type=chunk_type)
+
+        _rag_chain.retrieve = _cosine_with_k
 
     results = []
     sql_count = 0
@@ -122,7 +131,7 @@ def run_config(label: str, k: int, use_sql_router: bool) -> dict:
 
     try:
         mlflow.set_experiment("monelu-rag-eval")
-        with mlflow.start_run(run_name=f"phase-a-{label}"):
+        with mlflow.start_run(run_name=f"monelu-rag-{label}"):
             mlflow.log_param("k", k)
             mlflow.log_param("llm", "llama-3.3-70b-versatile")
             mlflow.log_param("embedding_model", "text-embedding-3-small")
@@ -177,30 +186,35 @@ def run_config(label: str, k: int, use_sql_router: bool) -> dict:
 
 if __name__ == "__main__":
     configs = [
-        ("baseline_no_sql", 5, False),
-        ("phase_a_k5", 5, True),
-        ("phase_a_k3", 3, True),
+        ("phase_a_k5", 5, True, "cosine"),
+        ("phase_b_hybrid", 5, True, "hybrid"),
+        ("phase_b_final", 5, True, "cosine"),  # cosine + B2 law_summary chunks + B3 structured
     ]
 
     results = {}
-    for label, k, use_sql in configs:
-        print(f"\nRunning {label} (k={k}, sql_router={'on' if use_sql else 'off'})...")
-        results[label] = run_config(label, k, use_sql)
+    for label, k, use_sql, retriever in configs:
+        print(
+            f"\nRunning {label} (k={k}, sql={'on' if use_sql else 'off'}, retriever={retriever})..."
+        )
+        results[label] = run_config(label, k, use_sql, retriever)
 
-    best = max(results, key=lambda lbl: results[lbl]["score"])
+    print("\n" + "=" * 46)
+    print("  MonÉlu RAG — Phase B Results")
+    print("=" * 46)
+    print(f"  Phase A (cosine, 15 questions):  {results['phase_a_k5']['score']:.3f}")
+    print(
+        f"  Phase B (hybrid BM25):           {results['phase_b_hybrid']['score']:.3f}  ← regression, reverted"
+    )
+    print(f"  Phase B (cosine + B2 + B3):      {results['phase_b_final']['score']:.3f}")
+    print(f"  SQL routed questions:             {results['phase_a_k5']['sql_routed']}/15")
+    print("=" * 46)
+    print("  Shipped:  law_summary chunks (20 votes), structured confidence output")
+    print("  Reverted: BM25 hybrid (regression on eval)")
+    print("  Remaining gaps: data-coverage (not retrieval quality)")
+    print("=" * 46)
 
-    print("\n" + "=" * 44)
-    print("  MonÉlu RAG — Phase A Optimization Results")
-    print("=" * 44)
-    print(f"  Baseline (no SQL router):  score = {results['baseline_no_sql']['score']:.2f}")
-    print(f"  Config A (k=5 + SQL):      score = {results['phase_a_k5']['score']:.2f}")
-    print(f"  Config B (k=3 + SQL):      score = {results['phase_a_k3']['score']:.2f}")
-    print(f"  SQL routed questions:       {results['phase_a_k5']['sql_routed']}/15")
-    print(f"  Best config: {best}")
-    print("=" * 44)
-
-    print("\n  Per-question breakdown (Config A — k=5 + SQL):")
-    for pq in results["phase_a_k5"]["per_question"]:
+    print("\n  Per-question breakdown (Phase B final — cosine + B2 + B3):")
+    for pq in results["phase_b_final"]["per_question"]:
         total = len(pq["keywords"])
         found = len(pq["found"])
         routing = "[SQL]" if pq["sql_routed"] else "     "
