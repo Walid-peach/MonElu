@@ -44,10 +44,24 @@ def build_index(since: str | None = None) -> None:
     if since is None:
         print("Clearing existing index...")
         clear_index()
-        print("Building chunks from database...")
+
+        print("Step 1/3: Building base chunks...")
         chunks = chunk_all()
         print(f"Starting embedding — {len(chunks)} chunks to process.\n")
         embed_and_store(chunks)
+
+        print("\nStep 2/3: Building notable deputy chunks...")
+        from rag.pipeline.chunk_notable_deputies import build_notable_deputy_index
+
+        build_notable_deputy_index(100)
+
+        print("\nStep 3/3: Building law summary chunks...")
+        from rag.pipeline.chunk_law_summaries import build_law_summary_index
+
+        build_law_summary_index(20)
+
+        print("\nIndex build complete.")
+        get_index_stats()
         return
 
     # --- Incremental path ---
