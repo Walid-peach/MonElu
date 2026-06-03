@@ -141,13 +141,13 @@ def build_law_summary_index(n: int = 20) -> dict:
 
         if already_indexed(vote_id):
             stats["skipped"] += 1
-            print(f"[{i+1}/{n}] Skipped (already indexed): {title_short}...")
+            print(f"[{i + 1}/{n}] Skipped (already indexed): {title_short}...")
             continue
 
         try:
             breakdown = get_party_breakdown(vote_id)
             if not breakdown:
-                print(f"[{i+1}/{n}] No party data, skipping: {title_short}...")
+                print(f"[{i + 1}/{n}] No party data, skipping: {title_short}...")
                 continue
 
             content = build_law_chunk(vote, breakdown)
@@ -160,14 +160,14 @@ def build_law_summary_index(n: int = 20) -> dict:
             }
             embed_and_store(content, metadata, client)
             stats["new"] += 1
-            print(f"[{i+1}/{n}] Embedded: {title_short}...")
+            print(f"[{i + 1}/{n}] Embedded: {title_short}...")
             if i == 0:
                 print("\n--- Sample chunk content ---")
                 print(content)
                 print("----------------------------\n")
         except Exception as e:
             stats["errors"] += 1
-            print(f"[{i+1}/{n}] Error on {title_short}: {e}")
+            print(f"[{i + 1}/{n}] Error on {title_short}: {e}")
 
     return stats
 

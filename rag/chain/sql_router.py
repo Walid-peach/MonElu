@@ -212,7 +212,7 @@ FORMATTERS = {
         if rows
         else "Aucun député trouvé pour ce département."
     ),
-    "deputy_total_count": lambda rows: (f"MonÉlu suit {rows[0]['total']} députés au total."),
+    "deputy_total_count": lambda rows: f"MonÉlu suit {rows[0]['total']} députés au total.",
     "vote_total_count": lambda rows: (
         f"MonÉlu a analysé {rows[0]['total']} votes au total "
         f"(du {rows[0]['from_date']} au {rows[0]['to_date']}). "
