@@ -98,6 +98,7 @@ def main() -> None:
         t_deputies = run_step("Deputies", "ingest_deputies.py")
         t_votes = run_step("Votes", "ingest_votes.py", ["--since", args.since])
         t_positions = run_step("Positions", "ingest_positions.py", ["--since", args.since])
+        t_party = run_step("Fix party + department names", "update_party.py")
 
         total_elapsed = time.perf_counter() - total_start
 
@@ -120,6 +121,7 @@ def main() -> None:
         log.info("║  Deputies  : %6d   (%5.1fs)      ║", n_deputies, t_deputies)
         log.info("║  Votes     : %6d   (%5.1fs)      ║", n_votes, t_votes)
         log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
+        log.info("║  Party fix :          (%5.1fs)      ║", t_party)
         log.info("╠══════════════════════════════════════╣")
         log.info("║  Total time: %.1fs                   ║", total_elapsed)
         log.info("╚══════════════════════════════════════╝")
