@@ -48,6 +48,12 @@ jobs:
           AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
         run: python scripts/run_ingestion_prod.py --since $(python3 -c "from datetime import date, timedelta; print(date.today() - timedelta(days=30))")
 
+      - name: Fix party + department names
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
+        run: python scripts/update_party.py
+
       - name: Install RAG dependencies
         if: steps.ingest.outputs.new_votes != '0'
         run: pip install -r requirements-rag.txt
