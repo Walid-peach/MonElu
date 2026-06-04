@@ -299,7 +299,8 @@ def route(question: str) -> dict | None:
         dept_code = detect_department(question)
         if not dept_code:
             return None
-        rows = run_sql_query("deputy_by_department", {"dept": dept_code})
+        dept_name = CODE_TO_DEPT_NAME.get(dept_code, dept_code)
+        rows = run_sql_query("deputy_by_department", {"dept": dept_name})
         formatter_key = "deputy_by_department"
     else:
         rows = run_sql_query(intent)
