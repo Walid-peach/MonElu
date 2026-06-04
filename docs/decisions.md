@@ -293,6 +293,26 @@ that Phase A + B don't cover.
 
 ---
 
+## ADR-015 — Confidence computed from retrieval quality, not LLM self-rating
+**Date:** RAG polish (2026-06-04)
+**Status:** Final
+
+**Decision:** The `confidence` field returned by `POST /search/` is computed from
+chunk similarity scores, not extracted from an LLM-generated `[Confiance]` tag.
+Thresholds: top similarity ≥ 0.65 AND ≥ 2 strong chunks → ÉLEVÉ; top ≥ 0.5 → MOYEN;
+otherwise → FAIBLE. The LLM tag is still stripped from the answer text but its value
+is discarded.
+
+**Reason:** Post-deploy testing showed the LLM always self-rated ÉLEVÉ regardless of
+answer quality, making the field meaningless as a reliability signal. Retrieval-based
+confidence is deterministic, requires no extra LLM call, and reflects actual evidence
+quality rather than LLM overconfidence.
+
+**Impact on `rag/chain/rag_chain.py`:** `compute_confidence(chunks)` replaces the
+`extract_confidence()` return value in the `ask()` response dict.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
