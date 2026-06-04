@@ -57,7 +57,7 @@ def detect_notable_deputy(question: str, notable_map: dict) -> str | None:
     q_lower = question.lower()
     for deputy_id, full_name in notable_map.items():
         last_name = full_name.lower().split()[-1]
-        if len(last_name) > 3 and last_name in q_lower:
+        if len(last_name) >= 3 and last_name in q_lower:
             return deputy_id
     return None
 
