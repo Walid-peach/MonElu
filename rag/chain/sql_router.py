@@ -69,17 +69,21 @@ CODE_TO_DEPT_NAME: dict[str, str] = {
     "95": "Val-d'Oise",
 }
 
-_DEPT_PATTERN = re.compile(
-    r"\b(" + "|".join(re.escape(k) for k in DEPT_NAME_TO_CODE) + r")\b",
-    re.IGNORECASE,
-)
+
+def normalize_text(text: str) -> str:
+    """Normalize apostrophes and whitespace for pattern matching."""
+    for char in ["’", "`", "´", "‘"]:
+        text = text.replace(char, "'")
+    text = " ".join(text.split())
+    return text.lower().strip()
 
 
 def detect_department(question: str) -> str | None:
-    """Return the department code if a known department name appears in the question."""
-    m = _DEPT_PATTERN.search(question)
-    if m:
-        return DEPT_NAME_TO_CODE[m.group(1).lower()]
+    """Return the canonical department name if a known department appears in the question."""
+    q = normalize_text(question)
+    for dept_name, code in DEPT_NAME_TO_CODE.items():
+        if normalize_text(dept_name) in q:
+            return CODE_TO_DEPT_NAME[code]
     return None
 
 
@@ -277,7 +281,7 @@ FORMATTERS = {
 
 def detect_intent(question: str) -> str | None:
     """Return intent key if question matches an aggregation pattern."""
-    q = question.lower().strip()
+    q = normalize_text(question)
     for pattern, intent in PATTERNS:
         if re.search(pattern, q):
             return intent
@@ -319,10 +323,9 @@ def route(question: str) -> dict | None:
     # "deputies by department" question is better handled there than
     # with a broken or meaningless ranking.
     if intent == "deputy_by_department":
-        dept_code = detect_department(question)
-        if not dept_code:
+        dept_name = detect_department(question)
+        if not dept_name:
             return None
-        dept_name = CODE_TO_DEPT_NAME.get(dept_code, dept_code)
         rows = run_sql_query("deputy_by_department", {"dept": dept_name})
         formatter_key = "deputy_by_department"
     else:
