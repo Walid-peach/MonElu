@@ -43,8 +43,31 @@ DEPT_NAME_TO_CODE = {
     "moselle": "57",
 }
 
-# Derived reverse map: numeric code → display name for formatter output
-CODE_TO_DEPT_NAME = {code: name.title() for name, code in DEPT_NAME_TO_CODE.items()}
+# Numeric code → canonical display name (must match what update_party.py writes to the DB).
+# Not derived via .title() — that capitalises after hyphens/apostrophes, producing
+# "Hauts-De-Seine" instead of "Hauts-de-Seine", and "Bouches" instead of "Bouches-du-Rhône".
+CODE_TO_DEPT_NAME: dict[str, str] = {
+    "06": "Alpes-Maritimes",
+    "13": "Bouches-du-Rhône",
+    "31": "Haute-Garonne",
+    "33": "Gironde",
+    "34": "Hérault",
+    "38": "Isère",
+    "42": "Loire",
+    "57": "Moselle",
+    "59": "Nord",
+    "67": "Bas-Rhin",
+    "69": "Rhône",
+    "75": "Paris",
+    "77": "Seine-et-Marne",
+    "78": "Yvelines",
+    "83": "Var",
+    "91": "Essonne",
+    "92": "Hauts-de-Seine",
+    "93": "Seine-Saint-Denis",
+    "94": "Val-de-Marne",
+    "95": "Val-d'Oise",
+}
 
 _DEPT_PATTERN = re.compile(
     r"\b(" + "|".join(re.escape(k) for k in DEPT_NAME_TO_CODE) + r")\b",
