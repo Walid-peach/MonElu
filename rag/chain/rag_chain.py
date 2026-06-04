@@ -24,14 +24,30 @@ _CONFIDENCE_PATTERN = re.compile(r"\[Confiance\s*:\s*(ÉLEVÉ|MOYEN|FAIBLE)\]", 
 
 
 def extract_confidence(answer: str) -> tuple[str, str]:
-    """Extract [Confiance : NIVEAU] tag from answer if present.
-    Returns (clean_answer, confidence_level)."""
+    """Strip any [Confiance : NIVEAU] tag the LLM emits. Returns (clean_answer, stripped_level)."""
     match = _CONFIDENCE_PATTERN.search(answer)
     if match:
         level = match.group(1).upper()
         clean = _CONFIDENCE_PATTERN.sub("", answer).strip()
         return clean, level
     return answer, "MEDIUM"
+
+
+def compute_confidence(chunks: list[dict]) -> str:
+    """
+    Compute confidence from retrieval quality, not LLM self-rating.
+    Based on top chunk similarity and number of supporting chunks.
+    """
+    if not chunks:
+        return "FAIBLE"
+    top_sim = chunks[0].get("similarity", 0)
+    strong_chunks = sum(1 for c in chunks if c.get("similarity", 0) >= 0.5)
+
+    if top_sim >= 0.65 and strong_chunks >= 2:
+        return "ÉLEVÉ"
+    if top_sim >= 0.5:
+        return "MOYEN"
+    return "FAIBLE"
 
 
 def ask(
