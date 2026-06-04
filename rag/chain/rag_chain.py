@@ -81,14 +81,16 @@ def ask(
         max_tokens=1024,
     )
 
-    clean_answer, confidence = extract_confidence(response.choices[0].message.content)
+    clean_answer, _llm_confidence = extract_confidence(response.choices[0].message.content)
+    computed_confidence = compute_confidence(chunks)
+
     return {
         "answer": clean_answer,
         "sources": chunks,
         "question": question,
         "chunks_retrieved": len(chunks),
         "query_type": "rag",
-        "confidence": confidence,
+        "confidence": computed_confidence,
         "data_source": "RAG",
         "caveat": None,
     }
