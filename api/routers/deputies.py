@@ -18,7 +18,9 @@ def list_deputies(
     offset: int = Query(0, ge=0, le=2_000),
     search: str = Query(None, description="Filter by name (case-insensitive)"),
     department: str = Query(None),
-    party: str = Query(None),
+    party: str = Query(
+        None, description="Exact match on party name (e.g. 'Rassemblement National')"
+    ),
 ):
     with get_conn() as conn:
         with conn.cursor() as cur:

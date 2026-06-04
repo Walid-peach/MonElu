@@ -49,6 +49,7 @@ jobs:
         run: python scripts/run_ingestion_prod.py --since $(python3 -c "from datetime import date, timedelta; print(date.today() - timedelta(days=30))")
 
       - name: Fix party + department names
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
