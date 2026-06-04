@@ -10,11 +10,14 @@ import re
 
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+_pool = psycopg2.pool.ThreadedConnectionPool(1, 5, dsn=DATABASE_URL)
 
 # Department name keywords (lowercase) → numeric code stored in DB
 DEPT_NAME_TO_CODE = {
@@ -263,13 +266,16 @@ def run_sql_query(intent: str, params: dict | None = None) -> list[dict]:
     sql = SQL_QUERIES.get(intent)
     if not sql:
         return []
+    conn = _pool.getconn()
     try:
-        with psycopg2.connect(DATABASE_URL) as conn:
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(sql, params)
-                return [dict(r) for r in cur.fetchall()]
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, params)
+            rows = [dict(r) for r in cur.fetchall()]
+        _pool.putconn(conn)
+        return rows
     except Exception as exc:
         print(f"[SQL router] query failed for intent={intent}: {exc}")
+        _pool.putconn(conn, close=True)
         return []
 
 
