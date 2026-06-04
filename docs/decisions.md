@@ -293,7 +293,7 @@ that Phase A + B don't cover.
 
 ---
 
-## ADR-015 — Confidence computed from retrieval quality, not LLM self-rating
+## ADR-016 — Confidence computed from retrieval quality, not LLM self-rating
 **Date:** RAG polish (2026-06-04)
 **Status:** Final
 
