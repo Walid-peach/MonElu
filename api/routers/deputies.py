@@ -18,6 +18,7 @@ def list_deputies(
     offset: int = Query(0, ge=0, le=2_000),
     search: str = Query(None, description="Filter by name (case-insensitive)"),
     department: str = Query(None),
+    party: str = Query(None),
 ):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -30,6 +31,9 @@ def list_deputies(
             if department:
                 conditions.append(sql.SQL("department = %s"))
                 params.append(department)
+            if party:
+                conditions.append(sql.SQL("party = %s"))
+                params.append(party)
 
             where = (
                 sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
