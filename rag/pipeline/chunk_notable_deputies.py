@@ -105,9 +105,9 @@ def get_key_votes(deputy_id: str) -> list[dict]:
                   ORDER BY v.voted_at DESC LIMIT 3
                 )
                 ORDER BY voted_at DESC
-                LIMIT 20
+                LIMIT 25
             """,
-                (deputy_id, deputy_id),
+                (deputy_id, deputy_id, deputy_id),
             )
             return [dict(r) for r in cur.fetchall()]
 
