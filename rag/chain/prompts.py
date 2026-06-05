@@ -15,8 +15,8 @@ def get_data_horizon() -> str:
                 lo, hi = cur.fetchone()
                 if lo and hi:
                     return f"du {lo} au {hi}"
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[prompts] get_data_horizon failed, using fallback: {exc}")
     return "depuis juillet 2025"
 
 
