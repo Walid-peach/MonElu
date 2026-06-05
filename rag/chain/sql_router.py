@@ -287,7 +287,9 @@ FORMATTERS = {
     ),
     "vote_result_count": lambda rows: (
         "Résultats des votes à l'Assemblée Nationale :\n"
-        + "\n".join(f"- {r['result'].capitalize()} : {r['count']} votes" for r in rows)
+        + "\n".join(
+            f"- {(r['result'] or 'inconnu').capitalize()} : {r['count']} votes" for r in rows
+        )
     ),
     "party_alignment": lambda rows: (
         "Discipline de vote par groupe parlementaire "
@@ -313,16 +315,18 @@ def run_sql_query(intent: str, params: dict | None = None) -> list[dict]:
         return []
     pool = _get_pool()
     conn = pool.getconn()
+    broken = False
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql, params)
             rows = [dict(r) for r in cur.fetchall()]
-        pool.putconn(conn)
         return rows
     except Exception as exc:
         print(f"[SQL router] query failed for intent={intent}: {exc}")
-        pool.putconn(conn, close=True)
+        broken = True
         return []
+    finally:
+        pool.putconn(conn, close=broken)
 
 
 def route(question: str) -> dict | None:

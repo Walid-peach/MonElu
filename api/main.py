@@ -905,6 +905,14 @@ def landing(request: Request) -> HTMLResponse:
                 n_votes = f"{cur.fetchone()['count']:,}"
                 cur.execute("SELECT COUNT(*) FROM vote_positions")
                 n_positions = f"{cur.fetchone()['count']:,}"
+        db_dot = "#4ade80"
+        db_label = "Base de données opérationnelle"
+    except Exception:
+        logger.warning("Landing page could not reach DB", exc_info=True)
+
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
                 cur.execute(
                     """
                     SELECT vote_title, result, voted_at,
@@ -917,10 +925,8 @@ def landing(request: Request) -> HTMLResponse:
                 rows = cur.fetchall()
                 if rows:
                     latest_votes_html = "".join(_build_vote_row(r) for r in rows)
-        db_dot = "#4ade80"
-        db_label = "Base de données opérationnelle"
     except Exception:
-        logger.warning("Landing page could not reach DB", exc_info=True)
+        logger.warning("Landing page could not fetch latest votes", exc_info=True)
 
     html = _LANDING_HTML.format(
         n_deputies=_compact(n_deputies),
