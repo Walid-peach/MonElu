@@ -38,7 +38,7 @@ def build_index(since: str | None = None) -> None:
 
     Without `since`: full rebuild (truncate + re-embed everything).
     With `since`: only embed new votes, refresh affected deputy chunks,
-    and always refresh the small aggregate chunks (party/global/notable).
+    and always refresh the small aggregate chunks (party/global).
     """
     if since is None:
         print("Clearing existing index...")
