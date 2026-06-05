@@ -5,6 +5,7 @@ Returns None if the question is not an aggregation query
 so the caller falls back to standard RAG.
 """
 
+import logging
 import os
 import re
 import threading
@@ -15,6 +16,8 @@ import psycopg2.pool
 from dotenv import load_dotenv
 
 load_dotenv()
+
+log = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -322,7 +325,7 @@ def run_sql_query(intent: str, params: dict | None = None) -> list[dict]:
             rows = [dict(r) for r in cur.fetchall()]
         return rows
     except Exception as exc:
-        print(f"[SQL router] query failed for intent={intent}: {exc}")
+        log.warning("SQL router query failed for intent=%s: %s", intent, exc)
         broken = True
         return []
     finally:
@@ -339,7 +342,7 @@ def route(question: str) -> dict | None:
     if not intent:
         return None
 
-    print(f"[SQL router] intent={intent} — bypassing RAG")
+    log.debug("SQL router intent=%s — bypassing RAG", intent)
 
     # Department queries need the detected code as a parameter.
     # If no department name is detected, fall back to RAG — a vague
