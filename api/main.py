@@ -899,12 +899,18 @@ def landing(request: Request) -> HTMLResponse:
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM deputies")
-                n_deputies = f"{cur.fetchone()['count']:,}"
-                cur.execute("SELECT COUNT(*) FROM votes")
-                n_votes = f"{cur.fetchone()['count']:,}"
-                cur.execute("SELECT COUNT(*) FROM vote_positions")
-                n_positions = f"{cur.fetchone()['count']:,}"
+                cur.execute(
+                    """
+                    SELECT
+                        (SELECT COUNT(*) FROM deputies)       AS n_deputies,
+                        (SELECT COUNT(*) FROM votes)          AS n_votes,
+                        (SELECT COUNT(*) FROM vote_positions) AS n_positions
+                    """
+                )
+                counts = cur.fetchone()
+                n_deputies = f"{counts['n_deputies']:,}"
+                n_votes = f"{counts['n_votes']:,}"
+                n_positions = f"{counts['n_positions']:,}"
         db_dot = "#4ade80"
         db_label = "Base de données opérationnelle"
     except Exception:
