@@ -313,6 +313,21 @@ quality rather than LLM overconfidence.
 
 ---
 
+## ADR-017 — High-profile deputies always indexed
+**Date:** RAG polish
+**Status:** Final
+
+**Decision:** ALWAYS_INCLUDE dict in chunk_notable_deputies.py forces
+indexing of high-profile deputies (Attal, Le Pen) regardless of vote
+count rank, since the production data window (July 2025+) doesn't rank
+them in the top 100 by vote count.
+
+**Reason:** These are the names users and journalists actually search.
+They must always have dedicated chunks even when their recent vote
+count is low.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
