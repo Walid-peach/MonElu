@@ -31,6 +31,11 @@ def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     return _pool
 
 
+def warm_pool() -> None:
+    """Establish the connection pool at startup. Intended for app lifespan callers."""
+    _get_pool()
+
+
 # Department name keywords (lowercase) → numeric code stored in DB
 DEPT_NAME_TO_CODE = {
     "yvelines": "78",
