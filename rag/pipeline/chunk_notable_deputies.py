@@ -18,6 +18,14 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Deputies guaranteed to be indexed regardless of vote-count rank.
+# Needed for high-profile figures whose vote counts in the production
+# date window (2025-07-01 onward) don't place them in the automatic top-N.
+ALWAYS_INCLUDE: dict[str, str] = {
+    "PA722190": "Gabriel Attal",
+    "PA720614": "Marine Le Pen",
+}
+
 
 def get_top_deputies(n: int = 100) -> list[dict]:
     """Get top N deputies by vote count."""
@@ -81,15 +89,25 @@ def get_key_votes(deputy_id: str) -> list[dict]:
                   AND (
                     v.vote_title ILIKE '%%PLFSS%%'
                     OR v.vote_title ILIKE '%%loi de finances%%'
+                    OR v.vote_title ILIKE '%%financement%%'
                     OR v.vote_title ILIKE '%%censure%%'
                     OR v.vote_title ILIKE '%%motion de rejet%%'
                   )
                   ORDER BY v.voted_at DESC LIMIT 10
                 )
+                UNION
+                (
+                  SELECT v.vote_title, v.voted_at, v.result, vp.position
+                  FROM vote_positions vp
+                  JOIN votes v ON vp.vote_id = v.vote_id
+                  WHERE vp.deputy_id = %s
+                  AND v.vote_title ILIKE '%%sécurité sociale%%'
+                  ORDER BY v.voted_at DESC LIMIT 3
+                )
                 ORDER BY voted_at DESC
-                LIMIT 20
+                LIMIT 25
             """,
-                (deputy_id, deputy_id),
+                (deputy_id, deputy_id, deputy_id),
             )
             return [dict(r) for r in cur.fetchall()]
 
@@ -189,6 +207,33 @@ def build_notable_deputy_index(n: int = 100) -> dict:
     client = OpenAI(api_key=OPENAI_API_KEY)
     deputies = get_top_deputies(n)
     already_indexed = get_already_indexed_ids()
+
+    # Prepend ALWAYS_INCLUDE deputies not already in the top-N list.
+    existing_ids = {d["deputy_id"] for d in deputies}
+    for deputy_id, _full_name in ALWAYS_INCLUDE.items():
+        if deputy_id not in existing_ids:
+            with psycopg2.connect(DATABASE_URL) as conn:
+                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                    cur.execute(
+                        """
+                        SELECT d.deputy_id, d.full_name, d.party, d.department,
+                               COUNT(vp.position_id) as total_votes,
+                               COUNT(vp.position_id) FILTER (WHERE vp.position='pour') as pour,
+                               COUNT(vp.position_id) FILTER (WHERE vp.position='contre') as contre,
+                               COUNT(vp.position_id) FILTER (WHERE vp.position='abstention') as abstention,
+                               ROUND(COUNT(vp.position_id) FILTER (
+                                   WHERE vp.position IN ('pour','contre','abstention')
+                               )::numeric / NULLIF((SELECT COUNT(*) FROM votes),0)*100,1) as presence_pct
+                        FROM deputies d
+                        LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
+                        WHERE d.deputy_id = %s
+                        GROUP BY d.deputy_id
+                        """,
+                        (deputy_id,),
+                    )
+                    row = cur.fetchone()
+                    if row:
+                        deputies.insert(0, dict(row))
 
     stats = {"new": 0, "skipped": 0, "errors": 0}
     notable_map = {}

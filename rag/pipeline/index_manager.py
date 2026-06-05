@@ -21,7 +21,6 @@ from rag.pipeline.chunker import (  # noqa: E402
     chunk_all,
     chunk_deputies,
     chunk_global_stats,
-    chunk_notable_deputies,
     chunk_party_summaries,
     chunk_votes,
 )
@@ -39,7 +38,7 @@ def build_index(since: str | None = None) -> None:
 
     Without `since`: full rebuild (truncate + re-embed everything).
     With `since`: only embed new votes, refresh affected deputy chunks,
-    and always refresh the small aggregate chunks (party/global/notable).
+    and always refresh the small aggregate chunks (party/global).
     """
     if since is None:
         print("Clearing existing index...")
@@ -108,11 +107,12 @@ def build_index(since: str | None = None) -> None:
     else:
         print(f"No new votes since {since} — skipping vote and deputy chunks.")
 
-    # Aggregate chunks are always small (~15 total) and always stale after a run
+    # Aggregate chunks are always small (~15 total) and always stale after a run.
+    # notable_deputy chunks are excluded — they are managed by make rag-notable
+    # (build_notable_deputy_index) which has its own already_indexed guard.
     _delete_aggregate_chunks()
     chunks += chunk_party_summaries()
     chunks += chunk_global_stats()
-    chunks += chunk_notable_deputies()
 
     if chunks:
         print(f"Embedding {len(chunks)} chunks...\n")
@@ -137,12 +137,16 @@ def _delete_chunks_by_ids(chunk_type: str, id_key: str, ids: set[str]) -> None:
 
 
 def _delete_aggregate_chunks() -> None:
+    # notable_deputy chunks are managed by chunk_notable_deputies.py
+    # (build_notable_deputy_index) and must not be wiped on incremental
+    # --since builds. Only party + global_stats are truly aggregate and
+    # always stale after a run.
     conn = _get_conn()
     try:
         with conn.cursor() as cur:
             cur.execute(
                 "DELETE FROM document_chunks WHERE metadata->>'chunk_type' = ANY(%s)",
-                (["party", "global_stats", "notable_deputy"],),
+                (["party", "global_stats"],),
             )
         conn.commit()
     finally:
