@@ -7,6 +7,7 @@ so the caller falls back to standard RAG.
 
 import os
 import re
+import threading
 
 import psycopg2
 import psycopg2.extras
@@ -17,7 +18,18 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-_pool = psycopg2.pool.ThreadedConnectionPool(1, 5, dsn=DATABASE_URL)
+_pool: psycopg2.pool.ThreadedConnectionPool | None = None
+_pool_lock = threading.Lock()
+
+
+def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
+    global _pool
+    if _pool is None:
+        with _pool_lock:
+            if _pool is None:
+                _pool = psycopg2.pool.ThreadedConnectionPool(1, 5, dsn=DATABASE_URL)
+    return _pool
+
 
 # Department name keywords (lowercase) → numeric code stored in DB
 DEPT_NAME_TO_CODE = {
@@ -82,7 +94,8 @@ def detect_department(question: str) -> str | None:
     """Return the canonical department name if a known department appears in the question."""
     q = normalize_text(question)
     for dept_name, code in DEPT_NAME_TO_CODE.items():
-        if normalize_text(dept_name) in q:
+        norm = normalize_text(dept_name)
+        if re.search(r"\b" + re.escape(norm) + r"\b", q):
             return CODE_TO_DEPT_NAME[code]
     return None
 
@@ -293,16 +306,17 @@ def run_sql_query(intent: str, params: dict | None = None) -> list[dict]:
     sql = SQL_QUERIES.get(intent)
     if not sql:
         return []
-    conn = _pool.getconn()
+    pool = _get_pool()
+    conn = pool.getconn()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql, params)
             rows = [dict(r) for r in cur.fetchall()]
-        _pool.putconn(conn)
+        pool.putconn(conn)
         return rows
     except Exception as exc:
         print(f"[SQL router] query failed for intent={intent}: {exc}")
-        _pool.putconn(conn, close=True)
+        pool.putconn(conn, close=True)
         return []
 
 
