@@ -8,17 +8,18 @@ via pgvector. The query is embedded with the same model used at index time.
 import logging
 import os
 import re
+import threading
 from functools import lru_cache
 
 import numpy as np
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
 from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
 
 from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES
-from rag.db_utils import connect_with_retry
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,20 @@ log = logging.getLogger(__name__)
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+_openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+_retriever_pool: psycopg2.pool.ThreadedConnectionPool | None = None
+_retriever_pool_lock = threading.Lock()
+
+
+def _get_retriever_pool() -> psycopg2.pool.ThreadedConnectionPool:
+    global _retriever_pool
+    if _retriever_pool is None:
+        with _retriever_pool_lock:
+            if _retriever_pool is None:
+                _retriever_pool = psycopg2.pool.ThreadedConnectionPool(1, 3, dsn=DATABASE_URL)
+    return _retriever_pool
 
 
 @lru_cache(maxsize=1)
@@ -87,17 +102,18 @@ def retrieve(
         if notable_id:
             log.debug("[retriever] Notable deputy pinned: %s", notable_map[notable_id])
 
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
+    response = _openai_client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
     query_vector = np.array(response.data[0].embedding, dtype=np.float32)
 
-    conn = connect_with_retry(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    pool = _get_retriever_pool()
+    conn = pool.getconn()
+    broken = False
     try:
         # register_vector must receive a plain cursor — RealDictCursor breaks
         # its internal dict(fetchall()) unpacking
         with conn.cursor(cursor_factory=psycopg2.extensions.cursor) as plain_cur:
             register_vector(plain_cur)
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             # Inject the notable-deputy chunk first (bypasses IVFFlat recall gap)
             pinned = []
             if notable_id:
@@ -156,8 +172,11 @@ def retrieve(
                 if row["metadata"].get("deputy_id") not in pinned_ids
                 or row["metadata"].get("chunk_type") != "notable_deputy"
             ]
+    except Exception:
+        broken = True
+        raise
     finally:
-        conn.close()
+        pool.putconn(conn, close=broken)
 
     results = (pinned + semantic_rows)[:k]
 
