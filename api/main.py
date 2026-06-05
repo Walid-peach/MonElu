@@ -957,6 +957,7 @@ def health() -> JSONResponse:
     deputies = votes = positions = None
     last_ingestion = None
 
+    scorecard_rows = vote_summary_rows = None
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -970,7 +971,23 @@ def health() -> JSONResponse:
                 row = cur.fetchone()
                 if row and row["last_vote"]:
                     last_ingestion = row["last_vote"].isoformat()
-        services["db"] = "ok"
+            services["db"] = "ok"
+
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_deputy_scorecard")
+                    scorecard_rows = cur.fetchone()["count"]
+                    cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_vote_summary")
+                    vote_summary_rows = cur.fetchone()["count"]
+                services["dbt_marts"] = "ok"
+            except psycopg2.errors.UndefinedTable:
+                conn.rollback()
+                services["dbt_marts"] = "degraded"
+            except Exception as exc:
+                conn.rollback()
+                logger.warning("Health check mart check error: %s", exc)
+                services["dbt_marts"] = "degraded"
+
     except Exception as exc:
         logger.error("Health check DB error: %s", exc)
         services["db"] = "degraded"
@@ -980,22 +997,7 @@ def health() -> JSONResponse:
 
     # all_ok excludes dbt_marts — marts are absent on every fresh deploy and
     # degrade gracefully; their absence should not trip Railway's health check.
-    all_ok = all(v == "ok" for v in services.values())
-
-    scorecard_rows = vote_summary_rows = None
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_deputy_scorecard")
-                scorecard_rows = cur.fetchone()["count"]
-                cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_vote_summary")
-                vote_summary_rows = cur.fetchone()["count"]
-        services["dbt_marts"] = "ok"
-    except psycopg2.errors.UndefinedTable:
-        services["dbt_marts"] = "degraded"
-    except Exception as exc:
-        logger.warning("Health check mart check error: %s", exc)
-        services["dbt_marts"] = "degraded"
+    all_ok = all(v == "ok" for k, v in services.items() if k != "dbt_marts")
 
     body: dict = {"status": "ok" if all_ok else "degraded", **services}
     if services["db"] == "ok":
