@@ -64,3 +64,8 @@ infra/*.tfstate
 infra/*.tfstate.*
 infra/terraform.tfvars
 infra/.terraform.tfstate.lock.info
+
+# Frontend (Next.js)
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local

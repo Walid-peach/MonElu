@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply font-sans bg-white text-navy; }
+  h1, h2, h3 { @apply font-serif; }
+}
+
+@layer utilities {
+  .badge-adopte { @apply bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium px-2 py-0.5 rounded; }
+  .badge-rejete { @apply bg-red-50 text-red-civic border border-red-200 text-xs font-medium px-2 py-0.5 rounded; }
+  .badge-party { @apply bg-navy-muted text-navy text-xs font-medium px-2 py-0.5 rounded; }
+}
