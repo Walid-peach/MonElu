@@ -26,28 +26,29 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const [search, setSearch] = useState('')
   const [offset, setOffset] = useState(0)
 
-  // When searching, fetch all deputies (no pagination) so the filter crosses all pages.
-  // When browsing, fetch the current page.
   const isSearching = search.length > 0
-  const swrKey = isSearching
-    ? `deputies:all:${party}`
-    : `deputies:${party}:${offset}`
 
-  const { data, isLoading } = useSWR<DeputyList>(
-    swrKey,
-    isSearching
-      ? () => api.deputies.list({ party: party || undefined, limit: 600 })
-      : () => api.deputies.list({ party: party || undefined, limit: 50, offset }),
-    {
-      // Keep the previous page visible while the next one loads — prevents the
-      // flash back to initial data on party change or pagination.
-      keepPreviousData: true,
-    }
+  // Paginated browsing — disabled while searching (key = null)
+  const { data: pageData, isLoading: pageLoading } = useSWR<DeputyList>(
+    !isSearching ? `deputies:${party}:${offset}` : null,
+    () => api.deputies.list({ party: party || undefined, limit: 50, offset }),
+    { keepPreviousData: true }
   )
 
-  // On first render data is undefined; fall back to initial (page 1, no filter).
-  const deputies = data?.items ?? initial.items
-  const total = data?.total ?? initial.total
+  // Full fetch for client-side search — disabled while not searching (key = null).
+  // Cached by party so switching party+search doesn't re-fetch unnecessarily.
+  const { data: allData, isLoading: allLoading } = useSWR<DeputyList>(
+    isSearching ? `deputies:all:${party}` : null,
+    () => api.deputies.list({ party: party || undefined, limit: 600 })
+  )
+
+  const isLoading = isSearching ? allLoading : pageLoading
+  const deputies = isSearching
+    ? (allData?.items ?? [])
+    : (pageData?.items ?? initial.items)
+  const total = isSearching
+    ? (allData?.total ?? 0)
+    : (pageData?.total ?? initial.total)
 
   const filtered = isSearching
     ? deputies.filter((d) =>
@@ -81,17 +82,25 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
       {/* Count */}
       <p className="text-xs text-gray-mid mb-4">
         {isSearching
-          ? `${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`
+          ? isLoading
+            ? 'Recherche...'
+            : `${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`
           : `${total} député${total !== 1 ? 's' : ''}`}
         {party && ` · ${partyShort(party)}`}
       </p>
 
       {/* Grid */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
-        {filtered.length === 0 && !isLoading ? (
-          <p className="text-sm text-gray-mid col-span-2 py-8 text-center">Aucun résultat</p>
-        ) : (
-          filtered.map((d) => (
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-20 bg-gray-light rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-gray-mid py-8 text-center">Aucun résultat</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {filtered.map((d) => (
             <Link key={d.deputy_id} href={`/deputes/${d.deputy_id}`}
               className="bg-white border border-gray-border rounded-lg p-4 hover:border-navy/30 transition-colors flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-navy-muted flex items-center justify-center text-navy font-medium text-sm flex-shrink-0">
@@ -107,9 +116,9 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                 </span>
               )}
             </Link>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Pagination — hidden while searching */}
       {!isSearching && total > 50 && (
