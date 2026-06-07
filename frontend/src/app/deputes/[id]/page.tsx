@@ -11,11 +11,10 @@ export default async function DeputyPage({ params }: { params: { id: string } })
   if (!deputy) notFound()
 
   const presencePct = scorecard ? Math.round((scorecard.presence_rate ?? 0) * 100) : null
-  const pourPct     = scorecard ? Math.round((scorecard.votes_for_pct   ?? 0) * 100) : null
-  const contrePct   = scorecard
-    ? Math.round((scorecard.votes_against ?? 0) / (scorecard.total_votes || 1) * 100)
-    : null
-  const abstPct = scorecard ? Math.round((scorecard.abstention_pct ?? 0) * 100) : null
+  const denom       = scorecard ? (scorecard.present_votes || 1) : 1
+  const pourPct     = scorecard ? Math.round(scorecard.votes_for      / denom * 100) : null
+  const contrePct   = scorecard ? Math.round(scorecard.votes_against  / denom * 100) : null
+  const abstPct     = scorecard ? Math.round(scorecard.abstentions    / denom * 100) : null
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-8 py-6">

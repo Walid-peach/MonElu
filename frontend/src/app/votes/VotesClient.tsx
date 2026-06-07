@@ -78,7 +78,7 @@ export function VotesClient({ initial }: { initial: VoteList }) {
       {total > 50 && (
         <div className="flex justify-center gap-3 mt-8">
           <button onClick={() => setOffset(Math.max(0, offset - 50))}
-            disabled={offset === 0}
+            disabled={offset === 0 || isLoading}
             className="px-4 py-2 text-sm border border-gray-border rounded disabled:opacity-40">
             ← Précédent
           </button>
@@ -86,7 +86,7 @@ export function VotesClient({ initial }: { initial: VoteList }) {
             {offset + 1}–{Math.min(offset + 50, total)} sur {total}
           </span>
           <button onClick={() => setOffset(offset + 50)}
-            disabled={offset + 50 >= total}
+            disabled={offset + 50 >= total || isLoading}
             className="px-4 py-2 text-sm border border-gray-border rounded disabled:opacity-40">
             Suivant →
           </button>

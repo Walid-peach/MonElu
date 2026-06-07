@@ -97,6 +97,9 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question }),
-    }).then(r => r.json() as Promise<SearchResult>),
+    }).then(r => {
+      if (!r.ok) throw new Error(`API error: ${r.status}`)
+      return r.json() as Promise<SearchResult>
+    }),
   health: () => apiFetch<Record<string, unknown>>('/health/'),
 }
