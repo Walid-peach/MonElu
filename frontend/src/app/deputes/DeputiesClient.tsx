@@ -26,16 +26,30 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const [search, setSearch] = useState('')
   const [offset, setOffset] = useState(0)
 
-  const { data, isLoading } = useSWR(
-    `deputies:${party}:${offset}`,
-    () => api.deputies.list({ party: party || undefined, limit: 50, offset }),
-    { fallbackData: initial }
+  // When searching, fetch all deputies (no pagination) so the filter crosses all pages.
+  // When browsing, fetch the current page.
+  const isSearching = search.length > 0
+  const swrKey = isSearching
+    ? `deputies:all:${party}`
+    : `deputies:${party}:${offset}`
+
+  const { data, isLoading } = useSWR<DeputyList>(
+    swrKey,
+    isSearching
+      ? () => api.deputies.list({ party: party || undefined, limit: 600 })
+      : () => api.deputies.list({ party: party || undefined, limit: 50, offset }),
+    {
+      // Keep the previous page visible while the next one loads — prevents the
+      // flash back to initial data on party change or pagination.
+      keepPreviousData: true,
+    }
   )
 
+  // On first render data is undefined; fall back to initial (page 1, no filter).
   const deputies = data?.items ?? initial.items
   const total = data?.total ?? initial.total
 
-  const filtered = search
+  const filtered = isSearching
     ? deputies.filter((d) =>
         d.full_name.toLowerCase().includes(search.toLowerCase()) ||
         d.department?.toLowerCase().includes(search.toLowerCase())
@@ -55,7 +69,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
         />
         <select
           value={party}
-          onChange={e => { setParty(e.target.value); setOffset(0) }}
+          onChange={e => { setParty(e.target.value); setOffset(0); setSearch('') }}
           className="border border-gray-border rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-navy">
           <option value="">Tous les groupes</option>
           {PARTIES.map(p => (
@@ -66,20 +80,18 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
       {/* Count */}
       <p className="text-xs text-gray-mid mb-4">
-        {search ? `${filtered.length} résultats` : `${total} députés`}
+        {isSearching
+          ? `${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`
+          : `${total} député${total !== 1 ? 's' : ''}`}
         {party && ` · ${partyShort(party)}`}
       </p>
 
       {/* Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-20 bg-gray-light rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {filtered.map((d) => (
+      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
+        {filtered.length === 0 && !isLoading ? (
+          <p className="text-sm text-gray-mid col-span-2 py-8 text-center">Aucun résultat</p>
+        ) : (
+          filtered.map((d) => (
             <Link key={d.deputy_id} href={`/deputes/${d.deputy_id}`}
               className="bg-white border border-gray-border rounded-lg p-4 hover:border-navy/30 transition-colors flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-navy-muted flex items-center justify-center text-navy font-medium text-sm flex-shrink-0">
@@ -95,15 +107,15 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                 </span>
               )}
             </Link>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
-      {/* Pagination */}
-      {!search && total > 50 && (
+      {/* Pagination — hidden while searching */}
+      {!isSearching && total > 50 && (
         <div className="flex justify-center gap-3 mt-8">
           <button onClick={() => setOffset(Math.max(0, offset - 50))}
-            disabled={offset === 0}
+            disabled={offset === 0 || isLoading}
             className="px-4 py-2 text-sm border border-gray-border rounded disabled:opacity-40">
             ← Précédent
           </button>
@@ -111,7 +123,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             {offset + 1}–{Math.min(offset + 50, total)} sur {total}
           </span>
           <button onClick={() => setOffset(offset + 50)}
-            disabled={offset + 50 >= total}
+            disabled={offset + 50 >= total || isLoading}
             className="px-4 py-2 text-sm border border-gray-border rounded disabled:opacity-40">
             Suivant →
           </button>
