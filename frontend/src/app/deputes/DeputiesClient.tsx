@@ -21,6 +21,20 @@ const PARTIES = [
 
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 
+// API max limit is 200. Fetch all pages in parallel and combine.
+async function fetchAllDeputies(party?: string): Promise<Deputy[]> {
+  const first = await api.deputies.list({ party, limit: 200, offset: 0 })
+  const total = first.total
+  if (total <= 200) return first.items
+  const extraPages = Math.ceil((total - 200) / 200)
+  const rest = await Promise.all(
+    Array.from({ length: extraPages }, (_, i) =>
+      api.deputies.list({ party, limit: 200, offset: 200 + i * 200 })
+    )
+  )
+  return [...first.items, ...rest.flatMap(r => r.items)]
+}
+
 export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const [party, setParty] = useState('')
   const [search, setSearch] = useState('')
@@ -28,34 +42,30 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
   const isSearching = search.length > 0
 
-  // Paginated browsing — disabled while searching (key = null)
+  // Paginated browsing
   const { data: pageData, isLoading: pageLoading } = useSWR<DeputyList>(
     !isSearching ? `deputies:${party}:${offset}` : null,
     () => api.deputies.list({ party: party || undefined, limit: 50, offset }),
     { keepPreviousData: true }
   )
 
-  // Full fetch for client-side search — disabled while not searching (key = null).
-  // Cached by party so switching party+search doesn't re-fetch unnecessarily.
-  const { data: allData, isLoading: allLoading } = useSWR<DeputyList>(
+  // Full list for search — fetches all pages in parallel, cached by party
+  const { data: allDeputies, isLoading: allLoading } = useSWR<Deputy[]>(
     isSearching ? `deputies:all:${party}` : null,
-    () => api.deputies.list({ party: party || undefined, limit: 600 })
+    () => fetchAllDeputies(party || undefined)
   )
 
   const isLoading = isSearching ? allLoading : pageLoading
-  const deputies = isSearching
-    ? (allData?.items ?? [])
-    : (pageData?.items ?? initial.items)
-  const total = isSearching
-    ? (allData?.total ?? 0)
-    : (pageData?.total ?? initial.total)
+  const total = pageData?.total ?? initial.total
 
-  const filtered = isSearching
-    ? deputies.filter((d) =>
+  const filtered = isSearching && allDeputies
+    ? allDeputies.filter(d =>
         d.full_name.toLowerCase().includes(search.toLowerCase()) ||
         d.department?.toLowerCase().includes(search.toLowerCase())
       )
-    : deputies
+    : null
+
+  const deputies = filtered ?? pageData?.items ?? initial.items
 
   return (
     <div>
@@ -82,9 +92,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
       {/* Count */}
       <p className="text-xs text-gray-mid mb-4">
         {isSearching
-          ? isLoading
-            ? 'Recherche...'
-            : `${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`
+          ? isLoading ? 'Recherche...' : `${deputies.length} résultat${deputies.length !== 1 ? 's' : ''}`
           : `${total} député${total !== 1 ? 's' : ''}`}
         {party && ` · ${partyShort(party)}`}
       </p>
@@ -96,11 +104,11 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             <div key={i} className="h-20 bg-gray-light rounded-lg animate-pulse" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : deputies.length === 0 ? (
         <p className="text-sm text-gray-mid py-8 text-center">Aucun résultat</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {filtered.map((d) => (
+          {deputies.map(d => (
             <Link key={d.deputy_id} href={`/deputes/${d.deputy_id}`}
               className="bg-white border border-gray-border rounded-lg p-4 hover:border-navy/30 transition-colors flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-navy-muted flex items-center justify-center text-navy font-medium text-sm flex-shrink-0">

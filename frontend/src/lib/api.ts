@@ -75,11 +75,11 @@ export const api = {
       if (params?.limit) q.set('limit', String(params.limit))
       if (params?.offset) q.set('offset', String(params.offset))
       return apiFetch<{ total: number; items: Deputy[]; limit: number; offset: number }>(
-        `/deputies?${q}`
+        `/deputies/?${q}`
       )
     },
-    get: (id: string) => apiFetch<Deputy>(`/deputies/${id}`),
-    scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard`),
+    get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`),
+    scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`),
   },
   votes: {
     list: (params?: { result?: string; limit?: number; offset?: number }) => {
