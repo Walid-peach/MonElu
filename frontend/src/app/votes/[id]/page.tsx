@@ -15,7 +15,7 @@ export default async function VoteDetailPage({ params }: { params: { id: string 
   const byPosition: Record<string, typeof vote.positions> = {}
   for (const p of vote.positions ?? []) {
     if (!byPosition[p.position]) byPosition[p.position] = []
-    byPosition[p.position].push(p)
+    byPosition[p.position]!.push(p)
   }
 
   const positionOrder = ['pour', 'contre', 'abstention', 'nonVotant']
