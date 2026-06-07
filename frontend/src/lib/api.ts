@@ -16,16 +16,14 @@ export type Deputy = {
 export type Scorecard = {
   deputy_id: string
   full_name: string
-  party: string | null
-  department: string | null
+  total_votes: number
+  present_votes: number
   presence_rate: number
-  total_votes_cast: number
+  votes_for: number
+  votes_against: number
+  abstentions: number
   votes_for_pct: number
   abstention_pct: number
-  total_pour: number
-  total_contre: number
-  total_abstention: number
-  is_active: boolean
 }
 
 export type Vote = {
@@ -88,11 +86,11 @@ export const api = {
       if (params?.limit) q.set('limit', String(params.limit))
       if (params?.offset) q.set('offset', String(params.offset))
       return apiFetch<{ total: number; items: Vote[]; limit: number; offset: number }>(
-        `/votes?${q}`
+        `/votes/?${q}`
       )
     },
-    latest: () => apiFetch<Vote[]>('/votes/latest'),
-    get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}`),
+    latest: () => apiFetch<Vote[]>('/votes/latest/'),
+    get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`),
   },
   search: (question: string) =>
     fetch(`${API_BASE}/search/`, {

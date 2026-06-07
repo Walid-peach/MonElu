@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import { partyColor, partyShort, getInitials } from '@/lib/utils'
+import { partyColor, getInitials } from '@/lib/utils'
 
 export default async function DeputyPage({ params }: { params: { id: string } }) {
   const [deputy, scorecard] = await Promise.all([
@@ -11,9 +11,9 @@ export default async function DeputyPage({ params }: { params: { id: string } })
   if (!deputy) notFound()
 
   const presencePct = scorecard ? Math.round((scorecard.presence_rate ?? 0) * 100) : null
-  const pourPct = scorecard ? Math.round((scorecard.votes_for_pct ?? 0) * 100) : null
-  const contrePct = scorecard
-    ? Math.round((scorecard.total_contre ?? 0) / (scorecard.total_votes_cast || 1) * 100)
+  const pourPct     = scorecard ? Math.round((scorecard.votes_for_pct   ?? 0) * 100) : null
+  const contrePct   = scorecard
+    ? Math.round((scorecard.votes_against ?? 0) / (scorecard.total_votes || 1) * 100)
     : null
   const abstPct = scorecard ? Math.round((scorecard.abstention_pct ?? 0) * 100) : null
 
@@ -85,9 +85,9 @@ export default async function DeputyPage({ params }: { params: { id: string } })
           {/* Stats grid */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'Votes exprimés', value: (scorecard.total_votes_cast ?? 0).toLocaleString('fr-FR') },
-              { label: 'Pour', value: (scorecard.total_pour ?? 0).toLocaleString('fr-FR') },
-              { label: 'Contre', value: (scorecard.total_contre ?? 0).toLocaleString('fr-FR') },
+              { label: 'Votes exprimés', value: (scorecard.total_votes ?? 0).toLocaleString('fr-FR') },
+              { label: 'Pour',           value: (scorecard.votes_for   ?? 0).toLocaleString('fr-FR') },
+              { label: 'Contre',         value: (scorecard.votes_against ?? 0).toLocaleString('fr-FR') },
             ].map(({ label, value }) => (
               <div key={label} className="bg-gray-off rounded-lg p-3 text-center">
                 <div className="text-lg font-medium text-navy">{value}</div>
