@@ -14,7 +14,7 @@ export function VotesClient({ initial }: { initial: VoteList }) {
   const { data, isLoading } = useSWR(
     `votes:${result}:${offset}`,
     () => api.votes.list({ result: result || undefined, limit: 50, offset }),
-    { fallbackData: initial }
+    { keepPreviousData: true }
   )
 
   const votes = data?.items ?? initial.items

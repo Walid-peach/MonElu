@@ -98,5 +98,5 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question }),
     }).then(r => r.json() as Promise<SearchResult>),
-  health: () => apiFetch<Record<string, unknown>>('/health'),
+  health: () => apiFetch<Record<string, unknown>>('/health/'),
 }

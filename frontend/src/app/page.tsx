@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, Vote } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 
 async function getStats() {
@@ -81,15 +81,7 @@ export default async function Home() {
           </Link>
         </div>
         <div className="flex flex-col gap-3">
-          {(latest as Array<{
-            vote_id: string
-            vote_title: string
-            result: string
-            voted_at: string
-            votes_for: number
-            votes_against: number
-            total_voters: number
-          }>).slice(0, 5).map((vote) => (
+          {(latest as Vote[]).slice(0, 5).map((vote) => (
             <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
               className="bg-white rounded-lg border border-gray-border p-4 hover:border-navy/30 transition-colors">
               <div className="flex items-start justify-between gap-3">
