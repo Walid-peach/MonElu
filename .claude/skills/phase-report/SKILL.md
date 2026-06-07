@@ -1,15 +1,15 @@
 ---
 name: phase-report
-description: Generates or updates a standalone HTML report for a phase or major update — infers content from PR notes, git log, and code, renders in the MonÉlu navy/red/white visual style, saves to notes/, and opens in the browser. Use as /phase-report <N> or /phase-report <N> <topic>.
+description: Generates or updates a standalone HTML report for a phase or major update — infers content from PR notes, git log, and code, renders in the MonÉlu navy/red/white visual style, saves to notes/phases/, and opens in the browser. Use as /phase-report <N> or /phase-report <N> <topic>.
 ---
 
 Generate a self-contained HTML report documenting what was built in a given phase or major update. Follow every instruction below exactly.
 
 ## Arguments
 
-- `/phase-report 1` → generate/overwrite `notes/phase1_report.html`
-- `/phase-report 3` → generate/overwrite `notes/phase3_report.html`
-- `/phase-report 2 rag-upgrade` → save as `notes/phase2_rag-upgrade_report.html`
+- `/phase-report 1` → generate/overwrite `notes/phases/phase1_report.html`
+- `/phase-report 3` → generate/overwrite `notes/phases/phase3_report.html`
+- `/phase-report 2 rag-upgrade` → save as `notes/phases/phase2_rag-upgrade_report.html`
 
 If no argument is given, ask the user which phase or update to document.
 
@@ -20,13 +20,13 @@ If no argument is given, ask the user which phase or update to document.
 Run all of these reads before producing a single line of HTML. Do not skip any.
 
 1. `git log --oneline -30` — identify commits relevant to this phase
-2. Search `notes/` for PR description files: `ls notes/pr_*.md`. Read every file whose name or content references this phase number or topic. PR notes are the richest source of intent — they contain What / Why / Changes / Risks written at merge time. **Priority: PR notes > git log > code reading.**
+2. Search `notes/prs/` for PR description files: `ls notes/prs/`. Read every file whose name or content references this phase number or topic. PR notes are the richest source of intent — they contain What / Why / Changes / Risks written at merge time. **Priority: PR notes > git log > code reading.**
 3. If the phase involves Airflow DAGs: read all files in `ingestion/dags/`
 4. If the phase involves the API: read `api/routers/` and `api/main.py`
 5. If the phase involves RAG / semantic search: read `rag/pipeline/` and `rag/chain/`
 6. If the phase involves schema changes: read `data/migrations/`
 7. If the phase involves CI/CD or infra: read `.github/workflows/` and `docker-compose.yml`
-8. If a report already exists for this phase (`notes/phase<N>_report.html`): read it — preserve still-accurate sections and add a "What's new in this update" banner at the very top when overwriting
+8. If a report already exists for this phase (`notes/phases/phase<N>_report.html`): read it — preserve still-accurate sections and add a "What's new in this update" banner at the very top when overwriting
 
 Only use facts found in these sources. Never invent stats, file names, or behaviour.
 
@@ -301,6 +301,6 @@ Use a `.rag-steps` grid (same pattern as RAG pipeline steps):
 
 ## Step 4 — Save and open
 
-- Write to `notes/phase<N>_report.html` (or `notes/phase<N>_<topic>_report.html` if a topic was given)
+- Write to `notes/phases/phase<N>_report.html` (or `notes/phases/phase<N>_<topic>_report.html` if a topic was given)
 - Run `open <filepath>` to open in the browser immediately after writing
 - Confirm the file path to the user in one line

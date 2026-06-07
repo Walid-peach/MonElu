@@ -35,7 +35,7 @@ When handling a pull request, follow this workflow:
      - `dbt: standardize casting in cognos employee details model`
    - Avoid vague titles like `updates`, `fixes`, or `changes`.
 
-6. Prepare the PR description in `notes/pr_<sanitized-branch-name>.md`
+6. Prepare the PR description in `notes/prs/pr_<sanitized-branch-name>.md`
    - Replace `/` with `_`
    - Use lowercase
    - Keep the name concise and filesystem-safe
@@ -90,5 +90,5 @@ Explain the problem, context, or reason the change is needed.
 
 12. Final deliverables:
    - A proposed or updated PR title
-   - A PR description saved in `notes/pr_<sanitized-branch-name>.md`
+   - A PR description saved in `notes/prs/pr_<sanitized-branch-name>.md`
    - A short reviewer summary explaining what to review first

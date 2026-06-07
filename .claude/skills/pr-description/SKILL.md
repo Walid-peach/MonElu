@@ -3,7 +3,7 @@ name: pr-description
 description: Writes high-quality pull request descriptions. Use when creating a PR, summarizing branch changes, or when the user asks for a PR description.
 ---
 
-This skill writes the PR description body only. For the full PR creation workflow (opening, updating, saving to `notes/`), use the `pr-create` skill instead.
+This skill writes the PR description body only. For the full PR creation workflow (opening, updating, saving to `notes/prs/`), use the `pr-create` skill instead.
 
 When writing a PR description:
 
