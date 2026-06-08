@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import { partyColor, getInitials } from '@/lib/utils'
+import { partyColor } from '@/lib/utils'
+import { DeputyAvatar } from '@/components/DeputyAvatar'
 
 export const dynamicParams = true
 export const revalidate = 86400 // fallback if the /api/revalidate webhook is not called
@@ -49,9 +50,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
       {/* Header card */}
       <div className="bg-white border border-gray-border rounded-xl p-6 mb-4 mt-4">
         <div className="flex items-center gap-4 mb-2">
-          <div className="w-16 h-16 rounded-full bg-navy-muted flex items-center justify-center text-navy font-medium text-xl flex-shrink-0">
-            {getInitials(deputy.full_name)}
-          </div>
+          <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="lg" priority />
           <div className="min-w-0">
             <h1 className="font-serif text-2xl text-navy leading-tight">{deputy.full_name}</h1>
             <p className="text-sm text-gray-mid mt-0.5">{deputy.department}</p>

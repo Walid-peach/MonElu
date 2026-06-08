@@ -10,6 +10,15 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'www.assemblee-nationale.fr',
+        pathname: '/dyn/static/tribun/photos/**',
+      },
+    ],
+  },
   async rewrites() {
     return []
   },

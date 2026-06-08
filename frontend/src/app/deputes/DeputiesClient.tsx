@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { api, Deputy } from '@/lib/api'
-import { getInitials, partyShort, partyColor } from '@/lib/utils'
+import { partyShort, partyColor } from '@/lib/utils'
+import { DeputyAvatar } from '@/components/DeputyAvatar'
 
 const PARTIES = [
   'Rassemblement National',
@@ -94,9 +95,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
           {deputies.map(d => (
             <Link key={d.deputy_id} href={`/deputes/${d.deputy_id}`}
               className="bg-white border border-gray-border rounded-lg p-4 hover:border-navy/30 transition-colors flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-navy-muted flex items-center justify-center text-navy font-medium text-sm flex-shrink-0">
-                {getInitials(d.full_name)}
-              </div>
+              <DeputyAvatar name={d.full_name} photoUrl={d.photo_url} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-navy truncate">{d.full_name}</p>
                 <p className="text-xs text-gray-mid truncate">{d.department}</p>
