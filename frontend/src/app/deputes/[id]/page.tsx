@@ -26,7 +26,7 @@ export default async function DeputyPage({ params }: { params: { id: string } })
       {/* Header card */}
       <div className="bg-white border border-gray-border rounded-xl p-6 mb-4 mt-4">
         <div className="flex items-center gap-4 mb-2">
-          <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="lg" />
+          <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="lg" priority />
           <div className="min-w-0">
             <h1 className="font-serif text-2xl text-navy leading-tight">{deputy.full_name}</h1>
             <p className="text-sm text-gray-mid mt-0.5">{deputy.department}</p>

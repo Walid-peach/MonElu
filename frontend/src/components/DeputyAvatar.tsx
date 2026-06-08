@@ -7,6 +7,7 @@ type Props = {
   name: string
   photoUrl: string | null
   size?: 'sm' | 'lg'
+  priority?: boolean
 }
 
 const sizes = {
@@ -14,7 +15,7 @@ const sizes = {
   lg: { px: 64, className: 'w-16 h-16 text-xl' },
 }
 
-export function DeputyAvatar({ name, photoUrl, size = 'sm' }: Props) {
+export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false }: Props) {
   const [imgError, setImgError] = useState(false)
   const { px, className } = sizes[size]
 
@@ -26,7 +27,8 @@ export function DeputyAvatar({ name, photoUrl, size = 'sm' }: Props) {
           alt={name}
           width={px}
           height={px}
-          className="object-cover w-full h-full"
+          className="object-cover object-top w-full h-full"
+          priority={priority}
           onError={() => setImgError(true)}
         />
       </div>
