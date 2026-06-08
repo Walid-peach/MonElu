@@ -22,6 +22,7 @@ const sans = DM_Sans({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://monelu.fr'),
   title: 'MonÉlu — Suivez vos députés',
   description: "Données officielles de l'Assemblée Nationale. Suivez chaque vote de chaque député français.",
   manifest: '/manifest.json',
