@@ -3,10 +3,11 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import { partyColor, getInitials } from '@/lib/utils'
 
-export default async function DeputyPage({ params }: { params: { id: string } }) {
+export default async function DeputyPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const [deputy, scorecard] = await Promise.all([
-    api.deputies.get(params.id).catch(() => null),
-    api.deputies.scorecard(params.id).catch(() => null),
+    api.deputies.get(id).catch(() => null),
+    api.deputies.scorecard(id).catch(() => null),
   ])
   if (!deputy) notFound()
 
