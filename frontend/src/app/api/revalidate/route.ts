@@ -1,6 +1,10 @@
 import { revalidatePath } from 'next/cache'
 import { NextRequest } from 'next/server'
 
+export async function GET() {
+  return new Response('Method Not Allowed', { status: 405 })
+}
+
 export async function POST(req: NextRequest) {
   if (req.headers.get('x-revalidate-secret') !== process.env.REVALIDATE_SECRET)
     return new Response('Unauthorized', { status: 401 })

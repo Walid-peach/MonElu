@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 import { formatDate, partyShort, partyColor } from '@/lib/utils'
 
 export const dynamicParams = true
-export const revalidate = 86400
+export const revalidate = 86400 // fallback if the /api/revalidate webhook is not called
 
 export async function generateStaticParams() {
   try {
