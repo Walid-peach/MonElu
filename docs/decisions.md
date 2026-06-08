@@ -328,6 +328,33 @@ count is low.
 
 ---
 
+## ADR-018 — Rebuild logo as inline SVG React component (Plan C)
+**Date:** 2026-06-09
+**Status:** Current
+
+**Decision:** Replace the existing `MonEluLogo.tsx` (a simplified geometric placeholder — 8 rotating squares) with a new inline SVG component that faithfully renders the hemicycle arc + deputy figure + wordmark from the canonical brand asset (`public/MonElu_LOGO-SVG.png`).
+
+**Reason:** Three options were evaluated:
+- **Plan A (use PNG as-is):** Rejected. Rasterized, 162 KB per use, cannot adapt to dark mode.
+- **Plan B (keep existing SVG component):** Rejected. Scalable but wrong visual — the nav shows a geometric placeholder that doesn't match the actual brand identity.
+- **Plan C (rebuild as SVG component):** Chosen. Pixel-perfect at any size, ~2–4 KB inline, dark mode is free via a `variant` prop, unblocks fixing broken PWA icons.
+
+**Component API:**
+```tsx
+<MonEluLogo size={32} variant="light" />  // default — navy + red
+<MonEluLogo size={32} variant="dark" />   // white + red, for dark backgrounds
+```
+
+**Impact:**
+- `frontend/src/components/MonEluLogo.tsx` must be replaced with the hemicycle design
+- Do NOT use the PNG file (`public/MonElu_LOGO-SVG.png`) directly in JSX — it exists as reference only
+- PWA icons (`public/icon-192.png`, `public/icon-512.png`) are 1×1 placeholders — export proper versions from the SVG when implementing
+- Dark mode infrastructure (next-themes, dark: Tailwind classes) is **deferred** — build only when there is real user demand
+
+**Trigger to revisit:** Dark mode request from users, or if the brand asset changes.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code

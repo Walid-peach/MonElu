@@ -1,39 +1,77 @@
-export function MonEluLogo({ size = 28 }: { size?: number }) {
+type Variant = 'light' | 'dark'
+
+interface MonEluLogoProps {
+  size?: number
+  variant?: Variant
+  hideWordmark?: boolean
+}
+
+// 7 angles spanning the upper semicircle (left → top → right)
+const ANGLES = [180, 210, 240, 270, 300, 330, 360] as const
+
+// Color assigned by angular position — French tricolor (bleu-blanc-rouge)
+function segColor(deg: number, navy: string, gray: string, red: string): string {
+  if (deg <= 240) return navy
+  if (deg === 270) return gray
+  return red
+}
+
+export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false }: MonEluLogoProps) {
+  const navy = variant === 'light' ? '#0D1F3C' : '#FFFFFF'
+  const gray = variant === 'light' ? '#D2CFCA' : 'rgba(255,255,255,0.45)'
+  const red  = '#C9302C'
+
+  const cx = 50
+  const cy = 50
+
+  const rings = [
+    { r: 40, w: 9,  h: 14, rx: 4.5 },
+    { r: 25, w: 6,  h: 10, rx: 3   },
+  ]
+
   return (
-    <div className="flex items-center gap-2.5">
-      <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <g transform="translate(24,32)">
-          {[...Array(8)].map((_, i) => {
-            const angle = -150 + i * (300 / 7)
-            const rad = angle * Math.PI / 180
-            const x = Math.cos(rad) * 20
-            const y = Math.sin(rad) * 20
-            const color = i % 3 === 1 ? '#C9302C' : '#0D1F3C'
+    <div className="flex items-center" style={{ gap: Math.round(size * 0.32) }}>
+      <svg
+        width={size}
+        height={Math.round(size * 0.6)}
+        viewBox="0 0 100 60"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        {rings.map((ring, ri) =>
+          ANGLES.map((deg, si) => {
+            const rad = (deg * Math.PI) / 180
+            const x   = cx + ring.r * Math.cos(rad)
+            const y   = cy + ring.r * Math.sin(rad)
+            const fill = segColor(deg, navy, gray, red)
             return (
-              <rect key={i} x={x - 3} y={y - 3} width={6} height={6} rx={1.5}
-                fill={color} opacity={0.9}
-                transform={`rotate(${angle}, ${x}, ${y})`} />
+              <rect
+                key={`${ri}-${si}`}
+                x={x - ring.w / 2}
+                y={y - ring.h / 2}
+                width={ring.w}
+                height={ring.h}
+                rx={ring.rx}
+                fill={fill}
+                transform={`rotate(${deg - 90},${x},${y})`}
+              />
             )
-          })}
-          {[...Array(5)].map((_, i) => {
-            const angle = -120 + i * (240 / 4)
-            const rad = angle * Math.PI / 180
-            const x = Math.cos(rad) * 13
-            const y = Math.sin(rad) * 13
-            const color = i % 2 === 0 ? '#888780' : '#0D1F3C'
-            return (
-              <rect key={i} x={x - 2.5} y={y - 2.5} width={5} height={5} rx={1}
-                fill={color} opacity={0.7}
-                transform={`rotate(${angle}, ${x}, ${y})`} />
-            )
-          })}
-          <circle cx={0} cy={-2} r={4} fill="#0D1F3C" />
-          <rect x={-5} y={2} width={10} height={6} rx={2} fill="#0D1F3C" />
-        </g>
+          })
+        )}
+        {/* Deputy at the podium */}
+        <circle cx={cx} cy={40} r={4.5} fill={navy} />
+        <rect x={42} y={44.5} width={16} height={10} rx={3.5} fill={navy} />
       </svg>
-      <span className="font-serif text-xl text-navy leading-none">
-        Mon<span className="text-red-civic">Élu</span>
-      </span>
+
+      {!hideWordmark && (
+        <span
+          className="font-serif leading-none select-none"
+          style={{ fontSize: Math.round(size * 0.75), color: navy }}
+        >
+          Mon<span style={{ color: red }}>Élu</span>
+        </span>
+      )}
     </div>
   )
 }
