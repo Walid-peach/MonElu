@@ -20,62 +20,103 @@ export default async function Home() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="relative min-h-[85vh] md:min-h-[70vh] flex flex-col justify-center px-6 md:px-16 py-16">
-        <Image
-          src="/assemblee_nationale.jpg"
-          alt="Hémicycle de l'Assemblée Nationale"
-          fill
-          className="object-cover object-center"
-          priority
-        />
-        <div className="absolute inset-0 bg-navy/80" />
-        <div className="relative z-10 max-w-2xl">
+      {/* Hero — split layout */}
+      <section className="bg-gray-off min-h-screen flex items-stretch">
+        {/* Left: text content */}
+        <div className="flex flex-col justify-center px-8 md:px-16 lg:px-20 py-16 w-full md:w-1/2">
           <p className="text-red-civic text-xs font-medium tracking-widest uppercase mb-4">
             Plateforme civique open source
           </p>
-          <h1 className="font-serif text-4xl md:text-6xl text-white leading-tight mb-6">
-            Les données parlementaires{' '}
-            <em className="text-red-civic not-italic">claires et accessibles.</em>
+          <h1 className="font-serif text-4xl md:text-5xl lg:text-[3.25rem] text-navy font-bold leading-tight mb-6">
+            Les données parlementaires claires, neutres et accessibles.
           </h1>
-          <p className="text-white/60 text-base md:text-lg mb-8 max-w-lg leading-relaxed">
-            Données officielles de l&apos;Assemblée Nationale. Ouvertes, vérifiables, mises à jour régulièrement.
+          <p className="text-navy/60 text-base md:text-lg mb-8 max-w-md leading-relaxed">
+            MonÉlu transforme les données officielles de l&apos;Assemblée Nationale en informations compréhensibles pour tous.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link href="/deputes"
-              className="bg-red-civic text-white px-6 py-3 rounded font-medium text-sm text-center hover:bg-red-light transition-colors">
-              Découvrir les députés →
-            </Link>
+          <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <Link href="/chat"
-              className="border border-white/30 text-white px-6 py-3 rounded font-medium text-sm text-center hover:bg-white/10 transition-colors">
-              Poser une question
+              className="bg-red-civic text-white px-6 py-3 rounded font-medium text-sm text-center hover:bg-red-light transition-colors">
+              Poser une question →
             </Link>
+            <a href="https://monelu-production.up.railway.app/docs" target="_blank" rel="noopener noreferrer"
+              className="border border-navy/30 text-navy px-6 py-3 rounded font-medium text-sm text-center hover:bg-navy/5 transition-colors">
+              Documentation API
+            </a>
+          </div>
+          <div className="flex flex-wrap gap-6 text-xs text-navy/40 border-t border-navy/10 pt-5">
+            <span>🔒 Données officielles · 100% transparentes</span>
+            <span>⚖ Neutre &amp; indépendant · Sans parti pris</span>
+          </div>
+        </div>
+
+        {/* Right: image + floating stats card */}
+        <div className="hidden md:block relative flex-1">
+          <div
+            className="absolute inset-y-0 left-0 w-32 z-10 pointer-events-none"
+            style={{ background: 'linear-gradient(to right, #F8F7F4, transparent)' }}
+          />
+          <Image
+            src="/assemblee_nationale.jpg"
+            alt="Assemblée Nationale, Paris"
+            fill
+            className="object-cover object-center"
+            priority
+          />
+          {/* Floating stats card */}
+          <div className="absolute bottom-10 left-10 right-10 bg-white rounded-2xl shadow-xl p-6 z-20">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="w-2 h-2 rounded-full bg-red-civic" />
+              <span className="text-sm font-medium text-navy">En direct à l&apos;Assemblée</span>
+            </div>
+            <div className="grid grid-cols-3 divide-x divide-navy/10">
+              {[
+                { value: health?.deputies as number ?? null, label: 'Députés' },
+                { value: health?.votes as number ?? null, label: 'Votes analysés' },
+                {
+                  value: health?.positions
+                    ? `${Math.round((health.positions as number) / 1000)}k`
+                    : null,
+                  label: 'Positions',
+                },
+              ].map(({ value, label }) => (
+                <div key={label} className="px-4 text-center first:pl-0 last:pr-0">
+                  <div className="text-2xl md:text-3xl font-serif font-bold text-navy">
+                    {value !== null
+                      ? typeof value === 'number'
+                        ? value.toLocaleString('fr-FR')
+                        : value
+                      : '—'}
+                  </div>
+                  <div className="text-xs text-navy/40 uppercase tracking-wider mt-1">{label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Live stats bar */}
-      <section className="bg-navy-light border-t border-white/10">
-        <div className="max-w-4xl mx-auto grid grid-cols-3 divide-x divide-white/10">
+      {/* Mobile stats bar */}
+      <section className="md:hidden bg-white border-t border-gray-border">
+        <div className="grid grid-cols-3 divide-x divide-gray-border">
           {[
-            { value: health?.deputies as number ?? null, label: 'Députés suivis' },
-            { value: health?.votes as number ?? null, label: 'Votes analysés' },
+            { value: health?.deputies as number ?? null, label: 'Députés' },
+            { value: health?.votes as number ?? null, label: 'Votes' },
             {
               value: health?.positions
                 ? `${Math.round((health.positions as number) / 1000)}k`
                 : null,
-              label: 'Positions enregistrées',
+              label: 'Positions',
             },
           ].map(({ value, label }) => (
             <div key={label} className="px-4 py-5 text-center">
-              <div className="text-2xl md:text-3xl font-serif font-medium text-white">
+              <div className="text-2xl font-serif font-bold text-navy">
                 {value !== null
                   ? typeof value === 'number'
                     ? value.toLocaleString('fr-FR')
                     : value
                   : '—'}
               </div>
-              <div className="text-xs text-white/50 uppercase tracking-wider mt-1">{label}</div>
+              <div className="text-xs text-navy/40 uppercase tracking-wider mt-1">{label}</div>
             </div>
           ))}
         </div>
