@@ -35,6 +35,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# next-pwa generated service worker (regenerates with new hash on every build)
+# PWA generated service workers (regenerate with new hash on every build)
 /public/sw.js
+/public/sw *.js
 /public/workbox-*.js
