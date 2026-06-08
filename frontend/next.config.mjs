@@ -15,7 +15,7 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'www.assemblee-nationale.fr',
-        pathname: '/dyn/static/tribun/photos/**',
+        pathname: '/dyn/static/tribun/17/photos/carre/**',
       },
     ],
   },

@@ -149,7 +149,10 @@ def parse_deputy(item: dict) -> dict | None:
         party = None
         party_short = organe_ref
 
-        photo_url = f"https://www.assemblee-nationale.fr/dyn/static/tribun/photos/{uid}.jpg"
+        numeric_id = uid.lstrip("PA")
+        photo_url = (
+            f"https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/{numeric_id}.jpg"
+        )
 
         return {
             "deputy_id": uid,
