@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { api, Deputy } from '@/lib/api'
@@ -21,51 +21,32 @@ const PARTIES = [
 
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 
-// API max limit is 200. Fetch all pages in parallel and combine.
-async function fetchAllDeputies(party?: string): Promise<Deputy[]> {
-  const first = await api.deputies.list({ party, limit: 200, offset: 0 })
-  const total = first.total
-  if (total <= 200) return first.items
-  const extraPages = Math.ceil((total - 200) / 200)
-  const rest = await Promise.all(
-    Array.from({ length: extraPages }, (_, i) =>
-      api.deputies.list({ party, limit: 200, offset: 200 + i * 200 })
-    )
-  )
-  return [...first.items, ...rest.flatMap(r => r.items)]
-}
-
 export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const [party, setParty] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [offset, setOffset] = useState(0)
 
-  const isSearching = search.length > 0
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
 
-  // Paginated browsing
-  const { data: pageData, isLoading: pageLoading } = useSWR<DeputyList>(
-    !isSearching ? `deputies:${party}:${offset}` : null,
-    () => api.deputies.list({ party: party || undefined, limit: 50, offset }),
-    { keepPreviousData: true }
+  const isSearching = debouncedSearch.length > 0
+
+  const { data, isLoading } = useSWR<DeputyList>(
+    `deputies:${party}:${debouncedSearch}:${isSearching ? 0 : offset}`,
+    () => api.deputies.list({
+      search: debouncedSearch || undefined,
+      party: party || undefined,
+      limit: 50,
+      offset: isSearching ? 0 : offset,
+    }),
+    { keepPreviousData: true, fallbackData: initial }
   )
 
-  // Full list for search — fetches all pages in parallel, cached by party
-  const { data: allDeputies, isLoading: allLoading } = useSWR<Deputy[]>(
-    isSearching ? `deputies:all:${party}` : null,
-    () => fetchAllDeputies(party || undefined)
-  )
-
-  const isLoading = isSearching ? allLoading : pageLoading
-  const total = pageData?.total ?? initial.total
-
-  const filtered = isSearching && allDeputies
-    ? allDeputies.filter(d =>
-        d.full_name.toLowerCase().includes(search.toLowerCase()) ||
-        d.department?.toLowerCase().includes(search.toLowerCase())
-      )
-    : null
-
-  const deputies = filtered ?? pageData?.items ?? initial.items
+  const deputies = data?.items ?? initial.items
+  const total = data?.total ?? initial.total
 
   return (
     <div>
@@ -75,7 +56,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
           type="search"
           placeholder="Rechercher un député ou département..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setOffset(0) }}
           className="flex-1 border border-gray-border rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-navy"
         />
         <select
@@ -91,9 +72,11 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
       {/* Count */}
       <p className="text-xs text-gray-mid mb-4">
-        {isSearching
-          ? isLoading ? 'Recherche...' : `${deputies.length} résultat${deputies.length !== 1 ? 's' : ''}`
-          : `${total} député${total !== 1 ? 's' : ''}`}
+        {isLoading
+          ? 'Recherche...'
+          : isSearching
+            ? `${total} résultat${total !== 1 ? 's' : ''}`
+            : `${total} député${total !== 1 ? 's' : ''}`}
         {party && ` · ${partyShort(party)}`}
       </p>
 

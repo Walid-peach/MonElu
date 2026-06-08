@@ -66,8 +66,9 @@ async function apiFetch<T>(path: string): Promise<T> {
 
 export const api = {
   deputies: {
-    list: (params?: { party?: string; department?: string; limit?: number; offset?: number }) => {
+    list: (params?: { search?: string; party?: string; department?: string; limit?: number; offset?: number }) => {
       const q = new URLSearchParams()
+      if (params?.search) q.set('search', params.search)
       if (params?.party) q.set('party', params.party)
       if (params?.department) q.set('department', params.department)
       if (params?.limit) q.set('limit', String(params.limit))

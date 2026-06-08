@@ -15,8 +15,9 @@ export async function generateStaticParams() {
   }
 }
 
-export default async function VoteDetailPage({ params }: { params: { id: string } }) {
-  const vote = await api.votes.get(params.id).catch(() => null)
+export default async function VoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const vote = await api.votes.get(id).catch(() => null)
   if (!vote) notFound()
 
   const pourPct = Math.round(vote.votes_for / (vote.total_voters || 1) * 100)
