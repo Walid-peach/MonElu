@@ -3,6 +3,18 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import { formatDate, partyShort, partyColor } from '@/lib/utils'
 
+export const dynamicParams = true
+export const revalidate = 86400 // fallback if the /api/revalidate webhook is not called
+
+export async function generateStaticParams() {
+  try {
+    const data = await api.votes.list({ limit: 100 })
+    return data.items.map(v => ({ id: v.vote_id }))
+  } catch {
+    return []
+  }
+}
+
 export default async function VoteDetailPage({ params }: { params: { id: string } }) {
   const vote = await api.votes.get(params.id).catch(() => null)
   if (!vote) notFound()
