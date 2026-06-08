@@ -22,7 +22,7 @@ const sans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://monelu.fr'),
+  metadataBase: new URL('https://mon-elu.vercel.app'),
   title: 'MonÉlu — Suivez vos députés',
   description: "Données officielles de l'Assemblée Nationale. Suivez chaque vote de chaque député français.",
   manifest: '/manifest.json',
@@ -30,10 +30,15 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'MonÉlu — Suivez vos députés',
     description: "Données officielles de l'Assemblée Nationale",
-    url: 'https://monelu.fr',
+    url: 'https://mon-elu.vercel.app',
     siteName: 'MonÉlu',
     locale: 'fr_FR',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MonÉlu — Suivez vos députés',
+    description: "Données officielles de l'Assemblée Nationale",
   },
 }
 
