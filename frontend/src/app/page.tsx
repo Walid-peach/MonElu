@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { api, Vote } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
@@ -20,8 +21,16 @@ export default async function Home() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-navy min-h-[85vh] md:min-h-[70vh] flex flex-col justify-center px-6 md:px-16 py-16">
-        <div className="max-w-2xl">
+      <section className="relative min-h-[85vh] md:min-h-[70vh] flex flex-col justify-center px-6 md:px-16 py-16">
+        <Image
+          src="/assemblee_nationale.jpg"
+          alt="Hémicycle de l'Assemblée Nationale"
+          fill
+          className="object-cover object-center"
+          priority
+        />
+        <div className="absolute inset-0 bg-navy/80" />
+        <div className="relative z-10 max-w-2xl">
           <p className="text-red-civic text-xs font-medium tracking-widest uppercase mb-4">
             Plateforme civique open source
           </p>
