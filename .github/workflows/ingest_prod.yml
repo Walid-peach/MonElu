@@ -112,5 +112,20 @@ jobs:
           dbt run --profiles-dir . --target prod
           dbt test --profiles-dir . --target prod
 
+      - name: Revalidate frontend cache
+        continue-on-error: true
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+        run: |
+          if [ -n "$FRONTEND_URL" ] && [ -n "$REVALIDATE_SECRET" ]; then
+            curl -sf -X POST "$FRONTEND_URL/api/revalidate" \
+              -H "x-revalidate-secret: $REVALIDATE_SECRET" \
+              -H "Content-Type: application/json"
+            echo "Frontend cache revalidated."
+          else
+            echo "FRONTEND_URL or REVALIDATE_SECRET not set — skipping revalidation."
+          fi
+
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
