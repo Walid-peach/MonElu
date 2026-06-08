@@ -6,45 +6,47 @@ interface MonEluLogoProps {
   hideWordmark?: boolean
 }
 
-// 7 angles spanning the upper semicircle (left → top → right)
+// 7 segments per ring — 3 navy left · 1 gray center · 3 red right
 const ANGLES = [180, 210, 240, 270, 300, 330, 360] as const
 
-// Color assigned by angular position — French tricolor (bleu-blanc-rouge)
+// 3 concentric rings, outer → inner
+// w = tangential (wider) · h = radial (thinner) → landscape/horizontal pills
+const RINGS = [
+  { r: 52, w: 17, h: 6, rx: 3 },
+  { r: 36, w: 12, h: 6, rx: 3 },
+  { r: 20, w: 7,  h: 6, rx: 3 },
+] as const
+
 function segColor(deg: number, navy: string, gray: string, red: string): string {
-  if (deg <= 240) return navy
-  if (deg === 270) return gray
-  return red
+  if (deg <= 240) return navy   // 180 · 210 · 240
+  if (deg === 270) return gray  // 270
+  return red                     // 300 · 330 · 360
 }
+
+// ViewBox 130 × 88 — arc center at cx=65 cy=72
+const CX = 65
+const CY = 72
 
 export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false }: MonEluLogoProps) {
   const navy = variant === 'light' ? '#0D1F3C' : '#FFFFFF'
-  const gray = variant === 'light' ? '#D2CFCA' : 'rgba(255,255,255,0.45)'
+  const gray = variant === 'light' ? '#C8C5C0' : 'rgba(255,255,255,0.4)'
   const red  = '#C9302C'
 
-  const cx = 50
-  const cy = 50
-
-  const rings = [
-    { r: 40, w: 9,  h: 14, rx: 4.5 },
-    { r: 25, w: 6,  h: 10, rx: 3   },
-  ]
-
   return (
-    <div className="flex items-center" style={{ gap: Math.round(size * 0.32) }}>
+    <div className="flex items-center" style={{ gap: Math.round(size * 0.3) }}>
       <svg
         width={size}
-        height={Math.round(size * 0.6)}
-        viewBox="0 0 100 60"
+        height={Math.round(size * 88 / 130)}
+        viewBox="0 0 130 88"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
-        {rings.map((ring, ri) =>
+        {RINGS.map((ring, ri) =>
           ANGLES.map((deg, si) => {
             const rad = (deg * Math.PI) / 180
-            const x   = cx + ring.r * Math.cos(rad)
-            const y   = cy + ring.r * Math.sin(rad)
-            const fill = segColor(deg, navy, gray, red)
+            const x   = CX + ring.r * Math.cos(rad)
+            const y   = CY + ring.r * Math.sin(rad)
             return (
               <rect
                 key={`${ri}-${si}`}
@@ -53,15 +55,15 @@ export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false 
                 width={ring.w}
                 height={ring.h}
                 rx={ring.rx}
-                fill={fill}
+                fill={segColor(deg, navy, gray, red)}
                 transform={`rotate(${deg - 90},${x},${y})`}
               />
             )
           })
         )}
         {/* Deputy at the podium */}
-        <circle cx={cx} cy={40} r={4.5} fill={navy} />
-        <rect x={42} y={44.5} width={16} height={10} rx={3.5} fill={navy} />
+        <circle cx={CX} cy={63} r={4.5} fill={navy} />
+        <rect x={60} y={67.5} width={10} height={9} rx={2.5} fill={navy} />
       </svg>
 
       {!hideWordmark && (
