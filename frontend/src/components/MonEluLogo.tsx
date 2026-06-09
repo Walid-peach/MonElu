@@ -27,6 +27,12 @@ function segColor(deg: number, navy: string, gray: string, red: string): string 
 const CX = 65
 const CY = 72
 
+// Deputy figure — positioned relative to arc center
+const FIGURE_R  = 7.5                  // head radius
+const FIGURE_CY = CY - 12.2           // head center: 12.2 units above arc center
+const FIGURE_BW = 17                   // body width
+const FIGURE_BH = 13                   // body height
+
 export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false }: MonEluLogoProps) {
   const navy = variant === 'light' ? '#0D1F3C' : '#FFFFFF'
   const gray = variant === 'light' ? '#C8C5C0' : 'rgba(255,255,255,0.4)'
@@ -62,8 +68,8 @@ export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false 
           })
         )}
         {/* Deputy at the podium */}
-        <circle cx={CX} cy={59.8} r={7.5} fill={navy} />
-        <rect x={56.5} y={67.3} width={17} height={13} rx={3} fill={navy} />
+        <circle cx={CX} cy={FIGURE_CY} r={FIGURE_R} fill={navy} />
+        <rect x={CX - FIGURE_BW / 2} y={FIGURE_CY + FIGURE_R} width={FIGURE_BW} height={FIGURE_BH} rx={3} fill={navy} />
       </svg>
 
       {!hideWordmark && (

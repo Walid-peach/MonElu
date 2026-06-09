@@ -347,7 +347,7 @@ count is low.
 
 **Impact:**
 - `frontend/src/components/MonEluLogo.tsx` must be replaced with the hemicycle design
-- Do NOT use the PNG file (`public/MonElu_LOGO-SVG.png`) directly in JSX — it exists as reference only
+- Do NOT use the PNG file (`docs/assets/MonElu_LOGO-SVG.png`) directly in JSX — it exists as reference only
 - PWA icons (`public/icon-192.png`, `public/icon-512.png`) are 1×1 placeholders — export proper versions from the SVG when implementing
 - Dark mode infrastructure (next-themes, dark: Tailwind classes) is **deferred** — build only when there is real user demand
 
