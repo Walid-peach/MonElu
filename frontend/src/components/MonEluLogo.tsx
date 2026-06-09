@@ -1,39 +1,85 @@
-export function MonEluLogo({ size = 28 }: { size?: number }) {
+type Variant = 'light' | 'dark'
+
+interface MonEluLogoProps {
+  size?: number
+  variant?: Variant
+  hideWordmark?: boolean
+}
+
+// 7 segments per ring — 3 navy left · 1 gray center · 3 red right
+const ANGLES = [180, 210, 240, 270, 300, 330, 360] as const
+
+// 3 concentric rings, outer → inner — equal spacing (12 units center-to-center)
+// w = tangential (wider) · h = radial (thinner) → landscape/horizontal pills
+const RINGS = [
+  { r: 52, w: 17, h: 6, rx: 3 },
+  { r: 40, w: 13, h: 6, rx: 3 },
+  { r: 28, w: 9,  h: 6, rx: 3 },
+] as const
+
+function segColor(deg: number, navy: string, gray: string, red: string): string {
+  if (deg <= 240) return navy   // 180 · 210 · 240
+  if (deg === 270) return gray  // 270
+  return red                     // 300 · 330 · 360
+}
+
+// ViewBox 130 × 88 — arc center at cx=65 cy=72
+const CX = 65
+const CY = 72
+
+// Deputy figure — positioned relative to arc center
+const FIGURE_R  = 7.5                  // head radius
+const FIGURE_CY = CY - 12.2           // head center inside innermost ring (r=28, inner edge at 25)
+const FIGURE_BW = 17                   // body width
+const FIGURE_BH = 13                   // body height
+
+export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false }: MonEluLogoProps) {
+  const navy = variant === 'light' ? '#0D1F3C' : '#FFFFFF'
+  const gray = variant === 'light' ? '#C8C5C0' : 'rgba(255,255,255,0.4)'
+  const red  = '#C9302C'
+
   return (
-    <div className="flex items-center gap-2.5">
-      <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <g transform="translate(24,32)">
-          {[...Array(8)].map((_, i) => {
-            const angle = -150 + i * (300 / 7)
-            const rad = angle * Math.PI / 180
-            const x = Math.cos(rad) * 20
-            const y = Math.sin(rad) * 20
-            const color = i % 3 === 1 ? '#C9302C' : '#0D1F3C'
+    <div className="flex items-center" style={{ gap: Math.round(size * 0.3) }}>
+      <svg
+        width={size}
+        height={Math.round(size * 88 / 130)}
+        viewBox="0 0 130 88"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        {RINGS.map((ring, ri) =>
+          ANGLES.map((deg, si) => {
+            const rad = (deg * Math.PI) / 180
+            const x   = CX + ring.r * Math.cos(rad)
+            const y   = CY + ring.r * Math.sin(rad)
             return (
-              <rect key={i} x={x - 3} y={y - 3} width={6} height={6} rx={1.5}
-                fill={color} opacity={0.9}
-                transform={`rotate(${angle}, ${x}, ${y})`} />
+              <rect
+                key={`${ri}-${si}`}
+                x={x - ring.w / 2}
+                y={y - ring.h / 2}
+                width={ring.w}
+                height={ring.h}
+                rx={ring.rx}
+                fill={segColor(deg, navy, gray, red)}
+                transform={`rotate(${deg - 90},${x},${y})`}
+              />
             )
-          })}
-          {[...Array(5)].map((_, i) => {
-            const angle = -120 + i * (240 / 4)
-            const rad = angle * Math.PI / 180
-            const x = Math.cos(rad) * 13
-            const y = Math.sin(rad) * 13
-            const color = i % 2 === 0 ? '#888780' : '#0D1F3C'
-            return (
-              <rect key={i} x={x - 2.5} y={y - 2.5} width={5} height={5} rx={1}
-                fill={color} opacity={0.7}
-                transform={`rotate(${angle}, ${x}, ${y})`} />
-            )
-          })}
-          <circle cx={0} cy={-2} r={4} fill="#0D1F3C" />
-          <rect x={-5} y={2} width={10} height={6} rx={2} fill="#0D1F3C" />
-        </g>
+          })
+        )}
+        {/* Deputy at the podium */}
+        <circle cx={CX} cy={FIGURE_CY} r={FIGURE_R} fill={navy} />
+        <rect x={CX - FIGURE_BW / 2} y={FIGURE_CY + FIGURE_R} width={FIGURE_BW} height={FIGURE_BH} rx={3} fill={navy} />
       </svg>
-      <span className="font-serif text-xl text-navy leading-none">
-        Mon<span className="text-red-civic">Élu</span>
-      </span>
+
+      {!hideWordmark && (
+        <span
+          className="font-serif leading-none select-none"
+          style={{ fontSize: Math.round(size * 0.75), color: navy }}
+        >
+          Mon<span style={{ color: red }}>Élu</span>
+        </span>
+      )}
     </div>
   )
 }

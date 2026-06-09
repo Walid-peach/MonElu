@@ -4,8 +4,8 @@ import { MonEluLogo } from './MonEluLogo'
 export function Nav() {
   return (
     <nav className="hidden md:flex items-center justify-between px-8 h-16 bg-white border-b border-gray-border sticky top-0 z-50">
-      <Link href="/" className="flex items-center gap-2">
-        <MonEluLogo />
+      <Link href="/" className="flex items-center">
+        <MonEluLogo size={32} variant="light" />
       </Link>
       <div className="flex items-center gap-8 text-sm font-medium text-gray-mid">
         <Link href="/deputes" className="hover:text-navy transition-colors">Députés</Link>
