@@ -2,9 +2,8 @@ import { Fragment } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { api, Vote } from '@/lib/api'
-import { formatDate, simplifyVoteTitle } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import { HeroSearch } from '@/components/HeroSearch'
-import { ShareButton } from '@/components/ShareButton'
 
 async function getStats() {
   try {
@@ -20,7 +19,6 @@ async function getStats() {
 
 export default async function Home() {
   const { health, latest } = await getStats()
-  const latestVote = (latest as Vote[])[0] ?? null
 
   const stats = [
     { value: health ? (health.deputies as number) : null, label: 'Députés', sub: null },
@@ -131,56 +129,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Dernier vote teaser */}
-      {latestVote && (
-        <section className="max-w-4xl mx-auto px-4 md:px-8 pt-10 pb-2">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-red-civic text-xs font-medium tracking-widest uppercase">Dernier vote</p>
-            <ShareButton
-              url={`/votes/${latestVote.vote_id}`}
-              title={latestVote.vote_title}
-              text={`${latestVote.result === 'adopté' ? '✅' : '❌'} ${latestVote.vote_title} — MonÉlu`}
-            />
-          </div>
-          <Link href={`/votes/${latestVote.vote_id}`}
-            className="block bg-white rounded-xl border border-gray-border p-6 hover:border-navy/30 transition-colors">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <p className="text-base font-medium text-navy leading-snug flex-1">
-                {latestVote.vote_title}
-              </p>
-              <span className={`shrink-0 ${latestVote.result === 'adopté' ? 'badge-adopte' : 'badge-rejete'}`}>
-                {latestVote.result}
-              </span>
-            </div>
-            {/* TODO: replace with AI-generated plain-language summary */}
-            <p className="text-sm text-navy/50 mb-4">
-              <span className="font-medium text-navy/70">En clair :</span>{' '}
-              {simplifyVoteTitle(latestVote.vote_title)}
-            </p>
-            <div className="h-2.5 rounded-full bg-gray-light overflow-hidden flex mb-2">
-              <div className="bg-emerald-500 h-full"
-                style={{ width: `${Math.round(latestVote.votes_for / (latestVote.total_voters || 1) * 100)}%` }} />
-              <div className="bg-red-civic h-full"
-                style={{ width: `${Math.round(latestVote.votes_against / (latestVote.total_voters || 1) * 100)}%` }} />
-            </div>
-            <div className="flex flex-wrap gap-4 text-xs text-gray-mid">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                {latestVote.votes_for} pour
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-red-civic inline-block" />
-                {latestVote.votes_against} contre
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-gray-light border border-gray-border inline-block" />
-                {latestVote.abstentions} abstentions
-              </span>
-              <span className="ml-auto text-navy/40">{formatDate(latestVote.voted_at)}</span>
-            </div>
-          </Link>
-        </section>
-      )}
 
       {/* Comment ça marche */}
       <section className="bg-navy py-12 md:py-16 mt-10">
@@ -218,7 +166,7 @@ export default async function Home() {
           </Link>
         </div>
         <div className="flex flex-col gap-3">
-          {(latest as Vote[]).slice(0, 5).map((vote) => (
+          {(latest as Vote[]).slice(0, 7).map((vote) => (
             <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
               className="bg-white rounded-lg border border-gray-border p-4 hover:border-navy/30 transition-colors">
               <div className="flex items-start justify-between gap-3">
