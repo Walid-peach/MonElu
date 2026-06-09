@@ -31,6 +31,20 @@ export function partyShort(party: string | null): string {
   return map[party] || party.slice(0, 3).toUpperCase()
 }
 
+export function simplifyVoteTitle(title: string): string {
+  // Extract from "relatif(e) à/au/aux …" if present
+  const relMatch = title.match(/relatif(?:e)?\s+(?:à|au|aux)\s+.+/i)
+  if (relMatch) {
+    const s = relMatch[0]
+    return s.charAt(0).toUpperCase() + s.slice(1)
+  }
+  // Strip leading "Texte n° NNN de … ," boilerplate
+  const stripped = title
+    .replace(/^Texte\s+n°\s*\d+[^,]*,\s*/i, '')
+    .replace(/^(?:Projet|Proposition)\s+de\s+(?:loi|résolution(?:-cadre)?)\s+/i, '')
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1)
+}
+
 export function partyColor(party: string | null): string {
   if (!party) return 'bg-gray-100 text-gray-600'
   const map: Record<string, string> = {
