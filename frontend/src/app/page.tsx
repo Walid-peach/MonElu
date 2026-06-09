@@ -1,11 +1,35 @@
 import { Fragment } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { api, Vote } from '@/lib/api'
+import { api, Vote, SearchResult } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { HeroSearch } from '@/components/HeroSearch'
 import { ShareButton } from '@/components/ShareButton'
 import { ChatRedirectInput } from '@/components/ChatRedirectInput'
+import { UserBubble, AssistantBubble } from '@/components/chat/Bubbles'
+
+const EXAMPLE_RESULT: SearchResult = {
+  answer:
+    "Depuis juillet 2025, l'Assemblée Nationale a enregistré plus de 4 200 scrutins. Environ deux tiers ont été adoptés et un tiers rejetés. Le groupe Ensemble pour la République vote le plus souvent avec la majorité.",
+  question: "Combien de votes ont été adoptés cette année ?",
+  chunks_retrieved: 2,
+  confidence: "high",
+  data_source: "postgresql",
+  sources: [
+    {
+      content:
+        "Statistiques globales — 17ème législature. Total scrutins enregistrés : 4 214. Adoptés : 2 847. Rejetés : 1 367.",
+      metadata: { chunk_type: "global_stats" },
+      similarity: 0.94,
+    },
+    {
+      content:
+        "Groupe Ensemble pour la République — 166 députés actifs. Cohésion de vote avec la majorité : 89 %.",
+      metadata: { chunk_type: "party" },
+      similarity: 0.81,
+    },
+  ],
+}
 
 async function getStats() {
   try {
@@ -138,53 +162,23 @@ export default async function Home() {
         <h2 className="font-serif text-2xl md:text-3xl text-navy mb-2">
           Posez votre question sur l&apos;Assemblée
         </h2>
-        <p className="text-navy/60 text-sm md:text-base mb-6 max-w-xl">
+        <p className="text-navy/60 text-sm md:text-base mb-8 max-w-xl">
           Posez votre question en français. L&apos;IA répond en s&apos;appuyant sur les données officielles, sources à l&apos;appui.
         </p>
 
-        <div className="mb-8">
-          <ChatRedirectInput />
-        </div>
+        {/* Conversation thread — static demo, same components as /chat */}
+        <div className="max-w-2xl space-y-4">
+          <p className="text-[10px] font-medium text-navy/30 uppercase tracking-widest text-right select-none">
+            Démonstration
+          </p>
 
-        {/* Static pre-answered example — the conversion hook */}
-        <div className="bg-white rounded-xl border border-gray-border p-5">
-          <p className="text-xs font-medium text-gray-mid uppercase tracking-wide mb-3">Exemple de réponse</p>
+          <UserBubble text="Combien de votes ont été adoptés cette année ?" />
 
-          {/* Question bubble */}
-          <div className="flex justify-end mb-3">
-            <div className="bg-navy text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm max-w-[80%]">
-              Combien de votes ont été adoptés cette année ?
-            </div>
-          </div>
+          <AssistantBubble result={EXAMPLE_RESULT} />
 
-          {/* Answer bubble */}
-          <div className="flex justify-start mb-1">
-            <div className="bg-gray-off rounded-2xl rounded-tl-sm px-4 py-3 max-w-[90%] space-y-3">
-              <p className="text-sm text-navy leading-relaxed">
-                Depuis juillet 2025, l&apos;Assemblée Nationale a enregistré plus de 4 200 scrutins.
-                Environ deux tiers ont été <span className="font-medium text-emerald-700">adoptés</span> et
-                un tiers <span className="font-medium text-red-civic">rejetés</span>.
-                Le groupe Ensemble pour la République vote le plus souvent avec la majorité.
-              </p>
-              <span className="inline-block text-xs px-2 py-0.5 rounded font-medium bg-emerald-100 text-emerald-800">
-                Haute confiance
-              </span>
-              <div className="border-t border-gray-light pt-3 space-y-2">
-                <p className="text-xs font-medium text-gray-mid uppercase tracking-wide">Sources (2)</p>
-                <div className="bg-white rounded-lg p-2.5 border border-gray-border">
-                  <p className="text-xs text-navy/70 line-clamp-2">
-                    Statistiques globales — 17ème législature. Total scrutins : 4 214. Adoptés : 2 847. Rejetés : 1 367.
-                  </p>
-                  <p className="text-xs text-gray-mid mt-1">Similarité 94% · global_stats</p>
-                </div>
-                <div className="bg-white rounded-lg p-2.5 border border-gray-border">
-                  <p className="text-xs text-navy/70 line-clamp-2">
-                    Groupe Ensemble pour la République — 166 députés. Taux de vote avec la majorité : 89 %.
-                  </p>
-                  <p className="text-xs text-gray-mid mt-1">Similarité 81% · party</p>
-                </div>
-              </div>
-            </div>
+          {/* Input as next thread turn */}
+          <div className="border-t border-gray-border pt-4">
+            <ChatRedirectInput />
           </div>
         </div>
       </section>

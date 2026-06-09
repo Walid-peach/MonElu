@@ -24,7 +24,7 @@ export function ChatRedirectInput() {
           type="text"
           value={value}
           onChange={e => setValue(e.target.value)}
-          placeholder="Ex : Qui a voté contre la réforme des retraites ?"
+          placeholder="Posez votre question à votre tour…"
           className="flex-1 border border-gray-border rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:border-navy min-w-0"
         />
         <button
