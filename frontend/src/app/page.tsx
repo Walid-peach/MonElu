@@ -19,13 +19,13 @@ const EXAMPLE_RESULT: SearchResult = {
     {
       content:
         "Statistiques globales — 17ème législature. Total scrutins enregistrés : 4 214. Adoptés : 2 847. Rejetés : 1 367.",
-      metadata: { chunk_type: "global_stats" },
+      metadata: { chunk_type: "global_stats" } as Record<string, string>,
       similarity: 0.94,
     },
     {
       content:
         "Groupe Ensemble pour la République — 166 députés actifs. Cohésion de vote avec la majorité : 89 %.",
-      metadata: { chunk_type: "party" },
+      metadata: { chunk_type: "party" } as Record<string, string>,
       similarity: 0.81,
     },
   ],

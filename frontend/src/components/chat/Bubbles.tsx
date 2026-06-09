@@ -1,5 +1,13 @@
 import type { SearchResult } from '@/lib/api'
 
+const chunkTypeLabel: Record<string, string> = {
+  vote: 'Scrutin',
+  deputy: 'Député',
+  party: 'Groupe parlementaire',
+  global_stats: 'Statistiques générales',
+  notable_deputy: 'Député',
+}
+
 const confidenceColor: Record<string, string> = {
   high: 'bg-emerald-100 text-emerald-800',
   medium: 'bg-amber-100 text-amber-800',
@@ -42,10 +50,11 @@ export function AssistantBubble({ result }: { result: SearchResult }) {
             {result.sources.slice(0, 3).map((src, j) => (
               <div key={j} className="bg-gray-off rounded-lg p-3">
                 <p className="text-xs text-navy/70 line-clamp-2">{src.content}</p>
-                <p className="text-xs text-gray-mid mt-1">
-                  Similarité {Math.round(src.similarity * 100)}%
-                  {src.metadata?.chunk_type && ` · ${src.metadata.chunk_type}`}
-                </p>
+                {src.metadata?.chunk_type && (
+                  <p className="text-xs text-gray-mid mt-1">
+                    {chunkTypeLabel[src.metadata.chunk_type] ?? src.metadata.chunk_type}
+                  </p>
+                )}
               </div>
             ))}
           </div>
