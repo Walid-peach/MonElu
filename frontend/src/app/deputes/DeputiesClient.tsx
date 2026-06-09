@@ -24,9 +24,11 @@ const PARTIES = [
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 
 export function DeputiesClient({ initial }: { initial: DeputyList }) {
+  const searchParams = useSearchParams()
+  const initialSearch = searchParams.get('search') ?? ''
   const [party, setParty] = useState('')
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [search, setSearch] = useState(initialSearch)
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch)
   const [offset, setOffset] = useState(0)
 
   useEffect(() => {
