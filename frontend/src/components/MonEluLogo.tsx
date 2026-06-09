@@ -9,14 +9,12 @@ interface MonEluLogoProps {
 // 7 segments per ring — 3 navy left · 1 gray center · 3 red right
 const ANGLES = [180, 210, 240, 270, 300, 330, 360] as const
 
-// 4 concentric rings, outer → inner
-// gap 1→2 = 21 (chosen), 2→3 = 10, 3→4 = 8
+// 3 concentric rings, outer → inner — equal spacing (12 units center-to-center)
 // w = tangential (wider) · h = radial (thinner) → landscape/horizontal pills
 const RINGS = [
   { r: 52, w: 17, h: 6, rx: 3 },
-  { r: 31, w: 10, h: 6, rx: 3 },
-  { r: 21, w: 7,  h: 6, rx: 3 },
-  { r: 13, w: 4,  h: 4, rx: 2 },
+  { r: 40, w: 13, h: 6, rx: 3 },
+  { r: 28, w: 9,  h: 6, rx: 3 },
 ] as const
 
 function segColor(deg: number, navy: string, gray: string, red: string): string {
@@ -64,8 +62,8 @@ export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false 
           })
         )}
         {/* Deputy at the podium */}
-        <circle cx={CX} cy={63} r={4.5} fill={navy} />
-        <rect x={60} y={67.5} width={10} height={9} rx={2.5} fill={navy} />
+        <circle cx={CX} cy={59.8} r={7.5} fill={navy} />
+        <rect x={56.5} y={67.3} width={17} height={13} rx={3} fill={navy} />
       </svg>
 
       {!hideWordmark && (
