@@ -29,7 +29,7 @@ const CY = 72
 
 // Deputy figure — positioned relative to arc center
 const FIGURE_R  = 7.5                  // head radius
-const FIGURE_CY = CY - 12.2           // head center: 12.2 units above arc center
+const FIGURE_CY = CY - 12.2           // head center inside innermost ring (r=28, inner edge at 25)
 const FIGURE_BW = 17                   // body width
 const FIGURE_BH = 13                   // body height
 

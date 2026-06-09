@@ -332,7 +332,7 @@ count is low.
 **Date:** 2026-06-09
 **Status:** Current
 
-**Decision:** Replace the existing `MonEluLogo.tsx` (a simplified geometric placeholder — 8 rotating squares) with a new inline SVG component that faithfully renders the hemicycle arc + deputy figure + wordmark from the canonical brand asset (`public/MonElu_LOGO-SVG.png`).
+**Decision:** Replace the existing `MonEluLogo.tsx` (a simplified geometric placeholder — 8 rotating squares) with a new inline SVG component that faithfully renders the hemicycle arc + deputy figure + wordmark from the canonical brand asset (`docs/assets/MonElu_LOGO-SVG.png`).
 
 **Reason:** Three options were evaluated:
 - **Plan A (use PNG as-is):** Rejected. Rasterized, 162 KB per use, cannot adapt to dark mode.
@@ -341,8 +341,9 @@ count is low.
 
 **Component API:**
 ```tsx
-<MonEluLogo size={32} variant="light" />  // default — navy + red
-<MonEluLogo size={32} variant="dark" />   // white + red, for dark backgrounds
+<MonEluLogo size={32} variant="light" />               // default — navy + red
+<MonEluLogo size={32} variant="dark" />                // white + red, for dark backgrounds
+<MonEluLogo size={32} variant="light" hideWordmark />  // icon only, no text
 ```
 
 **Impact:**
