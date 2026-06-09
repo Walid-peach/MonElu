@@ -9,12 +9,14 @@ interface MonEluLogoProps {
 // 7 segments per ring — 3 navy left · 1 gray center · 3 red right
 const ANGLES = [180, 210, 240, 270, 300, 330, 360] as const
 
-// 3 concentric rings, outer → inner
+// 4 concentric rings, outer → inner
+// gap 1→2 = 21 (chosen), 2→3 = 10, 3→4 = 8
 // w = tangential (wider) · h = radial (thinner) → landscape/horizontal pills
 const RINGS = [
   { r: 52, w: 17, h: 6, rx: 3 },
-  { r: 36, w: 12, h: 6, rx: 3 },
-  { r: 20, w: 7,  h: 6, rx: 3 },
+  { r: 31, w: 10, h: 6, rx: 3 },
+  { r: 21, w: 7,  h: 6, rx: 3 },
+  { r: 13, w: 4,  h: 4, rx: 2 },
 ] as const
 
 function segColor(deg: number, navy: string, gray: string, red: string): string {
