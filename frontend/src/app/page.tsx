@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { api, Vote } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { HeroSearch } from '@/components/HeroSearch'
+import { ShareButton } from '@/components/ShareButton'
 
 async function getStats() {
   try {
@@ -130,8 +131,52 @@ export default async function Home() {
       </section>
 
 
+      {/* Latest votes */}
+      <section className="max-w-4xl mx-auto px-4 md:px-8 py-10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-serif text-2xl text-navy">Derniers votes</h2>
+          <Link href="/votes" className="text-sm text-red-civic font-medium hover:underline">
+            Voir tous →
+          </Link>
+        </div>
+        <div className="flex flex-col gap-3">
+          {(latest as Vote[]).slice(0, 7).map((vote) => (
+            <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
+              className="bg-white rounded-lg border border-gray-border p-4 hover:border-navy/30 transition-colors">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-navy line-clamp-2 leading-snug">
+                    {vote.vote_title}
+                  </p>
+                  <p className="text-xs text-gray-mid mt-1">{formatDate(vote.voted_at)}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={vote.result === 'adopté' ? 'badge-adopte' : 'badge-rejete'}>
+                    {vote.result}
+                  </span>
+                  <ShareButton
+                    url={`/votes/${vote.vote_id}`}
+                    title={vote.vote_title}
+                    text={`${vote.result === 'adopté' ? '✅' : '❌'} ${vote.vote_title} — MonÉlu`}
+                    ariaLabel={`Partager : ${vote.vote_title}`}
+                  />
+                </div>
+              </div>
+              <div className="mt-3 h-1.5 rounded-full bg-gray-light overflow-hidden">
+                <div className="h-full bg-emerald-500 rounded-full"
+                  style={{ width: `${Math.round(vote.votes_for / (vote.total_voters || 1) * 100)}%` }} />
+              </div>
+              <div className="flex justify-between text-xs text-gray-mid mt-1">
+                <span>{vote.votes_for} pour</span>
+                <span>{vote.votes_against} contre</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Comment ça marche */}
-      <section className="bg-navy py-12 md:py-16 mt-10">
+      <section className="bg-navy py-12 md:py-16">
         <div className="max-w-4xl mx-auto px-4 md:px-8">
           <h2 className="font-serif text-xl text-white text-center mb-10">Comment ça marche</h2>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-8 md:gap-0">
@@ -154,42 +199,6 @@ export default async function Home() {
               </Fragment>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Latest votes */}
-      <section className="max-w-4xl mx-auto px-4 md:px-8 py-10">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-serif text-2xl text-navy">Derniers votes</h2>
-          <Link href="/votes" className="text-sm text-red-civic font-medium hover:underline">
-            Voir tous →
-          </Link>
-        </div>
-        <div className="flex flex-col gap-3">
-          {(latest as Vote[]).slice(0, 7).map((vote) => (
-            <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
-              className="bg-white rounded-lg border border-gray-border p-4 hover:border-navy/30 transition-colors">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-navy line-clamp-2 leading-snug">
-                    {vote.vote_title}
-                  </p>
-                  <p className="text-xs text-gray-mid mt-1">{formatDate(vote.voted_at)}</p>
-                </div>
-                <span className={vote.result === 'adopté' ? 'badge-adopte' : 'badge-rejete'}>
-                  {vote.result}
-                </span>
-              </div>
-              <div className="mt-3 h-1.5 rounded-full bg-gray-light overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full"
-                  style={{ width: `${Math.round(vote.votes_for / (vote.total_voters || 1) * 100)}%` }} />
-              </div>
-              <div className="flex justify-between text-xs text-gray-mid mt-1">
-                <span>{vote.votes_for} pour</span>
-                <span>{vote.votes_against} contre</span>
-              </div>
-            </Link>
-          ))}
         </div>
       </section>
     </div>

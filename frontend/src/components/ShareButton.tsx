@@ -5,9 +5,10 @@ interface ShareButtonProps {
   url: string
   title: string
   text?: string
+  ariaLabel?: string
 }
 
-export function ShareButton({ url, title, text }: ShareButtonProps) {
+export function ShareButton({ url, title, text, ariaLabel }: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
 
   async function handleShare() {
@@ -34,9 +35,9 @@ export function ShareButton({ url, title, text }: ShareButtonProps) {
 
   return (
     <button
-      onClick={e => { e.preventDefault(); handleShare() }}
+      onClick={e => { e.preventDefault(); e.stopPropagation(); handleShare() }}
       className="flex items-center gap-1.5 text-xs text-gray-mid hover:text-navy transition-colors px-2.5 py-1.5 rounded border border-gray-border bg-white shrink-0"
-      aria-label="Partager ce vote"
+      aria-label={ariaLabel ?? 'Partager ce vote'}
     >
       {copied ? (
         <span className="text-emerald-700 font-medium">Copié !</span>
