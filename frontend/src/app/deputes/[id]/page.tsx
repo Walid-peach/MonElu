@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -6,6 +7,29 @@ import { DeputyAvatar } from '@/components/DeputyAvatar'
 
 export const dynamicParams = true
 export const revalidate = 86400 // fallback if the /api/revalidate webhook is not called
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const deputy = await api.deputies.get(id).catch(() => null)
+  if (!deputy) return {}
+  const description = `Bilan de mandat, votes et présence de ${deputy.full_name}${
+    deputy.party ? ` (${deputy.party})` : deputy.department ? ` — ${deputy.department}` : ''
+  }.`
+  return {
+    title: `${deputy.full_name} — MonÉlu`,
+    description,
+    openGraph: {
+      title: `${deputy.full_name} — MonÉlu`,
+      description,
+      url: `https://mon-elu.vercel.app/deputes/${id}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${deputy.full_name} — MonÉlu`,
+      description,
+    },
+  }
+}
 
 export async function generateStaticParams() {
   try {
