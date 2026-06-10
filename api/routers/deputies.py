@@ -5,7 +5,15 @@ from starlette.requests import Request
 
 from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter
-from api.schemas import DeputyDetail, DeputyListResponse, DeputyScorecard, DeputySummary
+from api.schemas import (
+    DeputyDetail,
+    DeputyListResponse,
+    DeputyScorecard,
+    DeputyStats,
+    DeputySummary,
+    DeputyVoteItem,
+    DeputyVotesResponse,
+)
 
 router = APIRouter()
 
@@ -64,6 +72,22 @@ def list_deputies(
     )
 
 
+@router.get("/stats", response_model=DeputyStats)
+@limiter.limit("30/minute")
+def get_deputy_stats(request: Request):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT AVG(presence_rate) AS avg_presence_rate "
+                    "FROM analytics_marts.mart_deputy_scorecard"
+                )
+                row = cur.fetchone()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
+    return DeputyStats(avg_presence_rate=float(row["avg_presence_rate"] or 0.0))
+
+
 @router.get("/{deputy_id}", response_model=DeputyDetail)
 @limiter.limit("30/minute")
 def get_deputy(request: Request, deputy_id: str):
@@ -75,6 +99,44 @@ def get_deputy(request: Request, deputy_id: str):
     if not row:
         raise HTTPException(status_code=404, detail="Deputy not found")
     return DeputyDetail(**row)
+
+
+@router.get("/{deputy_id}/votes", response_model=DeputyVotesResponse)
+@limiter.limit("30/minute")
+def get_deputy_votes(
+    request: Request,
+    deputy_id: str,
+    limit: int = Query(10, ge=1, le=50),
+):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM vote_positions WHERE deputy_id = %s",
+                    (deputy_id,),
+                )
+                total = cur.fetchone()["count"]
+
+                cur.execute(
+                    """
+                    SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position
+                    FROM vote_positions vp
+                    JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
+                    WHERE vp.deputy_id = %s
+                    ORDER BY v.voted_at DESC
+                    LIMIT %s
+                    """,
+                    (deputy_id, limit),
+                )
+                rows = cur.fetchall()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
+
+    return DeputyVotesResponse(
+        deputy_id=deputy_id,
+        total=total,
+        items=[DeputyVoteItem(**r) for r in rows],
+    )
 
 
 @router.get("/{deputy_id}/scorecard", response_model=DeputyScorecard)
