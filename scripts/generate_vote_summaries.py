@@ -81,8 +81,9 @@ def _detect_motion_type(title: str) -> str:
     return "motion procédurale"
 
 
-def _call_groq(client, system: str, user: str, max_retries: int = 5) -> str | None:
-    """Call Groq with exponential backoff on 429. Returns raw content or None."""
+def _call_groq(client, system: str, user: str, max_retries: int = 6) -> str | None:
+    """Call Groq with exponential backoff on 429. SDK retries are disabled (max_retries=0
+    on the client) so this is the sole retry controller."""
     for attempt in range(max_retries):
         try:
             resp = client.chat.completions.create(
@@ -98,8 +99,10 @@ def _call_groq(client, system: str, user: str, max_retries: int = 5) -> str | No
         except Exception as exc:
             status = getattr(exc, "status_code", None)
             if status == 429 and attempt < max_retries - 1:
-                wait = 2**attempt
-                log.warning("Rate limited — retrying in %ds (attempt %d)", wait, attempt + 1)
+                wait = min(2**attempt, 60)
+                log.warning(
+                    "Rate limited — retrying in %ds (attempt %d/%d)", wait, attempt + 1, max_retries
+                )
                 time.sleep(wait)
             else:
                 log.warning("Groq error: %s", exc)
@@ -210,7 +213,8 @@ def main() -> None:
     warnings.filterwarnings("ignore")
     from groq import Groq
 
-    client = Groq(api_key=groq_api_key)
+    # max_retries=0: disable SDK-level retries so _call_groq is the sole backoff controller.
+    client = Groq(api_key=groq_api_key, max_retries=0)
 
     conn = psycopg2.connect(database_url)
 
@@ -248,7 +252,7 @@ def main() -> None:
         log.info("Batch %d/%d (%d votes)…", batch_num, total_batches, len(batch))
         process_batch(client, batch, args.dry_run, conn, stats)
         if i + BATCH_SIZE < len(rows):
-            time.sleep(1.2)  # ~50 req/min → stay under free-tier limit
+            time.sleep(2.0)  # ~15 req/min conservative → avoids 429 cascade
 
     conn.close()
     log.info(
