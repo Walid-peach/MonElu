@@ -79,7 +79,13 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
             {vote.result}
           </span>
         </div>
-        <p className="text-sm text-gray-mid">{formatDate(vote.voted_at)}</p>
+        {vote.summary_plain && (
+          <p className="text-sm text-navy/60 leading-relaxed mt-2">
+            <span className="text-red-civic font-medium">En clair</span>{' '}
+            {vote.summary_plain}
+          </p>
+        )}
+        <p className="text-sm text-gray-mid mt-2">{formatDate(vote.voted_at)}</p>
       </div>
 
       {/* Results bar */}

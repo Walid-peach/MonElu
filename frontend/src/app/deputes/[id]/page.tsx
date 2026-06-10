@@ -231,6 +231,12 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-navy line-clamp-2 leading-snug">{v.vote_title}</p>
+                  {v.summary_plain && (
+                    <p className="text-xs text-gray-mid mt-0.5 line-clamp-1 italic">
+                      <span className="text-red-civic font-medium not-italic">En clair</span>{' '}
+                      {v.summary_plain}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-mid mt-0.5">{v.voted_at ? formatDate(v.voted_at) : ''}</p>
                 </div>
                 <span
