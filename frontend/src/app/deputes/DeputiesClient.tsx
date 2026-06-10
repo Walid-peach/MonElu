@@ -79,7 +79,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   // list endpoint must include presence_rate + total_votes per deputy)
   const sorted = useMemo(() =>
     sort === 'nom'
-      ? [...filtered].sort((a, b) => a.last_name.localeCompare(b.last_name, 'fr'))
+      ? [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name, 'fr'))
       : filtered,
     [filtered, sort]
   )
