@@ -102,6 +102,8 @@ class VoteSummary(_Base):
     votes_against: Optional[int] = None
     abstentions: Optional[int] = None
     total_voters: Optional[int] = None
+    summary_plain: Optional[str] = None
+    theme: Optional[str] = None
 
 
 class VotePosition(_Base):
