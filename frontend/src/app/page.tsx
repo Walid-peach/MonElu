@@ -200,6 +200,12 @@ export default async function Home() {
                   <p className="text-sm font-medium text-navy line-clamp-2 leading-snug">
                     {vote.vote_title}
                   </p>
+                  {vote.summary_plain && (
+                    <p className="text-xs text-gray-mid mt-1 line-clamp-2 italic">
+                      <span className="text-red-civic font-medium not-italic">En clair</span>{' '}
+                      {vote.summary_plain}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-mid mt-1">{formatDate(vote.voted_at)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

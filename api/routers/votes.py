@@ -94,7 +94,8 @@ def list_votes(
                 cur.execute(
                     sql.SQL("""
                         SELECT vote_id, voted_at, vote_title, result,
-                               votes_for, votes_against, abstentions, total_voters
+                               votes_for, votes_against, abstentions, total_voters,
+                               summary_plain, theme
                         FROM analytics_marts.mart_vote_summary {}
                         ORDER BY voted_at DESC, vote_id DESC LIMIT %s OFFSET %s
                     """).format(where),
@@ -127,7 +128,8 @@ def latest_votes(request: Request):
                 cur.execute(
                     """
                     SELECT vote_id, voted_at, vote_title, result,
-                           votes_for, votes_against, abstentions, total_voters
+                           votes_for, votes_against, abstentions, total_voters,
+                           summary_plain, theme
                     FROM analytics_marts.mart_vote_summary
                     ORDER BY voted_at DESC
                     LIMIT 10

@@ -35,6 +35,8 @@ export type Vote = {
   votes_against: number
   abstentions: number
   total_voters: number
+  summary_plain?: string | null
+  theme?: string | null
 }
 
 export type VoteDetail = Vote & {
@@ -56,6 +58,7 @@ export type DeputyVoteItem = {
   vote_title: string
   result: string | null
   position: string
+  summary_plain?: string | null
 }
 
 export type DeputyVotesResponse = {
@@ -102,9 +105,10 @@ export const api = {
       apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?limit=${limit}`),
   },
   votes: {
-    list: (params?: { result?: string; limit?: number; offset?: number }) => {
+    list: (params?: { result?: string; theme?: string; limit?: number; offset?: number }) => {
       const q = new URLSearchParams()
       if (params?.result) q.set('result', params.result)
+      if (params?.theme)  q.set('theme',  params.theme)
       if (params?.limit) q.set('limit', String(params.limit))
       if (params?.offset) q.set('offset', String(params.offset))
       return apiFetch<{ total: number; items: Vote[]; limit: number; offset: number }>(
