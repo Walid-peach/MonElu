@@ -1,12 +1,13 @@
 """
 migrate.py
-Applies data/migrations/001_init.sql against DATABASE_URL.
-Safe to run multiple times — all statements use CREATE TABLE/INDEX IF NOT EXISTS.
+Applies all data/migrations/*.sql files (in order) against DATABASE_URL.
+Safe to run multiple times — all statements use CREATE TABLE/ALTER TABLE IF NOT EXISTS.
 
 Usage:
     python scripts/migrate.py
 """
 
+import glob
 import logging
 import os
 import sys
@@ -21,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MIGRATION_FILE = os.path.join(PROJECT_ROOT, "data", "migrations", "001_init.sql")
+MIGRATIONS_DIR = os.path.join(PROJECT_ROOT, "data", "migrations")
 
 
 def main() -> None:
@@ -29,26 +30,33 @@ def main() -> None:
     if not database_url:
         raise EnvironmentError("DATABASE_URL is not set.")
 
-    with open(MIGRATION_FILE) as f:
-        sql = f.read()
+    migration_files = sorted(glob.glob(os.path.join(MIGRATIONS_DIR, "*.sql")))
+    if not migration_files:
+        log.error("No migration files found in %s", MIGRATIONS_DIR)
+        sys.exit(1)
 
     log.info("Connecting to database…")
     conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(sql)
-        except psycopg2.Error as exc:
-            if "vector" in str(exc).lower():
-                log.error(
-                    "pgvector extension is not available. "
-                    "Enable it on Supabase: Database → Extensions → search 'vector' → enable. "
-                    "On local Docker, use the pgvector/pgvector:pg15 image."
-                )
-                sys.exit(1)
-            raise
-        log.info("Migration applied successfully.")
+        for migration_file in migration_files:
+            filename = os.path.basename(migration_file)
+            with open(migration_file) as f:
+                sql = f.read()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.execute(sql)
+            except psycopg2.Error as exc:
+                if "vector" in str(exc).lower():
+                    log.error(
+                        "pgvector extension is not available. "
+                        "Enable it on Supabase: Database → Extensions → search 'vector' → enable. "
+                        "On local Docker, use the pgvector/pgvector:pg15 image."
+                    )
+                    sys.exit(1)
+                raise
+            log.info("Applied %s", filename)
+        log.info("All migrations applied successfully.")
 
         # ── Table summary ────────────────────────────────────────────────────
         with conn.cursor() as cur:
