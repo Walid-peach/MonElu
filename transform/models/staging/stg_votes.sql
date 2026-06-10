@@ -14,6 +14,8 @@ renamed as (
         abstentions::integer                     as abstentions,
         total_voters::integer                    as total_voters,
         dossier_id,
+        summary_plain,
+        theme,
         ingested_at::timestamp                   as ingested_at,
 
         -- derived
