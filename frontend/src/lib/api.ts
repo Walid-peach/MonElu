@@ -46,6 +46,24 @@ export type VoteDetail = Vote & {
   }>
 }
 
+export type DeputyStats = {
+  avg_presence_rate: number
+}
+
+export type DeputyVoteItem = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string
+  result: string | null
+  position: string
+}
+
+export type DeputyVotesResponse = {
+  deputy_id: string
+  total: number
+  items: DeputyVoteItem[]
+}
+
 export type SearchResult = {
   answer: string
   question: string
@@ -79,6 +97,9 @@ export const api = {
     },
     get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`),
     scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`),
+    stats: () => apiFetch<DeputyStats>('/deputies/stats/'),
+    votes: (id: string, limit = 10) =>
+      apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?limit=${limit}`),
   },
   votes: {
     list: (params?: { result?: string; limit?: number; offset?: number }) => {
