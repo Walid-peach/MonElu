@@ -149,9 +149,7 @@ def process_batch(
             motion_type = _detect_motion_type(title)
             system = SUMMARY_PROMPT_PROCEDURAL
             user_msg = (
-                f"Type de motion : {motion_type}\n"
-                f'Titre : "{title}"\n'
-                f"Résultat du vote : {result}"
+                f'Type de motion : {motion_type}\nTitre : "{title}"\nRésultat du vote : {result}'
             )
         else:
             system = SUMMARY_PROMPT

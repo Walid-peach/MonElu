@@ -5,7 +5,7 @@ Steps 3 + 4:
   - Updates deputies.party using the GP mapping from ingest_organes.py
   - Updates deputies.department codes → full French names
 
-Run: venv/bin/python3 scripts/update_party.py
+Run: venv/bin/python3 scripts/update_party.py [--zip-path /path/to/AMO10.json.zip]
 """
 
 import os

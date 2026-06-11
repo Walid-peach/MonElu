@@ -108,8 +108,8 @@ jobs:
           dbt test --profiles-dir . --target prod
 
       - name: Revalidate frontend cache
-        # Runs unconditionally so deputy/party profile fixes (update_party.py)
-        # also trigger a cache purge, not just new-vote runs.
+        # Runs unconditionally so deputy/party profile fixes (update_party.py,
+        # run inside run_ingestion_prod.py) also purge the cache, not just new-vote runs.
         continue-on-error: true
         env:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}

@@ -147,6 +147,13 @@ def main() -> None:
         new_votes = n_votes - votes_before
         log.info("New votes ingested this run: %d", new_votes)
 
+        # Write the output as soon as it is known — a summaries failure below must
+        # not lose the new_votes signal for downstream workflow steps.
+        github_output = os.getenv("GITHUB_OUTPUT")
+        if github_output:
+            with open(github_output, "a") as f:
+                f.write(f"new_votes={new_votes}\n")
+
         # Always run summaries: the `summary_plain IS NULL` query no-ops when there is
         # nothing to do, and this retries summaries that failed on a previous run
         # instead of waiting for the next new vote.
@@ -157,12 +164,6 @@ def main() -> None:
         )
 
         total_elapsed = time.perf_counter() - total_start
-        log.info("New votes ingested this run: %d", new_votes)
-
-        github_output = os.getenv("GITHUB_OUTPUT")
-        if github_output:
-            with open(github_output, "a") as f:
-                f.write(f"new_votes={new_votes}\n")
 
         log.info("")
         log.info("╔══════════════════════════════════════╗")

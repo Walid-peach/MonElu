@@ -23,6 +23,7 @@ BACKOFF_BASE = 2  # seconds
 
 def download_with_retry(url: str, timeout: int = 60) -> bytes:
     """GET with exponential backoff on 429 / 5xx / network errors; returns raw bytes."""
+    last_exc: Exception | None = None
     for attempt in range(MAX_RETRIES):
         last_attempt = attempt == MAX_RETRIES - 1
         try:
@@ -42,22 +43,25 @@ def download_with_retry(url: str, timeout: int = 60) -> bytes:
             resp.raise_for_status()
             return resp.content
         except requests.RequestException as exc:
+            last_exc = exc
             if not last_attempt:
                 wait = BACKOFF_BASE**attempt
                 log.warning("Request failed (%s). Retrying in %ss…", exc, wait)
                 time.sleep(wait)
-    raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts")
+    raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts") from last_exc
 
 
 def connect_with_retry(dsn: str | None = None) -> psycopg2.extensions.connection:
     """Connect to Postgres with exponential backoff (handles transient proxy drops)."""
     dsn = dsn or os.getenv("DATABASE_URL")
+    last_exc: Exception | None = None
     for attempt in range(MAX_RETRIES):
         try:
             return psycopg2.connect(dsn)
         except psycopg2.OperationalError as exc:
+            last_exc = exc
             if attempt < MAX_RETRIES - 1:
                 wait = BACKOFF_BASE**attempt
                 log.warning("DB connection failed (%s). Retrying in %ss…", exc, wait)
                 time.sleep(wait)
-    raise RuntimeError(f"Could not connect to DB after {MAX_RETRIES} attempts")
+    raise RuntimeError(f"Could not connect to DB after {MAX_RETRIES} attempts") from last_exc
