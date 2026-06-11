@@ -70,16 +70,16 @@ setup-minio:
 
 airflow-up:
 	@if [ -z "$$AIRFLOW_FERNET_KEY" ]; then echo "WARNING: AIRFLOW_FERNET_KEY is unset — using the public dev default. Set it in .env before deploying to production."; fi
-	docker compose up -d airflow-webserver airflow-scheduler
+	docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d airflow-webserver airflow-scheduler
 
 airflow-down:
-	docker compose stop airflow-webserver airflow-scheduler airflow-init postgres-airflow
+	docker compose -f docker-compose.yml -f docker-compose.airflow.yml stop airflow-webserver airflow-scheduler airflow-init postgres-airflow
 
 airflow-logs:
-	docker compose logs -f airflow-scheduler
+	docker compose -f docker-compose.yml -f docker-compose.airflow.yml logs -f airflow-scheduler
 
 minio-up:
-	docker compose up -d minio
+	docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d minio
 
 airflow-ui:
 	open http://localhost:8080
@@ -88,10 +88,10 @@ minio-ui:
 	open http://localhost:9001
 
 dag-deputies:
-	docker compose exec airflow-scheduler airflow dags trigger deputies_incremental
+	docker compose -f docker-compose.yml -f docker-compose.airflow.yml exec airflow-scheduler airflow dags trigger deputies_incremental
 
 dag-votes:
-	docker compose exec airflow-scheduler airflow dags trigger votes_batch
+	docker compose -f docker-compose.yml -f docker-compose.airflow.yml exec airflow-scheduler airflow dags trigger votes_batch
 
 venv:
 	python3.12 -m venv venv && venv/bin/pip install -r requirements.txt -r requirements-ingest.txt -r requirements-rag.txt

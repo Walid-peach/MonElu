@@ -38,7 +38,7 @@ Production API: https://monelu-production.up.railway.app
 | Transform layer | dbt (staging → intermediate → marts) | Runs against prod Supabase on merge to `master` |
 | RAG embeddings | OpenAI `text-embedding-3-small` | 1 536 dimensions, ~$0.006 per full re-index |
 | RAG inference | Groq `llama-3.3-70b-versatile` | temperature=0.2; free tier, faster than OpenAI |
-| Vector index | IVFFlat via pgvector (`<=>` cosine) | `ivfflat.probes=10`; notable-deputy pin for recall gaps |
+| Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
 | CI/CD | GitHub Actions (5 workflows) | See Workflows section |
 | Experiment tracking | MLflow (local) | k=3 vs k=5 retrieval eval; baseline score 0.58 |
 | IaC | Terraform ~> 5.0 (AWS, validate-only) | `infra/` — not applied |
@@ -144,6 +144,7 @@ Assemblée Nationale Open Data (ZIPs)
 **`data/migrations/001_init.sql`** — Full schema
 - Four tables: `deputies`, `votes`, `vote_positions`, `document_chunks`
 - All `CREATE TABLE IF NOT EXISTS` — safe to re-run
+- `migrate.py` keeps a `schema_migrations` ledger: each file is applied once and skipped on later deploys
 
 ### Database
 
@@ -229,7 +230,9 @@ Key architectural choices made during the build and why. Consult this before pro
 
 ### 5. IVFFlat + notable-deputy pin for RAG retrieval
 
-**Decision:** pgvector uses IVFFlat (not HNSW) with `ivfflat.probes=10`. A hard-coded name list (Attal, Le Pen, etc.) pins the named deputy's chunk as the first result, bypassing the index.
+**Decision (revised 2026-06-11):** the IVFFlat index was dropped (migration 003) — it had been built on an empty table (degenerate clustering) and at ~3.7k chunks an exact cosine scan is faster *and* exact. The notable-deputy pin (hard-coded name list) remains for now; re-evaluating it is part of the RAG-axis remediation.
+
+**Original decision:** pgvector uses IVFFlat (not HNSW) with `ivfflat.probes=10`. A hard-coded name list (Attal, Le Pen, etc.) pins the named deputy's chunk as the first result, bypassing the index.
 
 **Why:** At 3 741 chunks, IVFFlat is fast enough and simpler to tune than HNSW. However, IVFFlat has known recall gaps for high-profile deputies whose names appear across many chunks — the index can return a generic vote chunk instead of the deputy profile. The pin is a targeted workaround: it adds one exact-match lookup before the vector search and is cheaper than retuning the entire index. This should be revisited if the corpus grows substantially or if HNSW becomes the default.
 

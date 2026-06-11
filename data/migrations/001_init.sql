@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS deputies (
 
 CREATE TABLE IF NOT EXISTS votes (
     vote_id         TEXT PRIMARY KEY,           -- AN scrutin uid, e.g. "VTANR5L17V1234"
-    voted_at        TIMESTAMPTZ NOT NULL,
+    voted_at        TIMESTAMPTZ,                -- nullable: AN can omit dateScrutin (003)
     vote_title      TEXT NOT NULL,
     vote_type       TEXT,                       -- e.g. "SPO" (scrutin public ordinaire)
     result          TEXT,                       -- "adopté" | "rejeté"
@@ -40,14 +40,13 @@ CREATE TABLE IF NOT EXISTS vote_positions (
     UNIQUE (vote_id, deputy_id)                 -- one position per deputy per vote
 );
 
--- Indexes for common query patterns
+-- Indexes for common query patterns.
+-- Deliberately minimal: UNIQUE(vote_id, deputy_id) already serves vote_id
+-- lookups, and name/title searches are ILIKE '%…%' (btree-unusable) — see
+-- migration 003, which dropped the dead indexes this file used to create.
 CREATE INDEX IF NOT EXISTS idx_positions_deputy   ON vote_positions(deputy_id, vote_id);
-CREATE INDEX IF NOT EXISTS idx_positions_vote     ON vote_positions(vote_id);
-CREATE INDEX IF NOT EXISTS idx_vote_positions_pos ON vote_positions(position);
 CREATE INDEX IF NOT EXISTS idx_votes_voted_at     ON votes(voted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_deputies_party     ON deputies(party_short);
-CREATE INDEX IF NOT EXISTS idx_deputies_full_name ON deputies(full_name);
-CREATE INDEX IF NOT EXISTS idx_votes_vote_title   ON votes(vote_title);
 
 -- ---------------------------------------------------------------------------
 -- Phase 2: semantic search via pgvector
@@ -63,19 +62,20 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     content     TEXT NOT NULL,
     metadata    JSONB DEFAULT '{}',
     embedding   vector(1536),
-    created_at  TIMESTAMP DEFAULT NOW()
+    created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_chunks_embedding
-    ON document_chunks USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100);
-
-CREATE INDEX IF NOT EXISTS idx_chunks_created_at  ON document_chunks(created_at);
+-- No ANN index: at this corpus size (~3.7k chunks) an exact cosine scan is
+-- milliseconds with perfect recall. An IVFFlat index built at migration time
+-- (empty table) clusters degenerately — see migration 003 and the database
+-- diagnostic 2026-06-11 before reintroducing one.
 
 -- ---------------------------------------------------------------------------
 -- Row-Level Security
--- Affects direct Supabase REST API access only — psycopg2 (superuser role)
--- bypasses RLS entirely, so the FastAPI app is unaffected.
+-- Affects direct Supabase REST API access only. The FastAPI app connects as
+-- the table OWNER, which bypasses RLS by default (on Supabase the postgres
+-- role is not a superuser — owner bypass is what actually applies here).
+-- If a dedicated non-owner app role is ever created, it will need policies.
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE deputies        ENABLE ROW LEVEL SECURITY;

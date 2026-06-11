@@ -1,7 +1,10 @@
 """
 migrate.py
-Applies all data/migrations/*.sql files (in order) against DATABASE_URL.
-Safe to run multiple times — all statements use CREATE TABLE/ALTER TABLE IF NOT EXISTS.
+Applies data/migrations/*.sql files (in order) against DATABASE_URL.
+
+A schema_migrations ledger records applied files so each migration runs
+exactly once — re-deploys skip them. Files should still be written
+idempotently as a safety net (the ledger row is only written on success).
 
 Usage:
     python scripts/migrate.py
@@ -25,6 +28,20 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MIGRATIONS_DIR = os.path.join(PROJECT_ROOT, "data", "migrations")
 
 
+def _applied_migrations(conn) -> set[str]:
+    """Ensure the ledger table exists and return the filenames already applied."""
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    filename   TEXT PRIMARY KEY,
+                    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute("SELECT filename FROM schema_migrations")
+            return {row["filename"] for row in cur.fetchall()}
+
+
 def main() -> None:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
@@ -38,14 +55,25 @@ def main() -> None:
     log.info("Connecting to database…")
     conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.RealDictCursor)
     try:
+        applied = _applied_migrations(conn)
+
         for migration_file in migration_files:
             filename = os.path.basename(migration_file)
+            if filename in applied:
+                log.info("Skipped %s (already applied)", filename)
+                continue
             with open(migration_file) as f:
                 sql = f.read()
             try:
+                # One transaction per migration: the SQL and its ledger row
+                # commit together, so a failed file is retried next run.
                 with conn:
                     with conn.cursor() as cur:
                         cur.execute(sql)
+                        cur.execute(
+                            "INSERT INTO schema_migrations (filename) VALUES (%s)",
+                            (filename,),
+                        )
             except psycopg2.Error as exc:
                 if "vector" in str(exc).lower():
                     log.error(
