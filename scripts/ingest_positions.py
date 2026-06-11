@@ -15,13 +15,15 @@ import io
 import json
 import logging
 import os
-import time
 import zipfile
 
-import psycopg2
 import psycopg2.extras
-import requests
 from dotenv import load_dotenv
+
+try:
+    from scripts._http import connect_with_retry, download_with_retry
+except ImportError:  # running as a plain file: python scripts/ingest_positions.py
+    from _http import connect_with_retry, download_with_retry
 
 load_dotenv()
 
@@ -35,53 +37,6 @@ AN_BASE_URL = os.getenv("AN_API_BASE_URL", "https://data.assemblee-nationale.fr"
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 SCRUTINS_ZIP_PATH = "/static/openData/repository/17/loi/scrutins/Scrutins.json.zip"
-
-MAX_RETRIES = 5
-BACKOFF_BASE = 2
-
-
-# ---------------------------------------------------------------------------
-# DB connection with retry (handles transient proxy drops on Railway)
-# ---------------------------------------------------------------------------
-
-
-def connect_with_retry() -> psycopg2.extensions.connection:
-    for attempt in range(MAX_RETRIES):
-        try:
-            return psycopg2.connect(DATABASE_URL)
-        except psycopg2.OperationalError as exc:
-            wait = BACKOFF_BASE**attempt
-            log.warning("DB connection failed (%s). Retrying in %ss…", exc, wait)
-            time.sleep(wait)
-    raise RuntimeError(f"Could not connect to DB after {MAX_RETRIES} attempts")
-
-
-# ---------------------------------------------------------------------------
-# HTTP helper (same pattern as ingest_deputies / ingest_votes)
-# ---------------------------------------------------------------------------
-
-
-def download_with_retry(url: str) -> bytes:
-    for attempt in range(MAX_RETRIES):
-        try:
-            resp = requests.get(url, timeout=60)
-            if resp.status_code == 429:
-                wait = BACKOFF_BASE**attempt
-                log.warning("Rate-limited (429). Retrying in %ss…", wait)
-                time.sleep(wait)
-                continue
-            if resp.status_code >= 500:
-                wait = BACKOFF_BASE**attempt
-                log.warning("Server error %s. Retrying in %ss…", resp.status_code, wait)
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            return resp.content
-        except requests.RequestException as exc:
-            wait = BACKOFF_BASE**attempt
-            log.warning("Request failed (%s). Retrying in %ss…", exc, wait)
-            time.sleep(wait)
-    raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts")
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +108,11 @@ def extract_positions(scrutin: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def fetch_scrutin_zip() -> bytes:
+def fetch_scrutin_zip(zip_path: str | None = None) -> bytes:
+    if zip_path:
+        log.info("Reading scrutins ZIP from %s…", zip_path)
+        with open(zip_path, "rb") as fh:
+            return fh.read()
     url = f"{AN_BASE_URL}{SCRUTINS_ZIP_PATH}"
     log.info("Downloading scrutins ZIP from %s…", url)
     return download_with_retry(url)
@@ -195,6 +154,11 @@ def main() -> None:
         default=None,
         help="Only ingest positions for votes on/after this date (YYYY-MM-DD). Default: all known votes.",
     )
+    parser.add_argument(
+        "--zip-path",
+        default=None,
+        help="Path to an already-downloaded Scrutins.json.zip (skips the download).",
+    )
     args = parser.parse_args()
 
     if args.since:
@@ -205,10 +169,10 @@ def main() -> None:
         except ValueError:
             parser.error(f"--since must be YYYY-MM-DD, got: {args.since!r}")
 
-    run(since=args.since)
+    run(since=args.since, zip_path=args.zip_path)
 
 
-def run(since: str | None = None) -> None:
+def run(since: str | None = None, zip_path: str | None = None) -> None:
     """Programmatic entry point for Airflow — skips argparse."""
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
@@ -220,7 +184,7 @@ def run(since: str | None = None) -> None:
         except ValueError as exc:
             raise ValueError(f"since must be YYYY-MM-DD, got: {since!r}") from exc
 
-    raw = fetch_scrutin_zip()
+    raw = fetch_scrutin_zip(zip_path=zip_path)
 
     log.info("Loading known vote_ids and deputy_ids…")
     conn = connect_with_retry()
