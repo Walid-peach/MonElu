@@ -1,0 +1,98 @@
+name: MonÉlu — Daily Summary Backfill
+
+on:
+  schedule:
+    - cron: '0 7 * * *'   # 07:00 UTC daily — one hour after Groq TPD reset at midnight UTC
+  workflow_dispatch:        # Manual trigger
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ingest.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-ingest.txt
+
+      - name: Check backlog
+        id: backlog
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          count=$(python3 -c "
+          import psycopg2, os
+          conn = psycopg2.connect(os.environ['DATABASE_URL'])
+          cur = conn.cursor()
+          cur.execute(\"SELECT COUNT(*) FROM votes WHERE summary_plain IS NULL AND voted_at >= '2025-07-01'\")
+          print(cur.fetchone()[0])
+          conn.close()
+          ")
+          echo "remaining=$count" >> "$GITHUB_OUTPUT"
+          echo "Votes without summaries: $count"
+
+      - name: Run summarizer
+        if: steps.backlog.outputs.remaining != '0'
+        id: summarize
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          python -m scripts.generate_vote_summaries --since 2025-07-01 2>&1 | tee /tmp/summary_run.log
+          generated=$(grep "Done —" /tmp/summary_run.log | grep -oP "generated: \K[0-9]+" || echo "0")
+          errors=$(grep "Done —" /tmp/summary_run.log | grep -oP "errors: \K[0-9]+" || echo "0")
+          echo "generated=$generated" >> "$GITHUB_OUTPUT"
+          echo "errors=$errors"       >> "$GITHUB_OUTPUT"
+          echo "Generated: $generated  Errors: $errors"
+
+      - name: Update progress log
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          mkdir -p notes/daily
+
+          remaining_before="${{ steps.backlog.outputs.remaining }}"
+          generated="${{ steps.summarize.outputs.generated || '0' }}"
+          errors="${{ steps.summarize.outputs.errors || '0' }}"
+          today=$(date -u +%Y-%m-%d)
+
+          if [ "$remaining_before" = "0" ]; then
+            status="complete"
+          elif [ "$generated" = "0" ] && [ "$errors" -gt "0" ] 2>/dev/null; then
+            status="no-credit"
+          elif [ "$generated" -gt "0" ] 2>/dev/null; then
+            status="progress"
+          else
+            status="skipped"
+          fi
+
+          file="notes/daily/summarize_progress.md"
+
+          if [ ! -f "$file" ]; then
+            printf '# Summary Backfill Progress\n\nDaily log of Groq-powered vote summary generation.\nGroq free tier: 100,000 tokens/day (~300 votes/day). Resets at midnight UTC.\n\n| Date (UTC)  | Remaining | Generated | Errors | Status    |\n|-------------|-----------|-----------|--------|-----------|\n' > "$file"
+          fi
+
+          echo "| $today | $remaining_before | $generated | $errors | $status |" >> "$file"
+          echo "Logged: $today | remaining=$remaining_before | generated=$generated | errors=$errors | status=$status"
+
+      - name: Commit progress log
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add notes/daily/summarize_progress.md
+          git diff --cached --quiet || git commit -m "chore: daily summary backfill stats $(date -u +%Y-%m-%d)"
+          git push origin master || echo "Nothing to push"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "::error::Summary backfill failed — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
