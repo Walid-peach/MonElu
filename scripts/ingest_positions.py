@@ -108,11 +108,7 @@ def extract_positions(scrutin: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def fetch_scrutin_zip(zip_path: str | None = None) -> bytes:
-    if zip_path:
-        log.info("Reading scrutins ZIP from %s…", zip_path)
-        with open(zip_path, "rb") as fh:
-            return fh.read()
+def fetch_scrutin_zip() -> bytes:
     url = f"{AN_BASE_URL}{SCRUTINS_ZIP_PATH}"
     log.info("Downloading scrutins ZIP from %s…", url)
     return download_with_retry(url)
@@ -154,11 +150,6 @@ def main() -> None:
         default=None,
         help="Only ingest positions for votes on/after this date (YYYY-MM-DD). Default: all known votes.",
     )
-    parser.add_argument(
-        "--zip-path",
-        default=None,
-        help="Path to an already-downloaded Scrutins.json.zip (skips the download).",
-    )
     args = parser.parse_args()
 
     if args.since:
@@ -169,10 +160,10 @@ def main() -> None:
         except ValueError:
             parser.error(f"--since must be YYYY-MM-DD, got: {args.since!r}")
 
-    run(since=args.since, zip_path=args.zip_path)
+    run(since=args.since)
 
 
-def run(since: str | None = None, zip_path: str | None = None) -> None:
+def run(since: str | None = None) -> None:
     """Programmatic entry point for Airflow — skips argparse."""
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
@@ -184,7 +175,7 @@ def run(since: str | None = None, zip_path: str | None = None) -> None:
         except ValueError as exc:
             raise ValueError(f"since must be YYYY-MM-DD, got: {since!r}") from exc
 
-    raw = fetch_scrutin_zip(zip_path=zip_path)
+    raw = fetch_scrutin_zip()
 
     log.info("Loading known vote_ids and deputy_ids…")
     conn = connect_with_retry()
