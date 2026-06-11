@@ -9,17 +9,21 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import io
 import json
 import logging
 import os
-import time
 import zipfile
 
 import psycopg2
 import psycopg2.extras
-import requests
 from dotenv import load_dotenv
+
+try:
+    from scripts._http import download_with_retry
+except ImportError:  # running as a plain file: python scripts/ingest_deputies.py
+    from _http import download_with_retry
 
 load_dotenv()
 
@@ -39,47 +43,20 @@ DEPUTIES_ZIP_PATH = (
 )
 
 # ---------------------------------------------------------------------------
-# HTTP helpers
-# ---------------------------------------------------------------------------
-
-MAX_RETRIES = 5
-BACKOFF_BASE = 2  # seconds
-
-
-def download_with_retry(url: str) -> bytes:
-    """GET with exponential backoff on 429 / 5xx; returns raw bytes."""
-    for attempt in range(MAX_RETRIES):
-        try:
-            resp = requests.get(url, timeout=60)
-            if resp.status_code == 429:
-                wait = BACKOFF_BASE**attempt
-                log.warning("Rate-limited (429). Retrying in %ss…", wait)
-                time.sleep(wait)
-                continue
-            if resp.status_code >= 500:
-                wait = BACKOFF_BASE**attempt
-                log.warning("Server error %s. Retrying in %ss…", resp.status_code, wait)
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            return resp.content
-        except requests.RequestException as exc:
-            wait = BACKOFF_BASE**attempt
-            log.warning("Request failed (%s). Retrying in %ss…", exc, wait)
-            time.sleep(wait)
-    raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts")
-
-
-# ---------------------------------------------------------------------------
 # Data fetch
 # ---------------------------------------------------------------------------
 
 
-def fetch_all_deputies() -> list[dict]:
-    """Download the ZIP export and return a list of raw acteur dicts."""
-    url = f"{AN_API_BASE_URL}{DEPUTIES_ZIP_PATH}"
-    log.info("Downloading deputies ZIP from %s…", url)
-    raw = download_with_retry(url)
+def fetch_all_deputies(zip_path: str | None = None) -> list[dict]:
+    """Load the ZIP export (local path or download) and return raw acteur dicts."""
+    if zip_path:
+        log.info("Reading deputies ZIP from %s…", zip_path)
+        with open(zip_path, "rb") as fh:
+            raw = fh.read()
+    else:
+        url = f"{AN_API_BASE_URL}{DEPUTIES_ZIP_PATH}"
+        log.info("Downloading deputies ZIP from %s…", url)
+        raw = download_with_retry(url)
 
     all_items = []
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
@@ -236,11 +213,19 @@ def upsert_deputies(raw_items: list[dict]) -> int:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Ingest AN deputies into MonÉlu DB")
+    parser.add_argument(
+        "--zip-path",
+        default=None,
+        help="Path to an already-downloaded AMO10 deputies ZIP (skips the download).",
+    )
+    args = parser.parse_args()
+
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
 
     log.info("=== Starting deputy ingestion ===")
-    raw_items = fetch_all_deputies()
+    raw_items = fetch_all_deputies(zip_path=args.zip_path)
     upsert_deputies(raw_items)
     log.info("=== Deputy ingestion finished ===")
 
