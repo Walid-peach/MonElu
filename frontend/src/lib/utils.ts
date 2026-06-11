@@ -31,6 +31,7 @@ export function partyShort(party: string | null): string {
   return map[party] || party.slice(0, 3).toUpperCase()
 }
 
+
 export function partyColor(party: string | null): string {
   if (!party) return 'bg-gray-100 text-gray-600'
   const map: Record<string, string> = {

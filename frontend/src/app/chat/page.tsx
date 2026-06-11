@@ -1,19 +1,15 @@
 'use client'
 import { useState, useRef, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { api, SearchResult } from '@/lib/api'
+import { api } from '@/lib/api'
+import { CHAT_SUGGESTIONS } from '@/lib/chat-suggestions'
+import { UserBubble, AssistantBubble, ErrorBubble, TypingIndicator } from '@/components/chat/Bubbles'
+import type { SearchResult } from '@/lib/api'
 
 type Message =
   | { role: 'user'; text: string }
-  | { role: 'assistant'; result: SearchResult; error?: never }
+  | { role: 'assistant'; result: SearchResult }
   | { role: 'error'; text: string }
-
-const SUGGESTIONS = [
-  'Qui vote le plus souvent pour le RN ?',
-  'Combien de votes ont été adoptés cette année ?',
-  'Quel est le taux de présence moyen des députés ?',
-  'Quels sont les votes rejetés récemment ?',
-]
 
 function ChatInner() {
   const searchParams = useSearchParams()
@@ -22,15 +18,19 @@ function ChatInner() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState(initialQ)
   const [loading, setLoading] = useState(false)
-  const [expanded, setExpanded] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const sentInitialRef = useRef(false)
 
+  // Auto-send when arriving with ?q=
   useEffect(() => {
-    if (initialQ) {
+    if (initialQ && !sentInitialRef.current) {
+      sentInitialRef.current = true
+      send(initialQ)
+    } else if (!initialQ) {
       inputRef.current?.focus()
     }
-  }, [initialQ])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -52,14 +52,8 @@ function ChatInner() {
     }
   }
 
-  const confidenceColor: Record<string, string> = {
-    high: 'bg-emerald-100 text-emerald-800',
-    medium: 'bg-amber-100 text-amber-800',
-    low: 'bg-red-50 text-red-700',
-  }
-
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto">
+    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-2xl mx-auto">
       {/* Header */}
       <div className="px-4 md:px-8 pt-6 pb-3 border-b border-gray-border bg-white flex-shrink-0">
         <h1 className="font-serif text-2xl text-navy">Chat IA</h1>
@@ -72,7 +66,7 @@ function ChatInner() {
           <div className="pt-4">
             <p className="text-sm text-gray-mid mb-4 text-center">Suggestions :</p>
             <div className="flex flex-wrap gap-2 justify-center">
-              {SUGGESTIONS.map(s => (
+              {CHAT_SUGGESTIONS.map(s => (
                 <button key={s}
                   onClick={() => send(s)}
                   className="text-xs border border-gray-border rounded-full px-3 py-1.5 bg-white text-navy hover:border-navy/40 transition-colors">
@@ -84,89 +78,22 @@ function ChatInner() {
         )}
 
         {messages.map((msg, i) => {
-          if (msg.role === 'user') {
-            return (
-              <div key={i} className="flex justify-end">
-                <div className="bg-navy text-white rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[80%] text-sm">
-                  {msg.text}
-                </div>
-              </div>
-            )
-          }
-
-          if (msg.role === 'error') {
-            return (
-              <div key={i} className="flex justify-start">
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[80%] text-sm">
-                  {msg.text}
-                </div>
-              </div>
-            )
-          }
-
-          const { result } = msg
-          return (
-            <div key={i} className="flex justify-start">
-              <div className="bg-white border border-gray-border rounded-2xl rounded-tl-sm px-4 py-3 max-w-[90%] space-y-3">
-                {/* Answer */}
-                <p className="text-sm text-navy leading-relaxed whitespace-pre-wrap">{result.answer}</p>
-
-                {/* Meta */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {result.confidence && (
-                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${confidenceColor[result.confidence] ?? 'bg-gray-light text-gray-mid'}`}>
-                      {result.confidence === 'high' ? 'Haute confiance' : result.confidence === 'medium' ? 'Confiance moyenne' : 'Basse confiance'}
-                    </span>
-                  )}
-                  {result.chunks_retrieved > 0 && (
-                    <button
-                      onClick={() => setExpanded(expanded === i ? null : i)}
-                      className="text-xs text-gray-mid hover:text-navy underline underline-offset-2">
-                      {expanded === i ? 'Masquer' : `${result.chunks_retrieved} sources`}
-                    </button>
-                  )}
-                </div>
-
-                {/* Sources */}
-                {expanded === i && result.sources?.length > 0 && (
-                  <div className="border-t border-gray-light pt-3 space-y-2">
-                    {result.sources.slice(0, 3).map((src, j) => (
-                      <div key={j} className="bg-gray-off rounded-lg p-3">
-                        <p className="text-xs text-gray-mid line-clamp-3">{src.content}</p>
-                        <p className="text-xs text-gray-mid/60 mt-1">
-                          Similarité : {Math.round(src.similarity * 100)}%
-                          {src.metadata?.chunk_type && ` · ${src.metadata.chunk_type}`}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )
+          if (msg.role === 'user') return <UserBubble key={i} text={msg.text} />
+          if (msg.role === 'error') return <ErrorBubble key={i} text={msg.text} />
+          return <AssistantBubble key={i} result={msg.result} />
         })}
 
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-gray-border rounded-2xl rounded-tl-sm px-4 py-3">
-              <div className="flex gap-1">
-                {[0, 1, 2].map(i => (
-                  <span key={i} className="w-1.5 h-1.5 bg-gray-mid rounded-full animate-bounce"
-                    style={{ animationDelay: `${i * 150}ms` }} />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {loading && <TypingIndicator />}
 
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
       <div className="flex-shrink-0 border-t border-gray-border bg-white px-4 md:px-8 py-3">
-        <form onSubmit={e => { e.preventDefault(); send(input) }}
-          className="flex gap-2">
+        <form onSubmit={e => { e.preventDefault(); send(input) }} className="flex gap-2">
+          <label htmlFor="chat-input" className="sr-only">Posez votre question</label>
           <input
+            id="chat-input"
             ref={inputRef}
             type="text"
             value={input}

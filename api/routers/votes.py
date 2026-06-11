@@ -44,6 +44,7 @@ def list_votes(
         "the offset ceiling.",
     ),
     result: str = Query(None, description="Filter by result: adopté | rejeté"),
+    theme: str = Query(None, description="Filter by theme category"),
 ):
     # Decode before opening a connection so a bad cursor fails fast with 422.
     cursor_key = _decode_cursor(before) if before else None
@@ -57,6 +58,10 @@ def list_votes(
                 if result:
                     conditions.append(sql.SQL("result = %s"))
                     params.append(result)
+
+                if theme:
+                    conditions.append(sql.SQL("theme = %s"))
+                    params.append(theme)
 
                 # total reflects the full filtered set, independent of the cursor window.
                 count_where = (
@@ -89,7 +94,8 @@ def list_votes(
                 cur.execute(
                     sql.SQL("""
                         SELECT vote_id, voted_at, vote_title, result,
-                               votes_for, votes_against, abstentions, total_voters
+                               votes_for, votes_against, abstentions, total_voters,
+                               summary_plain, theme
                         FROM analytics_marts.mart_vote_summary {}
                         ORDER BY voted_at DESC, vote_id DESC LIMIT %s OFFSET %s
                     """).format(where),
@@ -122,7 +128,8 @@ def latest_votes(request: Request):
                 cur.execute(
                     """
                     SELECT vote_id, voted_at, vote_title, result,
-                           votes_for, votes_against, abstentions, total_voters
+                           votes_for, votes_against, abstentions, total_voters,
+                           summary_plain, theme
                     FROM analytics_marts.mart_vote_summary
                     ORDER BY voted_at DESC
                     LIMIT 10

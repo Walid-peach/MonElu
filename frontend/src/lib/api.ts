@@ -35,6 +35,8 @@ export type Vote = {
   votes_against: number
   abstentions: number
   total_voters: number
+  summary_plain?: string | null
+  theme?: string | null
 }
 
 export type VoteDetail = Vote & {
@@ -44,6 +46,25 @@ export type VoteDetail = Vote & {
     party: string
     position: string
   }>
+}
+
+export type DeputyStats = {
+  avg_presence_rate: number
+}
+
+export type DeputyVoteItem = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string
+  result: string | null
+  position: string
+  summary_plain?: string | null
+}
+
+export type DeputyVotesResponse = {
+  deputy_id: string
+  total: number
+  items: DeputyVoteItem[]
 }
 
 export type SearchResult = {
@@ -79,11 +100,15 @@ export const api = {
     },
     get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`),
     scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`),
+    stats: () => apiFetch<DeputyStats>('/deputies/stats/'),
+    votes: (id: string, limit = 10) =>
+      apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?limit=${limit}`),
   },
   votes: {
-    list: (params?: { result?: string; limit?: number; offset?: number }) => {
+    list: (params?: { result?: string; theme?: string; limit?: number; offset?: number }) => {
       const q = new URLSearchParams()
       if (params?.result) q.set('result', params.result)
+      if (params?.theme)  q.set('theme',  params.theme)
       if (params?.limit) q.set('limit', String(params.limit))
       if (params?.offset) q.set('offset', String(params.offset))
       return apiFetch<{ total: number; items: Vote[]; limit: number; offset: number }>(

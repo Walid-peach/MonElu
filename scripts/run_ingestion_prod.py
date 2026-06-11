@@ -100,13 +100,24 @@ def main() -> None:
         t_positions = run_step("Positions", "ingest_positions.py", ["--since", args.since])
         t_party = run_step("Fix party + department names", "update_party.py")
 
-        total_elapsed = time.perf_counter() - total_start
-
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
         n_positions = row_count(lock_conn, "vote_positions")
 
         new_votes = n_votes - votes_before
+        log.info("New votes ingested this run: %d", new_votes)
+
+        if new_votes > 0:
+            t_summaries = run_step(
+                "Vote summaries",
+                "generate_vote_summaries.py",
+                ["--since", args.since],
+            )
+        else:
+            t_summaries = 0.0
+            log.info("No new votes — skipping summary generation.")
+
+        total_elapsed = time.perf_counter() - total_start
         log.info("New votes ingested this run: %d", new_votes)
 
         github_output = os.getenv("GITHUB_OUTPUT")
@@ -122,6 +133,7 @@ def main() -> None:
         log.info("║  Votes     : %6d   (%5.1fs)      ║", n_votes, t_votes)
         log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
         log.info("║  Party fix :          (%5.1fs)      ║", t_party)
+        log.info("║  Summaries :          (%5.1fs)      ║", t_summaries)
         log.info("╠══════════════════════════════════════╣")
         log.info("║  Total time: %.1fs                   ║", total_elapsed)
         log.info("╚══════════════════════════════════════╝")

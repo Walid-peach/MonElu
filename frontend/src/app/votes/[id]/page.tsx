@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -5,6 +6,31 @@ import { formatDate, partyShort, partyColor } from '@/lib/utils'
 
 export const dynamicParams = true
 export const revalidate = 86400 // fallback if the /api/revalidate webhook is not called
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const vote = await api.votes.get(id).catch(() => null)
+  if (!vote) return {}
+  const result = vote.result === 'adopté' ? 'Adopté' : 'Rejeté'
+  const shortTitle = vote.vote_title.length > 80
+    ? vote.vote_title.slice(0, 80) + '…'
+    : vote.vote_title
+  const description = `${result} · ${vote.votes_for} pour · ${vote.votes_against} contre · ${vote.abstentions} abstentions.`
+  return {
+    title: `${result} — ${shortTitle} — MonÉlu`,
+    description,
+    openGraph: {
+      title: `${result} — ${shortTitle} — MonÉlu`,
+      description,
+      url: `https://mon-elu.vercel.app/votes/${id}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${result} — ${shortTitle} — MonÉlu`,
+      description,
+    },
+  }
+}
 
 export async function generateStaticParams() {
   try {
@@ -53,7 +79,13 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
             {vote.result}
           </span>
         </div>
-        <p className="text-sm text-gray-mid">{formatDate(vote.voted_at)}</p>
+        {vote.summary_plain && (
+          <p className="text-sm text-navy/60 leading-relaxed mt-2">
+            <span className="text-red-civic font-medium">En clair</span>{' '}
+            {vote.summary_plain}
+          </p>
+        )}
+        <p className="text-sm text-gray-mid mt-2">{formatDate(vote.voted_at)}</p>
       </div>
 
       {/* Results bar */}

@@ -61,6 +61,24 @@ class DeputyScorecard(_Base):
     abstention_pct: float = Field(description="abstentions / present_votes, 0–1")
 
 
+class DeputyStats(_Base):
+    avg_presence_rate: float = Field(description="Average presence_rate across all deputies, 0–1")
+
+
+class DeputyVoteItem(_Base):
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: str
+    result: Optional[str] = None
+    position: str
+
+
+class DeputyVotesResponse(_Base):
+    deputy_id: str
+    total: int
+    items: list[DeputyVoteItem]
+
+
 class DeputyListResponse(_Base):
     total: int
     limit: int
@@ -84,6 +102,8 @@ class VoteSummary(_Base):
     votes_against: Optional[int] = None
     abstentions: Optional[int] = None
     total_voters: Optional[int] = None
+    summary_plain: Optional[str] = None
+    theme: Optional[str] = None
 
 
 class VotePosition(_Base):
