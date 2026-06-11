@@ -38,9 +38,8 @@ def _applied_migrations(conn) -> set[str]:
                     applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """)
-    with conn.cursor() as cur:
-        cur.execute("SELECT filename FROM schema_migrations")
-        return {row["filename"] for row in cur.fetchall()}
+            cur.execute("SELECT filename FROM schema_migrations")
+            return {row["filename"] for row in cur.fetchall()}
 
 
 def main() -> None:

@@ -55,6 +55,11 @@ END $$;
 -- 5. CHECK constraint on vote_positions.position (MON-13)
 --    Catches upstream AN format drift at write time instead of letting
 --    unknown position strings through silently.
+--    NOT VALID: enforced for new writes only — skips the full-table scan
+--    (ACCESS EXCLUSIVE over ~715k rows) inside the Railway start hook, and a
+--    surprise historical value can't fail the boot. Validate existing rows
+--    manually when convenient:  ALTER TABLE vote_positions
+--    VALIDATE CONSTRAINT chk_position_domain;
 -- ---------------------------------------------------------------------------
 
 DO $$
@@ -64,6 +69,7 @@ BEGIN
     ) THEN
         ALTER TABLE vote_positions
             ADD CONSTRAINT chk_position_domain
-            CHECK (position IN ('pour', 'contre', 'abstention', 'nonVotant'));
+            CHECK (position IN ('pour', 'contre', 'abstention', 'nonVotant'))
+            NOT VALID;
     END IF;
 END $$;
