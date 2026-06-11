@@ -21,6 +21,9 @@ def init_pool(minconn: int = 2, maxconn: int = 10) -> None:
         maxconn=maxconn,
         dsn=os.getenv("DATABASE_URL"),
         cursor_factory=psycopg2.extras.RealDictCursor,
+        # Cap query time so a pathological query can't hold a pooled
+        # connection indefinitely.
+        options="-c statement_timeout=5000",
     )
 
 

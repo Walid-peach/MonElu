@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api.db as _db
+import api.main as _main
 from api.main import app
 
 
@@ -31,5 +32,9 @@ def mock_cursor():
     pool.getconn.return_value = conn
     pool.closed = False
 
+    # The stats snapshot is cached at module level — reset it so tests don't
+    # leak cached counts into each other.
+    _main._stats_cache = None
     with patch.object(_db, "_pool", pool):
         yield cursor
+    _main._stats_cache = None

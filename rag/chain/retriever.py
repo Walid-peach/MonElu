@@ -49,7 +49,10 @@ def get_notable_deputy_ids() -> dict:
     Fetch all notable_deputy chunk deputy_ids from document_chunks.
     Returns {deputy_id: full_name} for all indexed notable deputies.
     """
-    with psycopg2.connect(DATABASE_URL) as conn:
+    pool = _get_retriever_pool()
+    conn = pool.getconn()
+    broken = False
+    try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
@@ -61,6 +64,11 @@ def get_notable_deputy_ids() -> dict:
             """
             )
             return {r["deputy_id"]: r["full_name"] for r in cur.fetchall()}
+    except Exception:
+        broken = True
+        raise
+    finally:
+        pool.putconn(conn, close=broken)
 
 
 def detect_notable_deputy(question: str, notable_map: dict) -> str | None:
