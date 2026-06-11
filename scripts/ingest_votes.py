@@ -16,14 +16,17 @@ import io
 import json
 import logging
 import os
-import time
 import zipfile
 from datetime import date, timedelta
 
 import psycopg2
 import psycopg2.extras
-import requests
 from dotenv import load_dotenv
+
+try:
+    from scripts._http import download_with_retry
+except ImportError:  # running as a plain file: python scripts/ingest_votes.py
+    from _http import download_with_retry
 
 load_dotenv()
 
@@ -38,48 +41,22 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 SCRUTINS_ZIP_PATH = "/static/openData/repository/17/loi/scrutins/Scrutins.json.zip"
 
-MAX_RETRIES = 5
-BACKOFF_BASE = 2
-
-
-# ---------------------------------------------------------------------------
-# HTTP helper
-# ---------------------------------------------------------------------------
-
-
-def download_with_retry(url: str) -> bytes:
-    for attempt in range(MAX_RETRIES):
-        try:
-            resp = requests.get(url, timeout=60)
-            if resp.status_code == 429:
-                wait = BACKOFF_BASE**attempt
-                log.warning("Rate-limited (429). Retrying in %ss…", wait)
-                time.sleep(wait)
-                continue
-            if resp.status_code >= 500:
-                wait = BACKOFF_BASE**attempt
-                log.warning("Server error %s. Retrying in %ss…", resp.status_code, wait)
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            return resp.content
-        except requests.RequestException as exc:
-            wait = BACKOFF_BASE**attempt
-            log.warning("Request failed (%s). Retrying in %ss…", exc, wait)
-            time.sleep(wait)
-    raise RuntimeError(f"Failed to download {url} after {MAX_RETRIES} attempts")
-
 
 # ---------------------------------------------------------------------------
 # Fetch
 # ---------------------------------------------------------------------------
 
 
-def fetch_all_scrutins(since: str | None = None) -> list[dict]:
-    """Download ZIP and return scrutins, optionally filtered to dateScrutin >= since."""
-    url = f"{AN_BASE_URL}{SCRUTINS_ZIP_PATH}"
-    log.info("Downloading scrutins ZIP from %s…", url)
-    raw = download_with_retry(url)
+def fetch_all_scrutins(since: str | None = None, zip_path: str | None = None) -> list[dict]:
+    """Load scrutins from a local ZIP (zip_path) or download one, filtered to dateScrutin >= since."""
+    if zip_path:
+        log.info("Reading scrutins ZIP from %s…", zip_path)
+        with open(zip_path, "rb") as fh:
+            raw = fh.read()
+    else:
+        url = f"{AN_BASE_URL}{SCRUTINS_ZIP_PATH}"
+        log.info("Downloading scrutins ZIP from %s…", url)
+        raw = download_with_retry(url)
 
     items = []
     skipped = 0
@@ -236,13 +213,18 @@ def main() -> None:
         default=(date.today() - timedelta(days=365)).isoformat(),
         help="Only ingest votes on or after this date (YYYY-MM-DD). Default: rolling 12 months.",
     )
+    parser.add_argument(
+        "--zip-path",
+        default=None,
+        help="Path to an already-downloaded Scrutins.json.zip (skips the download).",
+    )
     args = parser.parse_args()
 
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
 
     log.info("=== Starting vote ingestion (since %s) ===", args.since)
-    raw_items = fetch_all_scrutins(since=args.since)
+    raw_items = fetch_all_scrutins(since=args.since, zip_path=args.zip_path)
     upsert_votes(raw_items)
     log.info("=== Vote ingestion finished ===")
 
