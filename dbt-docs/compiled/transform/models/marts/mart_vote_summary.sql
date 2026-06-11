@@ -33,6 +33,8 @@ final as (
         v.abstentions,
         v.total_voters,
         v.dossier_id,
+        v.summary_plain,
+        v.theme,
 
         -- participation
         coalesce(s.deputies_with_position, 0)           as deputies_with_position,
