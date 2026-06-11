@@ -13,7 +13,10 @@ import io
 import json
 import zipfile
 
-import requests
+try:
+    from scripts._http import download_with_retry
+except ImportError:  # running as a plain file: python scripts/ingest_organes.py
+    from _http import download_with_retry
 
 AN_BASE = "https://data.assemblee-nationale.fr"
 ZIP_PATH = (
@@ -23,11 +26,16 @@ ZIP_PATH = (
 )
 
 
-def download_zip() -> zipfile.ZipFile:
-    url = AN_BASE + ZIP_PATH
-    print(f"Downloading {url} …")
-    raw = requests.get(url, timeout=120).content
-    print(f"  {len(raw):,} bytes downloaded.")
+def download_zip(zip_path: str | None = None) -> zipfile.ZipFile:
+    if zip_path:
+        print(f"Reading {zip_path} …")
+        with open(zip_path, "rb") as fh:
+            raw = fh.read()
+    else:
+        url = AN_BASE + ZIP_PATH
+        print(f"Downloading {url} …")
+        raw = download_with_retry(url, timeout=120)
+    print(f"  {len(raw):,} bytes loaded.")
     return zipfile.ZipFile(io.BytesIO(raw))
 
 

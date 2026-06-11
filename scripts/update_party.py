@@ -5,7 +5,7 @@ Steps 3 + 4:
   - Updates deputies.party using the GP mapping from ingest_organes.py
   - Updates deputies.department codes → full French names
 
-Run: venv/bin/python3 scripts/update_party.py
+Run: venv/bin/python3 scripts/update_party.py [--zip-path /path/to/AMO10.json.zip]
 """
 
 import os
@@ -204,13 +204,22 @@ def print_summary(conn) -> None:
 
 if __name__ == "__main__":
     # Import here so the ZIP is only downloaded once
+    import argparse
     import os
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     from scripts.ingest_organes import build_deputy_party_map, build_gp_map, download_zip
 
-    zf = download_zip()
+    parser = argparse.ArgumentParser(description="Resolve deputy party + department names")
+    parser.add_argument(
+        "--zip-path",
+        default=None,
+        help="Path to an already-downloaded AMO10 deputies ZIP (skips the download).",
+    )
+    args = parser.parse_args()
+
+    zf = download_zip(zip_path=args.zip_path)
     gp_map = build_gp_map(zf)
     deputy_map = build_deputy_party_map(zf, gp_map)
 

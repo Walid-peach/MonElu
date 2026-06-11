@@ -14,12 +14,18 @@ import logging
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import date, timedelta
 
 import psycopg2
 from dotenv import load_dotenv
 from psycopg2 import sql
+
+try:
+    from scripts._http import download_with_retry
+except ImportError:  # running as a plain file: python scripts/run_ingestion_prod.py
+    from _http import download_with_retry
 
 load_dotenv()
 
@@ -36,6 +42,29 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _INGESTION_LOCK_KEY = 7_391_204
 
 _ALLOWED_TABLES = {"deputies", "votes", "vote_positions", "document_chunks"}
+
+AN_BASE_URL = os.getenv("AN_API_BASE_URL", "https://data.assemblee-nationale.fr")
+SCRUTINS_ZIP_PATH = "/static/openData/repository/17/loi/scrutins/Scrutins.json.zip"
+DEPUTIES_ZIP_PATH = (
+    "/static/openData/repository/17/amo/deputes_actifs_mandats_actifs_organes"
+    "/AMO10_deputes_actifs_mandats_actifs_organes.json.zip"
+)
+
+
+def _download_zips(tmp_dir: str) -> tuple[str, str]:
+    """Download each AN ZIP once; the steps read them via --zip-path."""
+    scrutins_path = os.path.join(tmp_dir, "Scrutins.json.zip")
+    deputies_path = os.path.join(tmp_dir, "AMO10_deputes.json.zip")
+
+    log.info("Downloading scrutins ZIP once for votes + positions…")
+    with open(scrutins_path, "wb") as fh:
+        fh.write(download_with_retry(f"{AN_BASE_URL}{SCRUTINS_ZIP_PATH}"))
+
+    log.info("Downloading deputies/organes ZIP once for deputies + party fix…")
+    with open(deputies_path, "wb") as fh:
+        fh.write(download_with_retry(f"{AN_BASE_URL}{DEPUTIES_ZIP_PATH}", timeout=120))
+
+    return scrutins_path, deputies_path
 
 
 def _try_acquire_lock(conn) -> bool:
@@ -95,10 +124,21 @@ def main() -> None:
     try:
         votes_before = row_count(lock_conn, "votes")
 
-        t_deputies = run_step("Deputies", "ingest_deputies.py")
-        t_votes = run_step("Votes", "ingest_votes.py", ["--since", args.since])
-        t_positions = run_step("Positions", "ingest_positions.py", ["--since", args.since])
-        t_party = run_step("Fix party + department names", "update_party.py")
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scrutins_zip, deputies_zip = _download_zips(tmp_dir)
+
+            t_deputies = run_step("Deputies", "ingest_deputies.py", ["--zip-path", deputies_zip])
+            t_votes = run_step(
+                "Votes", "ingest_votes.py", ["--since", args.since, "--zip-path", scrutins_zip]
+            )
+            t_positions = run_step(
+                "Positions",
+                "ingest_positions.py",
+                ["--since", args.since, "--zip-path", scrutins_zip],
+            )
+            t_party = run_step(
+                "Fix party + department names", "update_party.py", ["--zip-path", deputies_zip]
+            )
 
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
@@ -107,23 +147,23 @@ def main() -> None:
         new_votes = n_votes - votes_before
         log.info("New votes ingested this run: %d", new_votes)
 
-        if new_votes > 0:
-            t_summaries = run_step(
-                "Vote summaries",
-                "generate_vote_summaries.py",
-                ["--since", args.since],
-            )
-        else:
-            t_summaries = 0.0
-            log.info("No new votes — skipping summary generation.")
-
-        total_elapsed = time.perf_counter() - total_start
-        log.info("New votes ingested this run: %d", new_votes)
-
+        # Write the output as soon as it is known — a summaries failure below must
+        # not lose the new_votes signal for downstream workflow steps.
         github_output = os.getenv("GITHUB_OUTPUT")
         if github_output:
             with open(github_output, "a") as f:
                 f.write(f"new_votes={new_votes}\n")
+
+        # Always run summaries: the `summary_plain IS NULL` query no-ops when there is
+        # nothing to do, and this retries summaries that failed on a previous run
+        # instead of waiting for the next new vote.
+        t_summaries = run_step(
+            "Vote summaries",
+            "generate_vote_summaries.py",
+            ["--since", args.since],
+        )
+
+        total_elapsed = time.perf_counter() - total_start
 
         log.info("")
         log.info("╔══════════════════════════════════════╗")
