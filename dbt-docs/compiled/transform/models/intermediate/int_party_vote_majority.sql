@@ -16,4 +16,6 @@ select distinct on (party, vote_id)
     vote_id,
     position as majority_position
 from position_counts
-order by party, vote_id, position_count desc
+-- position as final key makes ties deterministic (pour 40 / contre 40 would
+-- otherwise resolve to whichever row Postgres returns first)
+order by party, vote_id, position_count desc, position
