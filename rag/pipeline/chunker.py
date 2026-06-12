@@ -138,11 +138,18 @@ def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour')       AS pour_count,
                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre')     AS contre_count,
                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'abstention') AS abstention_count,
-                       ROUND(
+                       -- canonical presence: all recorded positions (incl.
+                       -- nonVotant) over votes during the mandate window —
+                       -- see docs/decisions.md
+                       ROUND(LEAST(
                            COUNT(vp.position_id)::numeric
-                           / NULLIF((SELECT COUNT(*) FROM votes), 0),
-                           3
-                       ) AS presence_rate
+                           / NULLIF((
+                               SELECT COUNT(*) FROM votes v
+                               WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
+                                 AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                           ), 0),
+                           1
+                       ), 3) AS presence_rate
                 FROM deputies d
                 LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
                 """
@@ -203,24 +210,45 @@ def chunk_party_summaries() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
+                -- canonical presence per deputy (incl. nonVotant, mandate-
+                -- windowed — see docs/decisions.md), averaged per deputy so
+                -- high-vote deputies don't dominate the party mean
+                WITH deputy_presence AS (
+                    SELECT d.deputy_id, d.party,
+                           LEAST(
+                               COUNT(vp.position_id)::numeric / NULLIF((
+                                   SELECT COUNT(*) FROM votes v
+                                   WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
+                                     AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                               ), 0),
+                               1
+                           ) AS presence_rate
+                    FROM deputies d
+                    LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
+                    WHERE d.party IS NOT NULL
+                    GROUP BY d.deputy_id
+                ),
+                party_positions AS (
+                    SELECT
+                        d.party,
+                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour')       AS total_pour,
+                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre')     AS total_contre,
+                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'abstention') AS total_abstention
+                    FROM deputies d
+                    LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
+                    WHERE d.party IS NOT NULL
+                    GROUP BY d.party
+                )
                 SELECT
-                    d.party,
-                    COUNT(DISTINCT d.deputy_id) AS deputy_count,
-                    COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour')       AS total_pour,
-                    COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre')     AS total_contre,
-                    COUNT(vp.position_id) FILTER (WHERE vp.position = 'abstention') AS total_abstention,
-                    ROUND(AVG(
-                        d2.total::numeric / NULLIF((SELECT COUNT(*) FROM votes), 0)
-                    ), 3) AS avg_presence
-                FROM deputies d
-                LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
-                LEFT JOIN (
-                    SELECT deputy_id,
-                           COUNT(*) AS total
-                    FROM vote_positions GROUP BY deputy_id
-                ) d2 ON d.deputy_id = d2.deputy_id
-                WHERE d.party IS NOT NULL
-                GROUP BY d.party
+                    dp.party,
+                    COUNT(*) AS deputy_count,
+                    pp.total_pour,
+                    pp.total_contre,
+                    pp.total_abstention,
+                    ROUND(AVG(dp.presence_rate), 3) AS avg_presence
+                FROM deputy_presence dp
+                JOIN party_positions pp ON pp.party = dp.party
+                GROUP BY dp.party, pp.total_pour, pp.total_contre, pp.total_abstention
                 ORDER BY deputy_count DESC
                 """
             )
@@ -291,11 +319,16 @@ def chunk_global_stats() -> list[dict]:
                 """
                 SELECT d.full_name, d.party, d.department,
                        COUNT(vp.position_id) AS total_votes,
-                       ROUND(
+                       -- canonical presence — see docs/decisions.md
+                       ROUND(LEAST(
                            COUNT(vp.position_id)::numeric
-                           / NULLIF((SELECT COUNT(*) FROM votes), 0),
-                           3
-                       ) AS presence_rate
+                           / NULLIF((
+                               SELECT COUNT(*) FROM votes v
+                               WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
+                                 AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                           ), 0),
+                           1
+                       ), 3) AS presence_rate
                 FROM deputies d
                 LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
                 WHERE d.full_name ILIKE '%Braun-Pivet%'

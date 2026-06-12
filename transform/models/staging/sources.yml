@@ -7,6 +7,12 @@ sources:
     tables:
       - name: deputies
         description: "577 French deputies — profiles, party, department"
+        loaded_at_field: ingested_at
+        freshness:
+          # Deputy rows change rarely (re-upserted on ingestion runs); generous
+          # windows avoid false alarms during parliamentary recess.
+          warn_after: { count: 7, period: day }
+          error_after: { count: 30, period: day }
         columns:
           - name: deputy_id
             description: "Unique deputy identifier (e.g. PA722190)"
@@ -23,6 +29,13 @@ sources:
 
       - name: votes
         description: "All parliamentary votes (scrutins)"
+        loaded_at_field: ingested_at
+        freshness:
+          # Cron ingests weekdays at 06:00 UTC; warn after a missed run-plus-
+          # weekend, error after a full week of silence (the "cron silently
+          # died" failure mode).
+          warn_after: { count: 4, period: day }
+          error_after: { count: 7, period: day }
         columns:
           - name: vote_id
             tests:
@@ -39,6 +52,10 @@ sources:
 
       - name: vote_positions
         description: "Individual deputy positions on each vote"
+        loaded_at_field: ingested_at
+        freshness:
+          warn_after: { count: 4, period: day }
+          error_after: { count: 7, period: day }
         columns:
           - name: position_id
             tests:

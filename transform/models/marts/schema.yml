@@ -2,7 +2,13 @@ version: 2
 
 models:
   - name: mart_deputy_scorecard
-    description: "One row per deputy — presence rate, vote breakdown, party info"
+    description: >
+      One row per deputy — presence rate, vote breakdown, party info.
+      Presence uses the canonical definition (docs/decisions.md): every
+      recorded position counts as present (including nonVotant), and the
+      denominator is the number of votes held during the deputy's mandate
+      window. votes_for_pct / abstention_pct divide by expressed positions
+      (pour + contre + abstention) only.
     tests:
       - dbt_utils.recency:
           datepart: day
@@ -54,6 +60,10 @@ models:
       cast pour, contre, or abstention are counted; nonvotant votes are
       excluded. Deputies whose party cast exclusively nonvotant on a vote are
       not counted for that vote, which can slightly inflate alignment rates.
+      Known limitation: positions join to the deputy's CURRENT party (latest
+      ingest) — a deputy who switched groups has all historical votes scored
+      against the new group's majority. snap_deputies_party captures party
+      changes going forward so a vote-time join becomes possible later.
     columns:
       - name: deputy_id
         tests: [not_null, unique]

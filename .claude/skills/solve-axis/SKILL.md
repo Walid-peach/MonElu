@@ -11,7 +11,20 @@ ARGUMENTS: the axis (category) to solve — one of:
 `ingestion, database, api, transform, rag, cicd, deploy-config, infra, frontend, tests`.
 These match the Linear labels in the MonElu team and the report names in `notes/dispatch/`.
 
+Linear writes (`mcp__linear-server__save_issue`, `save_comment`) are allowlisted in
+`.claude/settings.local.json` — apply Linear updates directly, no need to ask or to
+hand the user a manual list unless the MCP itself is down.
+
 ## Workflow
+
+### 0. Sync Linear with merged remediation PRs
+
+Before scoping, reconcile the board: `gh pr list --state merged` and match
+`fix: <axis> diagnostics … (MON-x..y)` titles against issue statuses. Any issue
+whose remediation PR has **merged** but still sits In Progress → move to **Done**
+(merge is the user's act of approval; moving the issue afterwards is bookkeeping,
+not a decision). Issues on still-open PRs stay In Progress; never touch Backlog
+issues here.
 
 ### 1. Gather scope — two sources, always both
 
@@ -79,9 +92,11 @@ section per Linear issue mapping finding → fix, a testing section, and the foo
 
 ### 7. Update Linear
 
-For each issue in scope: status → **In Progress** (not Done — that happens at
-merge), assignee → the workspace user, and a comment linking the PR. If the MCP is
-down, output the exact list of updates for the user to apply manually.
+For each issue in scope (`save_issue` + `save_comment`, pre-allowlisted):
+status → **In Progress** (Done only happens after merge — see step 0), assignee →
+the workspace user, and a comment linking the PR. For issues found already fixed
+on master or won't-fix, say so in the comment instead. If the MCP is down, output
+the exact list of updates for the user to apply manually.
 
 ### 8. Watch CI
 
@@ -108,7 +123,8 @@ Edit `notes/dispatch/diagnostic_roadmap.md`:
 
 Final report: branch name, PR URL, issues fixed (MON-IDs), review verdict, CI
 status, and any decision-items deferred to the user. Do **not** merge the PR and do
-**not** move Linear issues to Done.
+**not** move this run's issues to Done — the next run's step 0 (or the user asking
+to sync) does that once the PR has merged.
 
 ## Guard rails
 

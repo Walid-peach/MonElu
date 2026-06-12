@@ -4,6 +4,7 @@ profile: 'transform'
 
 model-paths: ["models"]
 test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
 macro-paths: ["macros"]
 analysis-paths: ["analyses"]
 

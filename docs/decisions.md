@@ -356,6 +356,42 @@ count is low.
 
 ---
 
+## ADR-019 — One canonical presence definition
+**Date:** 2026-06-12 (transform diagnostics, MON-22/MON-23)
+**Status:** Final
+
+**Decision:** Presence rate is defined exactly one way, everywhere:
+
+- **Numerator:** every recorded position — `pour`, `contre`, `abstention`,
+  **and `nonVotant`**. A nonVotant deputy was in the chamber; that is the
+  documented data quirk and it counts as present.
+- **Denominator:** the number of votes held **during the deputy's mandate
+  window** (`voted_at` between `mandate_start` and `mandate_end`, unbounded
+  when null). A deputy elected mid-legislature is not "absent" for votes that
+  happened before they held a seat.
+- **Capped at 1** to absorb data quirks (positions recorded outside the
+  stored mandate window).
+
+Pour/contre/abstention **percentages** divide by expressed positions only
+(`pour + contre + abstention`) — nonVotant is presence, not an opinion.
+
+**Where it lives:** `mart_deputy_scorecard` is the reference implementation.
+The RAG chunker (`chunker.py`, `chunk_notable_deputies.py`) and the SQL
+router (`sql_router.party_presence_rate`) replicate the same formula inline
+because they run against raw tables before the daily dbt run refreshes the
+marts.
+
+**Reason:** the diagnostic found presence computed three different ways
+(mart/deputy chunks counted nonVotant as present; notable chunks and the SQL
+router did not), so the platform's flagship metric contradicted itself
+depending on which path answered the question.
+
+**Rule:** any new consumer of presence either reads
+`mart_deputy_scorecard.presence_rate` or copies this exact formula. Do not
+invent a fourth definition.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
