@@ -85,7 +85,8 @@ def get_deputy_stats(request: Request):
                 row = cur.fetchone()
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
-    return DeputyStats(avg_presence_rate=float(row["avg_presence_rate"] or 0.0))
+    avg = row["avg_presence_rate"]
+    return DeputyStats(avg_presence_rate=float(avg) if avg is not None else None)
 
 
 @router.get("/{deputy_id}", response_model=DeputyDetail)

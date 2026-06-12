@@ -49,7 +49,9 @@ class SearchResponse(BaseModel):
     summary="Posez une question sur les votes et les députés",
 )
 @limiter.limit("10/minute")
-async def search(request: Request, body: SearchRequest):
+def search(request: Request, body: SearchRequest):
+    # Plain `def` on purpose: ask() does blocking psycopg2 + Groq I/O, so FastAPI
+    # must run it in the threadpool, not on the event loop.
     try:
         result = ask(
             question=body.question,

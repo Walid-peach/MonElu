@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import contextmanager
 
@@ -11,17 +12,37 @@ MART_UNAVAILABLE = HTTPException(
     detail="Analytics layer unavailable — dbt marts not found. Run `dbt run` to build them.",
 )
 
+logger = logging.getLogger(__name__)
+
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 
 
 def init_pool(minconn: int = 2, maxconn: int = 10) -> None:
     global _pool
-    _pool = psycopg2.pool.ThreadedConnectionPool(
-        minconn=minconn,
-        maxconn=maxconn,
-        dsn=os.getenv("DATABASE_URL"),
-        cursor_factory=psycopg2.extras.RealDictCursor,
-    )
+    try:
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn=minconn,
+            maxconn=maxconn,
+            dsn=os.getenv("DATABASE_URL"),
+            cursor_factory=psycopg2.extras.RealDictCursor,
+            # Cap query time so a pathological query can't hold a pooled
+            # connection indefinitely.
+            options="-c statement_timeout=5000",
+        )
+    except psycopg2.OperationalError:
+        # PgBouncer in transaction mode (e.g. Supabase pooler, port 6543)
+        # rejects startup parameters like options=. Fall back to a pool
+        # without the timeout rather than failing the deploy.
+        logger.warning(
+            "DB rejected startup options (statement_timeout) — likely a transaction-mode "
+            "pooler DSN; initializing pool without statement_timeout"
+        )
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn=minconn,
+            maxconn=maxconn,
+            dsn=os.getenv("DATABASE_URL"),
+            cursor_factory=psycopg2.extras.RealDictCursor,
+        )
 
 
 def close_pool() -> None:

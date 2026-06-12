@@ -62,7 +62,11 @@ _POSITION = {
 
 
 def test_health_ok(client, mock_cursor):
-    mock_cursor.fetchone.side_effect = [{"count": 577}, {"count": 821}, {"count": 289_411}]
+    mock_cursor.fetchone.side_effect = [
+        {"deputies": 577, "votes": 821, "positions": 289_411, "last_vote": None},
+        {"count": 577},
+        {"count": 821},
+    ]
     with patch.dict(
         "os.environ",
         {"OPENAI_API_KEY": "sk-real", "GROQ_API_KEY": "gsk_real"},  # pragma: allowlist secret
@@ -319,7 +323,11 @@ def test_rate_limit_handler_includes_retry_after():
 
 def test_health_degraded_when_openai_key_is_placeholder(client, mock_cursor):
     """Health endpoint returns 207 and marks openai=degraded when key is a placeholder."""
-    mock_cursor.fetchone.side_effect = [{"count": 577}, {"count": 821}, {"count": 289_411}]
+    mock_cursor.fetchone.side_effect = [
+        {"deputies": 577, "votes": 821, "positions": 289_411, "last_vote": None},
+        {"count": 577},
+        {"count": 821},
+    ]
     with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-..."}):  # pragma: allowlist secret
         resp = client.get("/health")
     assert resp.status_code == 207

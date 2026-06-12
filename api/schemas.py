@@ -62,7 +62,10 @@ class DeputyScorecard(_Base):
 
 
 class DeputyStats(_Base):
-    avg_presence_rate: float = Field(description="Average presence_rate across all deputies, 0–1")
+    avg_presence_rate: Optional[float] = Field(
+        None,
+        description="Average presence_rate across all deputies, 0–1; null when the mart is empty",
+    )
 
 
 class DeputyVoteItem(_Base):

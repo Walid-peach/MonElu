@@ -110,7 +110,7 @@ Assemblée Nationale Open Data (ZIPs)
 ### Key Layers
 
 **`api/`** — FastAPI application
-- `main.py`: App factory, CORS (GET-only public read), slowapi rate limiting (60 req/min global, 10 req/min on scorecard), global exception handler, HTML landing page with live stats. `/health` returns DB status, record counts, last ingestion timestamp, and dbt mart row counts.
+- `main.py`: App factory, CORS (GET + POST — POST is needed for `/search`; an empty `CORS_ORIGINS` blocks all cross-origin requests and logs a startup warning), slowapi rate limiting (30 req/min global, 10 req/min on scorecard and search), global exception handler, HTML landing page with live stats. `/health` returns DB status, record counts, last ingestion timestamp, and dbt mart row counts.
 - `routers/deputies.py`, `routers/votes.py`, `routers/search.py`: All DB queries — direct SQL, no ORM
 - `schemas.py`: Pydantic response models; all fields `Optional` to match DB NULLs
 - `limiter.py`: Shared slowapi `Limiter` instance imported by routers

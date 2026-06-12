@@ -6,6 +6,8 @@ FastAPI application entry point for MonÉlu.
 import base64
 import logging
 import os
+import threading
+import time
 import traceback
 from contextlib import asynccontextmanager
 
@@ -119,6 +121,11 @@ app.add_exception_handler(Exception, _unhandled_exception_handler)
 # CORS
 # ---------------------------------------------------------------------------
 ALLOWED_ORIGINS = [o for o in os.getenv("CORS_ORIGINS", "").split(",") if o]
+if not ALLOWED_ORIGINS:
+    logger.warning(
+        "⚠️  CORS_ORIGINS is not set — the allowlist is empty and ALL cross-origin "
+        "requests will be blocked. Set CORS_ORIGINS (e.g. '*' or a comma-separated list)."
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -889,6 +896,66 @@ _LANDING_HTML = """\
 """
 
 
+# ---------------------------------------------------------------------------
+# Cached DB stats — COUNT(*) is a full scan and the data changes once a day,
+# so landing and /health share one snapshot refreshed at most every 60s.
+# ---------------------------------------------------------------------------
+_STATS_TTL_SECONDS = 60.0
+_stats_lock = threading.Lock()
+_stats_cache: dict | None = None
+_stats_cached_at = 0.0
+
+
+def _get_db_stats() -> dict:
+    """Return counts, last ingestion, and mart row counts; raises if the DB is down.
+
+    Keys: deputies, votes, positions, last_ingestion, mart_scorecards,
+    mart_vote_summaries (mart keys are None when the marts are absent).
+    """
+    global _stats_cache, _stats_cached_at
+    with _stats_lock:
+        if _stats_cache is not None and time.monotonic() - _stats_cached_at < _STATS_TTL_SECONDS:
+            return _stats_cache
+
+    stats: dict = {"mart_scorecards": None, "mart_vote_summaries": None}
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    (SELECT COUNT(*) FROM deputies)        AS deputies,
+                    (SELECT COUNT(*) FROM votes)           AS votes,
+                    (SELECT COUNT(*) FROM vote_positions)  AS positions,
+                    (SELECT MAX(voted_at) FROM votes)      AS last_vote
+                """
+            )
+            row = cur.fetchone()
+            stats.update(
+                {
+                    "deputies": row["deputies"],
+                    "votes": row["votes"],
+                    "positions": row["positions"],
+                    "last_ingestion": row["last_vote"].isoformat() if row["last_vote"] else None,
+                }
+            )
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_deputy_scorecard")
+                stats["mart_scorecards"] = cur.fetchone()["count"]
+                cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_vote_summary")
+                stats["mart_vote_summaries"] = cur.fetchone()["count"]
+        except psycopg2.errors.UndefinedTable:
+            conn.rollback()
+        except Exception as exc:
+            conn.rollback()
+            logger.warning("Stats mart check error: %s", exc)
+
+    with _stats_lock:
+        _stats_cache = stats
+        _stats_cached_at = time.monotonic()
+    return stats
+
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def landing(request: Request) -> HTMLResponse:
     n_deputies = n_votes = n_positions = "—"
@@ -897,20 +964,10 @@ def landing(request: Request) -> HTMLResponse:
     latest_votes_html = '<div class="votes-empty">Données temporairement indisponibles</div>'
 
     try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                        (SELECT COUNT(*) FROM deputies)       AS n_deputies,
-                        (SELECT COUNT(*) FROM votes)          AS n_votes,
-                        (SELECT COUNT(*) FROM vote_positions) AS n_positions
-                    """
-                )
-                counts = cur.fetchone()
-                n_deputies = f"{counts['n_deputies']:,}"
-                n_votes = f"{counts['n_votes']:,}"
-                n_positions = f"{counts['n_positions']:,}"
+        stats = _get_db_stats()
+        n_deputies = f"{stats['deputies']:,}"
+        n_votes = f"{stats['votes']:,}"
+        n_positions = f"{stats['positions']:,}"
         db_dot = "#4ade80"
         db_label = "Base de données opérationnelle"
     except Exception:
@@ -954,43 +1011,20 @@ def landing(request: Request) -> HTMLResponse:
 @app.get("/health", tags=["Health"])
 def health() -> JSONResponse:
     services: dict[str, str] = {}
-    deputies = votes = positions = None
-    last_ingestion = None
-
-    scorecard_rows = vote_summary_rows = None
+    stats: dict = {}
     try:
+        # Liveness stays uncached so a dead DB is reported immediately; the
+        # COUNT(*) snapshot comes from the shared 60s cache.
         with get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM deputies")
-                deputies = cur.fetchone()["count"]
-                cur.execute("SELECT COUNT(*) FROM votes")
-                votes = cur.fetchone()["count"]
-                cur.execute("SELECT COUNT(*) FROM vote_positions")
-                positions = cur.fetchone()["count"]
-                cur.execute("SELECT MAX(voted_at) AS last_vote FROM votes")
-                row = cur.fetchone()
-                if row and row["last_vote"]:
-                    last_ingestion = row["last_vote"].isoformat()
-            services["db"] = "ok"
-
-            try:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_deputy_scorecard")
-                    scorecard_rows = cur.fetchone()["count"]
-                    cur.execute("SELECT COUNT(*) FROM analytics_marts.mart_vote_summary")
-                    vote_summary_rows = cur.fetchone()["count"]
-                services["dbt_marts"] = "ok"
-            except psycopg2.errors.UndefinedTable:
-                conn.rollback()
-                services["dbt_marts"] = "degraded"
-            except Exception as exc:
-                conn.rollback()
-                logger.warning("Health check mart check error: %s", exc)
-                services["dbt_marts"] = "degraded"
-
+                cur.execute("SELECT 1")
+        services["db"] = "ok"
+        stats = _get_db_stats()
+        services["dbt_marts"] = "ok" if stats["mart_scorecards"] is not None else "degraded"
     except Exception as exc:
         logger.error("Health check DB error: %s", exc)
         services["db"] = "degraded"
+        services["dbt_marts"] = "degraded"
 
     services["openai"] = "degraded" if _is_placeholder(os.getenv("OPENAI_API_KEY")) else "ok"
     services["groq"] = "degraded" if _is_placeholder(os.getenv("GROQ_API_KEY")) else "ok"
@@ -1003,13 +1037,18 @@ def health() -> JSONResponse:
     if services["db"] == "ok":
         body.update(
             {
-                "last_ingestion": last_ingestion,
-                "deputies": deputies,
-                "votes": votes,
-                "positions": positions,
+                "last_ingestion": stats["last_ingestion"],
+                "deputies": stats["deputies"],
+                "votes": stats["votes"],
+                "positions": stats["positions"],
             }
         )
     if services["dbt_marts"] == "ok":
-        body.update({"mart_scorecards": scorecard_rows, "mart_vote_summaries": vote_summary_rows})
+        body.update(
+            {
+                "mart_scorecards": stats["mart_scorecards"],
+                "mart_vote_summaries": stats["mart_vote_summaries"],
+            }
+        )
 
     return JSONResponse(content=body, status_code=200 if all_ok else 207)
