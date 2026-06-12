@@ -9,10 +9,10 @@ sources:
         description: "577 French deputies — profiles, party, department"
         loaded_at_field: ingested_at
         freshness:
-          # Deputy rows change rarely (re-upserted on ingestion runs); generous
-          # windows avoid false alarms during parliamentary recess.
-          warn_after: { count: 7, period: day }
-          error_after: { count: 30, period: day }
+          # Deputies are re-upserted on every successful run (recess or not),
+          # so this source is the "cron silently died" detector.
+          warn_after: { count: 4, period: day }
+          error_after: { count: 7, period: day }
         columns:
           - name: deputy_id
             description: "Unique deputy identifier (e.g. PA722190)"
@@ -31,11 +31,12 @@ sources:
         description: "All parliamentary votes (scrutins)"
         loaded_at_field: ingested_at
         freshness:
-          # Cron ingests weekdays at 06:00 UTC; warn after a missed run-plus-
-          # weekend, error after a full week of silence (the "cron silently
-          # died" failure mode).
+          # Upserts only touch votes inside the ingestion --since window, so a
+          # long parliamentary recess legitimately stalls this timestamp; the
+          # wide error window avoids August false alarms. Cron death itself is
+          # caught by the deputies source, whose rows refresh on every run.
           warn_after: { count: 4, period: day }
-          error_after: { count: 7, period: day }
+          error_after: { count: 30, period: day }
         columns:
           - name: vote_id
             tests:
@@ -54,8 +55,9 @@ sources:
         description: "Individual deputy positions on each vote"
         loaded_at_field: ingested_at
         freshness:
+          # Same recess caveat as votes — see above.
           warn_after: { count: 4, period: day }
-          error_after: { count: 7, period: day }
+          error_after: { count: 30, period: day }
         columns:
           - name: position_id
             tests:
