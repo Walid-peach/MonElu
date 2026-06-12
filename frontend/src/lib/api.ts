@@ -77,12 +77,19 @@ export type SearchResult = {
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    next: { revalidate: 300 },
-  })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
+  const delays = [200, 400]
+  let lastStatus = 0
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      next: { revalidate: 300 },
+    })
+    if (res.ok) return res.json()
+    lastStatus = res.status
+    if (res.status < 500 || attempt === delays.length) break
+    await new Promise(r => setTimeout(r, delays[attempt]))
+  }
+  throw new Error(`API error: ${lastStatus}`)
 }
 
 export const api = {
