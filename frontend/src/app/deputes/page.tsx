@@ -3,7 +3,7 @@ import { DeputiesClient } from './DeputiesClient'
 import { api } from '@/lib/api'
 import type { Deputy } from '@/lib/api'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 async function fetchAllDeputies() {
   const first = await api.deputies.list({ limit: 200, offset: 0 })
