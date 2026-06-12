@@ -194,24 +194,30 @@ SQL_QUERIES = {
         LIMIT 12
     """,
     "party_presence_rate": """
+        -- canonical presence: all recorded positions (incl. nonVotant) over
+        -- votes during the mandate window — see docs/decisions.md
         SELECT
-            d.party,
-            COUNT(DISTINCT d.deputy_id) as deputies,
-            ROUND(
-                AVG(ds.presence_rate) * 100, 1
-            ) as avg_presence_pct
-        FROM deputies d
-        JOIN (
+            ds.party,
+            COUNT(*) as deputies,
+            ROUND(AVG(ds.presence_rate) * 100, 1) as avg_presence_pct
+        FROM (
             SELECT
-                deputy_id,
-                COUNT(*) FILTER (
-                    WHERE position IN ('pour','contre','abstention')
-                )::numeric / NULLIF(COUNT(*), 0) as presence_rate
-            FROM vote_positions
-            GROUP BY deputy_id
-        ) ds ON d.deputy_id = ds.deputy_id
-        WHERE d.party IS NOT NULL
-        GROUP BY d.party
+                d.deputy_id,
+                d.party,
+                LEAST(
+                    COUNT(vp.position_id)::numeric / NULLIF((
+                        SELECT COUNT(*) FROM votes v
+                        WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
+                          AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                    ), 0),
+                    1
+                ) as presence_rate
+            FROM deputies d
+            LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
+            WHERE d.party IS NOT NULL
+            GROUP BY d.deputy_id
+        ) ds
+        GROUP BY ds.party
         ORDER BY avg_presence_pct DESC
         LIMIT 12
     """,

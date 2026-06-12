@@ -21,9 +21,11 @@ renamed as (
         -- derived
         date_trunc('month', voted_at)            as vote_month,
         extract(year from voted_at)::integer     as vote_year,
+        -- explicit both ways: an unexpected third result value surfaces as
+        -- null instead of being silently absorbed into false
         case
             when lower(result) = 'adopté' then true
-            else false
+            when lower(result) = 'rejeté' then false
         end                                      as is_adopted
 
     from source

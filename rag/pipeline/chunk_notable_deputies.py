@@ -48,13 +48,17 @@ def get_top_deputies(n: int = 100) -> list[dict]:
                     COUNT(vp.position_id) FILTER (
                         WHERE vp.position = 'abstention'
                     ) as abstention,
-                    ROUND(
-                        COUNT(vp.position_id) FILTER (
-                            WHERE vp.position IN ('pour','contre','abstention')
-                        )::numeric / NULLIF(
-                            (SELECT COUNT(*) FROM votes), 0
-                        ) * 100, 1
-                    ) as presence_pct
+                    -- canonical presence: all recorded positions (incl.
+                    -- nonVotant) over votes during the mandate window —
+                    -- see docs/decisions.md
+                    ROUND(LEAST(
+                        COUNT(vp.position_id)::numeric / NULLIF((
+                            SELECT COUNT(*) FROM votes v
+                            WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
+                              AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                        ), 0),
+                        1
+                    ) * 100, 1) as presence_pct
                 FROM deputies d
                 JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
                 WHERE d.party IS NOT NULL
@@ -221,9 +225,15 @@ def build_notable_deputy_index(n: int = 100) -> dict:
                                COUNT(vp.position_id) FILTER (WHERE vp.position='pour') as pour,
                                COUNT(vp.position_id) FILTER (WHERE vp.position='contre') as contre,
                                COUNT(vp.position_id) FILTER (WHERE vp.position='abstention') as abstention,
-                               ROUND(COUNT(vp.position_id) FILTER (
-                                   WHERE vp.position IN ('pour','contre','abstention')
-                               )::numeric / NULLIF((SELECT COUNT(*) FROM votes),0)*100,1) as presence_pct
+                               -- canonical presence — see docs/decisions.md
+                               ROUND(LEAST(
+                                   COUNT(vp.position_id)::numeric / NULLIF((
+                                       SELECT COUNT(*) FROM votes v
+                                       WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
+                                         AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                                   ), 0),
+                                   1
+                               ) * 100, 1) as presence_pct
                         FROM deputies d
                         LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
                         WHERE d.deputy_id = %s
