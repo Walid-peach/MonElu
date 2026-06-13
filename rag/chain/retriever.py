@@ -80,6 +80,7 @@ def get_notable_deputy_ids() -> dict:
             return result
         except Exception:
             broken = True
+            _notable_cache["ts"] = now  # back off for 1h even on failure
             raise
         finally:
             pool.putconn(conn, close=broken)

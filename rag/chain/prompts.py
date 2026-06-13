@@ -33,6 +33,7 @@ def get_data_horizon() -> str:
             import logging
 
             logging.getLogger(__name__).warning("get_data_horizon failed: %s", exc)
+            _horizon_cache["ts"] = now  # back off for 1h even on failure
     return _horizon_cache["value"]
 
 

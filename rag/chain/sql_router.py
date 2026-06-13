@@ -15,7 +15,7 @@ import psycopg2.extras
 import psycopg2.pool
 from dotenv import load_dotenv
 
-from rag.constants import NOTABLE_DEPUTY_NAMES  # noqa: E402
+from rag.constants import NOTABLE_DEPUTY_NAMES
 
 load_dotenv()
 
