@@ -9,6 +9,8 @@ jobs:
   backfill:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +44,7 @@ jobs:
       - name: Run summarizer
         if: steps.backlog.outputs.remaining != '0'
         id: summarize
+        shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -53,13 +56,9 @@ jobs:
           echo "errors=$errors"       >> "$GITHUB_OUTPUT"
           echo "Generated: $generated  Errors: $errors"
 
-      - name: Update progress log
+      - name: Write job summary
         if: always()
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          mkdir -p notes/daily
-
           remaining_before="${{ steps.backlog.outputs.remaining }}"
           generated="${{ steps.summarize.outputs.generated || '0' }}"
           errors="${{ steps.summarize.outputs.errors || '0' }}"
@@ -75,22 +74,15 @@ jobs:
             status="skipped"
           fi
 
-          file="notes/daily/summarize_progress.md"
+          {
+            echo "## Summary Backfill — $today"
+            echo ""
+            echo "| Date (UTC) | Remaining | Generated | Errors | Status |"
+            echo "|------------|-----------|-----------|--------|--------|"
+            echo "| $today | $remaining_before | $generated | $errors | $status |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ ! -f "$file" ]; then
-            printf '# Summary Backfill Progress\n\nDaily log of Groq-powered vote summary generation.\nGroq free tier: 100,000 tokens/day (~300 votes/day). Resets at midnight UTC.\n\n| Date (UTC)  | Remaining | Generated | Errors | Status    |\n|-------------|-----------|-----------|--------|-----------|\n' > "$file"
-          fi
-
-          echo "| $today | $remaining_before | $generated | $errors | $status |" >> "$file"
           echo "Logged: $today | remaining=$remaining_before | generated=$generated | errors=$errors | status=$status"
-
-      - name: Commit progress log
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add notes/daily/summarize_progress.md
-          git diff --cached --quiet || git commit -m "chore: daily summary backfill stats $(date -u +%Y-%m-%d)"
-          git push origin master || echo "Nothing to push"
 
       - name: Notify failure
         if: failure()
