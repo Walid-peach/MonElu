@@ -69,3 +69,4 @@ infra/.terraform.tfstate.lock.info
 frontend/.next/
 frontend/node_modules/
 frontend/.env.local
+.codex/
