@@ -161,7 +161,7 @@ function DesktopAssemblyScrollExperience({ stats, leadVote }: AssemblyScrollExpe
     <section ref={containerRef} className="relative hidden h-[330vh] bg-navy text-white md:block">
       <div className="sticky top-16 h-[calc(100svh-4rem)] overflow-hidden">
         <SceneImageLayer
-          src="/exterior-morning.png"
+          src="/exterior-morning.jpg"
           alt="Vue extérieure de l'Assemblée Nationale"
           priority
           opacity={exteriorOpacity}
@@ -174,7 +174,7 @@ function DesktopAssemblyScrollExperience({ stats, leadVote }: AssemblyScrollExpe
         </SceneImageLayer>
 
         <SceneImageLayer
-          src="/entrance.png"
+          src="/entrance.jpg"
           alt="Entrée principale de l'Assemblée Nationale"
           opacity={entranceOpacity}
           scale={entranceScale}
@@ -186,7 +186,7 @@ function DesktopAssemblyScrollExperience({ stats, leadVote }: AssemblyScrollExpe
         </SceneImageLayer>
 
         <SceneImageLayer
-          src="/hemicycle.png"
+          src="/hemicycle.jpg"
           alt="Vue intérieure de l'hémicycle de l'Assemblée Nationale"
           opacity={hemicycleOpacity}
           scale={hemicycleScale}
@@ -306,7 +306,7 @@ function MobileAssemblyExperience({ stats, leadVote }: AssemblyScrollExperienceP
     <section className="bg-gray-off md:hidden">
       <div className="relative isolate overflow-hidden bg-navy px-4 pb-10 pt-14 text-white">
         <Image
-          src="/exterior-morning.png"
+          src="/exterior-morning.jpg"
           alt="Vue extérieure de l'Assemblée Nationale"
           fill
           priority
@@ -324,14 +324,14 @@ function MobileAssemblyExperience({ stats, leadVote }: AssemblyScrollExperienceP
 
       <div className="space-y-5 px-4 py-8">
         <SceneCard
-          src="/entrance.png"
+          src="/entrance.jpg"
           alt="Entrée principale de l'Assemblée Nationale"
           eyebrow="L'Assemblée s'anime"
           title="L'Assemblée vote chaque semaine."
           body="La porte d'entrée devient le passage vers les décisions: textes, votes et positions individuelles."
         />
         <SceneCard
-          src="/hemicycle.png"
+          src="/hemicycle.jpg"
           alt="Vue intérieure de l'hémicycle de l'Assemblée Nationale"
           eyebrow="Dans l'hémicycle"
           title="Chaque scrutin contient des centaines de positions."
@@ -347,7 +347,7 @@ function ReducedMotionAssemblyExperience({ stats, leadVote }: AssemblyScrollExpe
     <section className="bg-gray-off">
       <div className="relative isolate overflow-hidden bg-navy px-4 py-16 text-white md:px-8 lg:px-12">
         <Image
-          src="/exterior-morning.png"
+          src="/exterior-morning.jpg"
           alt="Vue extérieure de l'Assemblée Nationale"
           fill
           priority
@@ -363,14 +363,14 @@ function ReducedMotionAssemblyExperience({ stats, leadVote }: AssemblyScrollExpe
 
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-8 md:grid-cols-2 md:px-8 lg:px-12">
         <SceneCard
-          src="/entrance.png"
+          src="/entrance.jpg"
           alt="Entrée principale de l'Assemblée Nationale"
           eyebrow="L'Assemblée s'anime"
           title="L'Assemblée vote chaque semaine."
           body="Chaque siège représente un député, et chaque scrutin produit une trace vérifiable."
         />
         <SceneCard
-          src="/hemicycle.png"
+          src="/hemicycle.jpg"
           alt="Vue intérieure de l'hémicycle de l'Assemblée Nationale"
           eyebrow="Dans l'hémicycle"
           title="Chaque scrutin contient des centaines de positions."
