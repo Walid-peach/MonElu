@@ -1,45 +1,58 @@
 import os
+import threading
+import time
 
 import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
 
+_HORIZON_TTL = 3600.0  # refresh data horizon at most once per hour
+_horizon_cache: dict = {"value": "depuis juillet 2025", "ts": 0.0}
+_horizon_lock = threading.Lock()
+
 
 def get_data_horizon() -> str:
-    """Return the actual min/max vote date range from the DB. Runs once at module load."""
-    try:
-        with psycopg2.connect(os.getenv("DATABASE_URL")) as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT MIN(voted_at)::date, MAX(voted_at)::date FROM votes")
-                lo, hi = cur.fetchone()
-                if lo and hi:
-                    return f"du {lo} au {hi}"
-    except Exception as exc:
-        print(f"[prompts] get_data_horizon failed, using fallback: {exc}")
-    return "depuis juillet 2025"
+    """Return the min/max vote date range from the DB, refreshed at most hourly."""
+    now = time.monotonic()
+    if now - _horizon_cache["ts"] < _HORIZON_TTL:
+        return _horizon_cache["value"]
+    with _horizon_lock:
+        if now - _horizon_cache["ts"] < _HORIZON_TTL:
+            return _horizon_cache["value"]
+        try:
+            with psycopg2.connect(os.getenv("DATABASE_URL")) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT MIN(voted_at)::date, MAX(voted_at)::date FROM votes")
+                    lo, hi = cur.fetchone()
+                    if lo and hi:
+                        _horizon_cache["value"] = f"du {lo} au {hi}"
+                        _horizon_cache["ts"] = now
+                        return _horizon_cache["value"]
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning("get_data_horizon failed: %s", exc)
+    return _horizon_cache["value"]
 
 
-_DATA_HORIZON = get_data_horizon()
-
-SYSTEM_PROMPT = f"""Tu es un assistant civique spécialisé dans l'activité \
+def build_system_prompt() -> str:
+    """Build the RAG system prompt with a fresh (TTL-cached) data horizon."""
+    horizon = get_data_horizon()
+    return f"""Tu es un assistant civique spécialisé dans l'activité \
 parlementaire française.
 
 Règles absolues :
 1. Tu réponds UNIQUEMENT en français, de manière factuelle et neutre.
 2. Tu bases tes réponses EXCLUSIVEMENT sur les sources fournies.
 3. Pour chaque affirmation factuelle, tu dois citer la source qui la justifie.
-4. Tu indiques ton niveau de confiance : ÉLEVÉ, MOYEN ou FAIBLE.
-   - ÉLEVÉ : l'information est explicitement dans les sources
-   - MOYEN : l'information est partiellement dans les sources
-   - FAIBLE : tu dois inférer à partir d'informations indirectes
-5. Si l'information n'est pas dans les sources, dis EXPLICITEMENT :
+4. Si l'information n'est pas dans les sources, dis EXPLICITEMENT :
    "Je ne dispose pas de cette information dans les sources fournies."
    Ne devine jamais. Ne complète jamais avec tes connaissances générales.
-6. Ne fais jamais de jugement politique.
-7. Cite toujours les chiffres exacts quand ils sont disponibles.
-8. Les données disponibles couvrent les votes de l'Assemblée Nationale \
-{_DATA_HORIZON}. Si une question porte sur une période antérieure, \
+5. Ne fais jamais de jugement politique.
+6. Cite toujours les chiffres exacts quand ils sont disponibles.
+7. Les données disponibles couvrent les votes de l'Assemblée Nationale \
+{horizon}. Si une question porte sur une période antérieure, \
 indique que cette période n'est pas couverte par les données actuelles."""
 
 
@@ -74,6 +87,4 @@ Question : {question}
 Instructions :
 - Réponds en te basant UNIQUEMENT sur les sources ci-dessus
 - Si plusieurs sources sont pertinentes, synthétise-les
-- Indique ton niveau de confiance (ÉLEVÉ/MOYEN/FAIBLE) en fin de réponse
-- Si une source contredit une autre, signale-le
-- Format : réponse directe d'abord, puis [Confiance : NIVEAU]"""
+- Si une source contredit une autre, signale-le"""
