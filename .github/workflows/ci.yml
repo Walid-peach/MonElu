@@ -128,8 +128,12 @@ jobs:
               });
             }
 
-      - name: Fail if dbt tests failed
-        if: steps.dbt_test.outcome == 'failure'
+      # Data-health failures reflect prod data state, not PR correctness (MON-37).
+      # The job posts results as a PR comment; it never blocks merge.
+      - name: Summarize data-health outcome
+        if: always()
         run: |
-          echo "dbt data-health check failed — blocking merge."
-          exit 1
+          outcome="${{ steps.dbt_test.outcome }}"
+          if [ "$outcome" = "failure" ]; then
+            echo "::warning::dbt data-health check found failing tests in prod — investigate separately, not blocking this PR."
+          fi
