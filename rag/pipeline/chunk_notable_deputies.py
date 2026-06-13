@@ -117,26 +117,10 @@ def get_key_votes(deputy_id: str) -> list[dict]:
 
 
 def dept_prep(dept: str) -> str:
-    """French preposition for department name."""
-    if not dept:
-        return "de"
-    d = dept.strip()
-    plurals = [
-        "Yvelines",
-        "Vosges",
-        "Landes",
-        "Hautes",
-        "Bouches",
-        "Alpes",
-        "Pyrénées",
-        "Côtes",
-        "Hauts",
-    ]
-    if any(d.startswith(p) for p in plurals):
-        return "des"
-    if d[0].lower() in "aeiouàâéèêëîïôùûü":
-        return "de l'"
-    return "du"
+    """French preposition for department name — delegates to canonical helper."""
+    from rag.pipeline.chunker import dept_preposition
+
+    return dept_preposition(dept)
 
 
 def build_chunk(deputy: dict, votes: list[dict]) -> str:
@@ -145,8 +129,10 @@ def build_chunk(deputy: dict, votes: list[dict]) -> str:
     party = deputy.get("party") or "groupe non renseigné"
     presence = deputy.get("presence_pct") or 0
 
+    prep = dept_prep(dept)
+    sep = "" if prep.endswith("'") else " "
     lines = [
-        f"{deputy['full_name']} est député(e) {dept_prep(dept)} {dept}, membre du parti {party}.",
+        f"{deputy['full_name']} est député(e) {prep}{sep}{dept}, membre du parti {party}.",
         f"Sur {deputy['total_votes']} votes enregistrés : "
         f"{deputy['pour']} pour, {deputy['contre']} contre, "
         f"{deputy['abstention']} abstentions.",
