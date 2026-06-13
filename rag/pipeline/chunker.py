@@ -83,7 +83,8 @@ def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
                 cur.execute(
                     """
                     SELECT vote_id, vote_title, result, voted_at,
-                           votes_for, votes_against, abstentions, total_voters
+                           votes_for, votes_against, abstentions, total_voters,
+                           summary_plain, theme
                     FROM votes
                     WHERE vote_id = ANY(%s)
                     ORDER BY voted_at DESC
@@ -94,7 +95,8 @@ def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
                 cur.execute(
                     """
                     SELECT vote_id, vote_title, result, voted_at,
-                           votes_for, votes_against, abstentions, total_voters
+                           votes_for, votes_against, abstentions, total_voters,
+                           summary_plain, theme
                     FROM votes
                     ORDER BY voted_at DESC
                     """
@@ -113,11 +115,14 @@ def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
             f"{row['abstentions'] or 0} abstentions "
             f"sur {row['total_voters'] or 0} votants."
         )
+        if row.get("summary_plain"):
+            content += f"\nRésumé : {row['summary_plain']}"
         metadata = {
             "chunk_type": "vote",
             "vote_id": row["vote_id"],
             "voted_at": str(row["voted_at"]) if row["voted_at"] else None,
             "result": row["result"],
+            "theme": row.get("theme"),
         }
         chunks.append({"content": content, "metadata": metadata})
 
