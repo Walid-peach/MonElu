@@ -13,7 +13,7 @@ from groq import Groq
 
 load_dotenv()
 
-from rag.chain.prompts import RAG_TEMPLATE, SYSTEM_PROMPT  # noqa: E402
+from rag.chain.prompts import RAG_TEMPLATE, build_system_prompt  # noqa: E402
 from rag.chain.retriever import retrieve  # noqa: E402
 from rag.chain.sql_router import route as sql_route  # noqa: E402
 from rag.constants import LLM_MODEL  # noqa: E402
@@ -74,7 +74,7 @@ def ask(
     response = _groq_client.chat.completions.create(
         model=LLM_MODEL,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": build_system_prompt()},
             {"role": "user", "content": user_message},
         ],
         temperature=0.2,
