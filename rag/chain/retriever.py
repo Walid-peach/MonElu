@@ -9,7 +9,7 @@ import logging
 import os
 import re
 import threading
-from functools import lru_cache
+import time
 
 import numpy as np
 import psycopg2
@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
 
-from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES
+from rag.constants import EMBEDDING_MODEL
 
 log = logging.getLogger(__name__)
 
@@ -43,32 +43,46 @@ def _get_retriever_pool() -> psycopg2.pool.ThreadedConnectionPool:
     return _retriever_pool
 
 
-@lru_cache(maxsize=1)
+_NOTABLE_TTL = 3600.0  # refresh at most once per hour
+_notable_cache: dict = {"value": None, "ts": 0.0}
+_notable_lock = threading.Lock()
+
+
 def get_notable_deputy_ids() -> dict:
     """
     Fetch all notable_deputy chunk deputy_ids from document_chunks.
     Returns {deputy_id: full_name} for all indexed notable deputies.
+    Refreshed at most once per hour so the serving process stays current.
     """
-    pool = _get_retriever_pool()
-    conn = pool.getconn()
-    broken = False
-    try:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT DISTINCT
-                    metadata->>'deputy_id' as deputy_id,
-                    metadata->>'full_name' as full_name
-                FROM document_chunks
-                WHERE metadata->>'chunk_type' = 'notable_deputy'
-            """
-            )
-            return {r["deputy_id"]: r["full_name"] for r in cur.fetchall()}
-    except Exception:
-        broken = True
-        raise
-    finally:
-        pool.putconn(conn, close=broken)
+    now = time.monotonic()
+    if _notable_cache["value"] is not None and now - _notable_cache["ts"] < _NOTABLE_TTL:
+        return _notable_cache["value"]
+    with _notable_lock:
+        if _notable_cache["value"] is not None and now - _notable_cache["ts"] < _NOTABLE_TTL:
+            return _notable_cache["value"]
+        pool = _get_retriever_pool()
+        conn = pool.getconn()
+        broken = False
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT DISTINCT
+                        metadata->>'deputy_id' as deputy_id,
+                        metadata->>'full_name' as full_name
+                    FROM document_chunks
+                    WHERE metadata->>'chunk_type' = 'notable_deputy'
+                    """
+                )
+                result = {r["deputy_id"]: r["full_name"] for r in cur.fetchall()}
+            _notable_cache["value"] = result
+            _notable_cache["ts"] = now
+            return result
+        except Exception:
+            broken = True
+            raise
+        finally:
+            pool.putconn(conn, close=broken)
 
 
 def detect_notable_deputy(question: str, notable_map: dict) -> str | None:
@@ -122,7 +136,6 @@ def retrieve(
         with conn.cursor(cursor_factory=psycopg2.extensions.cursor) as plain_cur:
             register_vector(plain_cur)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            # Inject the notable-deputy chunk first (bypasses IVFFlat recall gap)
             pinned = []
             if notable_id:
                 cur.execute(
@@ -146,7 +159,6 @@ def retrieve(
 
             semantic_k = k - len(pinned)
             pinned_ids = {p["metadata"].get("deputy_id") for p in pinned}
-            cur.execute("SET LOCAL ivfflat.probes = %s", (IVFFLAT_PROBES,))
             cur.execute(
                 """
                 SELECT content, metadata,
