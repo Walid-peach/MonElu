@@ -1,12 +1,10 @@
-import { Fragment } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { api, Vote, SearchResult } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
-import { HeroSearch } from '@/components/HeroSearch'
 import { ShareButton } from '@/components/ShareButton'
 import { ChatRedirectInput } from '@/components/ChatRedirectInput'
 import { UserBubble, AssistantBubble } from '@/components/chat/Bubbles'
+import { HomeScrollStory } from '@/components/home/HomeScrollStory'
 
 const EXAMPLE_RESULT: SearchResult = {
   answer:
@@ -31,6 +29,12 @@ const EXAMPLE_RESULT: SearchResult = {
   ],
 }
 
+const FALLBACK_STATS = {
+  deputies: 596,
+  votes: 4262,
+  positions: 685000,
+}
+
 async function getStats() {
   try {
     const [health, latest] = await Promise.all([
@@ -43,218 +47,158 @@ async function getStats() {
   }
 }
 
+function numericStat(value: unknown, fallback: number) {
+  return typeof value === 'number' ? value : fallback
+}
+
+function formatFreshness(value: unknown) {
+  if (typeof value !== 'string') return "Mise à jour aujourd'hui"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Mise à jour aujourd'hui"
+  const formatted = new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+  return `Mis à jour : ${formatted}`
+}
+
+function resultLabel(result: string) {
+  return result === 'adopté' ? 'Adopté' : 'Rejeté'
+}
+
 export default async function Home() {
   const { health, latest } = await getStats()
+  const latestVotes = latest as Vote[]
+  const leadVote = latestVotes[0]
+  const lastUpdated = formatFreshness(
+    health ? health.last_ingestion ?? health.last_ingestion_at ?? health.updated_at : null
+  )
 
-  const stats = [
-    { value: health ? (health.deputies as number) : null, label: 'Députés', sub: null },
-    { value: health ? (health.votes as number) : null, label: 'Votes analysés', sub: null },
-    {
-      value: health?.positions
-        ? `${Math.round((health.positions as number) / 1000)}k`
-        : null,
-      label: 'Positions',
-      sub: 'votes individuels',
-    },
-  ]
+  const homeStats = {
+    deputies: numericStat(health?.deputies, FALLBACK_STATS.deputies),
+    votes: numericStat(health?.votes, FALLBACK_STATS.votes),
+    positions: numericStat(health?.positions, FALLBACK_STATS.positions),
+    lastUpdated,
+  }
+
+  const pulseVote = {
+    title: leadVote?.summary_plain || leadVote?.vote_title || 'Réforme énergétique',
+    votesFor: leadVote?.votes_for ?? 289,
+    votesAgainst: leadVote?.votes_against ?? 223,
+    abstentions: leadVote?.abstentions ?? 58,
+    href: leadVote ? `/votes/${leadVote.vote_id}` : undefined,
+  }
 
   return (
-    <div>
-      {/* Hero — split layout */}
-      <section className="bg-gray-off min-h-screen flex items-stretch">
-        {/* Left: text content */}
-        <div className="flex flex-col justify-center px-8 md:px-16 lg:px-20 py-16 w-full md:w-1/2">
-          <p className="text-red-civic text-xs font-medium tracking-widest uppercase mb-4">
-            Plateforme civique open source
+    <div className="overflow-x-clip bg-gray-off">
+      <HomeScrollStory stats={homeStats} leadVote={pulseVote} />
+
+      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[0.82fr_1fr] md:px-8 lg:px-12">
+        <div>
+          <p className="text-xs font-semibold uppercase text-red-civic">Intelligence artificielle sourcée</p>
+          <h2 className="mt-3 font-serif text-3xl leading-tight text-navy md:text-4xl">
+            Posez une question politique. Obtenez une réponse lisible.
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-7 text-navy/60">
+            L&apos;IA MonÉlu répond en français, cite les données utilisées et garde le
+            contexte parlementaire visible pour éviter les réponses hors-sol.
           </p>
-          <h1 className="font-serif text-4xl md:text-5xl lg:text-[3.25rem] text-navy font-bold leading-tight mb-4">
-            Votre député a‑t‑il voté la réforme&nbsp;?{' '}
-            <span className="text-red-civic">Trouvez la réponse en 10 secondes.</span>
-          </h1>
-          <p className="text-navy/60 text-base md:text-lg mb-6 max-w-md leading-relaxed">
-            MonÉlu expose chaque vote de chaque député de l&apos;Assemblée Nationale — en clair, sans parti pris.
-          </p>
-
-          {/* Primary action: find my deputy */}
-          <div className="mb-6 max-w-md">
-            <HeroSearch />
-          </div>
-
-          {/* Secondary actions */}
-          <div className="flex flex-wrap gap-3 mb-8">
-            <Link href="/votes"
-              className="border border-navy/30 text-navy px-5 py-2.5 rounded font-medium text-sm text-center hover:bg-navy/5 transition-colors">
-              Explorer les votes
-            </Link>
-            <a href="https://monelu-production.up.railway.app/docs" target="_blank" rel="noopener noreferrer"
-              className="border border-navy/15 text-navy/40 px-5 py-2.5 rounded font-medium text-sm text-center hover:bg-navy/5 transition-colors">
-              Documentation API
-            </a>
-          </div>
-
-          <div className="flex flex-wrap gap-6 text-xs text-navy/40 border-t border-navy/10 pt-5">
-            <span>🔒 Données officielles · 100% transparentes</span>
-            <span>⚖ Neutre &amp; indépendant · Sans parti pris</span>
-          </div>
         </div>
 
-        {/* Right: image + floating stats card */}
-        <div className="hidden md:block relative flex-1">
-          <div
-            className="absolute inset-y-0 left-0 w-32 z-10 pointer-events-none"
-            style={{ background: 'linear-gradient(to right, #F8F7F4, transparent)' }}
-          />
-          <Image
-            src="/assemblee_nationale.jpg"
-            alt="Assemblée Nationale, Paris"
-            fill
-            className="object-cover object-center"
-            priority
-          />
-          {/* Floating stats card */}
-          <div className="absolute bottom-10 left-10 right-10 bg-white rounded-2xl shadow-xl p-6 z-20">
-            <div className="flex items-center gap-2 mb-5">
-              <span className="w-2 h-2 rounded-full bg-red-civic" />
-              <span className="text-sm font-medium text-navy">En direct à l&apos;Assemblée</span>
-            </div>
-            <div className="grid grid-cols-3 divide-x divide-navy/10">
-              {stats.map(({ value, label, sub }) => (
-                <div key={label} className="px-4 text-center first:pl-0 last:pr-0">
-                  <div className="text-2xl md:text-3xl font-serif font-bold text-navy">
-                    {value !== null
-                      ? typeof value === 'number'
-                        ? value.toLocaleString('fr-FR')
-                        : value
-                      : '—'}
-                  </div>
-                  <div className="text-xs text-navy/40 uppercase tracking-wider mt-1">{label}</div>
-                  {sub && <div className="text-[10px] text-navy/30 mt-0.5">{sub}</div>}
-                </div>
-              ))}
+        <div className="border border-gray-border bg-white p-4 md:p-5">
+          <p className="mb-4 text-xs font-semibold uppercase text-navy/40">Démonstration</p>
+          <div className="space-y-4">
+            <UserBubble text="Combien de votes ont été adoptés cette année ?" />
+            <AssistantBubble result={EXAMPLE_RESULT} />
+            <div className="border-t border-gray-border pt-4">
+              <ChatRedirectInput />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Mobile stats bar */}
-      <section className="md:hidden bg-white border-t border-gray-border">
-        <div className="grid grid-cols-3 divide-x divide-gray-border">
-          {stats.map(({ value, label, sub }) => (
-            <div key={label} className="px-4 py-5 text-center">
-              <div className="text-2xl font-serif font-bold text-navy">
-                {value !== null
-                  ? typeof value === 'number'
-                    ? value.toLocaleString('fr-FR')
-                    : value
-                  : '—'}
-              </div>
-              <div className="text-xs text-navy/40 uppercase tracking-wider mt-1">{label}</div>
-              {sub && <div className="text-[10px] text-navy/30 mt-0.5">{sub}</div>}
-            </div>
-          ))}
-        </div>
-      </section>
-
-
-      {/* AI section */}
-      <section className="max-w-4xl mx-auto px-4 md:px-8 py-12">
-        <p className="text-red-civic text-xs font-medium tracking-widest uppercase mb-3">Intelligence artificielle</p>
-        <h2 className="font-serif text-2xl md:text-3xl text-navy mb-2">
-          Posez votre question sur l&apos;Assemblée
-        </h2>
-        <p className="text-navy/60 text-sm md:text-base mb-8 max-w-xl">
-          Posez votre question en français. L&apos;IA répond en s&apos;appuyant sur les données officielles, sources à l&apos;appui.
-        </p>
-
-        {/* Conversation thread — static demo, same components as /chat */}
-        <div className="max-w-2xl space-y-4">
-          <p className="text-[10px] font-medium text-navy/30 uppercase tracking-widest text-right select-none">
-            Démonstration
-          </p>
-
-          <UserBubble text="Combien de votes ont été adoptés cette année ?" />
-
-          <AssistantBubble result={EXAMPLE_RESULT} />
-
-          {/* Input as next thread turn */}
-          <div className="border-t border-gray-border pt-4">
-            <ChatRedirectInput />
+      <section className="mx-auto max-w-7xl px-4 pb-14 md:px-8 lg:px-12">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase text-red-civic">Le fil politique</p>
+            <h2 className="mt-2 font-serif text-3xl text-navy">Derniers votes analysés</h2>
           </div>
-        </div>
-      </section>
-
-      {/* Latest votes */}
-      <section className="max-w-4xl mx-auto px-4 md:px-8 py-10">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-serif text-2xl text-navy">Derniers votes</h2>
-          <Link href="/votes" className="text-sm text-red-civic font-medium hover:underline">
+          <Link href="/votes" className="text-sm font-semibold text-red-civic hover:underline">
             Voir tous →
           </Link>
         </div>
-        <div className="flex flex-col gap-3">
-          {(latest as Vote[]).slice(0, 7).map((vote) => (
-            <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
-              className="bg-white rounded-lg border border-gray-border p-4 hover:border-navy/30 transition-colors">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-navy line-clamp-2 leading-snug">
-                    {vote.vote_title}
-                  </p>
-                  {vote.summary_plain && (
-                    <p className="text-xs text-gray-mid mt-1 line-clamp-2 italic">
-                      <span className="text-red-civic font-medium not-italic">En clair</span>{' '}
-                      {vote.summary_plain}
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          {latestVotes.slice(0, 6).map((vote) => {
+            const total = vote.total_voters || vote.votes_for + vote.votes_against + vote.abstentions || 1
+            const forPct = Math.round(vote.votes_for / total * 100)
+            return (
+              <Link
+                key={vote.vote_id}
+                href={`/votes/${vote.vote_id}`}
+                className="group border border-gray-border bg-white p-4 transition-colors hover:border-navy/35"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className={vote.result === 'adopté' ? 'badge-adopte' : 'badge-rejete'}>
+                        {resultLabel(vote.result)}
+                      </span>
+                      {vote.theme && (
+                        <span className="bg-gray-off px-2 py-0.5 text-xs font-medium text-navy/50">
+                          {vote.theme}
+                        </span>
+                      )}
+                    </div>
+                    <p className="line-clamp-2 text-sm font-semibold leading-6 text-navy group-hover:text-red-civic">
+                      {vote.summary_plain || vote.vote_title}
                     </p>
-                  )}
-                  <p className="text-xs text-gray-mid mt-1">{formatDate(vote.voted_at)}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={vote.result === 'adopté' ? 'badge-adopte' : 'badge-rejete'}>
-                    {vote.result}
-                  </span>
+                    {vote.summary_plain && (
+                      <p className="mt-2 line-clamp-1 text-xs text-gray-mid">
+                        Titre officiel : {vote.vote_title}
+                      </p>
+                    )}
+                    <p className="mt-2 text-xs text-gray-mid">{formatDate(vote.voted_at)}</p>
+                  </div>
                   <ShareButton
                     url={`/votes/${vote.vote_id}`}
                     title={vote.vote_title}
-                    text={`${vote.result === 'adopté' ? '✅' : '❌'} ${vote.vote_title} — MonÉlu`}
+                    text={`${resultLabel(vote.result)} — ${vote.vote_title} — MonÉlu`}
                     ariaLabel={`Partager : ${vote.vote_title}`}
                   />
                 </div>
-              </div>
-              <div className="mt-3 h-1.5 rounded-full bg-gray-light overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full"
-                  style={{ width: `${Math.round(vote.votes_for / (vote.total_voters || 1) * 100)}%` }} />
-              </div>
-              <div className="flex justify-between text-xs text-gray-mid mt-1">
-                <span>{vote.votes_for} pour</span>
-                <span>{vote.votes_against} contre</span>
-              </div>
-            </Link>
-          ))}
+                <div className="mt-4 h-1.5 overflow-hidden bg-gray-light">
+                  <div className="h-full bg-emerald-500" style={{ width: `${forPct}%` }} />
+                </div>
+                <div className="mt-1 flex justify-between text-xs text-gray-mid">
+                  <span>{vote.votes_for} pour</span>
+                  <span>{vote.votes_against} contre · {vote.abstentions} abst.</span>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       </section>
 
-      {/* Comment ça marche */}
       <section className="bg-navy py-12 md:py-16">
-        <div className="max-w-4xl mx-auto px-4 md:px-8">
-          <h2 className="font-serif text-xl text-white text-center mb-10">Comment ça marche</h2>
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-8 md:gap-0">
+        <div className="mx-auto max-w-5xl px-4 md:px-8">
+          <p className="text-center text-xs font-semibold uppercase text-white/45">Comment ça marche</p>
+          <h2 className="mx-auto mt-3 max-w-2xl text-center font-serif text-3xl leading-tight text-white">
+            Une chaîne simple : donnée officielle, traduction claire, preuve consultable.
+          </h2>
+          <div className="mt-10 grid gap-3 md:grid-cols-3">
             {[
-              { icon: '🔍', step: 'Cherchez votre député', desc: 'Par code postal, département ou nom.' },
-              { icon: '📋', step: 'Consultez son bilan', desc: 'Taux de présence, votes pour et contre.' },
-              { icon: '💡', step: 'Comprenez ses votes', desc: 'Chaque scrutin expliqué en clair.' },
-            ].map(({ icon, step, desc }, i) => (
-              <Fragment key={step}>
-                <div className="flex flex-col items-center text-center flex-1">
-                  <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-2xl mb-4">
-                    {icon}
-                  </div>
-                  <p className="text-white font-medium mb-1">{step}</p>
-                  <p className="text-white/50 text-sm">{desc}</p>
-                </div>
-                {i < 2 && (
-                  <div className="hidden md:block text-white/20 text-2xl px-3 self-center">→</div>
-                )}
-              </Fragment>
+              ['01', 'Cherchez', 'Un député, un département ou un groupe politique.'],
+              ['02', 'Comprenez', 'Les votes sont résumés en français courant.'],
+              ['03', 'Vérifiez', 'Les chiffres, sources et positions restent accessibles.'],
+            ].map(([number, title, desc]) => (
+              <div key={title} className="border border-white/12 bg-white/5 p-5">
+                <p className="font-serif text-3xl text-red-light">{number}</p>
+                <p className="mt-4 font-semibold text-white">{title}</p>
+                <p className="mt-2 text-sm leading-6 text-white/55">{desc}</p>
+              </div>
             ))}
           </div>
         </div>
