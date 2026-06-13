@@ -165,12 +165,9 @@ function CountUpNumber({
 
 function TrustRow({ lastUpdated }: { lastUpdated: string }) {
   return (
-    <div className="grid gap-2 text-xs font-semibold uppercase text-navy/52 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-px overflow-hidden border border-white/12 bg-white/12 text-xs font-semibold uppercase text-white/60 sm:grid-cols-2 lg:grid-cols-4">
       {TRUST_ITEMS.map((item, index) => (
-        <div
-          key={item}
-          className="border-l border-navy/12 bg-white/50 px-3 py-2 backdrop-blur-sm"
-        >
+        <div key={item} className="bg-navy/40 px-3 py-2.5 backdrop-blur-sm">
           <span>{index === 1 ? lastUpdated : item}</span>
         </div>
       ))}
@@ -206,8 +203,8 @@ function LiveAssemblyPulse({
       transition={{ duration: 0.7, delay: compact ? 0.18 : 0.42, ease: [0.22, 1, 0.36, 1] }}
       className={
         compact
-          ? 'border border-navy/10 bg-white/82 p-4 text-navy shadow-xl shadow-navy/10 backdrop-blur-md'
-          : 'border border-white/16 bg-navy/82 p-5 text-white shadow-2xl shadow-navy/25 backdrop-blur-md'
+          ? 'border border-navy/10 bg-white/90 p-4 text-navy shadow-2xl shadow-navy/12 backdrop-blur-md'
+          : 'border border-white/14 bg-navy/88 p-5 text-white shadow-2xl shadow-black/40 backdrop-blur-xl'
       }
     >
       <div className="flex items-start justify-between gap-4 border-b border-current/10 pb-4">
@@ -219,7 +216,7 @@ function LiveAssemblyPulse({
           aria-hidden="true"
           animate={reduceMotion ? undefined : { scale: [1, 1.3, 1], opacity: [1, 0.72, 1] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-          className="mt-1 h-2.5 w-2.5 rounded-full bg-red-civic shadow-[0_0_0_6px_rgba(201,48,44,0.18)]"
+          className="mt-1 h-2.5 w-2.5 rounded-full bg-red-civic shadow-[0_0_0_5px_rgba(201,48,44,0.22),0_0_12px_rgba(201,48,44,0.35)]"
         />
       </div>
 
@@ -351,15 +348,32 @@ function HomeHero({ stats, leadVote }: HomeScrollStoryProps) {
   const reduceMotion = useReducedMotion()
 
   return (
-    <section className="relative isolate overflow-hidden bg-gray-off">
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,#F8F7F4_0%,rgba(248,247,244,0.94)_42%,rgba(13,31,60,0.20)_72%,rgba(13,31,60,0.84)_100%)]" />
-      <div className="mx-auto grid min-h-[calc(100svh-4rem)] max-w-7xl items-center gap-8 px-4 py-8 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.76fr)] md:px-8 lg:px-12">
-        <div className="relative z-10 max-w-3xl pt-4 md:pt-8">
+    <section className="relative isolate overflow-hidden bg-navy text-white">
+      {/* Full-bleed assembly image — the dark act opens here and runs through the scroll story */}
+      <div className="absolute inset-0">
+        <Image
+          src="/assemblee_nationale.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        {/* Left-weighted scrim for headline legibility, image stays readable on the right */}
+        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(9,21,44,0.97)_0%,rgba(9,21,44,0.9)_34%,rgba(11,26,52,0.56)_64%,rgba(11,26,52,0.74)_100%)]" />
+        {/* Vertical grounding — fades to deep navy at the base so it melts into the scroll story */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,21,44,0.5)_0%,transparent_22%,transparent_55%,rgba(13,31,60,0.86)_82%,#0D1F3C_100%)]" />
+        {/* Soft spotlight on the dome */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_74%_28%,rgba(255,255,255,0.16),transparent_42%)]" />
+      </div>
+
+      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-4rem)] max-w-7xl items-center gap-10 px-4 py-12 md:grid-cols-[1.06fr_0.94fr] md:gap-12 md:px-8 lg:px-12">
+        <div className="max-w-2xl">
           <motion.p
             initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            className="inline-flex items-center gap-2 border-l-2 border-red-civic pl-3 text-xs font-semibold uppercase text-red-civic"
+            className="inline-flex items-center gap-2 border-l-2 border-red-civic pl-3 text-xs font-semibold uppercase tracking-wide text-red-light"
           >
             Plateforme civique
           </motion.p>
@@ -367,15 +381,16 @@ function HomeHero({ stats, leadVote }: HomeScrollStoryProps) {
             initial={reduceMotion ? false : { opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.72, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-6 max-w-[11ch] font-serif text-5xl font-normal leading-[0.94] text-navy md:max-w-4xl md:text-7xl lg:text-8xl"
+            className="mt-6 max-w-[12ch] font-serif text-5xl font-normal leading-[0.94] tracking-tight text-white md:text-7xl lg:text-[5.25rem]"
           >
-            La vie politique française, enfin lisible.
+            La vie politique française,{' '}
+            <span className="text-red-light">enfin lisible.</span>
           </motion.h1>
           <motion.p
             initial={reduceMotion ? false : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.68, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-5 max-w-2xl text-lg leading-8 text-navy/70 md:text-xl"
+            className="mt-6 max-w-xl text-lg leading-8 text-white/72 md:text-xl"
           >
             Tous les votes. Tous les députés. Des explications claires. Des sources
             officielles.
@@ -385,7 +400,7 @@ function HomeHero({ stats, leadVote }: HomeScrollStoryProps) {
             initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-8 max-w-2xl"
+            className="mt-8 max-w-xl"
           >
             <HeroSearch
               id="home-hero-search"
@@ -400,12 +415,12 @@ function HomeHero({ stats, leadVote }: HomeScrollStoryProps) {
             transition={{ duration: 0.6, delay: 0.36, ease: [0.22, 1, 0.36, 1] }}
             className="mt-5 flex flex-wrap items-center gap-2 text-sm"
           >
-            <span className="text-navy/48">Populaire</span>
+            <span className="text-white/55">Populaire</span>
             {POPULAR_SEARCHES.map(chip => (
               <Link
                 key={chip.label}
                 href={chip.href}
-                className="border border-navy/12 bg-white/72 px-3 py-1.5 font-medium text-navy transition-colors hover:border-navy/35 hover:bg-white"
+                className="border border-white/18 bg-white/10 px-3 py-1.5 font-medium text-white/90 backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-white/20"
               >
                 {chip.label}
               </Link>
@@ -416,22 +431,26 @@ function HomeHero({ stats, leadVote }: HomeScrollStoryProps) {
             initial={reduceMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.44, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-7 hidden max-w-3xl md:block"
+            className="mt-8 hidden max-w-2xl md:block"
           >
             <TrustRow lastUpdated={stats.lastUpdated} />
           </motion.div>
         </div>
 
-        <div className="relative z-10 space-y-4 md:self-center">
-          <div className="md:hidden">
-            <LiveAssemblyPulse stats={stats} leadVote={leadVote} compact />
-          </div>
-          <AssemblyChamberVisual className="h-[280px] md:h-[600px]" showCaption={false} />
-          <div className="hidden md:absolute md:bottom-8 md:left-8 md:right-8 md:z-20 md:block">
-            <LiveAssemblyPulse stats={stats} leadVote={leadVote} />
-          </div>
+        <div className="w-full md:max-w-md md:justify-self-end md:self-center">
+          <LiveAssemblyPulse stats={stats} leadVote={leadVote} />
         </div>
       </div>
+
+      {/* Scroll cue */}
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.7 }}
+        className="pointer-events-none absolute inset-x-0 bottom-5 z-10 hidden justify-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45 md:flex"
+      >
+        Faites défiler
+      </motion.div>
     </section>
   )
 }
@@ -476,7 +495,7 @@ function AssemblyScrollStory() {
                 <p className="border-l-2 border-red-civic pl-3 text-xs font-semibold uppercase text-red-light">
                   {activeStep.eyebrow}
                 </p>
-                <h2 className="mt-5 max-w-xl font-serif text-4xl leading-[1.06] text-white lg:text-5xl">
+                <h2 className="mt-5 max-w-xl font-serif text-4xl leading-[1.06] tracking-tight text-white lg:text-5xl">
                   {activeStep.title}
                 </h2>
                 <p className="mt-5 max-w-md text-lg leading-8 text-white/62">
@@ -493,8 +512,9 @@ function AssemblyScrollStory() {
               dotOpacity={dotOpacity}
             />
           </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(180deg,rgba(13,31,60,0),#F8F7F4)]" />
         </div>
+        {/* Exit gradient — outside sticky so it stays at the physical bottom of the scroll section */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-gradient-to-b from-navy/0 via-navy/60 to-gray-off" />
       </section>
 
       <section className="bg-navy px-4 py-12 text-white md:hidden">
@@ -520,10 +540,10 @@ function VoteDotsVisualization({ compact = false }: { compact?: boolean }) {
 
   return (
     <figure
-      className="relative h-[340px] overflow-hidden border border-gray-border bg-white md:h-[440px] lg:h-[520px]"
+      className="relative h-[340px] overflow-hidden bg-[#F4F3F0] ring-1 ring-navy/8 shadow-xl shadow-navy/6 md:h-[440px] lg:h-[520px]"
       aria-label="Visualisation schématique d'un scrutin: 289 pour, 223 contre, 58 abstentions et 27 non votants."
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_88%,rgba(13,31,60,0.08),transparent_42%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_95%,rgba(13,31,60,0.13),transparent_60%)]" />
       <div aria-hidden="true" className="absolute inset-[7%]">
         {visibleDots.map((dot, index) => (
           <motion.span
@@ -545,7 +565,7 @@ function VoteDotsVisualization({ compact = false }: { compact?: boolean }) {
         Exemple de scrutin: 597 positions individuelles réparties entre pour, contre,
         abstention et non votant.
       </figcaption>
-      <div className="absolute inset-x-0 bottom-0 border-t border-gray-border bg-gray-off/88 px-5 py-4 backdrop-blur-sm">
+      <div className="absolute inset-x-0 bottom-0 border-t border-navy/8 bg-white/80 px-5 py-4 backdrop-blur-md">
         <p className="text-xs font-semibold uppercase text-navy/44">Complexité convertie</p>
         <p className="mt-1 text-sm leading-6 text-navy/66">
           Une position individuelle devient un point lisible, comparable, sourcé.
@@ -565,7 +585,7 @@ function VotePositionsSection() {
   ]
 
   return (
-    <section className="relative bg-gray-off px-4 py-16 md:px-8 md:py-20 lg:px-12">
+    <section className="relative -mt-20 bg-gray-off px-4 pb-16 pt-24 md:px-8 md:pb-20 md:pt-28 lg:px-12">
       <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.74fr_1.26fr] lg:items-center">
         <div className="lg:pr-4">
           <motion.p
