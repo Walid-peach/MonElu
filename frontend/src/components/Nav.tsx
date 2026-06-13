@@ -10,8 +10,9 @@ export function Nav() {
       <div className="flex items-center gap-8 text-sm font-medium text-gray-mid">
         <Link href="/deputes" className="hover:text-navy transition-colors">Députés</Link>
         <Link href="/votes" className="hover:text-navy transition-colors">Votes</Link>
+        <Link href="/votes" className="hover:text-navy transition-colors">Explorer</Link>
         <Link href="/chat" className="hover:text-navy transition-colors">Chat IA</Link>
-        <Link href="/about" className="hover:text-navy transition-colors">À propos</Link>
+        <Link href="/#methodologie" className="hover:text-navy transition-colors">Méthodologie</Link>
       </div>
       <a href="https://monelu-production.up.railway.app/docs"
         target="_blank"

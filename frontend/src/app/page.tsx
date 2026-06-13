@@ -4,7 +4,7 @@ import { formatDate } from '@/lib/utils'
 import { ShareButton } from '@/components/ShareButton'
 import { ChatRedirectInput } from '@/components/ChatRedirectInput'
 import { UserBubble, AssistantBubble } from '@/components/chat/Bubbles'
-import { HomeScrollStory } from '@/components/home/HomeScrollStory'
+import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
 
 const EXAMPLE_RESULT: SearchResult = {
   answer:
@@ -85,6 +85,7 @@ export default async function Home() {
 
   const pulseVote = {
     title: leadVote?.summary_plain || leadVote?.vote_title || 'Réforme énergétique',
+    result: leadVote ? resultLabel(leadVote.result) : 'Adopté',
     votesFor: leadVote?.votes_for ?? 289,
     votesAgainst: leadVote?.votes_against ?? 223,
     abstentions: leadVote?.abstentions ?? 58,
@@ -93,7 +94,7 @@ export default async function Home() {
 
   return (
     <div className="overflow-x-clip bg-gray-off">
-      <HomeScrollStory stats={homeStats} leadVote={pulseVote} />
+      <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} />
 
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[0.82fr_1fr] md:px-8 lg:px-12">
         <div>
@@ -182,7 +183,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="bg-navy py-12 md:py-16">
+      <section id="methodologie" className="bg-navy py-12 md:py-16">
         <div className="mx-auto max-w-5xl px-4 md:px-8">
           <p className="text-center text-xs font-semibold uppercase text-white/45">Comment ça marche</p>
           <h2 className="mx-auto mt-3 max-w-2xl text-center font-serif text-3xl leading-tight text-white">
