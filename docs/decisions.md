@@ -392,6 +392,30 @@ invent a fourth definition.
 
 ---
 
+## ADR-020 — Railway/dbt deploy ordering is a known race, not a bug
+**Date:** 2026-06-13
+**Status:** Final — documented constraint
+
+**Decision:** On merge to `master`, Railway auto-deploys the API and `deploy.yml`
+runs dbt concurrently, with no coordination between them. Railway is typically
+faster. This race is accepted at current scale.
+
+**Reason:** At current scale (two small mart tables, no column additions under active
+development), the window where the API queries pre-deploy marts is seconds long and
+causes only graceful degradation (`/health` degrades, routers return stale counts —
+no crash). Sequencing the Railway deploy after dbt would require maintaining a
+Railway deploy webhook and adds operational complexity that isn't justified today.
+
+**Constraint:** Any PR that adds a new mart column the API reads must either:
+1. Be backward-compatible (API reads the column with a fallback) so the pre-dbt
+   window doesn't break anything; or
+2. Trigger the Railway deploy explicitly from `deploy.yml` using the Railway deploy
+   hook — revisit this ADR at that point.
+
+Do not assume dbt has run before the API starts serving a new deployment.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
