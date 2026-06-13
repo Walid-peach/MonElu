@@ -36,7 +36,7 @@ jobs:
           pip install ruff
 
       - name: Secret scanning
-        run: detect-secrets scan --baseline .secrets.baseline
+        run: detect-secrets-hook --baseline .secrets.baseline $(git ls-files)
 
       - name: Lint with ruff
         run: ruff check .
@@ -113,14 +113,14 @@ jobs:
             const body = `${marker}\n## 🧪 dbt data-health check — ${status}\n\`\`\`\n${output}\n\`\`\`\n_Validates prod data health. A failure means current prod data is stale/broken, not necessarily that this PR is wrong._`;
             const existing = existingComments.data.find(c => c.body.includes(marker));
             if (existing) {
-              github.rest.issues.updateComment({
+              await github.rest.issues.updateComment({
                 comment_id: existing.id,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 body,
               });
             } else {
-              github.rest.issues.createComment({
+              await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
