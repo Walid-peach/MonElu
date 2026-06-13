@@ -3,9 +3,6 @@ rag/pipeline/embedder.py
 
 Embeds text chunks via OpenAI text-embedding-3-small and stores them in
 document_chunks (pgvector on Supabase / local Postgres).
-
-Assumes the table is empty before calling embed_and_store — callers are
-responsible for truncating first (index_manager.build_index does this).
 """
 
 import os
@@ -42,8 +39,6 @@ def _embed_batch(client: OpenAI, texts: list[str], max_retries: int = 3):
                 time.sleep(wait)
             else:
                 raise
-        except Exception:
-            raise
 
 
 def embed_and_store(chunks: list[dict], batch_size: int = 100) -> None:

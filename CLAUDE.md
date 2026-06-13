@@ -40,7 +40,7 @@ Production API: https://monelu-production.up.railway.app
 | RAG inference | Groq `llama-3.3-70b-versatile` | temperature=0.2; free tier, faster than OpenAI |
 | Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
 | CI/CD | GitHub Actions (5 workflows) | See Workflows section |
-| Experiment tracking | MLflow (local) | k=3 vs k=5 retrieval eval; baseline score 0.58 |
+| Experiment tracking | MLflow (local) | router suite + retrieval suite eval (11 questions total) |
 | IaC | Terraform ~> 5.0 (AWS, validate-only) | `infra/` — not applied |
 
 ---
@@ -128,12 +128,12 @@ Assemblée Nationale Open Data (ZIPs)
 
 **`rag/`** — Phase 2 semantic search
 - `pipeline/chunker.py`: Five chunk strategies: `vote` (one per scrutin), `deputy` (one per député), `party` (one per parliamentary group), `global_stats` (aggregate overview), `notable_deputy` (vote-by-vote for high-profile deputies). Uses tiktoken (cl100k_base) for token counting.
-- `pipeline/embedder.py`: Batched OpenAI embedding (100 chunks/batch), stores into `document_chunks`. Assumes table is empty — callers must truncate first.
-- `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` always truncates before embedding.
-- `chain/retriever.py`: Cosine similarity via pgvector `<=>`. Supports `chunk_type`, `deputy_id`, and auto-detected `result` filters (`adopté`/`rejeté`). Notable deputy names (Attal, Le Pen) are detected and their chunk pinned as the first result, bypassing IVFFlat recall gaps. `ivfflat.probes=10` is set per query. Note: `register_vector` requires a plain psycopg2 cursor, not a `RealDictCursor`.
-- `chain/prompts.py`: French civic assistant system prompt + RAG context template
+- `pipeline/embedder.py`: Batched OpenAI embedding (100 chunks/batch), stores into `document_chunks`.
+- `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` always truncates before embedding (full rebuild, ~$0.006/run).
+- `chain/retriever.py`: Exact cosine similarity via pgvector `<=>`. Supports `chunk_type`, `deputy_id`, and auto-detected `result` filters (`adopté`/`rejeté`). Notable deputy names detected and their chunk pinned as first result. TTL-cached notable-deputy map (1h). Note: `register_vector` requires a plain psycopg2 cursor, not a `RealDictCursor`.
+- `chain/prompts.py`: TTL-cached system prompt (data horizon refreshed hourly) via `build_system_prompt()`. Call per request — do not cache the return value.
 - `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `llama-3.3-70b-versatile` (temperature=0.2)
-- `experiments/mlflow_eval.py`: 10 golden Q&A pairs, keyword scoring, k=3 vs k=5 MLflow experiment. Baseline score: 0.58.
+- `experiments/mlflow_eval.py`: 11 golden Q&A pairs split into router suite (live SQL ground truth) and retrieval suite (keyword scoring).
 - 3,741 chunks in production: 3,149 vote + 577 deputy + 12 party + 1 global_stats + 2 notable_deputy · avg 87 tokens · $0.0065 to embed
 
 **`infra/`** — Terraform IaC (validate-only)

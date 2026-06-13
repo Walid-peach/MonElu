@@ -15,6 +15,8 @@ import psycopg2.extras
 import psycopg2.pool
 from dotenv import load_dotenv
 
+from rag.constants import NOTABLE_DEPUTY_NAMES
+
 load_dotenv()
 
 log = logging.getLogger(__name__)
@@ -308,11 +310,26 @@ FORMATTERS = {
 }
 
 
+_DEPUTY_NAME_INTENTS = {"vote_total_count", "vote_result_count"}
+
+
+def _has_notable_deputy(question: str) -> bool:
+    """Return True if a notable deputy keyword appears in the question."""
+    q_lower = question.lower()
+    for kw in NOTABLE_DEPUTY_NAMES:
+        if len(kw) >= 3 and re.search(r"\b" + re.escape(kw) + r"\b", q_lower):
+            return True
+    return False
+
+
 def detect_intent(question: str) -> str | None:
     """Return intent key if question matches an aggregation pattern."""
     q = normalize_text(question)
     for pattern, intent in PATTERNS:
         if re.search(pattern, q):
+            # Don't let global-aggregate patterns swallow deputy-specific questions
+            if intent in _DEPUTY_NAME_INTENTS and _has_notable_deputy(question):
+                return None
             return intent
     return None
 

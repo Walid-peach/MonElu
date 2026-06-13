@@ -60,7 +60,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: python -m rag.pipeline.index_manager build --since $(python3 -c "from datetime import date, timedelta; print(date.today() - timedelta(days=30))")
+        run: python -m rag.pipeline.index_manager build
 
       # dbt install + profile run unconditionally: snapshots and source
       # freshness below must run even on no-new-votes days (freshness exists
