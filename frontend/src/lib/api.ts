@@ -76,13 +76,13 @@ export type SearchResult = {
   sources: Array<{ content: string; metadata: Record<string, string>; similarity: number }>
 }
 
-async function apiFetch<T>(path: string): Promise<T> {
+async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promise<T> {
   const delays = [200, 400]
   let lastStatus = 0
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     const res = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
-      next: { revalidate: 300 },
+      next: { revalidate: opts?.revalidate ?? 300 },
     })
     if (res.ok) return res.json()
     lastStatus = res.status
@@ -90,6 +90,16 @@ async function apiFetch<T>(path: string): Promise<T> {
     await new Promise(r => setTimeout(r, delays[attempt]))
   }
   throw new Error(`API error: ${lastStatus}`)
+}
+
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
 }
 
 export const api = {
@@ -102,14 +112,15 @@ export const api = {
       if (params?.limit) q.set('limit', String(params.limit))
       if (params?.offset) q.set('offset', String(params.offset))
       return apiFetch<{ total: number; items: Deputy[]; limit: number; offset: number }>(
-        `/deputies/?${q}`
+        `/deputies/?${q}`,
+        { revalidate: 900 }
       )
     },
-    get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`),
-    scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`),
-    stats: () => apiFetch<DeputyStats>('/deputies/stats/'),
+    get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`, { revalidate: 86400 }),
+    scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`, { revalidate: 86400 }),
+    stats: () => apiFetch<DeputyStats>('/deputies/stats/', { revalidate: 3600 }),
     votes: (id: string, limit = 10) =>
-      apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?limit=${limit}`),
+      apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?limit=${limit}`, { revalidate: 86400 }),
   },
   votes: {
     list: (params?: { result?: string; theme?: string; limit?: number; offset?: number }) => {
@@ -119,20 +130,13 @@ export const api = {
       if (params?.limit) q.set('limit', String(params.limit))
       if (params?.offset) q.set('offset', String(params.offset))
       return apiFetch<{ total: number; items: Vote[]; limit: number; offset: number }>(
-        `/votes/?${q}`
+        `/votes/?${q}`,
+        { revalidate: 900 }
       )
     },
-    latest: () => apiFetch<Vote[]>('/votes/latest/'),
-    get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`),
+    latest: () => apiFetch<Vote[]>('/votes/latest/', { revalidate: 300 }),
+    get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`, { revalidate: 86400 }),
   },
-  search: (question: string) =>
-    fetch(`${API_BASE}/search/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
-    }).then(r => {
-      if (!r.ok) throw new Error(`API error: ${r.status}`)
-      return r.json() as Promise<SearchResult>
-    }),
-  health: () => apiFetch<Record<string, unknown>>('/health/'),
+  search: (question: string) => apiPost<SearchResult>('/search/', { question }),
+  health: () => apiFetch<Record<string, unknown>>('/health/', { revalidate: 300 }),
 }

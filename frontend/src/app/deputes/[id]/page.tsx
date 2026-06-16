@@ -33,26 +33,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-export async function generateStaticParams() {
-  try {
-    const first = await api.deputies.list({ limit: 200, offset: 0 })
-    const total = first.total
-    const items = [...first.items]
-    if (total > 200) {
-      const pages = Math.ceil((total - 200) / 200)
-      const rest = await Promise.all(
-        Array.from({ length: pages }, (_, i) =>
-          api.deputies.list({ limit: 200, offset: 200 + i * 200 })
-        )
-      )
-      items.push(...rest.flatMap(r => r.items))
-    }
-    return items.map(d => ({ id: d.deputy_id }))
-  } catch {
-    return []
-  }
-}
-
 const POSITION_LABEL: Record<string, string> = {
   pour: 'Pour',
   contre: 'Contre',
