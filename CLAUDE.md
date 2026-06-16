@@ -22,8 +22,8 @@ Production API: https://monelu-production.up.railway.app
 | Phase 2 | Live | Semantic search — RAG over the legislative corpus (pgvector + Groq) |
 | Phase 3 | Live | Automated refresh — GitHub Actions cron ingestion + RAG re-index (daily, weekdays) |
 | Phase 4 | Live | dbt transform layer — staging → intermediate → marts; lineage docs on GitHub Pages |
-| Phase 5 | Deferred | AWS infrastructure — Terraform IaC written and validate-passing (`infra/`) but not applied. Managed services (Railway + Supabase) cover current load; AWS migration deferred until scale justifies the ops overhead. Kafka removed entirely — streaming is not needed at current ingestion cadence. |
-| Phase 6 | Live | CI/CD — PR gates (ruff, pytest, dbt test bot), deploy workflow, Terraform validate in CI |
+| Phase 5 | Deferred | AWS infrastructure — Terraform IaC was written and validate-passing but modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app; archived to `archive/infra-aws/` (MON-46). Managed services (Railway + Supabase) cover current load; a real AWS migration would start fresh with a state backend and an App Runner/ECS module. |
+| Phase 6 | Live | CI/CD — PR gates (ruff, pytest, dbt test bot), deploy workflow |
 
 ---
 
@@ -39,9 +39,9 @@ Production API: https://monelu-production.up.railway.app
 | RAG embeddings | OpenAI `text-embedding-3-small` | 1 536 dimensions, ~$0.006 per full re-index |
 | RAG inference | Groq `llama-3.3-70b-versatile` | temperature=0.2; free tier, faster than OpenAI |
 | Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
-| CI/CD | GitHub Actions (5 workflows) | See Workflows section |
+| CI/CD | GitHub Actions (4 workflows) | See Workflows section |
 | Experiment tracking | MLflow (local) | router suite + retrieval suite eval (11 questions total) |
-| IaC | Terraform ~> 5.0 (AWS, validate-only) | `infra/` — not applied |
+| IaC | Terraform ~> 5.0 (AWS, archived) | `archive/infra-aws/` — not applied, kept as reference |
 
 ---
 
@@ -77,9 +77,6 @@ make mlflow-ui      # Open MLflow UI at http://localhost:5001
 ruff check .        # Lint
 ruff format .       # Format
 pre-commit run --all-files  # Run all hooks
-
-# Terraform (validate-only — no AWS account required)
-cd infra && terraform init -backend=false && terraform validate
 ```
 
 ---
@@ -105,7 +102,6 @@ Assemblée Nationale Open Data (ZIPs)
 | `deploy.yml` | Merge to `master` | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index |
 | `dbt_docs.yml` | Push to `master` touching `transform/` | Generate + deploy lineage docs to GitHub Pages |
-| `terraform.yml` | PRs touching `infra/` | terraform fmt + init + validate (no credentials) |
 
 ### Key Layers
 
@@ -136,10 +132,9 @@ Assemblée Nationale Open Data (ZIPs)
 - `experiments/mlflow_eval.py`: 11 golden Q&A pairs split into router suite (live SQL ground truth) and retrieval suite (keyword scoring).
 - 3,741 chunks in production: 3,149 vote + 577 deputy + 12 party + 1 global_stats + 2 notable_deputy · avg 87 tokens · $0.0065 to embed
 
-**`infra/`** — Terraform IaC (validate-only)
-- AWS stack defined in four modules: `networking` (VPC, subnets, IGW, NAT, security groups), `s3` (bronze/silver/gold/artifacts), `rds` (PostgreSQL 15 + pgvector), `ec2` (Airflow + Spark)
-- Passes `terraform validate` and `terraform fmt -check` without AWS credentials
-- Not applied — see Phase 5 in the decisions log
+**`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
+- Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
+- `networking`, `s3`, `rds` modules are the only parts worth salvaging if an AWS migration ever happens; `ec2` does not survive that design.
 
 **`data/migrations/001_init.sql`** — Full schema
 - Four tables: `deputies`, `votes`, `vote_positions`, `document_chunks`
@@ -218,7 +213,7 @@ Key architectural choices made during the build and why. Consult this before pro
 
 **Decision:** Host on Railway (API) + Supabase (PostgreSQL) rather than provisioning EC2 + RDS.
 
-**Why:** Zero ops overhead. Railway auto-deploys on push, handles TLS and routing. Supabase provides managed PostgreSQL 15 with pgvector pre-installed and a generous free tier. At current scale (577 deputies, ~1 200 votes, ~715 k positions) there is no load that justifies the complexity and cost of a self-managed AWS stack. Terraform IaC is written and validate-passing in `infra/` for the day scale demands it, but it is explicitly not applied.
+**Why:** Zero ops overhead. Railway auto-deploys on push, handles TLS and routing. Supabase provides managed PostgreSQL 15 with pgvector pre-installed and a generous free tier. At current scale (577 deputies, ~1 200 votes, ~715 k positions) there is no load that justifies the complexity and cost of a self-managed AWS stack. The original Terraform IaC modeled an Airflow+Spark architecture that was never built and was archived to `archive/infra-aws/`; a real AWS migration would start fresh with a state backend and an App Runner/ECS module for the FastAPI app.
 
 ### 2. No ORM — direct psycopg2
 

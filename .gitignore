@@ -57,13 +57,13 @@ mlruns/
 # Airflow runtime logs and symlinks
 logs/
 
-# Terraform — keep tfvars.example tracked, ignore everything else
-infra/.terraform/
-infra/.terraform.lock.hcl
-infra/*.tfstate
-infra/*.tfstate.*
-infra/terraform.tfvars
-infra/.terraform.tfstate.lock.info
+# Terraform (archived AWS IaC) — keep tfvars.example tracked, ignore everything else
+archive/infra-aws/.terraform/
+archive/infra-aws/.terraform.lock.hcl
+archive/infra-aws/*.tfstate
+archive/infra-aws/*.tfstate.*
+archive/infra-aws/terraform.tfvars
+archive/infra-aws/.terraform.tfstate.lock.info
 
 # Frontend (Next.js)
 frontend/.next/

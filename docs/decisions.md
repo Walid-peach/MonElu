@@ -80,7 +80,7 @@ GitHub Actions                 ← Free
 
 ## ADR-004 — Terraform validate-only (no apply)
 **Date:** Phase 6A
-**Status:** Final for portfolio phase
+**Status:** Superseded by ADR-021 (infra/ archived)
 
 **Decision:** Terraform IaC is written and validated but never applied.
 `terraform apply` is explicitly not run.
@@ -416,12 +416,39 @@ Do not assume dbt has run before the API starts serving a new deployment.
 
 ---
 
+## ADR-021 — infra/ archived (MON-46)
+**Date:** 2026-06-16
+**Status:** Final
+
+**Decision:** The Terraform IaC moved from `infra/` to `archive/infra-aws/`.
+The `terraform.yml` CI workflow was deleted. This supersedes ADR-004.
+
+**Reason:** The diagnostic audit (infra axis, 2026-06-11) found the stack was
+well-written and validate-clean but blueprinted the wrong system: an
+Airflow+Spark data platform ADR-001 explicitly decided not to build, with no
+compute module for the actual FastAPI app. If applied, it would produce a
+~$250/mo VPC, four empty buckets, and a blank Postgres serving nothing.
+Keeping it validate-only (ADR-004) cost nothing in CI but kept a fourth
+deployment story alive that contradicted Railway + Supabase — every future
+session reading CLAUDE.md or this file paid a small tax parsing it.
+
+**What's salvageable:** `networking`, `s3`, and `rds` modules are kept as
+reference in the archive — roughly 40% of the stack. The `ec2` module
+(Airflow/Spark hosts) does not survive a real migration design and should be
+rewritten from scratch.
+
+**Future:** If an AWS migration becomes real, start with a state backend
+(none exists today, not even commented) and an App Runner/ECS module for the
+FastAPI app — a different module set than what's archived here.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
 2. If a prompt contradicts a decision here — flag it, don't build it
 3. Kafka is not part of this project (ADR-001, ADR-005)
 4. Airflow is local only (ADR-006) — do not write Railway/cloud Airflow config
-5. Terraform is validate-only (ADR-004) — do not add terraform apply steps
+5. Terraform IaC is archived, not live (ADR-004, ADR-021) — do not add terraform apply steps or resurrect infra/
 6. Phase 5 alerts are deferred (ADR-002) — do not build email dispatch
 7. When in doubt: check what's actually deployed before writing new code
