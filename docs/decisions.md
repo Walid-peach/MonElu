@@ -80,7 +80,7 @@ GitHub Actions                 ← Free
 
 ## ADR-004 — Terraform validate-only (no apply)
 **Date:** Phase 6A
-**Status:** Superseded by ADR-013 (infra/ archived)
+**Status:** Superseded by ADR-021 (infra/ archived)
 
 **Decision:** Terraform IaC is written and validated but never applied.
 `terraform apply` is explicitly not run.
