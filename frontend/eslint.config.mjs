@@ -5,8 +5,11 @@ import { FlatCompat } from '@eslint/eslintrc'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const compat = new FlatCompat({ baseDirectory: __dirname })
-
-export default compat.config({
-  extends: ['next/core-web-vitals', 'next/typescript'],
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+  recommendedConfig: {},
 })
+
+const config = compat.extends('next/core-web-vitals')
+
+export default config
