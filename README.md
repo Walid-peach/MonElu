@@ -21,8 +21,8 @@ MonÉlu is a civic transparency platform that makes the voting record of every d
 | **Phase 2** — Intelligence layer | **Live** | Semantic search over the legislative corpus (RAG, pgvector, Groq LLM) |
 | **Phase 3** — Automated refresh | **Live** | GitHub Actions daily cron — ingest + dbt run + RAG re-index |
 | **Phase 4** — dbt transformation layer | **Live** | Staging → intermediate → marts; lineage docs on GitHub Pages |
-| **Phase 5** — AWS infrastructure | **Deferred** | Terraform IaC written and validate-passing in `infra/`; not applied — Railway + Supabase cover current load |
-| **Phase 6** — CI/CD | **Live** | PR gates (ruff, pytest, dbt test bot), deploy workflow, Terraform validate |
+| **Phase 5** — AWS infrastructure | **Deferred** | Terraform IaC archived to `archive/infra-aws/` — modeled an architecture never built; Railway + Supabase cover current load |
+| **Phase 6** — CI/CD | **Live** | PR gates (ruff, pytest, dbt test bot), deploy workflow |
 
 ---
 
@@ -185,7 +185,6 @@ Required GitHub secrets: `DBT_HOST` · `DBT_PORT` · `DBT_USER` · `DBT_PASSWORD
 | `deploy.yml` | Merge to `master` | dbt run + test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest votes + deputies + rebuild RAG index |
 | `dbt_docs.yml` | Push to `master` touching `transform/` | Deploy lineage docs to GitHub Pages |
-| `terraform.yml` | PRs touching `infra/` | terraform fmt + init + validate (no credentials needed) |
 
 All PRs must pass CI before merge — see [`docs/branch_protection.md`](docs/branch_protection.md).
 
@@ -213,23 +212,13 @@ Notable deputy pinning (Attal, Le Pen, etc.) bypasses IVFFlat for known deputy n
 
 ---
 
-## Infrastructure (Terraform — validate-only)
+## Infrastructure (archived)
 
-Full AWS stack defined as code in `infra/`. Not applied — see ADR-003 and ADR-004.
-
-| Module | Resources |
-|--------|-----------|
-| networking | VPC, 2 public + 2 private subnets, IGW, NAT gateway, 2 security groups |
-| s3 | 4 buckets: bronze, silver, gold, artifacts (versioned, encrypted, public access blocked) |
-| rds | PostgreSQL 15 + pgvector, 20 GB gp3, 7-day backups |
-| ec2 | Airflow + Spark instances (Ubuntu 24.04, Docker on boot, S3 IAM profile) |
-
-```bash
-cd infra
-terraform init -backend=false
-terraform validate
-# Success! The configuration is valid.
-```
+The AWS Terraform stack moved to `archive/infra-aws/` — it modeled an
+Airflow+Spark architecture that was never built, with no compute for the
+actual FastAPI app. See ADR-021. `networking`, `s3`, and `rds` modules are
+kept as reference for a future AWS migration; `ec2` does not survive that
+design.
 
 ---
 
