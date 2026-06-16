@@ -78,7 +78,8 @@ function ChatInner() {
               {CHAT_SUGGESTIONS.map(s => (
                 <button key={s}
                   onClick={() => send(s)}
-                  className="text-xs border border-gray-border rounded-full px-3 py-1.5 bg-white text-navy hover:border-navy/40 transition-colors">
+                  disabled={loading}
+                  className="text-xs border border-gray-border rounded-full px-3 py-1.5 bg-white text-navy hover:border-navy/40 transition-colors disabled:opacity-40">
                   {s}
                 </button>
               ))}
