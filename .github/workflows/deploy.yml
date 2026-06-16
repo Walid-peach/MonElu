@@ -40,6 +40,11 @@ jobs:
           dbt deps
           dbt snapshot --profiles-dir . --target prod
           dbt run --profiles-dir . --target prod
+
+      - name: Run dbt data-quality tests
+        continue-on-error: true
+        run: |
+          cd transform
           dbt test --profiles-dir . --target prod --threads 1
 
       - name: Deploy notification
