@@ -6,20 +6,6 @@ import { Deputy } from '@/lib/api'
 import { partyShort, partyColor } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 
-const PARTIES = [
-  'Rassemblement National',
-  'Ensemble pour la République',
-  'La France insoumise - Nouveau Front Populaire',
-  'Socialistes et apparentés',
-  'Droite Républicaine',
-  'Écologiste et Social',
-  'Les Démocrates',
-  'Horizons & Indépendants',
-  'Libertés, Indépendants, Outre-mer et Territoires',
-  'Union des droites pour la République',
-  'Gauche Démocrate et Républicaine',
-]
-
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 
 export function DeputiesClient({ initial }: { initial: DeputyList }) {
@@ -32,6 +18,11 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const [dept,  setDept]    = useState(() => searchParams.get('dept')   ?? '')
   const [sort,  setSort]    = useState(() => searchParams.get('sort')   ?? 'nom')
   const [filtersOpen, setFiltersOpen] = useState(false)
+
+  const parties = useMemo(
+    () => [...new Set(initial.items.map(d => d.party).filter(Boolean))].sort() as string[],
+    [initial.items]
+  )
 
   // Debounce search input
   const [debouncedSearch, setDebouncedSearch] = useState(search)
@@ -136,7 +127,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             className="w-full border border-gray-border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-navy"
           >
             <option value="">Tous les groupes</option>
-            {PARTIES.map(p => (
+            {parties.map(p => (
               <option key={p} value={p}>{partyShort(p)} — {p}</option>
             ))}
           </select>

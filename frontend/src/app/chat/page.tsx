@@ -45,8 +45,17 @@ function ChatInner() {
     try {
       const result = await api.search(q)
       setMessages(prev => [...prev, { role: 'assistant', result }])
-    } catch {
-      setMessages(prev => [...prev, { role: 'error', text: 'Erreur de connexion. Réessayez.' }])
+    } catch (err) {
+      const is429 = err instanceof Error && err.message.includes('429')
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'error',
+          text: is429
+            ? 'Trop de questions, patientez une minute.'
+            : 'Erreur de connexion. Réessayez.',
+        },
+      ])
     } finally {
       setLoading(false)
     }
@@ -69,7 +78,8 @@ function ChatInner() {
               {CHAT_SUGGESTIONS.map(s => (
                 <button key={s}
                   onClick={() => send(s)}
-                  className="text-xs border border-gray-border rounded-full px-3 py-1.5 bg-white text-navy hover:border-navy/40 transition-colors">
+                  disabled={loading}
+                  className="text-xs border border-gray-border rounded-full px-3 py-1.5 bg-white text-navy hover:border-navy/40 transition-colors disabled:opacity-40">
                   {s}
                 </button>
               ))}

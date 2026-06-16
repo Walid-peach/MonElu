@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import { formatDate, partyShort, partyColor } from '@/lib/utils'
+import { formatDate, partyShort, partyColor, groupVotesByParty } from '@/lib/utils'
 
 export const dynamicParams = true
 export const revalidate = 86400 // fallback if the /api/revalidate webhook is not called
@@ -126,12 +126,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
 
           {/* Party breakdown */}
           {(() => {
-            const partyMap: Record<string, Record<string, number>> = {}
-            for (const p of vote.positions ?? []) {
-              const party = p.party || 'Non inscrit'
-              if (!partyMap[party]) partyMap[party] = { pour: 0, contre: 0, abstention: 0, nonVotant: 0 }
-              partyMap[party][p.position] = (partyMap[party][p.position] || 0) + 1
-            }
+            const partyMap = groupVotesByParty(vote.positions ?? [])
             return (
               <div className="space-y-3">
                 {Object.entries(partyMap)
