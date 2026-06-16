@@ -45,8 +45,17 @@ function ChatInner() {
     try {
       const result = await api.search(q)
       setMessages(prev => [...prev, { role: 'assistant', result }])
-    } catch {
-      setMessages(prev => [...prev, { role: 'error', text: 'Erreur de connexion. Réessayez.' }])
+    } catch (err) {
+      const is429 = err instanceof Error && err.message.includes('429')
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'error',
+          text: is429
+            ? 'Trop de questions, patientez une minute.'
+            : 'Erreur de connexion. Réessayez.',
+        },
+      ])
     } finally {
       setLoading(false)
     }
