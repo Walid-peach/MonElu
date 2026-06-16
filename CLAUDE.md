@@ -194,9 +194,19 @@ Health check: `GET /health` — returns DB status, record counts, `last_ingestio
 
 Ruff is the single tool for lint and formatting (`ruff.toml`):
 - Line length: 100
-- `print()` allowed in `scripts/` and `rag/` (T201 ignored there), blocked elsewhere
+- `print()` allowed in `scripts/`, `rag/`, and `ingestion/` (T201 ignored there), blocked elsewhere
 - B008 ignored to allow FastAPI `Depends()` defaults
 - Pre-commit hooks run automatically on `git commit`
+
+### Dependency pinning convention
+
+Across `requirements*.txt`: exact-pin (`==`) packages with a history of breaking
+changes or where a newer version forced a downstream ceiling (e.g. `openai`,
+`tiktoken`, `pgvector`); range-pin (`>=`) everything else. The same package must
+use the same floor in every file it appears in (e.g. `groq>=0.11.0` everywhere) —
+a mismatched floor between `requirements.txt` and `requirements-ingest.txt` is a
+drift bug, not an intentional difference. No lockfiles are generated; each
+`requirements-*.txt` documents intent, not a fully resolved dependency graph.
 
 ---
 

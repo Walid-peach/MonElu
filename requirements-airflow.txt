@@ -1,0 +1,7 @@
+# Installed into the local Airflow image only — see Dockerfile.airflow.
+# Not part of the Railway/prod deploy; do not delete as "unused" without
+# checking Dockerfile.airflow first (PR #145 deleted this file once already
+# and broke the Airflow image build as a result).
+pandas==2.2.2
+boto3>=1.34.0
+great-expectations>=1.0,<2.0
