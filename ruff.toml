@@ -13,9 +13,9 @@ select = [
 ignore = [
     "E501", # line too long — handled by ruff-format
     "B008", # do not perform function calls in default args (FastAPI uses this pattern)
-    "T201", # print() allowed — scripts use it intentionally
 ]
 
 [lint.per-file-ignores]
-"scripts/*" = ["T201"]   # scripts print freely
-"rag/*"     = ["T201"]
+"scripts/*"   = ["T201"]   # scripts print freely
+"rag/*"       = ["T201"]
+"ingestion/*" = ["T201"]   # Airflow DAG path (Phase 5, deferred) — prints freely like scripts/

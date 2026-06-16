@@ -15,7 +15,7 @@ ingest:
 	venv/bin/python3 scripts/ingest_positions.py
 
 ingest-prod:
-	venv/bin/python3 scripts/run_ingestion_prod.py --since 2025-01-01
+	venv/bin/python3 scripts/run_ingestion_prod.py --since $$(python3 -c "from datetime import date, timedelta; print(date.today() - timedelta(days=90))")
 
 api:
 	venv/bin/uvicorn api.main:app --reload
