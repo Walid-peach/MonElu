@@ -32,6 +32,18 @@ export function partyShort(party: string | null): string {
 }
 
 
+export function groupVotesByParty(
+  positions: Array<{ party: string; position: string }>
+): Record<string, Record<string, number>> {
+  const map: Record<string, Record<string, number>> = {}
+  for (const p of positions) {
+    const party = p.party || 'Non inscrit'
+    if (!map[party]) map[party] = { pour: 0, contre: 0, abstention: 0, nonVotant: 0 }
+    map[party][p.position] = (map[party][p.position] || 0) + 1
+  }
+  return map
+}
+
 export function partyColor(party: string | null): string {
   if (!party) return 'bg-gray-100 text-gray-600'
   const map: Record<string, string> = {
