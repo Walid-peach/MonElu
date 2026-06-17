@@ -183,8 +183,8 @@ def test_detect_intent_no_match():
 
 
 def test_detect_intent_notable_deputy_blocks_vote_count():
-    """A vote-count question mentioning a notable deputy should NOT be routed."""
-    assert detect_intent("Combien de votes au total pour Mélenchon ?") is None
+    """A vote-count question mentioning a notable deputy (Attal, Le Pen) bypasses routing."""
+    assert detect_intent("Combien de votes au total pour Attal ?") is None
 
 
 # ---------------------------------------------------------------------------
