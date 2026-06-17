@@ -10,7 +10,11 @@ from api.main import app
 
 @pytest.fixture(scope="module")
 def client():
-    with patch("api.main.init_pool"), patch("api.main.close_pool"):
+    with (
+        patch("api.main.init_pool"),
+        patch("api.main.close_pool"),
+        patch("api.main._warm_sql_pool"),
+    ):
         with TestClient(app) as c:
             yield c
 

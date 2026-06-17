@@ -44,8 +44,8 @@ jobs:
       - name: Check formatting
         run: ruff format --check .
 
-      - name: Run unit tests
-        run: pytest tests/unit/ -v --tb=short
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
 
   frontend:
     runs-on: ubuntu-latest

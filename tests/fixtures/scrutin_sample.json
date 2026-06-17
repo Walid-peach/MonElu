@@ -1,0 +1,70 @@
+{
+  "scrutin": {
+    "uid": "VTANR5L17V1",
+    "dateScrutin": "2024-07-16",
+    "titre": "Vote sur le projet de loi de finances rectificative pour 2024",
+    "typeVote": {
+      "codeTypeVote": "SFS",
+      "libelleTypeVote": "Vote sur un texte"
+    },
+    "sort": {
+      "code": "adopté",
+      "libelle": "Adopté"
+    },
+    "syntheseVote": {
+      "nombreVotants": "539",
+      "decompte": {
+        "pour": "289",
+        "contre": "240",
+        "abstentions": "10"
+      }
+    },
+    "ventilationVotes": {
+      "organe": {
+        "groupes": {
+          "groupe": [
+            {
+              "organeRef": "PO800538",
+              "vote": {
+                "decompteNominatif": {
+                  "pours": {
+                    "votant": [
+                      {"acteurRef": "PA1"},
+                      {"acteurRef": "PA2"}
+                    ]
+                  },
+                  "contres": {
+                    "votant": {"acteurRef": "PA3"}
+                  },
+                  "abstentions": null,
+                  "nonVotants": {
+                    "votant": {"acteurRef": "PA4"}
+                  }
+                }
+              }
+            },
+            {
+              "organeRef": "PO800520",
+              "vote": {
+                "decompteNominatif": {
+                  "pours": null,
+                  "contres": {
+                    "votant": [
+                      {"acteurRef": "PA5"}
+                    ]
+                  },
+                  "abstentions": {
+                    "votant": [
+                      {"acteurRef": "PA6"}
+                    ]
+                  },
+                  "nonVotants": null
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -31,11 +31,12 @@ def _fake_groq_response(text: str) -> MagicMock:
 
 def test_ask_returns_required_keys():
     with (
+        patch("rag.chain.rag_chain.sql_route", return_value=None),
         patch("rag.chain.rag_chain.retrieve", return_value=_FAKE_CHUNKS),
         patch("rag.chain.rag_chain._groq_client") as mock_groq,
     ):
         mock_groq.chat.completions.create.return_value = _fake_groq_response("Réponse test.")
-        result = ask("Combien de députés appartiennent au RN ?")
+        result = ask("Quel est le bilan de Yaël Braun-Pivet ?")
 
     assert "answer" in result
     assert "sources" in result
@@ -62,7 +63,12 @@ def test_ask_propagates_groq_timeout():
 
 
 def _make_retriever_mocks(semantic_rows: list[dict]):
-    """Build (mock_openai_client, mock_psycopg2_conn) for use in retrieve() tests."""
+    """Build (mock_openai_client, mock_pool) for use in retrieve() tests.
+
+    Patches _openai_client (already created at import time, not the class),
+    get_notable_deputy_ids (bypasses DB for notable-deputy lookup),
+    and _get_retriever_pool (bypasses real connection pool creation).
+    """
     embedding_resp = MagicMock()
     embedding_resp.data = [MagicMock()]
     embedding_resp.data[0].embedding = [0.0] * 1536
@@ -73,13 +79,17 @@ def _make_retriever_mocks(semantic_rows: list[dict]):
     cursor = MagicMock()
     cursor.__enter__ = lambda s: s
     cursor.__exit__ = MagicMock(return_value=False)
-    # First fetchall: notable-deputy pinned chunk (empty) — second: semantic results
-    cursor.fetchall.side_effect = [[], semantic_rows]
+    # With get_notable_deputy_ids returning {} there is no pin query; only the
+    # semantic fetchall runs (one call).
+    cursor.fetchall.return_value = semantic_rows
 
     conn = MagicMock()
     conn.cursor.return_value = cursor
 
-    return mock_openai, conn
+    pool = MagicMock()
+    pool.getconn.return_value = conn
+
+    return mock_openai, pool
 
 
 def test_retrieve_returns_list_with_correct_keys():
@@ -90,30 +100,33 @@ def test_retrieve_returns_list_with_correct_keys():
             "similarity": 0.88,
         }
     ]
-    mock_openai, mock_conn = _make_retriever_mocks(semantic_rows)
+    mock_openai, mock_pool = _make_retriever_mocks(semantic_rows)
 
     with (
-        patch("rag.chain.retriever.OpenAI", return_value=mock_openai),
-        patch("rag.chain.retriever.psycopg2.connect", return_value=mock_conn),
+        patch("rag.chain.retriever._openai_client", mock_openai),
+        patch("rag.chain.retriever.get_notable_deputy_ids", return_value={}),
+        patch("rag.chain.retriever._get_retriever_pool", return_value=mock_pool),
         patch("rag.chain.retriever.register_vector"),
     ):
         results = retrieve("Quels votes ont été adoptés ?")
 
     assert isinstance(results, list)
+    assert len(results) > 0
     for chunk in results:
         assert "content" in chunk
         assert "metadata" in chunk
         assert "similarity" in chunk
+    # Embedding was requested exactly once
+    mock_openai.embeddings.create.assert_called_once()
 
 
 def test_retrieve_returns_empty_list_when_no_chunks():
-    mock_openai, mock_conn = _make_retriever_mocks([])
-    # Both fetchall calls return empty
-    mock_conn.cursor.return_value.fetchall.side_effect = [[], []]
+    mock_openai, mock_pool = _make_retriever_mocks([])
 
     with (
-        patch("rag.chain.retriever.OpenAI", return_value=mock_openai),
-        patch("rag.chain.retriever.psycopg2.connect", return_value=mock_conn),
+        patch("rag.chain.retriever._openai_client", mock_openai),
+        patch("rag.chain.retriever.get_notable_deputy_ids", return_value={}),
+        patch("rag.chain.retriever._get_retriever_pool", return_value=mock_pool),
         patch("rag.chain.retriever.register_vector"),
     ):
         results = retrieve("Question sans résultat")

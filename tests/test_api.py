@@ -129,16 +129,18 @@ def test_get_deputy_not_found(client, mock_cursor):
 
 
 def test_get_scorecard(client, mock_cursor):
-    mock_cursor.fetchone.side_effect = [
-        {"deputy_id": "PA1", "full_name": "Jean Martin"},
-        {
-            "total_votes": 100,
-            "present_votes": 90,
-            "votes_for": 60,
-            "votes_against": 20,
-            "abstentions": 10,
-        },
-    ]
+    mock_cursor.fetchone.return_value = {
+        "deputy_id": "PA1",
+        "full_name": "Jean Martin",
+        "total_votes": 100,
+        "present_votes": 90,
+        "presence_rate": 0.9,
+        "votes_for": 60,
+        "votes_against": 20,
+        "abstentions": 10,
+        "votes_for_pct": 0.667,
+        "abstention_pct": 0.111,
+    }
     resp = client.get("/deputies/PA1/scorecard")
     assert resp.status_code == 200
     data = resp.json()
@@ -251,16 +253,18 @@ def test_search_groq_timeout_returns_504(client):
 
 def test_scorecard_zero_votes(client, mock_cursor):
     """Deputy who has never voted — division-by-zero guards must yield 0.0."""
-    mock_cursor.fetchone.side_effect = [
-        {"deputy_id": "PA99", "full_name": "Nouveau Député"},
-        {
-            "total_votes": 0,
-            "present_votes": 0,
-            "votes_for": 0,
-            "votes_against": 0,
-            "abstentions": 0,
-        },
-    ]
+    mock_cursor.fetchone.return_value = {
+        "deputy_id": "PA99",
+        "full_name": "Nouveau Député",
+        "total_votes": 0,
+        "present_votes": 0,
+        "presence_rate": 0.0,
+        "votes_for": 0,
+        "votes_against": 0,
+        "abstentions": 0,
+        "votes_for_pct": 0.0,
+        "abstention_pct": 0.0,
+    }
     resp = client.get("/deputies/PA99/scorecard")
     assert resp.status_code == 200
     data = resp.json()
