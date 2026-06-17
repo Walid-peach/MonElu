@@ -31,11 +31,12 @@ def _fake_groq_response(text: str) -> MagicMock:
 
 def test_ask_returns_required_keys():
     with (
+        patch("rag.chain.rag_chain.sql_route", return_value=None),
         patch("rag.chain.rag_chain.retrieve", return_value=_FAKE_CHUNKS),
         patch("rag.chain.rag_chain._groq_client") as mock_groq,
     ):
         mock_groq.chat.completions.create.return_value = _fake_groq_response("Réponse test.")
-        result = ask("Combien de députés appartiennent au RN ?")
+        result = ask("Quel est le bilan de Yaël Braun-Pivet ?")
 
     assert "answer" in result
     assert "sources" in result
