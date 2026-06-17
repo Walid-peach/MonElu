@@ -92,6 +92,7 @@ def test_retrieve_returns_list_with_correct_keys():
         }
     ]
     mock_openai, mock_conn = _make_retriever_mocks(semantic_rows)
+    cursor = mock_conn.cursor.return_value
 
     with (
         patch("rag.chain.retriever.OpenAI", return_value=mock_openai),
@@ -105,6 +106,8 @@ def test_retrieve_returns_list_with_correct_keys():
         assert "content" in chunk
         assert "metadata" in chunk
         assert "similarity" in chunk
+    # Pin query runs first (fetchall called twice: once for pin, once for semantic)
+    assert cursor.fetchall.call_count == 2
 
 
 def test_retrieve_returns_empty_list_when_no_chunks():
