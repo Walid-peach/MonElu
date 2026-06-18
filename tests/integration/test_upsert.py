@@ -85,29 +85,17 @@ def test_vote_upsert_creates_row(db_conn):
 @pytest.mark.integration
 def test_vote_upsert_updates_result(db_conn):
     """Re-inserting a vote with a different result must update, not duplicate."""
-    from datetime import datetime, timezone
+    from tests.integration.conftest import _make_vote
 
-    vote = {
-        "vote_id": "VTANR5L17V0001",
-        "voted_at": datetime(2026, 1, 2, 12, 0, 0, tzinfo=timezone.utc),
-        "vote_title": "Vote de test numéro 1",
-        "vote_type": "SPO",
-        "result": "rejeté",  # changed from "adopté"
-        "votes_for": 100,
-        "votes_against": 300,
-        "abstentions": 50,
-        "total_voters": 450,
-        "dossier_id": None,
-    }
+    original = _make_vote(1)  # VTANR5L17V0001, voted_at derived from formula
+    vote = {**original, "result": "rejeté", "votes_for": 100, "votes_against": 300}
     with db_conn.cursor() as cur:
         cur.execute(VOTE_UPSERT_SQL, vote)
         cur.execute("SELECT result FROM votes WHERE vote_id = 'VTANR5L17V0001'")
         assert cur.fetchone()["result"] == "rejeté"
 
-        # Restore
-        cur.execute(
-            VOTE_UPSERT_SQL, {**vote, "result": "adopté", "votes_for": 300, "votes_against": 100}
-        )
+        # Restore using the original values so the fixture state is unchanged
+        cur.execute(VOTE_UPSERT_SQL, original)
 
 
 @pytest.mark.integration

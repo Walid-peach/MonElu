@@ -98,6 +98,9 @@ DEPUTY_C = {
     "photo_url": None,
 }
 
+# Seeding-only stub — updates only the two columns needed for fixture setup.
+# The real upsert SQL (updating all fields) is imported from scripts/ingest_deputies.py
+# and tested directly in tests/integration/test_upsert.py.
 _DEPUTY_UPSERT = """
 INSERT INTO deputies (
     deputy_id, full_name, first_name, last_name,
@@ -224,7 +227,9 @@ def db_conn():
 
     yield conn
 
-    # Teardown — truncate all data so the schema can be reused by other test runs
+    # Teardown — truncate all data so the schema can be reused by other test runs.
+    # Postgres TRUNCATE checks for FK-referencing tables even when they're empty,
+    # so CASCADE is required on votes and deputies (referenced by vote_positions).
     with conn.cursor() as cur:
         cur.execute("TRUNCATE analytics_marts.mart_vote_summary CASCADE")
         cur.execute("TRUNCATE analytics_marts.mart_deputy_scorecard CASCADE")
