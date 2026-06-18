@@ -43,8 +43,10 @@ jobs:
             requirements-ingest.txt
             requirements-rag.txt
 
-      - name: Install ingestion dependencies
-        run: pip install -r requirements-ingest.txt
+      - name: Install ingestion + RAG dependencies
+        run: |
+          pip install -r requirements-ingest.txt
+          pip install -r requirements-rag.txt
 
       - name: Run ingestion
         id: ingest
@@ -53,10 +55,6 @@ jobs:
           AN_API_BASE_URL: ${{ secrets.AN_API_BASE_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python scripts/run_ingestion_prod.py --since $(python3 -c "from datetime import date, timedelta; print(date.today() - timedelta(days=30))")
-
-      - name: Install RAG dependencies
-        if: steps.ingest.outputs.new_votes != '0'
-        run: pip install -r requirements-rag.txt
 
       - name: Rebuild RAG index
         if: steps.ingest.outputs.new_votes != '0'

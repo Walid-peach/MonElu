@@ -87,7 +87,8 @@ def run_step(label: str, script: str, extra_args: list[str] | None = None) -> fl
     cmd = [sys.executable, script_path] + (extra_args or [])
     log.info("━━━ Starting: %s ━━━", label)
     t0 = time.perf_counter()
-    result = subprocess.run(cmd, cwd=PROJECT_ROOT, env={**os.environ})
+    env = {**os.environ, "PYTHONPATH": PROJECT_ROOT}
+    result = subprocess.run(cmd, cwd=PROJECT_ROOT, env=env)
     elapsed = time.perf_counter() - t0
     if result.returncode != 0:
         raise RuntimeError(f"{label} failed with exit code {result.returncode}")
