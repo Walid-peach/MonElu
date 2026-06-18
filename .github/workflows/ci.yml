@@ -20,6 +20,20 @@ jobs:
       OPENAI_API_KEY: "sk-ci-placeholder"  # pragma: allowlist secret
       GROQ_API_KEY: "gsk-ci-placeholder"  # pragma: allowlist secret
       DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"  # pragma: allowlist secret
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci  # pragma: allowlist secret
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -44,8 +58,11 @@ jobs:
       - name: Check formatting
         run: ruff format --check .
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short -m "not integration"
+
+      - name: Run integration tests
+        run: pytest tests/integration/ -v --tb=short -m integration
 
   frontend:
     runs-on: ubuntu-latest
