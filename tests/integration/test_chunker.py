@@ -55,11 +55,11 @@ def test_chunk_deputies_content_fields(db_conn):
 @pytest.mark.integration
 def test_chunk_party_summaries_one_per_party(db_conn):
     chunks = chunk_party_summaries()
-    # conftest seeds 3 deputies with 3 distinct party_short values
-    party_shorts = {c["metadata"]["party_short"] for c in chunks}
-    assert "RN" in party_shorts
-    assert "LFI" in party_shorts
-    assert "RE" in party_shorts
+    # conftest seeds 3 deputies across 3 distinct parties; metadata key is "party" (full name)
+    parties = {c["metadata"]["party"] for c in chunks}
+    assert "Rassemblement National" in parties
+    assert "La France Insoumise" in parties
+    assert "Renaissance" in parties
 
 
 @pytest.mark.integration
