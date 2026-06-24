@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { api, Vote, SearchResult } from '@/lib/api'
+import { api, Vote, SearchResult, Deputy, Scorecard } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { ShareButton } from '@/components/ShareButton'
 import { ChatRedirectInput } from '@/components/ChatRedirectInput'
@@ -35,15 +35,52 @@ const FALLBACK_STATS = {
   positions: 685000,
 }
 
+export type DeputyInfo = {
+  name: string
+  party: string
+  department: string
+  photoUrl: string | null
+  deputyId: string
+  totalVotes: number
+  presenceRate: number
+  votesFor: number
+  votesAgainst: number
+  abstentions: number
+}
+
 async function getStats() {
   try {
-    const [health, latest] = await Promise.all([
+    const [health, latest, deputyList] = await Promise.all([
       api.health(),
       api.votes.latest(),
+      api.deputies.list({ limit: 20 }),
     ])
-    return { health, latest }
+
+    // Pick first deputy with a photo, fetch their scorecard
+    let deputyInfo: DeputyInfo | null = null
+    const deputies = deputyList?.items as Deputy[] | undefined
+    const picked = deputies?.find(d => d.photo_url) ?? deputies?.[0] ?? null
+    if (picked) {
+      try {
+        const sc: Scorecard = await api.deputies.scorecard(picked.deputy_id)
+        deputyInfo = {
+          name: picked.full_name,
+          party: picked.party ?? 'Groupe parlementaire',
+          department: picked.department ?? 'France',
+          photoUrl: picked.photo_url,
+          deputyId: picked.deputy_id,
+          totalVotes: sc.total_votes ?? 0,
+          presenceRate: Math.round((sc.presence_rate ?? 0) * 100),
+          votesFor: sc.votes_for ?? 0,
+          votesAgainst: sc.votes_against ?? 0,
+          abstentions: sc.abstentions ?? 0,
+        }
+      } catch { /* ignore, deputyInfo stays null */ }
+    }
+
+    return { health, latest, deputyInfo }
   } catch {
-    return { health: null, latest: [] }
+    return { health: null, latest: [], deputyInfo: null }
   }
 }
 
@@ -69,7 +106,7 @@ function resultLabel(result: string) {
 }
 
 export default async function Home() {
-  const { health, latest } = await getStats()
+  const { health, latest, deputyInfo } = await getStats()
   const latestVotes = latest as Vote[]
   const leadVote = latestVotes[0]
   const lastUpdated = formatFreshness(
@@ -94,7 +131,7 @@ export default async function Home() {
 
   return (
     <div className="overflow-x-clip bg-gray-off">
-      <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} />
+      <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} deputyInfo={deputyInfo} />
 
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[0.82fr_1fr] md:px-8 lg:px-12">
         <div>

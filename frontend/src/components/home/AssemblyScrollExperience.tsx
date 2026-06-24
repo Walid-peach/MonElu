@@ -1,21 +1,28 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { AssemblyStats, LeadVoteSummary } from './LiveAssemblyPulse'
 import { LiveAssemblyPulse } from './LiveAssemblyPulse'
 import { HeroSearch } from '@/components/HeroSearch'
 import { TrustRow } from './TrustRow'
+import type { DeputyInfo } from '@/app/page'
+
+// Nav height in px (matches h-16 in Nav.tsx)
+const NAV_H = 64
 
 type Props = {
   stats: AssemblyStats
   leadVote: LeadVoteSummary
+  deputyInfo: DeputyInfo | null
 }
 
 // ---- static / reduced-motion fallback ----
-function StaticExperience({ stats, leadVote }: Props) {
+function StaticExperience({ stats, leadVote, deputyInfo }: Props) {
+  void deputyInfo
   return (
     <section className="bg-gray-off">
       <div className="relative isolate overflow-hidden bg-navy px-4 py-16 text-white md:px-8 lg:px-12">
@@ -58,7 +65,8 @@ function StaticExperience({ stats, leadVote }: Props) {
 }
 
 // ---- mobile fallback (card stack, no cinematic) ----
-function MobileExperience({ stats, leadVote }: Props) {
+function MobileExperience({ stats, leadVote, deputyInfo }: Props) {
+  void deputyInfo
   return (
     <section className="md:hidden">
       <div className="relative isolate overflow-hidden bg-navy px-4 pb-10 pt-14 text-white">
@@ -122,8 +130,16 @@ function MobileExperience({ stats, leadVote }: Props) {
 }
 
 // ---- cinematic scroll experience (desktop) ----
-function CinematicExperience({ stats, leadVote }: Props) {
+function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
   const trackRef = useRef<HTMLDivElement>(null)
+  const [query, setQuery] = useState('')
+  const router = useRouter()
+
+  const submitQuery = (q: string) => {
+    const trimmed = q.trim()
+    if (!trimmed) return
+    router.push(`/chat?q=${encodeURIComponent(trimmed)}`)
+  }
 
   useEffect(() => {
     const track = trackRef.current
@@ -182,7 +198,7 @@ function CinematicExperience({ stats, leadVote }: Props) {
     }
 
     const fitStage = () => {
-      const w = window.innerWidth, h = window.innerHeight
+      const w = window.innerWidth, h = window.innerHeight - NAV_H
       fitScale = Math.max(w / BASE_W, h / BASE_H)
       offX = (w - BASE_W * fitScale) / 2
       offY = (h - BASE_H * fitScale) / 2
@@ -502,8 +518,10 @@ function CinematicExperience({ stats, leadVote }: Props) {
 
     const computeTarget = () => {
       const rect = track.getBoundingClientRect()
-      const max = track.offsetHeight - window.innerHeight
-      target = max > 0 ? clamp(-rect.top / max, 0, 1) : 0
+      // Account for nav height: experience starts when track top hits the nav bottom
+      const scrolled = -(rect.top - NAV_H)
+      const max = track.offsetHeight - (window.innerHeight - NAV_H)
+      target = max > 0 ? clamp(scrolled / max, 0, 1) : 0
     }
 
     const tick = () => {
@@ -542,10 +560,10 @@ function CinematicExperience({ stats, leadVote }: Props) {
       ref={trackRef}
       style={{ height: '650vh', position: 'relative', background: '#070b14' }}
     >
-      {/* sticky viewport */}
+      {/* sticky viewport — offset by nav height so content is never hidden behind the nav */}
       <div
         data-sticky
-        style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', background: '#070b14' }}
+        style={{ position: 'sticky', top: NAV_H, height: `calc(100vh - ${NAV_H}px)`, overflow: 'hidden', background: '#070b14' }}
       >
         {/* cover-fit stage: imagery + dot field */}
         <div
@@ -591,11 +609,6 @@ function CinematicExperience({ stats, leadVote }: Props) {
           {/* progress bar */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'rgba(255,255,255,0.12)' }}>
             <div data-topbar style={{ height: '100%', background: '#C9302C', transform: 'scaleX(0)', transformOrigin: 'left center', willChange: 'transform' }} />
-          </div>
-
-          {/* wordmark */}
-          <div style={{ position: 'absolute', top: 30, left: 'clamp(22px,4vw,60px)', fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 800, fontSize: 'clamp(17px,2vw,20px)', letterSpacing: '-0.01em', color: '#fff', textShadow: '0 1px 12px rgba(0,0,0,0.5)' }}>
-            Mon<span style={{ color: '#C9302C' }}>É</span>lu
           </div>
 
           {/* connective link SVG */}
@@ -695,52 +708,62 @@ function CinematicExperience({ stats, leadVote }: Props) {
             </div>
           </div>
 
-          {/* deputy card */}
-          <div data-deputy style={{ position: 'absolute', top: 'clamp(96px,12vh,124px)', right: 'clamp(16px,3vw,54px)', width: 'min(430px,92vw)', padding: 'clamp(22px,2.4vw,30px) clamp(22px,2.6vw,34px) clamp(24px,2.6vw,32px)', borderRadius: 18, background: 'linear-gradient(180deg,rgba(16,24,48,0.93),rgba(10,16,34,0.93))', border: '1px solid rgba(120,150,210,0.28)', boxShadow: '0 30px 80px rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', opacity: 0, transform: 'translateX(70px)', boxSizing: 'border-box' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
-              <span style={{ fontSize: 12, letterSpacing: '0.26em', fontWeight: 600, color: '#f3b6b1', background: 'rgba(217,48,37,0.22)', border: '1px solid rgba(240,88,76,0.4)', padding: '8px 22px', borderRadius: 999 }}>VOTRE DÉPUTÉ</span>
+          {/* deputy card — real deputy data from API */}
+          <div data-deputy style={{ position: 'absolute', top: 'clamp(24px,6vh,60px)', right: 'clamp(16px,3vw,54px)', width: 'min(400px,92vw)', padding: 'clamp(20px,2.4vw,28px) clamp(20px,2.6vw,30px) clamp(20px,2.6vw,28px)', borderRadius: 18, background: 'linear-gradient(180deg,rgba(16,24,48,0.93),rgba(10,16,34,0.93))', border: '1px solid rgba(120,150,210,0.28)', boxShadow: '0 30px 80px rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', opacity: 0, transform: 'translateX(70px)', boxSizing: 'border-box', pointerEvents: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: 11, letterSpacing: '0.26em', fontWeight: 600, color: '#f3b6b1', background: 'rgba(217,48,37,0.22)', border: '1px solid rgba(240,88,76,0.4)', padding: '6px 18px', borderRadius: 999 }}>VOTRE DÉPUTÉ</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 22 }}>
-              <div style={{ width: 120, height: 120, borderRadius: 999, padding: 4, background: 'linear-gradient(160deg,rgba(240,88,76,0.85),rgba(120,150,210,0.5))', boxShadow: '0 0 30px rgba(240,68,56,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 112, height: 112, borderRadius: 999, background: 'rgba(13,31,60,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, color: 'rgba(150,185,240,0.7)' }}>⚖</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <div style={{ width: 100, height: 100, borderRadius: 999, padding: 3, background: 'linear-gradient(160deg,rgba(240,88,76,0.85),rgba(120,150,210,0.5))', boxShadow: '0 0 24px rgba(240,68,56,0.45)', overflow: 'hidden', flexShrink: 0 }}>
+                {deputyInfo?.photoUrl ? (
+                  <Image
+                    src={deputyInfo.photoUrl}
+                    alt={deputyInfo.name}
+                    width={94}
+                    height={94}
+                    style={{ borderRadius: 999, objectFit: 'cover', width: 94, height: 94 }}
+                  />
+                ) : (
+                  <div style={{ width: 94, height: 94, borderRadius: 999, background: 'rgba(13,31,60,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'rgba(150,185,240,0.7)' }}>⚖</div>
+                )}
               </div>
             </div>
-            <div style={{ textAlign: 'center', fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 700, fontSize: 'clamp(22px,2.6vw,30px)', color: '#fff', letterSpacing: '-0.01em' }}>17ème Législature</div>
-            <div style={{ textAlign: 'center', fontSize: 'clamp(14px,1.5vw,17px)', color: 'rgba(220,228,245,0.78)', marginTop: 8 }}>Assemblée Nationale - France</div>
-            <div style={{ textAlign: 'center', fontSize: 'clamp(13px,1.4vw,16px)', color: '#7fd9b6', marginTop: 10 }}>{stats.deputies} députés actifs</div>
-            <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: voteResultBg, border: `1px solid ${voteResultBorder}`, padding: '10px 24px', borderRadius: 999 }}>
-                <span style={{ width: 21, height: 21, borderRadius: 999, background: voteResultColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{voteResultIcon}</span>
-                <span style={{ fontSize: 'clamp(14px,1.5vw,16px)', fontWeight: 600, color: voteResultColor }}>{voteResultLabel} ce texte</span>
+            <div style={{ textAlign: 'center', fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 700, fontSize: 'clamp(18px,2.2vw,24px)', color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.2 }}>{deputyInfo?.name ?? '17ème Législature'}</div>
+            <div style={{ textAlign: 'center', fontSize: 'clamp(12px,1.3vw,15px)', color: 'rgba(220,228,245,0.78)', marginTop: 6 }}>{deputyInfo?.department ?? 'Assemblée Nationale'}</div>
+            <div style={{ textAlign: 'center', fontSize: 'clamp(12px,1.3vw,14px)', color: '#7fd9b6', marginTop: 6 }}>{deputyInfo?.party ?? `${stats.deputies} députés actifs`}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: voteResultBg, border: `1px solid ${voteResultBorder}`, padding: '8px 20px', borderRadius: 999 }}>
+                <span style={{ width: 19, height: 19, borderRadius: 999, background: voteResultColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{voteResultIcon}</span>
+                <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', fontWeight: 600, color: voteResultColor }}>{voteResultLabel} ce texte</span>
               </div>
             </div>
-            <div style={{ height: 1, background: 'rgba(120,150,210,0.2)', margin: '20px 0 18px' }} />
-            <div style={{ display: 'flex', gap: 'clamp(16px,2.4vw,26px)', justifyContent: 'center' }}>
+            <div style={{ height: 1, background: 'rgba(120,150,210,0.2)', margin: '14px 0 14px' }} />
+            <div style={{ display: 'flex', gap: 'clamp(12px,2vw,20px)', justifyContent: 'center' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'monospace', fontWeight: 500, fontSize: 'clamp(20px,2.2vw,24px)', color: '#fff' }}>{stats.votes.toLocaleString('fr-FR')}</div>
-                <div style={{ fontSize: 13, color: 'rgba(180,196,228,0.66)', marginTop: 4, letterSpacing: '0.04em' }}>scrutins</div>
+                <div style={{ fontFamily: 'monospace', fontWeight: 500, fontSize: 'clamp(17px,2vw,22px)', color: '#fff' }}>{(deputyInfo?.totalVotes ?? stats.votes).toLocaleString('fr-FR')}</div>
+                <div style={{ fontSize: 12, color: 'rgba(180,196,228,0.66)', marginTop: 3, letterSpacing: '0.04em' }}>scrutins</div>
               </div>
               <div style={{ width: 1, background: 'rgba(120,150,210,0.2)' }} />
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'monospace', fontWeight: 500, fontSize: 'clamp(20px,2.2vw,24px)', color: '#fff' }}>{totalVotes.toLocaleString('fr-FR')}</div>
-                <div style={{ fontSize: 13, color: 'rgba(180,196,228,0.66)', marginTop: 4, letterSpacing: '0.04em' }}>votants</div>
+                <div style={{ fontFamily: 'monospace', fontWeight: 500, fontSize: 'clamp(17px,2vw,22px)', color: '#fff' }}>{deputyInfo ? `${deputyInfo.presenceRate}%` : `${stats.deputies}`}</div>
+                <div style={{ fontSize: 12, color: 'rgba(180,196,228,0.66)', marginTop: 3, letterSpacing: '0.04em' }}>{deputyInfo ? 'présence' : 'sièges'}</div>
               </div>
               <div style={{ width: 1, background: 'rgba(120,150,210,0.2)' }} />
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'monospace', fontWeight: 500, fontSize: 'clamp(20px,2.2vw,24px)', color: '#fff' }}>{stats.deputies}</div>
-                <div style={{ fontSize: 13, color: 'rgba(180,196,228,0.66)', marginTop: 4, letterSpacing: '0.04em' }}>sièges</div>
+                <div style={{ fontFamily: 'monospace', fontWeight: 500, fontSize: 'clamp(17px,2vw,22px)', color: '#fff' }}>{(deputyInfo?.votesFor ?? totalVotes).toLocaleString('fr-FR')}</div>
+                <div style={{ fontSize: 12, color: 'rgba(180,196,228,0.66)', marginTop: 3, letterSpacing: '0.04em' }}>{deputyInfo ? 'pour' : 'votants'}</div>
               </div>
             </div>
             <Link
-              href="/deputes"
-              style={{ display: 'block', marginTop: 24, textAlign: 'center', fontSize: 15, fontWeight: 600, letterSpacing: '0.02em', color: '#fff', background: 'linear-gradient(180deg,#e8463a,#cf2f24)', padding: 14, borderRadius: 11, boxShadow: '0 10px 24px rgba(207,47,36,0.4)', pointerEvents: 'auto', textDecoration: 'none' }}
+              href={deputyInfo ? `/deputes/${deputyInfo.deputyId}` : '/deputes'}
+              style={{ display: 'block', marginTop: 18, textAlign: 'center', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em', color: '#fff', background: 'linear-gradient(180deg,#e8463a,#cf2f24)', padding: 12, borderRadius: 11, boxShadow: '0 10px 24px rgba(207,47,36,0.4)', textDecoration: 'none' }}
             >
-              Trouver mon député →
+              Voir le profil complet →
             </Link>
           </div>
 
           {/* intelligence section */}
-          <div data-scene6 style={{ position: 'absolute', inset: 0, opacity: 0 }}>
+          <div data-scene6 style={{ position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(130% 120% at 28% 18%, rgba(14,26,58,0.72) 0%, rgba(8,15,36,0.92) 52%, rgba(5,9,22,0.98) 100%)' }} />
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, boxSizing: 'border-box' }}>
               <div data-s6inner style={{ transformOrigin: 'center center', display: 'flex', flexDirection: 'column', alignItems: 'center', width: 'min(1180px,94vw)' }}>
@@ -754,13 +777,28 @@ function CinematicExperience({ stats, leadVote }: Props) {
                   <p style={{ margin: '18px auto 0', fontSize: 'clamp(16px,1.8vw,19px)', lineHeight: 1.55, color: 'rgba(214,224,244,0.8)', maxWidth: 700 }}>Posez une question sur un député, un vote, un groupe ou une loi. L&apos;IA de MonÉlu relie chaque réponse aux données et aux sources officielles.</p>
                 </div>
 
-                <div data-s6item style={{ marginTop: 30, width: 'min(880px,94%)', display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, background: 'rgba(9,15,32,0.72)', border: '1px solid rgba(120,150,210,0.34)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', boxSizing: 'border-box', opacity: 0 }}>
+                <form
+                  data-s6item
+                  onSubmit={e => { e.preventDefault(); submitQuery(query) }}
+                  style={{ marginTop: 30, width: 'min(880px,94%)', display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, background: 'rgba(9,15,32,0.72)', border: '1px solid rgba(120,150,210,0.34)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', boxSizing: 'border-box', opacity: 0, pointerEvents: 'auto' }}
+                >
                   <span style={{ width: 40, height: 40, flex: 'none', borderRadius: 11, background: 'linear-gradient(160deg,#13213f,#0b1730)', border: '1px solid rgba(39,224,173,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 L13.7 9.6 L21 11 L13.7 12.4 L12 19.5 L10.3 12.4 L3 11 L10.3 9.6 Z" fill="#27e0ad" /></svg>
                   </span>
-                  <div style={{ flex: 1, fontSize: 'clamp(15px,1.7vw,18px)', color: 'rgba(230,238,252,0.96)', letterSpacing: '-0.01em', textAlign: 'left' }}>Comment mon groupe a-t-il voté sur le budget&nbsp;?<span style={{ display: 'inline-block', width: 2, height: 20, background: '#27e0ad', marginLeft: 3, verticalAlign: -3 }} /></div>
-                  <span style={{ flex: 'none', fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.08em', color: 'rgba(160,190,230,0.62)', border: '1px solid rgba(120,150,210,0.36)', borderRadius: 7, padding: '7px 11px' }}>Entrée ↵</span>
-                </div>
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder="Posez votre question sur un député, un vote..."
+                    style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 'clamp(14px,1.6vw,17px)', color: 'rgba(230,238,252,0.96)', letterSpacing: '-0.01em' }}
+                  />
+                  <button
+                    type="submit"
+                    style={{ flex: 'none', fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.08em', color: 'rgba(160,190,230,0.62)', border: '1px solid rgba(120,150,210,0.36)', borderRadius: 7, padding: '7px 11px', background: 'transparent', cursor: 'pointer' }}
+                  >
+                    Entrée ↵
+                  </button>
+                </form>
 
                 <div data-s6item style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 9, opacity: 0 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12.5 L10 17.5 L19 6.5" stroke="#27e0ad" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -769,30 +807,57 @@ function CinematicExperience({ stats, leadVote }: Props) {
 
                 <div style={{ marginTop: 32, width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14 }}>
                   {[
-                    { icon: <circle cx="12" cy="8" r="3.6" />, iconPath: <path d="M5.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />, color: '#f0584c', colorBg: 'rgba(38,22,30,0.5)', colorBorder: 'rgba(240,88,76,0.42)', label: 'Députés', badge: `${stats.deputies} élus`, q: '« Quel est le bilan de vote de mon député ? »' },
-                    { icon: <rect x="4" y="4" width="16" height="16" rx="3" />, iconPath: <path d="M8 12.2l2.6 2.6L16 9" />, color: '#5fd6b0', colorBg: 'rgba(18,28,54,0.5)', colorBorder: 'rgba(120,150,210,0.2)', label: 'Votes', badge: `${stats.votes.toLocaleString('fr-FR')} scrutins`, q: '« Qui a voté pour la loi énergie-climat ? »' },
-                    { icon: <><circle cx="8.5" cy="9" r="2.7" /><path d="M3.5 19c0-2.8 2.2-4.6 5-4.6" /><circle cx="16" cy="10" r="2.4" /><path d="M13.5 19c0-2.2 1.7-3.8 3.6-3.8 1.9 0 3.4 1.4 3.4 3.4" /></>, iconPath: null, color: '#5fd6b0', colorBg: 'rgba(18,28,54,0.5)', colorBorder: 'rgba(120,150,210,0.2)', label: 'Groupes', badge: '8 groupes', q: '« Comment se positionne chaque groupe ? »' },
-                    { icon: <><path d="M4 8.5 12 3.5l8 5" /><path d="M6 11v7M10 11v7M14 11v7M18 11v7" /><path d="M4 20.5h16" /></>, iconPath: null, color: '#5fd6b0', colorBg: 'rgba(18,28,54,0.5)', colorBorder: 'rgba(120,150,210,0.2)', label: 'Assemblée', badge: 'XVIIe lég.', q: '« Quelles grandes tendances cette législature ? »' },
+                    {
+                      icon: <><circle cx="12" cy="8" r="3.6" /><path d="M5.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /></>,
+                      color: '#f0584c', colorBg: 'rgba(38,22,30,0.5)', colorBorder: 'rgba(240,88,76,0.42)',
+                      label: 'Députés', badge: `${stats.deputies} élus`,
+                      q: deputyInfo ? `Quel est le bilan de ${deputyInfo.name} ?` : 'Quel est le bilan de Marine Le Pen ?',
+                    },
+                    {
+                      icon: <><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M8 12.2l2.6 2.6L16 9" /></>,
+                      color: '#5fd6b0', colorBg: 'rgba(18,28,54,0.5)', colorBorder: 'rgba(120,150,210,0.2)',
+                      label: 'Votes', badge: `${stats.votes.toLocaleString('fr-FR')} scrutins`,
+                      q: 'Quels votes ont été rejetés récemment ?',
+                    },
+                    {
+                      icon: <><circle cx="8.5" cy="9" r="2.7" /><path d="M3.5 19c0-2.8 2.2-4.6 5-4.6" /><circle cx="16" cy="10" r="2.4" /><path d="M13.5 19c0-2.2 1.7-3.8 3.6-3.8 1.9 0 3.4 1.4 3.4 3.4" /></>,
+                      color: '#5fd6b0', colorBg: 'rgba(18,28,54,0.5)', colorBorder: 'rgba(120,150,210,0.2)',
+                      label: 'Groupes', badge: '8 groupes',
+                      q: 'Comment le RN vote-t-il par rapport à la majorité ?',
+                    },
+                    {
+                      icon: <><path d="M4 8.5 12 3.5l8 5" /><path d="M6 11v7M10 11v7M14 11v7M18 11v7" /><path d="M4 20.5h16" /></>,
+                      color: '#5fd6b0', colorBg: 'rgba(18,28,54,0.5)', colorBorder: 'rgba(120,150,210,0.2)',
+                      label: 'Assemblée', badge: 'XVIIe lég.',
+                      q: 'Quels députés ont le meilleur taux de présence ?',
+                    },
                   ].map((card, i) => (
-                    <div key={i} data-s6item style={{ background: card.colorBg, border: `1px solid ${card.colorBorder}`, borderRadius: 16, padding: '18px 20px', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', opacity: 0 }}>
+                    <button
+                      key={i}
+                      data-s6item
+                      onClick={() => submitQuery(card.q)}
+                      style={{ background: card.colorBg, border: `1px solid ${card.colorBorder}`, borderRadius: 16, padding: '18px 20px', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', opacity: 0, cursor: 'pointer', textAlign: 'left', pointerEvents: 'auto', transition: 'border-color 0.2s, background 0.2s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = card.color }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = card.colorBorder }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                           <span style={{ width: 36, height: 36, flex: 'none', borderRadius: 10, background: `rgba(${card.color === '#f0584c' ? '240,88,76' : '39,224,173'},0.1)`, border: `1px solid rgba(${card.color === '#f0584c' ? '240,88,76' : '39,224,173'},0.26)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={card.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{card.icon}{card.iconPath}</svg>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={card.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{card.icon}</svg>
                           </span>
                           <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: '0.01em' }}>{card.label}</span>
                         </div>
                         <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(160,195,230,0.6)' }}>{card.badge}</span>
                       </div>
-                      <div style={{ fontSize: 14.5, lineHeight: 1.45, color: 'rgba(206,218,240,0.74)', textAlign: 'left' }}>{card.q}</div>
-                    </div>
+                      <div style={{ fontSize: 14.5, lineHeight: 1.45, color: 'rgba(206,218,240,0.74)' }}>«&nbsp;{card.q}&nbsp;»</div>
+                    </button>
                   ))}
                 </div>
 
                 <div data-s6item style={{ marginTop: 28, opacity: 0, pointerEvents: 'auto' }}>
                   <Link
                     href="/chat"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(160deg,rgba(39,224,173,0.18),rgba(39,224,173,0.08))', border: '1px solid rgba(39,224,173,0.45)', padding: '14px 32px', borderRadius: 12, fontSize: 16, fontWeight: 600, color: '#27e0ad', textDecoration: 'none', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(160deg,rgba(39,224,173,0.18),rgba(39,224,173,0.08))', border: '1px solid rgba(39,224,173,0.45)', padding: '14px 32px', borderRadius: 12, fontSize: 16, fontWeight: 600, color: '#27e0ad', textDecoration: 'none', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', pointerEvents: 'auto' }}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 L13.7 9.6 L21 11 L13.7 12.4 L12 19.5 L10.3 12.4 L3 11 L10.3 9.6 Z" fill="#27e0ad" /></svg>
                     Poser une question à MonÉlu →
@@ -824,19 +889,19 @@ function CinematicExperience({ stats, leadVote }: Props) {
   )
 }
 
-export function AssemblyScrollExperience({ stats, leadVote }: Props) {
+export function AssemblyScrollExperience({ stats, leadVote, deputyInfo }: Props) {
   const reduceMotion = useReducedMotion()
 
   if (reduceMotion) {
-    return <StaticExperience stats={stats} leadVote={leadVote} />
+    return <StaticExperience stats={stats} leadVote={leadVote} deputyInfo={deputyInfo} />
   }
 
   return (
     <>
       <div className="hidden md:block">
-        <CinematicExperience stats={stats} leadVote={leadVote} />
+        <CinematicExperience stats={stats} leadVote={leadVote} deputyInfo={deputyInfo} />
       </div>
-      <MobileExperience stats={stats} leadVote={leadVote} />
+      <MobileExperience stats={stats} leadVote={leadVote} deputyInfo={deputyInfo} />
     </>
   )
 }
