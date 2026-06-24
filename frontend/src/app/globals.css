@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Thin scrollbar for cinematic scroll container */
+.sp { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.22) transparent; }
+.sp::-webkit-scrollbar { width: 9px; }
+.sp::-webkit-scrollbar-track { background: transparent; }
+.sp::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); border-radius: 999px; }
+
+/* Nudge animation for scroll hint */
+@keyframes nudge { 0%,100% { transform: translate(-50%,0); } 50% { transform: translate(-50%,5px); } }
+[data-hint] { animation: nudge 2s ease-in-out infinite; }
+
 @layer base {
   body { @apply font-sans bg-white text-navy; }
   h1, h2, h3 { @apply font-serif; }
