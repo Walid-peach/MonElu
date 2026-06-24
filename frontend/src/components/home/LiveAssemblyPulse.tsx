@@ -37,22 +37,22 @@ function CountUpNumber({
   className?: string
 }) {
   const reduceMotion = useReducedMotion()
-  const [display, setDisplay] = useState(formatCount(value, compact))
+  const formattedValue = formatCount(value, compact)
+  const [animatedDisplay, setAnimatedDisplay] = useState(formattedValue)
 
   useEffect(() => {
-    if (reduceMotion) {
-      setDisplay(formatCount(value, compact))
-      return
-    }
+    if (reduceMotion) return
 
     const controls = animate(0, value, {
       duration: 1.25,
       ease: [0.22, 1, 0.36, 1],
-      onUpdate: latest => setDisplay(formatCount(Math.round(latest), compact)),
+      onUpdate: latest => setAnimatedDisplay(formatCount(Math.round(latest), compact)),
     })
 
     return () => controls.stop()
   }, [compact, reduceMotion, value])
+
+  const display = reduceMotion ? formattedValue : animatedDisplay
 
   return <span className={className}>{display}</span>
 }
