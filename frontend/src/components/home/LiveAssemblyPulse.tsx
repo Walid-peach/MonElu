@@ -18,6 +18,8 @@ export type LeadVoteSummary = {
   votesAgainst: number
   abstentions: number
   href?: string
+  votedAt?: string
+  voteId?: string
 }
 
 function formatCount(value: number, compact = false) {

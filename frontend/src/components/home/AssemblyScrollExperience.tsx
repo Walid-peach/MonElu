@@ -683,7 +683,11 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
           {/* vote card */}
           <div data-votecard style={{ position: 'absolute', right: 'clamp(16px,3vw,60px)', bottom: 130, width: 'min(312px,86vw)', padding: '26px 28px 24px', borderRadius: 14, background: 'rgba(11,18,38,0.82)', border: '1px solid rgba(120,150,210,0.22)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', opacity: 0 }}>
             <div style={{ textAlign: 'center', fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 700, fontSize: 24, color: '#fff', letterSpacing: '-0.01em', marginBottom: 6 }}>Mon<span style={{ color: '#C9302C' }}>É</span>lu</div>
-            <div style={{ textAlign: 'center', fontSize: 12, letterSpacing: '0.18em', color: 'rgba(150,185,240,0.6)', fontFamily: 'monospace', marginBottom: 20 }}>RÉSULTAT DU SCRUTIN</div>
+            <div style={{ textAlign: 'center', fontSize: 12, letterSpacing: '0.18em', color: 'rgba(150,185,240,0.6)', fontFamily: 'monospace', marginBottom: 8 }}>RÉSULTAT DU SCRUTIN</div>
+            {leadVote.votedAt && (
+              <div style={{ textAlign: 'center', fontSize: 11, letterSpacing: '0.14em', color: 'rgba(150,185,240,0.45)', fontFamily: 'monospace', marginBottom: 6 }}>{leadVote.votedAt}</div>
+            )}
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(210,220,240,0.72)', lineHeight: 1.45, marginBottom: 16, padding: '0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{leadVote.title}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                 <span style={{ width: 13, height: 13, borderRadius: 999, background: '#1fd4a6', boxShadow: '0 0 10px rgba(31,212,166,0.7)', flex: 'none' }} />

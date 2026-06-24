@@ -1,33 +1,5 @@
-import Link from 'next/link'
-import { api, Vote, SearchResult, Deputy, Scorecard } from '@/lib/api'
-import { formatDate } from '@/lib/utils'
-import { ShareButton } from '@/components/ShareButton'
-import { ChatRedirectInput } from '@/components/ChatRedirectInput'
-import { UserBubble, AssistantBubble } from '@/components/chat/Bubbles'
+import { api, Vote, Deputy, Scorecard } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
-
-const EXAMPLE_RESULT: SearchResult = {
-  answer:
-    "Depuis juillet 2025, l'Assemblée Nationale a enregistré plus de 4 200 scrutins. Environ deux tiers ont été adoptés et un tiers rejetés. Le groupe Ensemble pour la République vote le plus souvent avec la majorité.",
-  question: "Combien de votes ont été adoptés cette année ?",
-  chunks_retrieved: 2,
-  confidence: "high",
-  data_source: "postgresql",
-  sources: [
-    {
-      content:
-        "Statistiques globales — 17ème législature. Total scrutins enregistrés : 4 214. Adoptés : 2 847. Rejetés : 1 367.",
-      metadata: { chunk_type: "global_stats" } as Record<string, string>,
-      similarity: 0.94,
-    },
-    {
-      content:
-        "Groupe Ensemble pour la République — 166 députés actifs. Cohésion de vote avec la majorité : 89 %.",
-      metadata: { chunk_type: "party" } as Record<string, string>,
-      similarity: 0.81,
-    },
-  ],
-}
 
 const FALLBACK_STATS = {
   deputies: 596,
@@ -50,11 +22,19 @@ export type DeputyInfo = {
 
 async function getStats() {
   try {
-    const [health, latest, deputyList] = await Promise.all([
+    const [health, voteList, deputyList] = await Promise.all([
       api.health(),
-      api.votes.latest(),
+      api.votes.list({ limit: 100 }),
       api.deputies.list({ limit: 20 }),
     ])
+
+    // Pick the vote with the most voters (most significant/representative scrutin)
+    const votes = (voteList?.items ?? []) as Vote[]
+    const featuredVote = votes.reduce<Vote | null>((best, v) => {
+      const total = v.total_voters || v.votes_for + v.votes_against + v.abstentions
+      const bestTotal = best ? (best.total_voters || best.votes_for + best.votes_against + best.abstentions) : 0
+      return total > bestTotal ? v : best
+    }, null) ?? votes[0] ?? null
 
     // Pick first deputy with a photo, fetch their scorecard
     let deputyInfo: DeputyInfo | null = null
@@ -75,12 +55,12 @@ async function getStats() {
           votesAgainst: sc.votes_against ?? 0,
           abstentions: sc.abstentions ?? 0,
         }
-      } catch { /* ignore, deputyInfo stays null */ }
+      } catch { /* ignore */ }
     }
 
-    return { health, latest, deputyInfo }
+    return { health, featuredVote, deputyInfo }
   } catch {
-    return { health: null, latest: [], deputyInfo: null }
+    return { health: null, featuredVote: null, deputyInfo: null }
   }
 }
 
@@ -101,14 +81,19 @@ function formatFreshness(value: unknown) {
   return `Mis à jour : ${formatted}`
 }
 
-function resultLabel(result: string) {
-  return result === 'adopté' ? 'Adopté' : 'Rejeté'
+function formatVoteDate(value: string | null | undefined) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date).toUpperCase()
 }
 
 export default async function Home() {
-  const { health, latest, deputyInfo } = await getStats()
-  const latestVotes = latest as Vote[]
-  const leadVote = latestVotes[0]
+  const { health, featuredVote, deputyInfo } = await getStats()
   const lastUpdated = formatFreshness(
     health ? health.last_ingestion ?? health.last_ingestion_at ?? health.updated_at : null
   )
@@ -120,127 +105,22 @@ export default async function Home() {
     lastUpdated,
   }
 
+  const resultLabel = (r: string) => r === 'adopté' ? 'Adopté' : 'Rejeté'
+
   const pulseVote = {
-    title: leadVote?.summary_plain || leadVote?.vote_title || 'Réforme énergétique',
-    result: leadVote ? resultLabel(leadVote.result) : 'Adopté',
-    votesFor: leadVote?.votes_for ?? 289,
-    votesAgainst: leadVote?.votes_against ?? 223,
-    abstentions: leadVote?.abstentions ?? 58,
-    href: leadVote ? `/votes/${leadVote.vote_id}` : undefined,
+    title: featuredVote?.summary_plain || featuredVote?.vote_title || 'Vote solennel',
+    result: featuredVote ? resultLabel(featuredVote.result) : 'Adopté',
+    votesFor: featuredVote?.votes_for ?? 289,
+    votesAgainst: featuredVote?.votes_against ?? 223,
+    abstentions: featuredVote?.abstentions ?? 58,
+    href: featuredVote ? `/votes/${featuredVote.vote_id}` : undefined,
+    votedAt: formatVoteDate(featuredVote?.voted_at),
+    voteId: featuredVote?.vote_id ?? '',
   }
 
   return (
-    <div className="overflow-x-clip bg-gray-off">
+    <div className="overflow-x-clip bg-[#070b14]">
       <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} deputyInfo={deputyInfo} />
-
-      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[0.82fr_1fr] md:px-8 lg:px-12">
-        <div>
-          <p className="text-xs font-semibold uppercase text-red-civic">Intelligence artificielle sourcée</p>
-          <h2 className="mt-3 font-serif text-3xl leading-tight text-navy md:text-4xl">
-            Posez une question politique. Obtenez une réponse lisible.
-          </h2>
-          <p className="mt-4 max-w-xl text-base leading-7 text-navy/60">
-            L&apos;IA MonÉlu répond en français, cite les données utilisées et garde le
-            contexte parlementaire visible pour éviter les réponses hors-sol.
-          </p>
-        </div>
-
-        <div className="border border-gray-border bg-white p-4 md:p-5">
-          <p className="mb-4 text-xs font-semibold uppercase text-navy/40">Démonstration</p>
-          <div className="space-y-4">
-            <UserBubble text="Combien de votes ont été adoptés cette année ?" />
-            <AssistantBubble result={EXAMPLE_RESULT} />
-            <div className="border-t border-gray-border pt-4">
-              <ChatRedirectInput />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pb-14 md:px-8 lg:px-12">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase text-red-civic">Le fil politique</p>
-            <h2 className="mt-2 font-serif text-3xl text-navy">Derniers votes analysés</h2>
-          </div>
-          <Link href="/votes" className="text-sm font-semibold text-red-civic hover:underline">
-            Voir tous →
-          </Link>
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-2">
-          {latestVotes.slice(0, 6).map((vote) => {
-            const total = vote.total_voters || vote.votes_for + vote.votes_against + vote.abstentions || 1
-            const forPct = Math.round(vote.votes_for / total * 100)
-            return (
-              <Link
-                key={vote.vote_id}
-                href={`/votes/${vote.vote_id}`}
-                className="group border border-gray-border bg-white p-4 transition-colors hover:border-navy/35"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span className={vote.result === 'adopté' ? 'badge-adopte' : 'badge-rejete'}>
-                        {resultLabel(vote.result)}
-                      </span>
-                      {vote.theme && (
-                        <span className="bg-gray-off px-2 py-0.5 text-xs font-medium text-navy/50">
-                          {vote.theme}
-                        </span>
-                      )}
-                    </div>
-                    <p className="line-clamp-2 text-sm font-semibold leading-6 text-navy group-hover:text-red-civic">
-                      {vote.summary_plain || vote.vote_title}
-                    </p>
-                    {vote.summary_plain && (
-                      <p className="mt-2 line-clamp-1 text-xs text-gray-mid">
-                        Titre officiel : {vote.vote_title}
-                      </p>
-                    )}
-                    <p className="mt-2 text-xs text-gray-mid">{formatDate(vote.voted_at)}</p>
-                  </div>
-                  <ShareButton
-                    url={`/votes/${vote.vote_id}`}
-                    title={vote.vote_title}
-                    text={`${resultLabel(vote.result)} — ${vote.vote_title} — MonÉlu`}
-                    ariaLabel={`Partager : ${vote.vote_title}`}
-                  />
-                </div>
-                <div className="mt-4 h-1.5 overflow-hidden bg-gray-light">
-                  <div className="h-full bg-emerald-500" style={{ width: `${forPct}%` }} />
-                </div>
-                <div className="mt-1 flex justify-between text-xs text-gray-mid">
-                  <span>{vote.votes_for} pour</span>
-                  <span>{vote.votes_against} contre · {vote.abstentions} abst.</span>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-      </section>
-
-      <section id="methodologie" className="bg-navy py-12 md:py-16">
-        <div className="mx-auto max-w-5xl px-4 md:px-8">
-          <p className="text-center text-xs font-semibold uppercase text-white/45">Comment ça marche</p>
-          <h2 className="mx-auto mt-3 max-w-2xl text-center font-serif text-3xl leading-tight text-white">
-            Une chaîne simple : donnée officielle, traduction claire, preuve consultable.
-          </h2>
-          <div className="mt-10 grid gap-3 md:grid-cols-3">
-            {[
-              ['01', 'Cherchez', 'Un député, un département ou un groupe politique.'],
-              ['02', 'Comprenez', 'Les votes sont résumés en français courant.'],
-              ['03', 'Vérifiez', 'Les chiffres, sources et positions restent accessibles.'],
-            ].map(([number, title, desc]) => (
-              <div key={title} className="border border-white/12 bg-white/5 p-5">
-                <p className="font-serif text-3xl text-red-light">{number}</p>
-                <p className="mt-4 font-semibold text-white">{title}</p>
-                <p className="mt-2 text-sm leading-6 text-white/55">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
     </div>
   )
 }
