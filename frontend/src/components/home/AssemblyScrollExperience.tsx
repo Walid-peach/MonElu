@@ -10,9 +10,7 @@ import { LiveAssemblyPulse } from './LiveAssemblyPulse'
 import { HeroSearch } from '@/components/HeroSearch'
 import { TrustRow } from './TrustRow'
 import type { DeputyInfo } from '@/app/page'
-
-// Nav height in px (matches h-16 in Nav.tsx)
-const NAV_H = 64
+import { NAV_HEIGHT_PX } from '@/components/Nav'
 
 type Props = {
   stats: AssemblyStats
@@ -21,8 +19,7 @@ type Props = {
 }
 
 // ---- static / reduced-motion fallback ----
-function StaticExperience({ stats, leadVote, deputyInfo }: Props) {
-  void deputyInfo
+function StaticExperience({ stats, leadVote }: Props) {
   return (
     <section className="bg-gray-off">
       <div className="relative isolate overflow-hidden bg-navy px-4 py-16 text-white md:px-8 lg:px-12">
@@ -65,8 +62,7 @@ function StaticExperience({ stats, leadVote, deputyInfo }: Props) {
 }
 
 // ---- mobile fallback (card stack, no cinematic) ----
-function MobileExperience({ stats, leadVote, deputyInfo }: Props) {
-  void deputyInfo
+function MobileExperience({ stats, leadVote }: Props) {
   return (
     <section className="md:hidden">
       <div className="relative isolate overflow-hidden bg-navy px-4 pb-10 pt-14 text-white">
@@ -198,7 +194,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
     }
 
     const fitStage = () => {
-      const w = window.innerWidth, h = window.innerHeight - NAV_H
+      const w = window.innerWidth, h = window.innerHeight - NAV_HEIGHT_PX
       fitScale = Math.max(w / BASE_W, h / BASE_H)
       offX = (w - BASE_W * fitScale) / 2
       offY = (h - BASE_H * fitScale) / 2
@@ -519,8 +515,8 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
     const computeTarget = () => {
       const rect = track.getBoundingClientRect()
       // Account for nav height: experience starts when track top hits the nav bottom
-      const scrolled = -(rect.top - NAV_H)
-      const max = track.offsetHeight - (window.innerHeight - NAV_H)
+      const scrolled = -(rect.top - NAV_HEIGHT_PX)
+      const max = track.offsetHeight - (window.innerHeight - NAV_HEIGHT_PX)
       target = max > 0 ? clamp(scrolled / max, 0, 1) : 0
     }
 
@@ -536,17 +532,19 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
     fitStage()
     const ro = new ResizeObserver(() => { fitStage(); kick() })
     ro.observe(track)
+    const onResize = () => { fitStage(); kick() }
     window.addEventListener('scroll', kick, { passive: true })
-    window.addEventListener('resize', () => { fitStage(); kick() })
+    window.addEventListener('resize', onResize)
     computeTarget(); frame(0); cur = target; kick()
     setTimeout(fitS6, 350)
 
     return () => {
       ro.disconnect()
       window.removeEventListener('scroll', kick)
+      window.removeEventListener('resize', onResize)
       if (raf) cancelAnimationFrame(raf)
     }
-  }, [stats, leadVote]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stats, leadVote])
 
   const totalVotes = leadVote.votesFor + leadVote.votesAgainst + leadVote.abstentions
   const voteResultLabel = leadVote.result.toLowerCase().includes('adopt') ? 'A voté pour' : 'A voté contre'
@@ -563,7 +561,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
       {/* sticky viewport — offset by nav height so content is never hidden behind the nav */}
       <div
         data-sticky
-        style={{ position: 'sticky', top: NAV_H, height: `calc(100vh - ${NAV_H}px)`, overflow: 'hidden', background: '#070b14' }}
+        style={{ position: 'sticky', top: NAV_HEIGHT_PX, height: `calc(100vh - ${NAV_HEIGHT_PX}px)`, overflow: 'hidden', background: '#070b14' }}
       >
         {/* cover-fit stage: imagery + dot field */}
         <div
@@ -592,6 +590,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
               <img
                 data-entry="0"
                 src="/exterior-morning.jpg"
+                fetchPriority="high"
                 alt="Façade de l'Assemblée nationale"
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block', transformOrigin: 'center center', opacity: 1, willChange: 'transform,opacity' }}
               />

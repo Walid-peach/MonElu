@@ -1,9 +1,14 @@
 import Link from 'next/link'
 import { MonEluLogo } from './MonEluLogo'
 
+export const NAV_HEIGHT_PX = 64
+
 export function Nav() {
   return (
-    <nav className="hidden md:flex items-center justify-between px-8 h-16 bg-white border-b border-gray-border sticky top-0 z-50">
+    <nav
+      className="hidden md:flex items-center justify-between px-8 bg-white border-b border-gray-border sticky top-0 z-50"
+      style={{ height: NAV_HEIGHT_PX }}
+    >
       <Link href="/" className="flex items-center">
         <MonEluLogo size={32} variant="light" />
       </Link>
