@@ -6,13 +6,14 @@ import { getInitials } from '@/lib/utils'
 type Props = {
   name: string
   photoUrl: string | null
-  size?: 'sm' | 'lg'
+  size?: 'sm' | 'lg' | 'xl'
   priority?: boolean
 }
 
 const sizes = {
   sm: { px: 40, className: 'w-10 h-10 text-sm' },
   lg: { px: 64, className: 'w-16 h-16 text-xl' },
+  xl: { px: 80, className: 'w-20 h-20 text-2xl' },
 }
 
 export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false }: Props) {
