@@ -1,16 +1,25 @@
 import type { Metadata, Viewport } from 'next'
-import { DM_Serif_Display, DM_Sans } from 'next/font/google'
+import { DM_Serif_Display, DM_Sans, Newsreader } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import { Nav } from '@/components/Nav'
 import { BottomNav } from '@/components/BottomNav'
+import { PageTransition } from '@/components/PageTransition'
 
 const serif = DM_Serif_Display({
   subsets: ['latin'],
   weight: '400',
   style: ['normal', 'italic'],
   variable: '--font-serif',
+  display: 'swap',
+})
+
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-newsreader',
   display: 'swap',
 })
 
@@ -50,10 +59,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${serif.variable} ${sans.variable}`}>
+    <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`}>
       <body className="bg-gray-off min-h-screen">
         <Nav />
-        <main className="pb-20 md:pb-0">{children}</main>
+        <main className="pb-20 md:pb-0"><PageTransition>{children}</PageTransition></main>
         <BottomNav />
         <Analytics />
         <SpeedInsights />

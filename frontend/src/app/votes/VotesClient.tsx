@@ -4,9 +4,10 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { api, Vote } from '@/lib/api'
-import { formatDate } from '@/lib/utils'
+import { formatDate, themeColors } from '@/lib/utils'
 
 type VoteList = { total: number; items: Vote[]; limit: number; offset: number }
+type HeroStat = { value: string; label: string }
 
 const THEMES = [
   'Économie & Budget',
@@ -21,159 +22,265 @@ const THEMES = [
   'Autre',
 ]
 
-export function VotesClient({ initial }: { initial: VoteList }) {
+const PAGE_SIZE = 50
+
+function shortDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function buildPageNumbers(current: number, total: number): (number | '…')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | '…')[] = []
+  pages.push(1)
+  if (current > 3) pages.push('…')
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p)
+  if (current < total - 2) pages.push('…')
+  pages.push(total)
+  return pages
+}
+
+export function VotesClient({ initial, heroStats }: { initial: VoteList; heroStats: HeroStat[] }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const [result, setResult] = useState(() => searchParams.get('result') ?? '')
-  const [theme,  setTheme]  = useState(() => searchParams.get('theme')  ?? '')
-  const [offset, setOffset] = useState(0)
+  const [theme, setTheme]   = useState(() => searchParams.get('theme')  ?? '')
+  const [search, setSearch] = useState('')
+  const [inputVal, setInputVal] = useState('')
+  const [page, setPage]     = useState(1)
 
-  // Sync state → URL
+  const offset = (page - 1) * PAGE_SIZE
+
   const skipFirstSync = useRef(true)
   useEffect(() => {
     if (skipFirstSync.current) { skipFirstSync.current = false; return }
     const p = new URLSearchParams()
     if (result) p.set('result', result)
-    if (theme)  p.set('theme',  theme)
+    if (theme)  p.set('theme', theme)
     const qs = p.toString()
     router.replace(`/votes${qs ? `?${qs}` : ''}`, { scroll: false })
   }, [result, theme, router])
 
   const { data, isLoading } = useSWR(
     `votes:${result}:${theme}:${offset}`,
-    () => api.votes.list({ result: result || undefined, theme: theme || undefined, limit: 50, offset }),
+    () => api.votes.list({ result: result || undefined, theme: theme || undefined, limit: PAGE_SIZE, offset }),
     { keepPreviousData: true }
   )
 
-  const votes = data?.items ?? initial.items
-  const total = data?.total ?? initial.total
+  const rawVotes = data?.items ?? initial.items
+  const total    = data?.total  ?? initial.total
+
+  const votes = search
+    ? rawVotes.filter(v => v.vote_title.toLowerCase().includes(search.toLowerCase()))
+    : rawVotes
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   function changeFilter(newResult: string, newTheme: string) {
     setResult(newResult)
     setTheme(newTheme)
-    setOffset(0)
+    setPage(1)
+    setSearch('')
+    setInputVal('')
+  }
+
+  function handleSearch() {
+    setSearch(inputVal)
+    setPage(1)
   }
 
   return (
-    <div>
-      {/* Result filter pills */}
-      <div className="flex gap-2 mb-3 flex-wrap">
-        {(['', 'adopté', 'rejeté'] as const).map((r) => (
-          <button key={r}
-            onClick={() => changeFilter(r, theme)}
-            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors
-              ${result === r
-                ? 'bg-navy text-white border-navy'
-                : 'bg-white text-gray-mid border-gray-border hover:border-navy/40'}`}>
-            {r === '' ? 'Tous' : r.charAt(0).toUpperCase() + r.slice(1)}
-          </button>
-        ))}
+    <div style={{ background: '#F7F4ED', minHeight: '100vh' }}>
+
+      {/* ── Hero ── */}
+      <div style={{ padding: '50px 56px 40px', background: 'linear-gradient(180deg,#fff 0%,#F7F4ED 100%)', borderBottom: '1px solid #ECE7DC' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+
+          <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C9302A' }}>
+            Scrutins publics
+          </div>
+
+          <h1 className="font-newsreader" style={{ fontWeight: 600, fontSize: 48, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: '16px 0 0', maxWidth: 760 }}>
+            Les votes de l&apos;Assemblée nationale, <span style={{ color: '#C9302A' }}>en clair</span>.
+          </h1>
+
+          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 540 }}>
+            Retrouvez chaque scrutin public de la XVII&#7497; législature — texte voté, résultat, et ventilation par groupe.
+          </p>
+
+          {/* Stats strip */}
+          <div style={{ display: 'flex', gap: 0, marginTop: 32, border: '1px solid #ECE7DC', borderRadius: 12, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: 700 }}>
+            {heroStats.map((hs, i) => (
+              <div key={i} style={{ flex: 1, padding: '18px 22px', borderRight: i < heroStats.length - 1 ? '1px solid #ECE7DC' : 'none' }}>
+                <div className="font-newsreader" style={{ fontWeight: 600, fontSize: 30, color: '#1B2B50', letterSpacing: '-0.01em' }}>{hs.value}</div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, lineHeight: 1.35 }}>{hs.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Search bar */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 28, maxWidth: 720 }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #E4E6EA', borderRadius: 10, padding: '0 18px', height: 54, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+              <input
+                type="text"
+                value={inputVal}
+                onChange={e => setInputVal(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                placeholder="Titre du scrutin, numéro, mot-clé…"
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#1B2B50', background: 'transparent' }}
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              style={{ display: 'flex', alignItems: 'center', background: '#E0786E', color: '#fff', height: 54, padding: '0 28px', borderRadius: 10, fontWeight: 600, fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap', border: 'none', boxShadow: '0 2px 8px rgba(224,120,110,0.4)' }}>
+              Rechercher
+            </button>
+          </div>
+
+          {/* Filter chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 18, alignItems: 'center' }}>
+            {(['', 'adopté', 'rejeté'] as const).map((r) => {
+              const label = r === '' ? 'Tous les scrutins' : r === 'adopté' ? 'Adoptés' : 'Rejetés'
+              const active = result === r && theme === ''
+              return (
+                <button key={r} onClick={() => changeFilter(r, '')}
+                  style={{ background: active ? '#1B2B50' : '#fff', color: active ? '#fff' : '#4B5563', border: `1px solid ${active ? '#1B2B50' : '#E4E6EA'}`, padding: '8px 16px', borderRadius: 999, fontSize: 13.5, fontWeight: active ? 600 : 400, cursor: 'pointer' }}>
+                  {label}
+                </button>
+              )
+            })}
+            {THEMES.map((t) => {
+              const active = theme === t
+              return (
+                <button key={t} onClick={() => changeFilter(result, active ? '' : t)}
+                  style={{ background: active ? '#1B2B50' : '#fff', color: active ? '#fff' : '#4B5563', border: `1px solid ${active ? '#1B2B50' : '#E4E6EA'}`, padding: '8px 16px', borderRadius: 999, fontSize: 13.5, fontWeight: active ? 600 : 400, cursor: 'pointer' }}>
+                  {t.split(' & ')[0]}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Theme filter chips */}
-      <div className="flex gap-1.5 mb-5 flex-wrap">
-        <button
-          onClick={() => changeFilter(result, '')}
-          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors
-            ${theme === ''
-              ? 'bg-navy text-white border-navy'
-              : 'bg-white text-gray-mid border-gray-border hover:border-navy/40'}`}>
-          Tous les thèmes
-        </button>
-        {THEMES.map((t) => (
-          <button key={t}
-            onClick={() => changeFilter(result, t)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors
-              ${theme === t
-                ? 'bg-navy text-white border-navy'
-                : 'bg-white text-gray-mid border-gray-border hover:border-navy/40'}`}>
-            {t}
-          </button>
-        ))}
+      {/* ── Table ── */}
+      <div style={{ padding: '32px 56px 72px' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>
+            <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, color: '#6B7280' }}>
+              {total.toLocaleString('fr-FR')} scrutins
+              {result && ` · ${result.charAt(0).toUpperCase() + result.slice(1)}s`}
+              {theme && ` · ${theme}`}
+              {' · triés par date'}
+            </span>
+            {(result || theme || search) && (
+              <button onClick={() => changeFilter('', '')} style={{ fontSize: 13, color: '#C9302A', background: 'none', border: 'none', cursor: 'pointer' }}>
+                Effacer les filtres
+              </button>
+            )}
+          </div>
+
+          <div style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            {/* Table header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 180px 260px 36px', gap: 16, padding: '13px 26px', borderBottom: '1px solid #E4E6EA', background: '#FBFAF6', font: '600 11.5px/1 var(--font-sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+              <span>Date</span><span>Scrutin</span><span>Thème</span><span>Résultat</span><span></span>
+            </div>
+
+            {isLoading ? (
+              <div style={{ padding: '32px 0', textAlign: 'center', color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>
+            ) : votes.length === 0 ? (
+              <div style={{ padding: '40px 26px', textAlign: 'center', color: '#9CA3AF', fontSize: 14 }}>Aucun scrutin trouvé.</div>
+            ) : (
+              votes.map((vote) => {
+                const total_v = vote.total_voters || 1
+                const forPct  = Math.round(vote.votes_for     / total_v * 100)
+                const agtPct  = Math.round(vote.votes_against / total_v * 100)
+                const tc = themeColors(vote.theme ?? null)
+                const adopted = vote.result === 'adopté'
+                return (
+                  <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
+                    style={{ display: 'grid', gridTemplateColumns: '100px 1fr 180px 260px 36px', gap: 16, padding: '18px 26px', borderBottom: '1px solid #F0F1F3', alignItems: 'center', textDecoration: 'none', background: '#fff', transition: 'background 0.12s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#FBFAF6')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
+
+                    {/* Date */}
+                    <div suppressHydrationWarning style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12, color: '#9CA3AF', lineHeight: 1.4 }}>
+                      {shortDate(vote.voted_at)}
+                    </div>
+
+                    {/* Title */}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 15, color: '#1B2B50', lineHeight: 1.3 }}
+                        className="line-clamp-2">
+                        {vote.vote_title}
+                      </div>
+                      <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 4 }}>
+                        Scrutin n°{vote.vote_id}
+                      </div>
+                    </div>
+
+                    {/* Theme */}
+                    <div>
+                      {vote.theme ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 999, background: tc.bg, color: tc.c }}>
+                          {vote.theme.split(' & ')[0]}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#D1D5DB', fontSize: 12 }}>—</span>
+                      )}
+                    </div>
+
+                    {/* Result */}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', padding: '3px 10px', borderRadius: 999, background: adopted ? '#EAF5EF' : '#FBE9E7', color: adopted ? '#1F8A5B' : '#C9302A' }}>
+                          {adopted ? 'Adopté' : 'Rejeté'}
+                        </span>
+                        <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 11.5, color: '#6B7280' }}>
+                          {vote.votes_for} pour · {vote.votes_against} contre
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', height: 5, borderRadius: 999, overflow: 'hidden', background: '#F0F1F3' }}>
+                        <div style={{ height: '100%', background: '#1F8A5B', width: `${forPct}%` }} />
+                        <div style={{ height: '100%', background: '#D9685E', width: `${agtPct}%` }} />
+                        <div style={{ height: '100%', background: '#D1D5DB', flex: 1 }} />
+                      </div>
+                    </div>
+
+                    {/* Chevron */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4C9D2" strokeWidth="2.2" strokeLinecap="round"><path d="m9 6 6 6-6 6"/></svg>
+                  </Link>
+                )
+              })
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 26, fontSize: 14, color: '#6B7280' }}>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E4E6EA', borderRadius: 8, background: '#fff', cursor: page === 1 ? 'default' : 'pointer', opacity: page === 1 ? 0.4 : 1 }}>
+                ‹
+              </button>
+              {buildPageNumbers(page, totalPages).map((p, i) =>
+                p === '…' ? (
+                  <span key={`ellipsis-${i}`} style={{ padding: '0 6px' }}>…</span>
+                ) : (
+                  <button key={p} onClick={() => setPage(p as number)}
+                    style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, background: page === p ? '#1B2B50' : '#fff', color: page === p ? '#fff' : '#6B7280', border: page === p ? 'none' : '1px solid #E4E6EA', fontWeight: page === p ? 600 : 400, cursor: 'pointer' }}>
+                    {p}
+                  </button>
+                )
+              )}
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E4E6EA', borderRadius: 8, background: '#fff', cursor: page === totalPages ? 'default' : 'pointer', opacity: page === totalPages ? 0.4 : 1 }}>
+                ›
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Count + clear */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs text-gray-mid">
-          {total} vote{total !== 1 ? 's' : ''}
-          {result && ` · ${result.charAt(0).toUpperCase() + result.slice(1)}`}
-          {theme  && ` · ${theme}`}
-        </p>
-        {(result || theme) && (
-          <button onClick={() => changeFilter('', '')} className="text-xs text-red-civic hover:underline">
-            Effacer les filtres
-          </button>
-        )}
-      </div>
-
-      {/* List */}
-      {isLoading ? (
-        <div className="flex flex-col gap-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-24 bg-gray-light rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {votes.map((vote) => (
-            <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
-              className="bg-white rounded-lg border border-gray-border p-4 hover:border-navy/30 transition-colors">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-navy line-clamp-2 leading-snug">
-                    {vote.vote_title}
-                  </p>
-                  {vote.summary_plain && (
-                    <p className="text-xs text-gray-mid mt-1 line-clamp-2 italic">
-                      <span className="text-red-civic font-medium not-italic">En clair</span>{' '}
-                      {vote.summary_plain}
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-mid mt-1">{formatDate(vote.voted_at)}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className={vote.result === 'adopté' ? 'badge-adopte' : 'badge-rejete'}>
-                    {vote.result}
-                  </span>
-                  {vote.theme && (
-                    <span className="text-[10px] text-gray-mid bg-gray-off rounded px-1.5 py-0.5 whitespace-nowrap">
-                      {vote.theme}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="mt-3 h-1.5 rounded-full bg-gray-light overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full"
-                  style={{ width: `${Math.round(vote.votes_for / (vote.total_voters || 1) * 100)}%` }} />
-              </div>
-              <div className="flex justify-between text-xs text-gray-mid mt-1">
-                <span>{vote.votes_for} pour</span>
-                <span>{vote.votes_against} contre · {vote.abstentions} abst.</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {total > 50 && (
-        <div className="flex justify-center gap-3 mt-8">
-          <button onClick={() => setOffset(Math.max(0, offset - 50))}
-            disabled={offset === 0 || isLoading}
-            className="px-4 py-2 text-sm border border-gray-border rounded disabled:opacity-40">
-            ← Précédent
-          </button>
-          <span className="px-4 py-2 text-sm text-gray-mid">
-            {offset + 1}–{Math.min(offset + 50, total)} sur {total}
-          </span>
-          <button onClick={() => setOffset(offset + 50)}
-            disabled={offset + 50 >= total || isLoading}
-            className="px-4 py-2 text-sm border border-gray-border rounded disabled:opacity-40">
-            Suivant →
-          </button>
-        </div>
-      )}
     </div>
   )
 }

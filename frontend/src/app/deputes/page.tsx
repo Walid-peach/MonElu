@@ -24,12 +24,8 @@ async function fetchAllDeputies() {
 export default async function DeputiesPage() {
   const initial = await fetchAllDeputies()
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-8 py-6">
-      <h1 className="font-serif text-3xl text-navy mb-2">Les députés</h1>
-      <p className="text-gray-mid text-sm mb-6">Assemblée Nationale · 17ème législature</p>
-      <Suspense fallback={<div className="text-gray-mid text-sm">Chargement...</div>}>
-        <DeputiesClient initial={initial} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<div className="min-h-screen bg-[#F7F4ED]" />}>
+      <DeputiesClient initial={initial} />
+    </Suspense>
   )
 }

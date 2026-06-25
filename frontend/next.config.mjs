@@ -17,6 +17,14 @@ const nextConfig = {
         hostname: 'www.assemblee-nationale.fr',
         pathname: '/dyn/static/tribun/17/photos/carre/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'github.com',
+      },
     ],
   },
   async rewrites() {
