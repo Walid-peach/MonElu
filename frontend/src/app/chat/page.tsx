@@ -587,11 +587,12 @@ function ChatInner() {
 
 function AiAvatar() {
   return (
-    <div style={{ width: 30, height: 30, borderRadius: 999, background: '#1B2B50', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-      <svg width="15" height="11" viewBox="0 0 30 22" fill="none">
-        <path d="M2 19 A13 13 0 0 1 28 19" stroke="#fff" strokeWidth="2.4" strokeLinecap="round"/>
-        <path d="M6 19 A9 9 0 0 1 24 19" stroke="rgba(255,255,255,0.44)" strokeWidth="2.4" strokeLinecap="round"/>
-        <path d="M10 19 A5 5 0 0 1 20 19" stroke="#D93025" strokeWidth="2.4" strokeLinecap="round"/>
+    <div style={{ width: 36, height: 36, borderRadius: 999, background: '#1B2B50', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+      <svg width="22" height="16" viewBox="0 0 30 22" fill="none">
+        <path d="M2 19 A13 13 0 0 1 28 19" stroke="#fff" strokeWidth="2.6" strokeLinecap="round"/>
+        <path d="M6 19 A9 9 0 0 1 24 19" stroke="rgba(255,255,255,0.45)" strokeWidth="2.6" strokeLinecap="round"/>
+        <path d="M10 19 A5 5 0 0 1 20 19" stroke="#D93025" strokeWidth="2.6" strokeLinecap="round"/>
+        <circle cx="15" cy="19" r="2" fill="#fff"/>
       </svg>
     </div>
   )
