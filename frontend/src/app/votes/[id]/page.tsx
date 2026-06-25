@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { getInitials, groupVotesByParty, partyHex } from '@/lib/utils'
 import { VoteDetailClient } from './VoteDetailClient'
@@ -96,24 +97,26 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'
 
   return (
-    <VoteDetailClient
-      voteId={vote.vote_id}
-      voteTitle={vote.vote_title}
-      result={vote.result}
-      votedAt={vote.voted_at}
-      summary={vote.summary_plain ?? null}
-      theme={vote.theme ?? null}
-      votesFor={vote.votes_for}
-      votesAgainst={vote.votes_against}
-      abstentions={vote.abstentions}
-      totalVoters={vote.total_voters}
-      pourPct={pourPct}
-      contrePct={contrePct}
-      abstPct={abstPct}
-      groups={groups}
-      dissidents={dissidents}
-      related={related}
-      apiUrl={apiUrl}
-    />
+    <Suspense fallback={<div style={{ padding: '48px 32px', color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
+      <VoteDetailClient
+        voteId={vote.vote_id}
+        voteTitle={vote.vote_title}
+        result={vote.result}
+        votedAt={vote.voted_at}
+        summary={vote.summary_plain ?? null}
+        theme={vote.theme ?? null}
+        votesFor={vote.votes_for}
+        votesAgainst={vote.votes_against}
+        abstentions={vote.abstentions}
+        totalVoters={vote.total_voters}
+        pourPct={pourPct}
+        contrePct={contrePct}
+        abstPct={abstPct}
+        groups={groups}
+        dissidents={dissidents}
+        related={related}
+        apiUrl={apiUrl}
+      />
+    </Suspense>
   )
 }

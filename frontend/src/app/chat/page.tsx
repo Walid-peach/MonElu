@@ -149,6 +149,7 @@ function ChatInner() {
   const scrollRef     = useRef<HTMLDivElement>(null)
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
   const activeConvRef = useRef<string | null>(null)  // sync for use inside callbacks
+  const isNewConvRef  = useRef(false)               // sync counterpart so setMessages updater never closes over stale value
   const sentRef       = useRef(false)
 
   // Keep ref in sync with state
@@ -191,14 +192,16 @@ function ChatInner() {
     setInputVal('')
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
-    // Determine if this is a new conv or continuation
+    // Determine if this is a new conv or continuation — use refs so the
+    // setMessages updater below never closes over stale closure values.
     let convId = activeConvRef.current
-    let isNewConv = false
     if (!convId) {
       convId = Date.now().toString()
-      isNewConv = true
+      isNewConvRef.current = true
       setActiveConvId(convId)
       activeConvRef.current = convId
+    } else {
+      isNewConvRef.current = false
     }
 
     setMessages(prev => [...prev, { role: 'user', text: q }, { role: 'typing' }])
@@ -206,17 +209,21 @@ function ChatInner() {
 
     try {
       const result = await api.search(q)
+      // Read localStorage once, outside the updater, to avoid repeated I/O
+      // and to ensure the snapshot is consistent for title/createdAt lookups.
+      const id = activeConvRef.current!
+      const isNew = isNewConvRef.current
+      const existingConvs = loadConversations()
+      const existing = existingConvs.find(c => c.id === id)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), { role: 'assistant' as const, result }]
-        // Persist to localStorage
-        const storedMsgs = next as StoredMsg[]
         const conv: StoredConv = {
-          id: convId!,
-          title: isNewConv ? q.slice(0, 60) : (loadConversations().find(c => c.id === convId!)?.title ?? q.slice(0, 60)),
-          createdAt: isNewConv ? Date.now() : (loadConversations().find(c => c.id === convId!)?.createdAt ?? Date.now()),
-          messages: storedMsgs,
+          id,
+          title: isNew ? q.slice(0, 60) : (existing?.title ?? q.slice(0, 60)),
+          createdAt: isNew ? Date.now() : (existing?.createdAt ?? Date.now()),
+          messages: next as StoredMsg[],
         }
-        const updated = upsertConv(loadConversations(), conv)
+        const updated = upsertConv(existingConvs, conv)
         saveConversations(updated)
         setConversations(updated)
         return next
@@ -227,13 +234,14 @@ function ChatInner() {
         role: 'error',
         text: is429 ? 'Trop de questions, patientez une minute.' : 'Erreur de connexion. Réessayez.',
       }
+      const id = activeConvRef.current!
+      const isNew = isNewConvRef.current
+      const existingConvs = isNew ? loadConversations() : null
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), errMsg]
-        // Still persist what we have (user msg + error)
-        const storedMsgs = next as StoredMsg[]
-        if (isNewConv) {
-          const conv: StoredConv = { id: convId!, title: q.slice(0, 60), createdAt: Date.now(), messages: storedMsgs }
-          const updated = upsertConv(loadConversations(), conv)
+        if (isNew && existingConvs) {
+          const conv: StoredConv = { id, title: q.slice(0, 60), createdAt: Date.now(), messages: next as StoredMsg[] }
+          const updated = upsertConv(existingConvs, conv)
           saveConversations(updated)
           setConversations(updated)
         }

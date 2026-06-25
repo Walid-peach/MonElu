@@ -59,7 +59,11 @@ export function partyHex(party: string | null): string {
     'Union des droites pour la République':             '#DC2626',
     'Gauche Démocrate et Républicaine':                 '#B45309',
   }
-  return map[party] ?? '#6B7280'
+  const color = map[party]
+  if (!color && process.env.NODE_ENV === 'development') {
+    console.warn(`partyHex: unknown party "${party}", using fallback. Add it to the map in lib/utils.ts.`)
+  }
+  return color ?? '#6B7280'
 }
 
 export function themeColors(theme: string | null): { c: string; bg: string } {
