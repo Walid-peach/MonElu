@@ -186,6 +186,7 @@ function ChatInner() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const send = useCallback(async (question: string) => {
     if (!question.trim() || loading) return
     const q = question.trim()
@@ -262,7 +263,6 @@ function ChatInner() {
 
   const restoreConv = useCallback((conv: StoredConv) => {
     setActiveConvId(conv.id)
-    activeConvRef.current = conv.id
     setMessages(conv.messages as Message[])
   }, [])
 
