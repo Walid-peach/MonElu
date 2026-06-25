@@ -276,53 +276,8 @@ function ChatInner() {
         overflow: 'hidden',
       }} className="hidden md:flex">
 
-        {/* Logo + toggle */}
-        <div style={{ padding: '20px 16px 12px', flexShrink: 0 }}>
-          <button
-            onClick={toggleDark}
-            title="Changer le thème"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 9,
-              marginBottom: 16,
-              cursor: 'pointer',
-              borderRadius: 9,
-              padding: '6px 7px',
-              marginLeft: -7,
-              marginRight: -7,
-              width: 'calc(100% + 14px)',
-              background: 'transparent',
-              border: 'none',
-              transition: 'background 140ms',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            <svg width="26" height="19" viewBox="0 0 30 22" fill="none">
-              <path d="M2 19 A13 13 0 0 1 28 19" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
-              <path d="M6 19 A9 9 0 0 1 24 19" stroke="rgba(255,255,255,0.38)" strokeWidth="2.5" strokeLinecap="round"/>
-              <path d="M10 19 A5 5 0 0 1 20 19" stroke="#D93025" strokeWidth="2.5" strokeLinecap="round"/>
-              <circle cx="15" cy="19" r="2.2" fill="#fff"/>
-            </svg>
-            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 800, fontSize: 18, color: '#fff', letterSpacing: '-0.01em' }}>
-              Mon<span style={{ color: '#D93025' }}>É</span>lu
-            </span>
-            {dk ? (
-              <svg style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.40)' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <circle cx="12" cy="12" r="5"/>
-                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-              </svg>
-            ) : (
-              <svg style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.28)' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-            )}
-          </button>
-
+        {/* New chat */}
+        <div style={{ padding: '16px 16px 12px', flexShrink: 0 }}>
           {/* New chat */}
           <button
             onClick={newChat}
@@ -401,6 +356,27 @@ function ChatInner() {
               <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.88)' }}>Utilisateur</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.36)' }}>Plan gratuit</div>
             </div>
+            <button
+              onClick={toggleDark}
+              title={dk ? 'Mode clair' : 'Mode sombre'}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.35)', transition: 'color 140ms' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.70)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+            >
+              {dk ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="5"/>
+                  <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </div>
