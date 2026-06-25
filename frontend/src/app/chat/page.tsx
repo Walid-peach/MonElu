@@ -175,7 +175,7 @@ function ChatInner() {
   useEffect(() => {
     if (initialQ && !sentRef.current) {
       sentRef.current = true
-      // eslint-disable-next-line react-compiler/react-compiler
+      // eslint-disable-next-line react-hooks/immutability
       send(initialQ)
     } else if (!initialQ) {
       textareaRef.current?.focus()
