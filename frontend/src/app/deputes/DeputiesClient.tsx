@@ -4,8 +4,10 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Deputy } from '@/lib/api'
 import { getInitials, partyHex } from '@/lib/utils'
+import { DeputyAvatar } from '@/components/DeputyAvatar'
 
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
+type SortKey = 'nom' | 'region' | 'parti'
 
 const PAGE_SIZE = 10
 const NAVY = '#1B2B50'
@@ -18,20 +20,8 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
-  const [party, setParty]   = useState(() => searchParams.get('party') ?? '')
-  const [dept,  setDept]    = useState(() => searchParams.get('dept')   ?? '')
-  const [page,  setPage]    = useState(1)
-
-  const parties = useMemo(
-    () => [...new Set(initial.items.map(d => d.party).filter(Boolean))].sort() as string[],
-    [initial.items]
-  )
-
-  const departments = useMemo(
-    () => ([...new Set(initial.items.map(d => d.department).filter(Boolean))] as string[])
-      .sort((a, b) => a.localeCompare(b, 'fr')),
-    [initial.items]
-  )
+  const [sort,   setSort]   = useState<SortKey>('nom')
+  const [page,   setPage]   = useState(1)
 
   const [debouncedSearch, setDebouncedSearch] = useState(search)
   useEffect(() => {
@@ -44,39 +34,32 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     if (skipFirstSync.current) { skipFirstSync.current = false; return }
     const p = new URLSearchParams()
     if (debouncedSearch) p.set('search', debouncedSearch)
-    if (party)           p.set('party',  party)
-    if (dept)            p.set('dept',   dept)
     const qs = p.toString()
     router.replace(`/deputes${qs ? `?${qs}` : ''}`, { scroll: false })
     setPage(1)
-  }, [debouncedSearch, party, dept, router])
+  }, [debouncedSearch, router])
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.toLowerCase()
-    return initial.items
-      .filter(d => {
-        if (party && d.party !== party) return false
-        if (dept  && d.department !== dept) return false
-        if (q) return (
+    const items = q
+      ? initial.items.filter(d =>
           d.full_name.toLowerCase().includes(q) ||
           (d.department?.toLowerCase().includes(q) ?? false) ||
           (d.party?.toLowerCase().includes(q) ?? false)
         )
-        return true
-      })
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, 'fr'))
-  }, [initial.items, party, dept, debouncedSearch])
+      : [...initial.items]
+
+    if (sort === 'nom')    return items.sort((a, b) => a.full_name.localeCompare(b.full_name, 'fr'))
+    if (sort === 'region') return items.sort((a, b) => (a.department ?? '').localeCompare(b.department ?? '', 'fr'))
+    if (sort === 'parti')  return items.sort((a, b) => (a.party ?? '').localeCompare(b.party ?? '', 'fr'))
+    return items
+  }, [initial.items, debouncedSearch, sort])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
-  function clearAll() { setSearch(''); setParty(''); setDept(''); setPage(1) }
-
-  function selectParty(p: string) {
-    setParty(prev => prev === p ? '' : p)
-    setPage(1)
-  }
+  function clearSearch() { setSearch(''); setPage(1) }
 
   function getPageNumbers(): (number | '…')[] {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -144,7 +127,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
               />
               {search && (
                 <button
-                  onClick={() => setSearch('')}
+                  onClick={clearSearch}
                   aria-label="Effacer la recherche"
                   style={{ color: '#9CA3AF', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
                 >
@@ -167,62 +150,25 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             </button>
           </div>
 
-          {/* Filter chips */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 18, alignItems: 'center' }}>
-            <button
-              onClick={() => { setParty(''); setPage(1) }}
-              style={{
-                background: party === '' ? NAVY : '#fff',
-                color: party === '' ? '#fff' : '#4B5563',
-                border: '1px solid ' + (party === '' ? NAVY : LINE),
-                padding: '8px 16px', borderRadius: 999, fontSize: 13.5,
-                fontWeight: party === '' ? 600 : 400, cursor: 'pointer',
-              }}
-            >
-              Tous
-            </button>
-            {parties.map(p => (
+          {/* Sort pills */}
+          <div style={{ display: 'flex', gap: 9, marginTop: 18, alignItems: 'center' }}>
+            <span style={{ fontSize: 13.5, color: '#9CA3AF', marginRight: 4 }}>Trier par</span>
+            {([['nom', 'Nom'], ['region', 'Région'], ['parti', 'Groupe']] as const).map(([val, label]) => (
               <button
-                key={p}
-                onClick={() => selectParty(p)}
-                aria-pressed={party === p}
+                key={val}
+                onClick={() => { setSort(val); setPage(1) }}
+                aria-pressed={sort === val}
                 style={{
-                  background: party === p ? NAVY : '#fff',
-                  color: party === p ? '#fff' : '#4B5563',
-                  border: '1px solid ' + (party === p ? NAVY : LINE),
-                  padding: '8px 16px', borderRadius: 999, fontSize: 13.5,
-                  fontWeight: party === p ? 600 : 400, cursor: 'pointer',
+                  background: sort === val ? NAVY : '#fff',
+                  color: sort === val ? '#fff' : '#4B5563',
+                  border: '1px solid ' + (sort === val ? NAVY : LINE),
+                  padding: '8px 18px', borderRadius: 999, fontSize: 13.5,
+                  fontWeight: sort === val ? 600 : 400, cursor: 'pointer',
                 }}
               >
-                {p}
+                {label}
               </button>
             ))}
-            <div style={{ marginLeft: 'auto' }}>
-              <label htmlFor="filter-dept" className="sr-only">Région / département</label>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                background: '#fff', border: '1px solid ' + LINE,
-                padding: '8px 16px', borderRadius: 999, fontSize: 13.5,
-                color: '#4B5563', cursor: 'pointer',
-              }}>
-                <select
-                  id="filter-dept"
-                  value={dept}
-                  onChange={e => { setDept(e.target.value); setPage(1) }}
-                  style={{
-                    border: 'none', outline: 'none', background: 'transparent',
-                    fontSize: 13.5, color: '#4B5563', cursor: 'pointer',
-                    appearance: 'none', paddingRight: 4,
-                  }}
-                >
-                  <option value="">Toutes régions</option>
-                  {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-                  <path d="m5 9 7 7 7-7"/>
-                </svg>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -231,31 +177,29 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
       <div style={{ padding: '32px 56px 72px' }}>
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
 
-          {/* Count + sort row */}
+          {/* Count row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>
             <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#6B7280' }}>
-              {filtered.length} député{filtered.length !== 1 ? 's' : ''} · triés par nom
+              {filtered.length} député{filtered.length !== 1 ? 's' : ''}
             </span>
-            <span style={{ fontSize: 13.5, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 7 }}>
-              {(party || dept || debouncedSearch) && (
-                <button
-                  onClick={clearAll}
-                  style={{ color: '#C9302A', fontSize: 13, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
-                >
-                  Effacer les filtres ×
-                </button>
-              )}
-            </span>
+            {debouncedSearch && (
+              <button
+                onClick={clearSearch}
+                style={{ color: '#C9302A', fontSize: 13, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+              >
+                Effacer la recherche ×
+              </button>
+            )}
           </div>
 
           {filtered.length === 0 ? (
             <div style={{ padding: '64px 0', textAlign: 'center' }}>
               <p style={{ color: '#6B7280', fontSize: 15, marginBottom: 12 }}>Aucun résultat pour cette recherche</p>
               <button
-                onClick={clearAll}
+                onClick={clearSearch}
                 style={{ fontSize: 14, color: NAVY, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
               >
-                Effacer les filtres
+                Effacer la recherche
               </button>
             </div>
           ) : (
@@ -282,17 +226,12 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                 {/* Rows */}
                 {paginated.map(d => {
                   const hex = partyHex(d.party)
-                  const initials = getInitials(d.full_name)
                   return (
-                    <Link
-                      key={d.deputy_id}
-                      href={`/deputes/${d.deputy_id}`}
-                      style={{ textDecoration: 'none' }}
-                    >
+                    <Link key={d.deputy_id} href={`/deputes/${d.deputy_id}`} style={{ textDecoration: 'none' }}>
                       <div
                         style={{
                           display: 'grid', gridTemplateColumns: '1fr 260px 34px',
-                          gap: 18, padding: '15px 26px',
+                          gap: 18, padding: '13px 26px',
                           borderBottom: '1px solid #F0F1F3',
                           alignItems: 'center', cursor: 'pointer',
                           background: '#fff', transition: 'background 0.12s',
@@ -302,13 +241,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                       >
                         {/* Deputy */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-                          <span style={{
-                            width: 42, height: 42, flexShrink: 0, borderRadius: 999,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 700, fontSize: 14, color: '#fff', background: hex,
-                          }}>
-                            {initials}
-                          </span>
+                          <DeputyAvatar name={d.full_name} photoUrl={d.photo_url} size="sm" />
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontWeight: 600, fontSize: 15.5, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {d.full_name}
@@ -345,12 +278,10 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                     disabled={safePage === 1}
                     style={{
                       width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '1px solid ' + LINE, borderRadius: 8, background: '#fff', cursor: safePage === 1 ? 'default' : 'pointer',
-                      opacity: safePage === 1 ? 0.4 : 1,
+                      border: '1px solid ' + LINE, borderRadius: 8, background: '#fff',
+                      cursor: safePage === 1 ? 'default' : 'pointer', opacity: safePage === 1 ? 0.4 : 1,
                     }}
-                  >
-                    ‹
-                  </button>
+                  >‹</button>
                   {getPageNumbers().map((n, i) =>
                     n === '…' ? (
                       <span key={`ellipsis-${i}`} style={{ padding: '0 6px' }}>…</span>
@@ -366,9 +297,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                           border: safePage === n ? 'none' : '1px solid ' + LINE,
                           fontWeight: safePage === n ? 600 : 400,
                         }}
-                      >
-                        {n}
-                      </button>
+                      >{n}</button>
                     )
                   )}
                   <button
@@ -376,12 +305,10 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                     disabled={safePage === totalPages}
                     style={{
                       width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '1px solid ' + LINE, borderRadius: 8, background: '#fff', cursor: safePage === totalPages ? 'default' : 'pointer',
-                      opacity: safePage === totalPages ? 0.4 : 1,
+                      border: '1px solid ' + LINE, borderRadius: 8, background: '#fff',
+                      cursor: safePage === totalPages ? 'default' : 'pointer', opacity: safePage === totalPages ? 0.4 : 1,
                     }}
-                  >
-                    ›
-                  </button>
+                  >›</button>
                 </div>
               )}
             </>
