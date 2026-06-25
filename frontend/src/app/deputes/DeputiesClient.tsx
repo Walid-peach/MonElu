@@ -12,26 +12,22 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Initialize from URL params (once on mount)
   const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
   const [party, setParty]   = useState(() => searchParams.get('party') ?? '')
   const [dept,  setDept]    = useState(() => searchParams.get('dept')   ?? '')
   const [sort,  setSort]    = useState(() => searchParams.get('sort')   ?? 'nom')
-  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const parties = useMemo(
     () => [...new Set(initial.items.map(d => d.party).filter(Boolean))].sort() as string[],
     [initial.items]
   )
 
-  // Debounce search input
   const [debouncedSearch, setDebouncedSearch] = useState(search)
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300)
     return () => clearTimeout(t)
   }, [search])
 
-  // Sync state → URL (skip first render to avoid spurious replace)
   const skipFirstSync = useRef(true)
   useEffect(() => {
     if (skipFirstSync.current) { skipFirstSync.current = false; return }
@@ -44,14 +40,12 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     router.replace(`/deputes${qs ? `?${qs}` : ''}`, { scroll: false })
   }, [debouncedSearch, party, dept, sort, router])
 
-  // Unique department names from full list
   const departments = useMemo(() =>
     ([...new Set(initial.items.map(d => d.department).filter(Boolean))] as string[])
       .sort((a, b) => a.localeCompare(b, 'fr')),
     [initial.items]
   )
 
-  // Compose all filters client-side over the full loaded list
   const filtered = useMemo(() => {
     const q = debouncedSearch.toLowerCase()
     return initial.items.filter(d => {
@@ -66,8 +60,6 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     })
   }, [initial.items, party, dept, debouncedSearch])
 
-  // Sort — Nom A–Z only for now (presence/activity requires backend change:
-  // list endpoint must include presence_rate + total_votes per deputy)
   const sorted = useMemo(() =>
     sort === 'nom'
       ? [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name, 'fr'))
@@ -81,65 +73,75 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
   return (
     <div>
-      {/* Search — always visible */}
-      <div className="mb-3">
+      {/* Search bar */}
+      <div className="relative mb-5">
         <label htmlFor="deputy-search" className="sr-only">Rechercher un député</label>
+        <svg
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-mid pointer-events-none"
+          width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
         <input
           id="deputy-search"
           type="search"
-          placeholder="Nom, département…"
+          placeholder="Rechercher par nom, département…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full border border-gray-border rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-navy"
+          className="w-full border border-gray-border rounded-xl pl-11 pr-4 py-3 text-sm bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy/20 transition-colors"
         />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-mid hover:text-navy p-1"
+            aria-label="Effacer la recherche"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/* Mobile: "Filtres" toggle */}
-      <button
-        onClick={() => setFiltersOpen(o => !o)}
-        className="md:hidden mb-2 flex items-center gap-2 text-sm text-navy/70 border border-gray-border rounded-lg px-3 py-2 bg-white w-full"
-        aria-expanded={filtersOpen}
-        aria-controls="filter-row"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
-        </svg>
-        Filtres &amp; tri
-        {activeFilterCount > 0 && (
-          <span className="bg-red-civic text-white text-[10px] font-medium rounded-full w-4 h-4 flex items-center justify-center">
-            {activeFilterCount}
-          </span>
-        )}
-        <span className="ml-auto text-xs">{filtersOpen ? '▲' : '▼'}</span>
-      </button>
-
-      {/* Filter + sort row — collapsible on mobile */}
-      <div
-        id="filter-row"
-        className={`${filtersOpen ? 'flex' : 'hidden'} md:flex flex-col sm:flex-row gap-2 mb-4`}
-      >
-        <div className="flex-1">
-          <label htmlFor="filter-groupe" className="sr-only">Groupe parlementaire</label>
-          <select
-            id="filter-groupe"
-            value={party}
-            onChange={e => setParty(e.target.value)}
-            className="w-full border border-gray-border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-navy"
+      {/* Party pill strip */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 sp" role="group" aria-label="Filtrer par groupe parlementaire">
+        <button
+          onClick={() => setParty('')}
+          className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+            party === ''
+              ? 'bg-navy text-white border-navy'
+              : 'bg-white text-navy/70 border-gray-border hover:border-navy/40'
+          }`}
+        >
+          Tous
+        </button>
+        {parties.map(p => (
+          <button
+            key={p}
+            onClick={() => setParty(prev => prev === p ? '' : p)}
+            aria-pressed={party === p}
+            className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+              party === p
+                ? `${partyColor(p)} border-transparent ring-2 ring-offset-1 ring-navy/20`
+                : `bg-white text-navy/70 border-gray-border hover:border-navy/40`
+            }`}
           >
-            <option value="">Tous les groupes</option>
-            {parties.map(p => (
-              <option key={p} value={p}>{partyShort(p)} — {p}</option>
-            ))}
-          </select>
-        </div>
+            {partyShort(p)}
+          </button>
+        ))}
+      </div>
 
+      {/* Department + sort row */}
+      <div className="flex gap-2 mb-5">
         <div className="flex-1">
           <label htmlFor="filter-dept" className="sr-only">Département</label>
           <select
             id="filter-dept"
             value={dept}
             onChange={e => setDept(e.target.value)}
-            className="w-full border border-gray-border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-navy"
+            className="w-full border border-gray-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-navy"
           >
             <option value="">Tous les départements</option>
             {departments.map(d => (
@@ -147,30 +149,31 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             ))}
           </select>
         </div>
-
         <div>
           <label htmlFor="filter-sort" className="sr-only">Trier par</label>
           <select
             id="filter-sort"
             value={sort}
             onChange={e => setSort(e.target.value)}
-            className="w-full border border-gray-border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-navy"
+            className="border border-gray-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-navy"
           >
-            <option value="nom">Trier : Nom A–Z</option>
-            {/* TODO: add presence + activity options once list endpoint exposes those fields */}
+            <option value="nom">Nom A–Z</option>
           </select>
         </div>
       </div>
 
       {/* Count + clear */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <p className="text-xs text-gray-mid">
-          {sorted.length} député{sorted.length !== 1 ? 's' : ''}
+          <span className="font-medium text-navy">{sorted.length}</span> député·e·s
           {party && ` · ${partyShort(party)}`}
           {dept   && ` · ${dept}`}
         </p>
         {activeFilterCount > 0 && (
-          <button onClick={clearAll} className="text-xs text-red-civic hover:underline">
+          <button onClick={clearAll} className="text-xs text-red-civic hover:underline flex items-center gap-1">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
             Effacer les filtres
           </button>
         )}
@@ -178,32 +181,44 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
       {/* Grid */}
       {sorted.length === 0 ? (
-        <p className="text-sm text-gray-mid py-8 text-center">Aucun résultat</p>
+        <div className="py-16 text-center">
+          <p className="text-gray-mid text-sm mb-3">Aucun résultat pour cette recherche</p>
+          <button onClick={clearAll} className="text-sm text-navy underline underline-offset-2">
+            Effacer les filtres
+          </button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {sorted.map(d => (
-            <Link key={d.deputy_id} href={`/deputes/${d.deputy_id}`}
-              className="bg-white border border-gray-border rounded-lg p-4 hover:border-navy/30 transition-colors flex items-center gap-3">
+            <Link
+              key={d.deputy_id}
+              href={`/deputes/${d.deputy_id}`}
+              className="group bg-white border border-gray-border rounded-xl p-4 hover:border-navy/30 hover:shadow-sm transition-all flex items-center gap-3"
+            >
               <DeputyAvatar name={d.full_name} photoUrl={d.photo_url} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-navy truncate">{d.full_name}</p>
-                <p className="text-xs text-gray-mid truncate">{d.department}</p>
-              </div>
-              {d.party && (
-                <span
-                  tabIndex={0}
-                  className={`relative group text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 cursor-default outline-none focus-visible:ring-1 focus-visible:ring-navy/40 ${partyColor(d.party)}`}
-                  aria-label={`Groupe : ${d.party}`}
-                >
-                  {partyShort(d.party)}
+                <p className="text-sm font-medium text-navy truncate group-hover:text-navy leading-snug">
+                  {d.full_name}
+                </p>
+                <p className="text-xs text-gray-mid truncate mt-0.5">{d.department}</p>
+                {d.party && (
                   <span
-                    role="tooltip"
-                    className="absolute bottom-full right-0 mb-1.5 px-2 py-1 text-xs bg-navy text-white rounded whitespace-nowrap shadow-lg invisible group-hover:visible group-focus-within:visible pointer-events-none z-10"
+                    className={`inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full font-medium ${partyColor(d.party)}`}
+                    aria-label={`Groupe : ${d.party}`}
+                    title={d.party}
                   >
-                    {d.party}
+                    {partyShort(d.party)}
                   </span>
-                </span>
-              )}
+                )}
+              </div>
+              <svg
+                className="text-gray-border group-hover:text-navy/30 flex-shrink-0 transition-colors"
+                width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </Link>
           ))}
         </div>
