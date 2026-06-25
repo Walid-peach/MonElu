@@ -3,12 +3,17 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { DeputyVoteItem } from '@/lib/api'
-import { partyColor, formatDate } from '@/lib/utils'
+import { partyHex, formatDate } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
-import { ShareButton } from '@/components/ShareButton'
 
 export const dynamicParams = true
 export const revalidate = 86400
+
+const NAVY   = '#1B2B50'
+const CREAM  = '#F7F4ED'
+const LINE   = '#E4E6EA'
+const ACCENT = '#E0786E'
+const RED    = '#C9302A'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -20,31 +25,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${deputy.full_name} — MonÉlu`,
     description,
-    openGraph: {
-      title: `${deputy.full_name} — MonÉlu`,
-      description,
-      url: `https://mon-elu.vercel.app/deputes/${id}`,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${deputy.full_name} — MonÉlu`,
-      description,
-    },
+    openGraph: { title: `${deputy.full_name} — MonÉlu`, description },
+    twitter:   { card: 'summary_large_image', title: `${deputy.full_name} — MonÉlu`, description },
   }
 }
 
-const POSITION_LABEL: Record<string, string> = {
-  pour: 'Pour',
-  contre: 'Contre',
-  abstention: 'Abstention',
-  nonVotant: 'Non votant',
-}
-
-const POSITION_CLASS: Record<string, string> = {
-  pour: 'bg-emerald-100 text-emerald-800',
-  contre: 'bg-red-50 text-red-700',
-  abstention: 'bg-amber-100 text-amber-800',
-  nonVotant: 'bg-gray-100 text-gray-500',
+const POS = {
+  pour:       { label: 'Pour',       color: '#1F8A5B', bg: '#EAF5EF' },
+  contre:     { label: 'Contre',     color: RED,        bg: '#FBE9E7' },
+  abstention: { label: 'Abstention', color: '#6B7280',  bg: '#F0F1F3' },
+  nonVotant:  { label: 'Non votant', color: '#9CA3AF',  bg: '#F5F6F7' },
 }
 
 export default async function DeputyPage({ params }: { params: Promise<{ id: string }> }) {
@@ -60,228 +50,284 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
   const presencePct    = scorecard ? Math.round((scorecard.presence_rate ?? 0) * 100) : null
   const avgPresencePct = deputyStats ? Math.round((deputyStats.avg_presence_rate ?? 0) * 100) : null
   const denom          = scorecard ? (scorecard.present_votes || 1) : 1
-  const pourPct        = scorecard ? Math.round(scorecard.votes_for      / denom * 100) : null
-  const contrePct      = scorecard ? Math.round(scorecard.votes_against  / denom * 100) : null
-  const abstPct        = scorecard ? Math.round(scorecard.abstentions    / denom * 100) : null
+  const pourPct        = scorecard ? Math.round(scorecard.votes_for     / denom * 100) : 0
+  const contrePct      = scorecard ? Math.round(scorecard.votes_against / denom * 100) : 0
+  const abstPct        = scorecard ? Math.round(scorecard.abstentions   / denom * 100) : 0
 
-  const aboveAvg =
-    presencePct !== null && avgPresencePct !== null
-      ? presencePct > avgPresencePct
-        ? 'above'
-        : presencePct < avgPresencePct
-        ? 'below'
-        : 'equal'
-      : null
+  const hex = partyHex(deputy.party)
 
-  const firstName = deputy.first_name || deputy.full_name.split(' ')[0]
+  const stats = scorecard ? [
+    { value: scorecard.total_votes.toLocaleString('fr-FR'),    label: 'scrutins votés' },
+    { value: `${presencePct ?? '—'}%`,                        label: 'présence aux votes' },
+    { value: scorecard.votes_for.toLocaleString('fr-FR'),      label: 'votes Pour' },
+    { value: scorecard.votes_against.toLocaleString('fr-FR'),  label: 'votes Contre' },
+    { value: scorecard.abstentions.toLocaleString('fr-FR'),    label: 'abstentions' },
+    { value: scorecard.present_votes.toLocaleString('fr-FR'),  label: 'votes exprimés' },
+  ] : []
 
   return (
-    <div className="max-w-2xl mx-auto px-4 md:px-8 py-6">
-      {/* Back link */}
-      <Link
-        href="/deputes"
-        className="inline-flex items-center gap-1.5 text-xs text-gray-mid hover:text-navy transition-colors mb-6"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-        Annuaire des députés
-      </Link>
+    <div style={{ background: CREAM, minHeight: '100vh' }}>
 
-      {/* Hero card — navy background */}
-      <div className="bg-navy rounded-2xl p-6 mb-4">
-        <div className="flex items-start gap-4">
-          <div className="ring-2 ring-white/20 rounded-full flex-shrink-0">
-            <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="xl" priority />
+      {/* Hero band */}
+      <div style={{
+        padding: '38px 56px 44px',
+        background: `linear-gradient(180deg,#ffffff 0%,${CREAM} 100%)`,
+        borderBottom: `1px solid #ECE7DC`,
+      }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+
+          {/* Breadcrumb */}
+          <div style={{ fontSize: 13.5, color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 26 }}>
+            <Link
+              href="/deputes"
+              style={{ color: RED, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none', fontWeight: 500 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+              Retour aux députés
+            </Link>
+            <span>/</span>
+            <span style={{ color: '#6B7280' }}>{deputy.full_name}</span>
           </div>
-          <div className="min-w-0 flex-1 pt-1">
-            <h1 className="font-serif text-2xl text-white leading-tight">{deputy.full_name}</h1>
-            <p className="text-white/60 text-sm mt-1">{deputy.department}</p>
-            {deputy.party && (
-              <span className="inline-block mt-2 text-xs px-2.5 py-1 rounded-full font-medium bg-white/10 text-white/90 border border-white/20">
-                {deputy.party}
-              </span>
-            )}
-          </div>
-          <div className="flex-shrink-0 text-white/70 hover:text-white transition-colors">
-            <ShareButton
-              url={`/deputes/${id}`}
-              title={`${deputy.full_name} — MonÉlu`}
-              text={`Découvrez le bilan de ${deputy.full_name} sur MonÉlu`}
-              ariaLabel={`Partager le profil de ${deputy.full_name}`}
-            />
-          </div>
-        </div>
 
-        {/* Presence summary inside hero */}
-        {presencePct !== null && avgPresencePct !== null && (
-          <div className="mt-5 flex items-center gap-3 bg-white/8 rounded-xl px-4 py-3">
-            <div className="text-2xl font-semibold text-white tabular-nums">{presencePct}%</div>
-            <div className="text-white/60 text-xs leading-snug">
-              de présence aux votes
-              <br />
-              <span className={aboveAvg === 'above' ? 'text-emerald-400' : aboveAvg === 'below' ? 'text-red-400' : 'text-white/50'}>
-                {aboveAvg === 'above' && `↑ +${presencePct - avgPresencePct} pts vs. moy. nationale`}
-                {aboveAvg === 'below' && `↓ −${avgPresencePct - presencePct} pts vs. moy. nationale`}
-                {aboveAvg === 'equal' && `= dans la moyenne nationale`}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
+          {/* Photo + identity */}
+          <div style={{ display: 'flex', gap: 44, alignItems: 'flex-start' }}>
 
-      {/* Plain-language summary */}
-      {presencePct !== null && avgPresencePct !== null && (
-        <div className="border-l-2 border-navy bg-gray-off rounded-r-xl px-4 py-3 mb-4 text-sm text-navy/70 leading-relaxed">
-          {firstName} a participé à{' '}
-          <span className="font-medium text-navy">{presencePct}%</span> des votes —{' '}
-          {aboveAvg === 'above' && <span className="text-emerald-700 font-medium">au-dessus</span>}
-          {aboveAvg === 'below' && <span className="text-red-700 font-medium">en dessous</span>}
-          {aboveAvg === 'equal' && <span className="font-medium">dans</span>}{' '}
-          de la moyenne nationale ({avgPresencePct}%).
-        </div>
-      )}
-
-      {/* Scorecard */}
-      {scorecard && (
-        <div className="bg-white border border-gray-border rounded-2xl p-6 mb-4">
-          <h2 className="font-serif text-xl text-navy mb-5">Bilan de mandat</h2>
-
-          {/* Presence bar */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center text-sm mb-2">
-              <span className="text-gray-mid font-medium">Taux de présence</span>
-              <div className="flex items-center gap-2">
-                {avgPresencePct !== null && aboveAvg && (
-                  <span
-                    className={`text-xs font-medium ${aboveAvg === 'above' ? 'text-emerald-700' : aboveAvg === 'below' ? 'text-red-700' : 'text-gray-mid'}`}
-                    aria-label={`${aboveAvg === 'above' ? 'Au-dessus' : aboveAvg === 'below' ? 'En dessous' : 'Dans'} de la moyenne nationale (${avgPresencePct}%)`}
-                  >
-                    {aboveAvg === 'above' ? '↑' : aboveAvg === 'below' ? '↓' : '≈'} moy. {avgPresencePct}%
-                  </span>
-                )}
-                <span className="font-semibold text-navy tabular-nums">{presencePct}%</span>
+            {/* Left: photo */}
+            <div style={{ width: 210, flexShrink: 0 }}>
+              <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid #ECE7DC`, boxShadow: '0 6px 20px rgba(27,43,80,0.12)' }}>
+                <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="2xl" priority />
               </div>
-            </div>
-            <div className="relative h-2.5 bg-gray-light rounded-full overflow-hidden">
-              <div
-                className="h-full bg-navy rounded-full transition-all"
-                style={{ width: `${presencePct}%` }}
-              />
-            </div>
-            {avgPresencePct !== null && (
-              <div className="relative h-0" style={{ marginTop: '-10px' }}>
-                <div
-                  className="absolute top-0 h-2.5 w-0.5 bg-gray-mid/50"
-                  style={{ left: `${avgPresencePct}%` }}
-                  aria-hidden="true"
-                />
-              </div>
-            )}
-            {avgPresencePct !== null && (
-              <p className="text-[11px] text-gray-mid mt-2">
-                Trait vertical = moyenne nationale ({avgPresencePct}%)
-              </p>
-            )}
-          </div>
-
-          {/* Vote breakdown */}
-          <div className="mb-6">
-            <p className="text-sm text-gray-mid font-medium mb-2">Répartition des votes exprimés</p>
-            <div className="h-3 rounded-full overflow-hidden flex">
-              <div className="bg-emerald-500 h-full transition-all" style={{ width: `${pourPct}%` }} />
-              <div className="bg-red-civic h-full transition-all" style={{ width: `${contrePct}%` }} />
-              <div className="bg-amber-300 h-full transition-all" style={{ width: `${abstPct}%` }} />
-              <div className="bg-gray-light h-full flex-1" />
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-mid">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" aria-hidden="true" />
-                Pour {pourPct}%
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-civic inline-block" aria-hidden="true" />
-                Contre {contrePct}%
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-300 inline-block" aria-hidden="true" />
-                Abstention {abstPct}%
-              </span>
-            </div>
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'Votes exprimés', value: (scorecard.total_votes ?? 0).toLocaleString('fr-FR'), accent: false },
-              { label: 'Pour',           value: (scorecard.votes_for   ?? 0).toLocaleString('fr-FR'), accent: false },
-              { label: 'Contre',         value: (scorecard.votes_against ?? 0).toLocaleString('fr-FR'), accent: false },
-            ].map(({ label, value }) => (
-              <div key={label} className="bg-gray-off rounded-xl p-3 text-center">
-                <div className="text-lg font-semibold text-navy tabular-nums">{value}</div>
-                <div className="text-[11px] text-gray-mid mt-0.5 leading-tight">{label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent votes */}
-      {recentVotes && recentVotes.items.length > 0 && (
-        <div className="bg-white border border-gray-border rounded-2xl p-6 mb-4">
-          <h2 className="font-serif text-xl text-navy mb-4">Votes récents</h2>
-          <div className="flex flex-col divide-y divide-gray-border">
-            {recentVotes.items.map((v: DeputyVoteItem) => (
-              <Link
-                key={v.vote_id}
-                href={`/votes/${v.vote_id}`}
-                className="flex items-start gap-3 py-3.5 first:pt-0 last:pb-0 hover:bg-gray-off -mx-2 px-2 rounded transition-colors"
-              >
-                <span
-                  className={`text-xs px-2 py-0.5 rounded font-medium shrink-0 mt-0.5 ${POSITION_CLASS[v.position] ?? 'bg-gray-100 text-gray-500'}`}
-                  aria-label={`Position : ${POSITION_LABEL[v.position] ?? v.position}`}
-                >
-                  {POSITION_LABEL[v.position] ?? v.position}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-navy line-clamp-2 leading-snug">{v.vote_title}</p>
-                  {v.summary_plain && (
-                    <p className="text-xs text-gray-mid mt-0.5 line-clamp-1 italic">
-                      <span className="text-red-civic font-medium not-italic">En clair</span>{' '}
-                      {v.summary_plain}
-                    </p>
-                  )}
-                  <p className="text-[11px] text-gray-mid mt-1">{v.voted_at ? formatDate(v.voted_at) : ''}</p>
+              {deputy.department && (
+                <div style={{ marginTop: 14, fontSize: 12.5, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/>
+                  </svg>
+                  {deputy.department}
                 </div>
-                <svg
-                  className="text-gray-border flex-shrink-0 mt-1"
-                  width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  aria-hidden="true"
+              )}
+            </div>
+
+            {/* Right: identity */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
+                Député·e · XVII<sup>e</sup> législature
+              </div>
+              <h1 className="font-serif" style={{
+                fontWeight: 600, fontSize: 'clamp(36px,4.5vw,58px)', lineHeight: 1.0,
+                letterSpacing: '-0.02em', color: NAVY, margin: '14px 0 0',
+              }}>
+                {deputy.full_name}
+              </h1>
+              {deputy.department && (
+                <div style={{ fontSize: 20, color: '#4B5563', marginTop: 10 }}>
+                  {deputy.department}
+                </div>
+              )}
+              {deputy.party && (
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 9,
+                  marginTop: 18, padding: '8px 16px', borderRadius: 999,
+                  background: `${hex}14`, border: `1px solid ${hex}40`,
+                  color: hex, fontWeight: 600, fontSize: 14,
+                }}>
+                  <span style={{ width: 9, height: 9, borderRadius: 999, background: hex }} />
+                  {deputy.party}
+                </div>
+              )}
+
+              {/* CTA buttons */}
+              <div style={{ display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
+                <Link
+                  href={`/chat?q=${encodeURIComponent(`Quel est le bilan de ${deputy.full_name} ?`)}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    background: ACCENT, color: '#fff', padding: '12px 24px',
+                    borderRadius: 9, fontWeight: 600, fontSize: 15,
+                    boxShadow: '0 2px 8px rgba(224,120,110,0.35)', textDecoration: 'none',
+                  }}
                 >
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </Link>
-            ))}
+                  Poser une question sur ce député
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </Link>
+                <a
+                  href="#votes"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    background: '#fff', border: `1px solid ${LINE}`, color: NAVY,
+                    padding: '12px 22px', borderRadius: 9, fontWeight: 600,
+                    fontSize: 15, textDecoration: 'none',
+                  }}
+                >
+                  Votes récents
+                </a>
+              </div>
+            </div>
           </div>
-          {recentVotes.total > 10 && (
-            <p className="text-xs text-gray-mid mt-4 pt-3 border-t border-gray-border">
-              {recentVotes.total.toLocaleString('fr-FR')} votes au total sur ce mandat
-            </p>
+
+          {/* Stats strip */}
+          {stats.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stats.length},1fr)`, marginTop: 38, borderTop: `1px solid #ECE7DC` }}>
+              {stats.map((s, i) => (
+                <div key={i} style={{ padding: '22px 14px 18px', borderRight: i < stats.length - 1 ? `1px solid #ECE7DC` : undefined }}>
+                  <div className="font-serif" style={{ fontWeight: 600, fontSize: 34, color: NAVY, letterSpacing: '-0.01em', lineHeight: 1 }}>
+                    {s.value}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, lineHeight: 1.35 }}>
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Ask the AI */}
-      <Link
-        href={`/chat?q=${encodeURIComponent(`Quel est le bilan de ${deputy.full_name} ?`)}`}
-        className="w-full flex items-center justify-center gap-2 border border-navy text-navy rounded-xl py-3.5 text-sm font-medium hover:bg-navy hover:text-white transition-colors"
-      >
-        Poser une question sur ce député
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-        </svg>
-      </Link>
+      {/* Body */}
+      <div style={{ padding: '52px 56px 80px' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 52 }}>
+
+          {/* Vote breakdown */}
+          {scorecard && (
+            <section>
+              <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
+                Bilan de mandat
+              </div>
+              <h2 className="font-serif" style={{ fontWeight: 600, fontSize: 30, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
+                Répartition des votes
+              </h2>
+              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '26px 30px' }}>
+
+                {/* Stacked bar */}
+                <div style={{ height: 12, borderRadius: 999, overflow: 'hidden', display: 'flex', marginBottom: 14 }}>
+                  <div style={{ width: `${pourPct}%`,   background: '#1F8A5B', height: '100%', transition: 'width 0.4s' }} />
+                  <div style={{ width: `${contrePct}%`, background: RED,       height: '100%', transition: 'width 0.4s' }} />
+                  <div style={{ width: `${abstPct}%`,   background: '#D1D5DB', height: '100%', transition: 'width 0.4s' }} />
+                  <div style={{ flex: 1,                background: '#EEF0F2', height: '100%' }} />
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: 14, color: '#374151' }}>
+                  {[
+                    { color: '#1F8A5B', label: 'Pour',       pct: pourPct   },
+                    { color: RED,       label: 'Contre',     pct: contrePct },
+                    { color: '#9CA3AF', label: 'Abstention', pct: abstPct   },
+                  ].map(({ color, label, pct }) => (
+                    <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 999, background: color, flexShrink: 0 }} />
+                      {label} <span style={{ fontFamily: 'monospace', color: '#6B7280' }}>{pct}%</span>
+                    </span>
+                  ))}
+                </div>
+
+                {/* Presence bar */}
+                {presencePct !== null && (
+                  <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500 }}>Taux de présence aux votes</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {avgPresencePct !== null && (
+                          <span style={{ fontSize: 13, color: presencePct >= avgPresencePct ? '#1F8A5B' : RED }}>
+                            {presencePct >= avgPresencePct ? '↑' : '↓'} moy. {avgPresencePct}%
+                          </span>
+                        )}
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 18, color: NAVY }}>{presencePct}%</span>
+                      </div>
+                    </div>
+                    <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${presencePct}%`, transition: 'width 0.4s' }} />
+                    </div>
+                    {avgPresencePct !== null && (
+                      <div style={{ position: 'relative', height: 0 }}>
+                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'rgba(0,0,0,0.25)', left: `${avgPresencePct}%` }} aria-hidden="true" />
+                      </div>
+                    )}
+                    {avgPresencePct !== null && (
+                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                        Trait vertical = moyenne nationale ({avgPresencePct}%)
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Votes timeline */}
+          {recentVotes && recentVotes.items.length > 0 && (
+            <section id="votes">
+              <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
+                Votes marquants
+              </div>
+              <h2 className="font-serif" style={{ fontWeight: 600, fontSize: 30, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
+                Les votes récents de la législature
+              </h2>
+              <div style={{ position: 'relative', paddingLeft: 32 }}>
+                {/* Timeline line */}
+                <div style={{ position: 'absolute', left: 6, top: 8, bottom: 8, width: 2, background: '#E7E2D6', borderRadius: 2 }} />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+                  {recentVotes.items.map((v: DeputyVoteItem) => {
+                    const pos = POS[v.position as keyof typeof POS] ?? POS.nonVotant
+                    return (
+                      <div key={v.vote_id} style={{ position: 'relative' }}>
+                        {/* Dot */}
+                        <span style={{
+                          position: 'absolute', left: -32, top: 5,
+                          width: 13, height: 13, borderRadius: 999,
+                          background: pos.color,
+                          border: `3px solid ${CREAM}`,
+                          boxShadow: `0 0 0 1px ${pos.color}`,
+                        }} />
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                          {v.voted_at && (
+                            <span style={{ fontFamily: 'monospace', fontSize: 12.5, color: '#9CA3AF', letterSpacing: '0.02em' }}>
+                              {formatDate(v.voted_at)}
+                            </span>
+                          )}
+                          <span style={{
+                            fontSize: 12.5, fontWeight: 700, letterSpacing: '0.04em',
+                            padding: '4px 12px', borderRadius: 999,
+                            color: pos.color, background: pos.bg,
+                          }}>
+                            {pos.label}
+                          </span>
+                          {v.result && (
+                            <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+                              Scrutin : {v.result}
+                            </span>
+                          )}
+                        </div>
+
+                        <Link href={`/votes/${v.vote_id}`} style={{ textDecoration: 'none' }}>
+                          <div className="font-serif" style={{ fontSize: 21, color: NAVY, marginTop: 8, lineHeight: 1.3, cursor: 'pointer' }}>
+                            {v.vote_title}
+                          </div>
+                        </Link>
+
+                        {v.summary_plain && (
+                          <div style={{ fontSize: 14.5, color: '#4B5563', lineHeight: 1.55, marginTop: 5, maxWidth: 680, fontStyle: 'italic' }}>
+                            {v.summary_plain}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {recentVotes.total > 10 && (
+                <p style={{ fontSize: 13, color: '#9CA3AF', marginTop: 28, paddingTop: 20, borderTop: `1px solid ${LINE}` }}>
+                  {recentVotes.total.toLocaleString('fr-FR')} votes au total sur ce mandat
+                </p>
+              )}
+            </section>
+          )}
+
+        </div>
+      </div>
     </div>
   )
 }
