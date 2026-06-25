@@ -1,9 +1,21 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
 
 export const NAV_HEIGHT_PX = 64
 
+const navLinks = [
+  { href: '/deputes', label: 'Députés' },
+  { href: '/votes', label: 'Votes' },
+  { href: '/chat', label: 'Chat IA' },
+  { href: '/a-propos', label: 'À propos' },
+]
+
 export function Nav() {
+  const pathname = usePathname()
+
   return (
     <nav
       className="hidden md:flex items-center justify-between px-8 bg-white border-b border-gray-border sticky top-0 z-50"
@@ -13,10 +25,18 @@ export function Nav() {
         <MonEluLogo size={32} variant="light" />
       </Link>
       <div className="flex items-center gap-8 text-sm font-medium text-gray-mid">
-        <Link href="/deputes" className="hover:text-navy transition-colors">Députés</Link>
-        <Link href="/votes" className="hover:text-navy transition-colors">Votes</Link>
-        <Link href="/chat" className="hover:text-navy transition-colors">Chat IA</Link>
-        <Link href="/a-propos" className="hover:text-navy transition-colors">À propos</Link>
+        {navLinks.map(({ href, label }) => {
+          const active = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`transition-colors hover:text-navy ${active ? 'text-navy border-b-2 border-red-civic pb-0.5' : ''}`}
+            >
+              {label}
+            </Link>
+          )
+        })}
       </div>
       <a href="https://monelu-production.up.railway.app/docs"
         target="_blank"
