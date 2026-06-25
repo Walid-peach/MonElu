@@ -141,8 +141,12 @@ function ChatInner() {
   const [messages, setMessages]   = useState<Message[]>([])
   const [inputVal, setInputVal]   = useState(initialQ)
   const [loading, setLoading]     = useState(false)
-  const [darkMode, setDarkMode]   = useState(false)
-  const [conversations, setConversations] = useState<StoredConv[]>([])
+  const [darkMode, setDarkMode]   = useState<boolean>(() => {
+    try { return localStorage.getItem('monelu-dark') === '1' } catch { return false }
+  })
+  const [conversations, setConversations] = useState<StoredConv[]>(() => {
+    try { return loadConversations() } catch { return [] }
+  })
   const [activeConvId, setActiveConvId]   = useState<string | null>(null)
   const [copied, setCopied]       = useState(false)
 
@@ -154,15 +158,6 @@ function ChatInner() {
 
   // Keep ref in sync with state
   useEffect(() => { activeConvRef.current = activeConvId }, [activeConvId])
-
-  // Load persisted state on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('monelu-dark')
-      if (saved === '1') setDarkMode(true)
-    } catch {}
-    setConversations(loadConversations())
-  }, [])
 
   const toggleDark = useCallback(() => {
     setDarkMode(d => {
@@ -180,6 +175,7 @@ function ChatInner() {
   useEffect(() => {
     if (initialQ && !sentRef.current) {
       sentRef.current = true
+      // eslint-disable-next-line react-compiler/react-compiler
       send(initialQ)
     } else if (!initialQ) {
       textareaRef.current?.focus()
