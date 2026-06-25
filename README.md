@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/Walid-peach/MonElu/actions/workflows/ci.yml/badge.svg)](https://github.com/Walid-peach/MonElu/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Walid-peach/MonElu/actions/workflows/deploy.yml/badge.svg)](https://github.com/Walid-peach/MonElu/actions/workflows/deploy.yml)
-[![Terraform](https://github.com/Walid-peach/MonElu/actions/workflows/terraform.yml/badge.svg)](https://github.com/Walid-peach/MonElu/actions/workflows/terraform.yml)
 [![dbt docs](https://github.com/Walid-peach/MonElu/actions/workflows/dbt_docs.yml/badge.svg)](https://github.com/Walid-peach/MonElu/actions/workflows/dbt_docs.yml)
 
 > Every vote. Every deputy. In plain French.
@@ -34,7 +33,8 @@ Assemblée Nationale Open Data (ZIP exports)
   → Supabase PostgreSQL          deputies · votes · vote_positions · document_chunks
   → dbt (GitHub Actions)         staging → intermediate → analytics_marts
   → api/routers/                 direct psycopg2, RealDictCursor, parameterized SQL
-  → Railway (FastAPI)            JSON API · HTML landing page · POST /search (RAG)
+  → Railway (FastAPI)            JSON API · POST /search (RAG)
+  → Next.js (frontend/)          Cinematic landing page · live stats · RAG search UI
 ```
 
 The API tier is fully stateless. All state lives in Supabase (managed Postgres with pgvector). Railway restarts on failure; `/health` returns live DB counts on every check.
@@ -45,7 +45,7 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Landing page — live stats, latest votes, RAG demo |
+| GET | `/` | API root (JSON) — use the Next.js frontend for the landing experience |
 | GET | `/deputies` | List all deputies (`search`, `department` filters) |
 | GET | `/deputies/{id}` | Deputy profile |
 | GET | `/deputies/{id}/scorecard` | Presence rate, vote breakdown by position |
@@ -63,8 +63,9 @@ Implemented with [slowapi](https://github.com/laurentS/slowapi), keyed by remote
 
 | Scope | Limit |
 |---|---|
-| Global default | 60 req / min |
+| Global default | 30 req / min |
 | `GET /deputies/{id}/scorecard` | 10 req / min |
+| `POST /search` | 10 req / min |
 
 On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}` · `Retry-After` + `X-RateLimit-*` headers.
 
@@ -73,6 +74,8 @@ On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}`
 ## Stack
 
 **Core:** FastAPI · PostgreSQL 15 + pgvector (Supabase) · Python 3.11 · Railway · slowapi
+
+**Frontend:** Next.js 15 · React 18 · Tailwind CSS · Framer Motion · SWR
 
 **Phase 2 — RAG:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
 
@@ -144,7 +147,6 @@ make dbt-lineage    open lineage graph in browser
 make dbt-clean      remove compiled dbt artifacts
 ```
 
-> **Note:** Airflow and MinIO run locally only (Docker) and are not part of the production stack. See ADR-006.
 
 ---
 
@@ -203,12 +205,13 @@ rag/
 │   ├── prompts.py        French civic assistant system prompt + RAG template
 │   └── rag_chain.py      ask() — retrieve → format → Groq LLM
 └── experiments/
-    └── mlflow_eval.py    10 golden Q&A pairs, keyword scoring, k=3 vs k=5 experiment
+    └── mlflow_eval.py    11 golden Q&A pairs, keyword scoring, k=3 vs k=5 experiment
 ```
 
 **Index stats:** 3,741 chunks · avg 87 tokens · ~$0.0065 to embed · $0 per query (question embedding only)
 
-Notable deputy pinning (Attal, Le Pen, etc.) bypasses IVFFlat for known deputy names to fix recall gaps — see ADR-008.
+Notable deputy pinning (Attal, Le Pen, etc.) adds one exact-match lookup before the vector search.
+The IVFFlat index was dropped (migration 003) — at ~3.7k chunks an exact cosine scan is faster and gives perfect recall.
 
 ---
 
@@ -278,6 +281,20 @@ design.
 | `routers/search.py` | `POST /search` — RAG query endpoint |
 | `schemas.py` | Pydantic response models (all fields `Optional` to match DB NULLs) |
 
+### Frontend (`frontend/`)
+
+| Module | Purpose |
+|---|---|
+| `src/app/page.tsx` | Root page — fetches deputies, votes, scorecards and renders `AssemblyScrollExperience` |
+| `src/components/home/AssemblyScrollExperience.tsx` | Cinematic 5-scene horizontal scroll experience |
+| `src/components/home/LiveAssemblyPulse.tsx` | Live stats panel (vote counts, adoption rate, recent votes via API) |
+| `src/components/home/TrustRow.tsx` | Trust strip — "577 députés · données officielles AN" |
+| `src/components/HeroSearch.tsx` | Search bar wired to `POST /search` |
+| `src/lib/api.ts` | Typed API client for all backend endpoints |
+
+Built with Next.js 15 (App Router) + Tailwind + Framer Motion.
+Deployed separately from the FastAPI backend.
+
 ### Ingestion (`scripts/`)
 
 | Script | Purpose |
@@ -296,7 +313,7 @@ All scripts use exponential-backoff retry (5 attempts, 2 s base) and upsert via 
 
 ## Security
 
-- **CORS:** `allow_credentials=False`, `allow_methods=["GET"]` — public read-only API
+- **CORS:** `allow_credentials=False`, `allow_methods=["GET", "POST"]` — POST required for `/search`
 - **Input validation:** `limit` capped at 200, `offset` at 100,000 on all list endpoints
 - **Error handling:** Global 500 handler returns a generic message — no tracebacks or DSNs in responses
 - **Rate limiting:** 60 req/min global, 10 req/min on scorecard, keyed by IP

@@ -91,7 +91,8 @@ Assemblée Nationale Open Data (ZIPs)
   → Supabase PostgreSQL          deputies · votes · vote_positions · document_chunks
   → dbt (GitHub Actions)         staging → intermediate → analytics_marts
   → api/routers/                 direct psycopg2, RealDictCursor, parameterized SQL
-  → Railway (FastAPI)            JSON responses · HTML landing page · POST /search (RAG)
+  → Railway (FastAPI)            JSON responses · POST /search (RAG)
+  → Next.js (frontend/)          Cinematic landing page · live stats · RAG search UI
 ```
 
 ### GitHub Actions Workflows
@@ -106,7 +107,7 @@ Assemblée Nationale Open Data (ZIPs)
 ### Key Layers
 
 **`api/`** — FastAPI application
-- `main.py`: App factory, CORS (GET + POST — POST is needed for `/search`; an empty `CORS_ORIGINS` blocks all cross-origin requests and logs a startup warning), slowapi rate limiting (30 req/min global, 10 req/min on scorecard and search), global exception handler, HTML landing page with live stats. `/health` returns DB status, record counts, last ingestion timestamp, and dbt mart row counts.
+- `main.py`: App factory, CORS (GET + POST — POST is needed for `/search`; an empty `CORS_ORIGINS` blocks all cross-origin requests and logs a startup warning), slowapi rate limiting (30 req/min global, 10 req/min on scorecard and search), global exception handler. `/health` returns DB status, record counts, last ingestion timestamp, and dbt mart row counts. The landing page is now the Next.js frontend (`frontend/`), not a FastAPI-served HTML page.
 - `routers/deputies.py`, `routers/votes.py`, `routers/search.py`: All DB queries — direct SQL, no ORM
 - `schemas.py`: Pydantic response models; all fields `Optional` to match DB NULLs
 - `limiter.py`: Shared slowapi `Limiter` instance imported by routers
