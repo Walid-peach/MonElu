@@ -44,6 +44,24 @@ export function groupVotesByParty(
   return map
 }
 
+export function partyHex(party: string | null): string {
+  if (!party) return '#9CA3AF'
+  const map: Record<string, string> = {
+    'Rassemblement National':                           '#003189',
+    'Ensemble pour la République':                      '#C79A2E',
+    'La France insoumise - Nouveau Front Populaire':    '#C9302A',
+    'Socialistes et apparentés':                        '#E07A2E',
+    'Droite Républicaine':                              '#0066CC',
+    'Écologiste et Social':                             '#1F8A5B',
+    'Les Démocrates':                                   '#F97316',
+    'Horizons & Indépendants':                          '#0D9488',
+    'Libertés, Indépendants, Outre-mer et Territoires': '#7C3AED',
+    'Union des droites pour la République':             '#DC2626',
+    'Gauche Démocrate et Républicaine':                 '#B45309',
+  }
+  return map[party] ?? '#6B7280'
+}
+
 export function partyColor(party: string | null): string {
   if (!party) return 'bg-gray-100 text-gray-600'
   const map: Record<string, string> = {
