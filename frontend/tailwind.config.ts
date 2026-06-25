@@ -24,6 +24,7 @@ const config: Config = {
       fontFamily: {
         serif: ['var(--font-serif)', 'Georgia', 'serif'],
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        newsreader: ['var(--font-newsreader)', 'Georgia', 'serif'],
       },
       fontSize: {
         'display': ['3rem', { lineHeight: '1.1', fontWeight: '400' }],

@@ -62,6 +62,22 @@ export function partyHex(party: string | null): string {
   return map[party] ?? '#6B7280'
 }
 
+export function themeColors(theme: string | null): { c: string; bg: string } {
+  const map: Record<string, { c: string; bg: string }> = {
+    'Énergie & Environnement': { c: '#2A5DB0', bg: '#E8EFFE' },
+    'Économie & Budget':       { c: '#B45309', bg: '#FEF3C7' },
+    'Santé & Social':          { c: '#7C3AED', bg: '#EDE9FE' },
+    'Justice & Sécurité':      { c: '#0D7490', bg: '#E0F7FA' },
+    'Agriculture':             { c: '#1F8A5B', bg: '#ECFDF5' },
+    'Transport & Logement':    { c: '#B45309', bg: '#FFF7ED' },
+    'Institutions':            { c: '#374151', bg: '#F2F3F5' },
+    'International':           { c: '#374151', bg: '#F2F3F5' },
+    'Éducation & Culture':     { c: '#7C3AED', bg: '#EDE9FE' },
+    'Autre':                   { c: '#6B7280', bg: '#F3F4F6' },
+  }
+  return map[theme ?? ''] ?? { c: '#6B7280', bg: '#F3F4F6' }
+}
+
 export function partyColor(party: string | null): string {
   if (!party) return 'bg-gray-100 text-gray-600'
   const map: Record<string, string> = {
