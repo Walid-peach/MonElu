@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import { Nav } from '@/components/Nav'
 import { BottomNav } from '@/components/BottomNav'
+import { PageTransition } from '@/components/PageTransition'
 
 const serif = DM_Serif_Display({
   subsets: ['latin'],
@@ -61,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`}>
       <body className="bg-gray-off min-h-screen">
         <Nav />
-        <main className="pb-20 md:pb-0">{children}</main>
+        <main className="pb-20 md:pb-0"><PageTransition>{children}</PageTransition></main>
         <BottomNav />
         <Analytics />
         <SpeedInsights />
