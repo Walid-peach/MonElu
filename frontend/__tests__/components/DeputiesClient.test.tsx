@@ -34,7 +34,8 @@ describe('DeputiesClient browse mode', () => {
   it('shows count of deputies from initial items', () => {
     const items = [makeDeputy(), makeDeputy({ deputy_id: 'PA002', full_name: 'Marie Martin' })]
     render(<DeputiesClient initial={makeList(items, 2)} />)
-    expect(screen.getByText(/2 député/)).toBeInTheDocument()
+    // The filtered count badge (monospace) shows "2 députés"
+    expect(screen.getAllByText(/2 député/).length).toBeGreaterThan(0)
   })
 
   it('renders a single deputy card without plural suffix', () => {
@@ -52,7 +53,7 @@ describe('DeputiesClient search mode', () => {
     ]
 
     render(<DeputiesClient initial={makeList(allDeputies, 2)} />)
-    await user.type(screen.getByPlaceholderText(/Nom, département/), 'Dupont')
+    await user.type(screen.getByPlaceholderText(/Nom, circonscription/), 'Dupont')
 
     await waitFor(() => {
       expect(screen.queryByText('Marie Martin')).not.toBeInTheDocument()
@@ -65,10 +66,11 @@ describe('DeputiesClient search mode', () => {
     const allDeputies = [makeDeputy({ full_name: 'Yaël Braun-Pivet', department: 'Paris' })]
 
     render(<DeputiesClient initial={makeList(allDeputies, 1)} />)
-    await user.type(screen.getByPlaceholderText(/Nom, département/), 'Braun')
+    await user.type(screen.getByPlaceholderText(/Nom, circonscription/), 'Braun')
 
     await waitFor(() => {
-      expect(screen.getByText(/1 député/)).toBeInTheDocument()
+      // Multiple elements may show "1 député" (header + filtered count badge)
+      expect(screen.getAllByText(/1 député/).length).toBeGreaterThan(0)
     }, { timeout: 2000 })
   })
 
@@ -77,8 +79,8 @@ describe('DeputiesClient search mode', () => {
     const allDeputies = [makeDeputy({ full_name: 'Jean Dupont', department: 'Paris' })]
 
     render(<DeputiesClient initial={makeList(allDeputies, 1)} />)
-    await user.type(screen.getByPlaceholderText(/Nom, département/), 'zzzzz')
+    await user.type(screen.getByPlaceholderText(/Nom, circonscription/), 'zzzzz')
 
-    await screen.findByText('Aucun résultat')
+    await screen.findByText(/Aucun résultat/)
   })
 })
