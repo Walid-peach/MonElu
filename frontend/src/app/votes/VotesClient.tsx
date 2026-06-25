@@ -205,7 +205,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
 
                     {/* Date */}
-                    <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12, color: '#9CA3AF', lineHeight: 1.4 }}>
+                    <div suppressHydrationWarning style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12, color: '#9CA3AF', lineHeight: 1.4 }}>
                       {shortDate(vote.voted_at)}
                     </div>
 

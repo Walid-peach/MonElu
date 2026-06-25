@@ -134,7 +134,7 @@ export function VoteDetailClient(props: Props) {
                   Scrutin public · n°{voteId}
                 </span>
                 <span style={{ fontFamily: 'monospace', fontSize: 11.5, color: '#9CA3AF' }}>·</span>
-                <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#9CA3AF' }}>{shortDate(votedAt)}</span>
+                <span suppressHydrationWarning style={{ fontFamily: 'monospace', fontSize: 12, color: '#9CA3AF' }}>{shortDate(votedAt)}</span>
               </div>
 
               <h1 className="font-newsreader" style={{ fontWeight: 600, fontSize: 44, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: 0, maxWidth: 620 }}>
@@ -312,7 +312,7 @@ export function VoteDetailClient(props: Props) {
                           {r.vote_title}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
-                          <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#9CA3AF' }}>
+                          <span suppressHydrationWarning style={{ fontFamily: 'monospace', fontSize: 11, color: '#9CA3AF' }}>
                             {new Date(r.voted_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                           <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: rAdopted ? '#1F8A5B' : '#C9302A', background: rAdopted ? '#EAF5EF' : '#FBE9E7' }}>
@@ -346,7 +346,7 @@ export function VoteDetailClient(props: Props) {
             {/* Freshness */}
             <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.6, padding: '0 2px' }}>
               Données issues du flux officiel de l&apos;Assemblée nationale.<br />
-              Dernière mise à jour : <span style={{ color: '#6B7280', fontWeight: 600 }}>{shortDate(votedAt)}</span>
+              Dernière mise à jour : <span suppressHydrationWarning style={{ color: '#6B7280', fontWeight: 600 }}>{shortDate(votedAt)}</span>
             </div>
           </div>
         </div>
