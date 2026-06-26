@@ -150,25 +150,27 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             </button>
           </div>
 
-          {/* Sort pills */}
+          {/* Sort dropdown */}
           <div style={{ display: 'flex', gap: 9, marginTop: 18, alignItems: 'center' }}>
-            <span style={{ fontSize: 13.5, color: '#9CA3AF', marginRight: 4 }}>Trier par</span>
-            {([['nom', 'Nom'], ['region', 'Région'], ['parti', 'Groupe']] as const).map(([val, label]) => (
-              <button
-                key={val}
-                onClick={() => { setSort(val); setPage(1) }}
-                aria-pressed={sort === val}
-                style={{
-                  background: sort === val ? NAVY : '#fff',
-                  color: sort === val ? '#fff' : '#4B5563',
-                  border: '1px solid ' + (sort === val ? NAVY : LINE),
-                  padding: '8px 18px', borderRadius: 999, fontSize: 13.5,
-                  fontWeight: sort === val ? 600 : 400, cursor: 'pointer',
-                }}
-              >
-                {label}
-              </button>
-            ))}
+            <label htmlFor="deputy-sort" style={{ fontSize: 13.5, color: '#9CA3AF', marginRight: 4 }}>Trier par</label>
+            <select
+              id="deputy-sort"
+              value={sort}
+              onChange={e => { setSort(e.target.value as SortKey); setPage(1) }}
+              style={{
+                background: '#fff', color: '#1B2B50',
+                border: '1px solid ' + LINE, borderRadius: 999,
+                padding: '8px 34px 8px 16px', fontSize: 13.5, fontWeight: 600,
+                cursor: 'pointer', appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 14px center',
+              }}
+            >
+              <option value="nom">Nom</option>
+              <option value="region">Région</option>
+              <option value="parti">Groupe</option>
+            </select>
           </div>
         </div>
       </div>

@@ -212,6 +212,17 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
     const pPour = REAL_TOTAL > 0 ? REAL_POUR / REAL_TOTAL : 0.52
     const pAbst = REAL_TOTAL > 0 ? REAL_ABST / REAL_TOTAL : 0.08
 
+    // Deterministic PRNG (mulberry32) so the seat layout is stable per render
+    // and never re-randomizes on re-render or per frame (MON-71).
+    let _seed = 0x9e3779b9 >>> 0
+    const rand = () => {
+      _seed = (_seed + 0x6d2b79f5) >>> 0
+      let t = _seed
+      t = Math.imul(t ^ (t >>> 15), t | 1)
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+
     for (let a = 0; a < arcs; a++) {
       const r = rMin + (rMax - rMin) * (a / (arcs - 1))
       const arcLen = (aMax - aMin) * r
@@ -224,14 +235,14 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
         if (y < 548 || y > 980 || x < 70 || x > 1602) continue
         const aisleHalf = 70 + Math.max(0, y - 560) * 0.16
         if (Math.abs(x - CX) < aisleHalf && y > 560) continue
-        const side = t
+        // No left/right bias: kind is drawn from the global proportions so
+        // pour/contre/abst spread evenly across both wings of the hemicycle.
         let kind: 'pour' | 'contre' | 'abst'
-        const rnd = Math.random()
-        const pG = Math.min(0.85, Math.max(0.10, pPour + (side - 0.5) * 0.3))
-        if (rnd < pG) kind = 'pour'
-        else if (rnd < pG + pAbst) kind = 'abst'
+        const rnd = rand()
+        if (rnd < pPour) kind = 'pour'
+        else if (rnd < pPour + pAbst) kind = 'abst'
         else kind = 'contre'
-        seats.push({ x, y, kind, arc: a, order: Math.random(), _el: null!, _col: null! })
+        seats.push({ x, y, kind, arc: a, order: rand(), _el: null!, _col: null! })
       }
     }
     seats.sort((p, q) => (p.arc - q.arc) || (p.order - q.order))
