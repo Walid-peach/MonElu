@@ -16,10 +16,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const shortTitle = vote.vote_title.length > 80 ? vote.vote_title.slice(0, 80) + '…' : vote.vote_title
   const description = `${result} · ${vote.votes_for} pour · ${vote.votes_against} contre · ${vote.abstentions} abstentions.`
   return {
-    title: `${result} — ${shortTitle} — MonÉlu`,
+    title: `${result} - ${shortTitle} - MonÉlu`,
     description,
-    openGraph: { title: `${result} — ${shortTitle} — MonÉlu`, description, url: `https://mon-elu.vercel.app/votes/${id}` },
-    twitter: { card: 'summary_large_image', title: `${result} — ${shortTitle} — MonÉlu`, description },
+    openGraph: { title: `${result} - ${shortTitle} - MonÉlu`, description, url: `https://mon-elu.vercel.app/votes/${id}` },
+    twitter: { card: 'summary_large_image', title: `${result} - ${shortTitle} - MonÉlu`, description },
   }
 }
 
