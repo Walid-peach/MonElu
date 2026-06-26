@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { ShareButton } from '@/components/ShareButton'
 
 interface GroupRow {
   name: string
@@ -214,6 +215,12 @@ export function VoteDetailClient(props: Props) {
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E4E6EA', color: '#4B5563', padding: '11px 16px', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                 </a>
+                <ShareButton
+                  url={`/votes/${voteId}`}
+                  title={`${adopted ? 'Adopté' : 'Rejeté'} — ${voteTitle}`}
+                  text="Suivez ce scrutin sur MonÉlu"
+                  ariaLabel="Partager ce vote"
+                />
               </div>
             </div>
           </div>

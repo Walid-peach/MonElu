@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import type { DeputyVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
+import { ShareButton } from '@/components/ShareButton'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -164,6 +165,12 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 >
                   Votes récents
                 </a>
+                <ShareButton
+                  url={`/deputes/${id}`}
+                  title={`${deputy.full_name} — MonÉlu`}
+                  text={`Bilan de mandat et votes de ${deputy.full_name}`}
+                  ariaLabel="Partager ce député"
+                />
               </div>
             </div>
           </div>
