@@ -21,13 +21,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const deputy = await api.deputies.get(id).catch(() => null)
   if (!deputy) return {}
   const description = `Bilan de mandat, votes et présence de ${deputy.full_name}${
-    deputy.party ? ` (${deputy.party})` : deputy.department ? ` — ${deputy.department}` : ''
+    deputy.party ? ` (${deputy.party})` : deputy.department ? ` - ${deputy.department}` : ''
   }.`
   return {
-    title: `${deputy.full_name} — MonÉlu`,
+    title: `${deputy.full_name} - MonÉlu`,
     description,
-    openGraph: { title: `${deputy.full_name} — MonÉlu`, description },
-    twitter:   { card: 'summary_large_image', title: `${deputy.full_name} — MonÉlu`, description },
+    openGraph: { title: `${deputy.full_name} - MonÉlu`, description },
+    twitter:   { card: 'summary_large_image', title: `${deputy.full_name} - MonÉlu`, description },
   }
 }
 
