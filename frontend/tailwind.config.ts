@@ -37,7 +37,7 @@ const config: Config = {
       fontSize: {
         // Heading scale — use these on h1/h2/h3 instead of inline fontSize
         'headline':    ['3.25rem', { lineHeight: '1.06' }], // 52px — hero h1
-        'display':     ['3rem',    { lineHeight: '1.1'  }], // 48px — list page h1
+        'display':     ['3rem',    { lineHeight: '1.1', fontWeight: '400' }], // 48px — list page h1
         'title':       ['2.75rem', { lineHeight: '1.05' }], // 44px — detail page h1
         'section-lg':  ['2.625rem',{ lineHeight: '1.1'  }], // 42px — major section h2, stat numbers
         'section':     ['2.375rem',{ lineHeight: '1.1'  }], // 38px — section h2
