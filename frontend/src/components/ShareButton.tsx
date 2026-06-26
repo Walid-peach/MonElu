@@ -20,8 +20,10 @@ export function ShareButton({ url, title, text, ariaLabel }: ShareButtonProps) {
       try {
         await navigator.share({ url: fullUrl, title, text })
         return
-      } catch {
-        // user cancelled or API not available — fall through to clipboard
+      } catch (err) {
+        // User cancelled the share sheet: respect that, don't copy instead.
+        if (err instanceof Error && err.name === 'AbortError') return
+        // API genuinely unavailable - fall through to clipboard.
       }
     }
     try {
