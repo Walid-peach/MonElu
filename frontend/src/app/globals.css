@@ -14,7 +14,7 @@
 
 @layer base {
   body { @apply font-sans bg-white text-navy; }
-  h1, h2, h3 { @apply font-serif; }
+  h1, h2, h3 { @apply font-newsreader; }
 }
 
 @layer utilities {

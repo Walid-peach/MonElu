@@ -104,7 +104,7 @@ export function VoteDetailClient(props: Props) {
             <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 999, background: adopted ? '#EAF5EF' : '#FBE9E7', color: adopted ? '#1F8A5B' : '#C9302A', flexShrink: 0 }}>
               {adopted ? 'Adopté' : 'Rejeté'}
             </span>
-            <span style={{ fontFamily: 'monospace', fontSize: 12.5, color: '#6B7280', flexShrink: 0 }}>
+            <span className="font-mono" style={{ fontSize: 12.5, color: '#6B7280', flexShrink: 0 }}>
               {votesFor} pour · {votesAgainst} contre
             </span>
           </div>
@@ -133,11 +133,11 @@ export function VoteDetailClient(props: Props) {
                 <span style={{ font: '700 11.5px/1 var(--font-sans)', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#9CA3AF' }}>
                   Scrutin public · n°{voteId}
                 </span>
-                <span style={{ fontFamily: 'monospace', fontSize: 11.5, color: '#9CA3AF' }}>·</span>
-                <span suppressHydrationWarning style={{ fontFamily: 'monospace', fontSize: 12, color: '#9CA3AF' }}>{shortDate(votedAt)}</span>
+                <span className="font-mono" style={{ fontSize: 11.5, color: '#9CA3AF' }}>·</span>
+                <span suppressHydrationWarning className="font-mono" style={{ fontSize: 12, color: '#9CA3AF' }}>{shortDate(votedAt)}</span>
               </div>
 
-              <h1 className="font-newsreader" style={{ fontWeight: 600, fontSize: 44, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: 0, maxWidth: 620 }}>
+              <h1 className="font-newsreader text-title" style={{ fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: 0, maxWidth: 620 }}>
                 {voteTitle}
               </h1>
 
@@ -171,15 +171,15 @@ export function VoteDetailClient(props: Props) {
               {/* Big numbers */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, textAlign: 'center', marginBottom: 22 }}>
                 <div style={{ borderRight: '1px solid #F0F1F3', padding: '0 12px' }}>
-                  <div className="font-newsreader" style={{ fontSize: 42, fontWeight: 600, color: '#1F8A5B', letterSpacing: '-0.02em' }}>{votesFor.toLocaleString('fr-FR')}</div>
+                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: '#1F8A5B', letterSpacing: '-0.02em' }}>{votesFor.toLocaleString('fr-FR')}</div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#1F8A5B', marginTop: 3, letterSpacing: '0.04em' }}>POUR</div>
                 </div>
                 <div style={{ borderRight: '1px solid #F0F1F3', padding: '0 12px' }}>
-                  <div className="font-newsreader" style={{ fontSize: 42, fontWeight: 600, color: '#C9302A', letterSpacing: '-0.02em' }}>{votesAgainst.toLocaleString('fr-FR')}</div>
+                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: '#C9302A', letterSpacing: '-0.02em' }}>{votesAgainst.toLocaleString('fr-FR')}</div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#C9302A', marginTop: 3, letterSpacing: '0.04em' }}>CONTRE</div>
                 </div>
                 <div style={{ padding: '0 12px' }}>
-                  <div className="font-newsreader" style={{ fontSize: 42, fontWeight: 600, color: '#9CA3AF', letterSpacing: '-0.02em' }}>{abstentions.toLocaleString('fr-FR')}</div>
+                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: '#9CA3AF', letterSpacing: '-0.02em' }}>{abstentions.toLocaleString('fr-FR')}</div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#9CA3AF', marginTop: 3, letterSpacing: '0.04em' }}>ABST.</div>
                 </div>
               </div>
@@ -190,7 +190,7 @@ export function VoteDetailClient(props: Props) {
                 <div style={{ width: `${contrePct}%`, background: '#D9685E' }} />
                 <div style={{ flex: 1, background: '#E4E6EA' }} />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'monospace', fontSize: 11, color: '#9CA3AF', marginBottom: 22 }}>
+              <div className="font-mono" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9CA3AF', marginBottom: 22 }}>
                 <span>{pourPct}%</span><span>{contrePct}%</span><span>{abstPct}%</span>
               </div>
 
@@ -231,7 +231,7 @@ export function VoteDetailClient(props: Props) {
             {groups.length > 0 && (
               <section>
                 <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C9302A' }}>Ventilation par groupe</div>
-                <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 30, color: '#1B2B50', margin: '12px 0 4px', letterSpacing: '-0.01em' }}>Comment chaque groupe a voté</h2>
+                <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: '#1B2B50', margin: '12px 0 4px', letterSpacing: '-0.01em' }}>Comment chaque groupe a voté</h2>
                 <p style={{ fontSize: 15, color: '#6B7280', margin: '0 0 22px', maxWidth: 560 }}>Position majoritaire exprimée par les membres de chaque groupe parlementaire.</p>
 
                 <div style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -254,9 +254,9 @@ export function VoteDetailClient(props: Props) {
                           </div>
                           <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 11px', borderRadius: 999, color: posColor, background: posBg, flexShrink: 0 }}>{g.position}</span>
                         </div>
-                        <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#1F8A5B', textAlign: 'right', fontWeight: 600 }}>{g.pour}</div>
-                        <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#C9302A', textAlign: 'right', fontWeight: 600 }}>{g.contre}</div>
-                        <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#9CA3AF', textAlign: 'right' }}>{g.abst}</div>
+                        <div className="font-mono" style={{ fontSize: 13, color: '#1F8A5B', textAlign: 'right', fontWeight: 600 }}>{g.pour}</div>
+                        <div className="font-mono" style={{ fontSize: 13, color: '#C9302A', textAlign: 'right', fontWeight: 600 }}>{g.contre}</div>
+                        <div className="font-mono" style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'right' }}>{g.abst}</div>
                       </div>
                     )
                   })}
@@ -268,7 +268,7 @@ export function VoteDetailClient(props: Props) {
             {dissidents.length > 0 && (
               <section>
                 <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C9302A' }}>Votes notables</div>
-                <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 30, color: '#1B2B50', margin: '12px 0 22px', letterSpacing: '-0.01em' }}>Dissidences &amp; surprises</h2>
+                <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: '#1B2B50', margin: '12px 0 22px', letterSpacing: '-0.01em' }}>Dissidences &amp; surprises</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {dissidents.map((d) => {
                     const voteColor = d.vote === 'pour' ? '#1F8A5B' : d.vote === 'contre' ? '#C9302A' : '#6B7280'
@@ -312,7 +312,7 @@ export function VoteDetailClient(props: Props) {
                           {r.vote_title}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
-                          <span suppressHydrationWarning style={{ fontFamily: 'monospace', fontSize: 11, color: '#9CA3AF' }}>
+                          <span suppressHydrationWarning className="font-mono" style={{ fontSize: 11, color: '#9CA3AF' }}>
                             {new Date(r.voted_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                           <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: rAdopted ? '#1F8A5B' : '#C9302A', background: rAdopted ? '#EAF5EF' : '#FBE9E7' }}>

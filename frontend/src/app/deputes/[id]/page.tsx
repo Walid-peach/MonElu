@@ -114,8 +114,8 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
                 Député·e · XVII<sup>e</sup> législature
               </div>
-              <h1 className="font-serif" style={{
-                fontWeight: 600, fontSize: 'clamp(36px,4.5vw,58px)', lineHeight: 1.0,
+              <h1 className="font-newsreader text-[clamp(36px,4.5vw,58px)]" style={{
+                fontWeight: 600, lineHeight: 1.0,
                 letterSpacing: '-0.02em', color: NAVY, margin: '14px 0 0',
               }}>
                 {deputy.full_name}
@@ -173,7 +173,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stats.length},1fr)`, marginTop: 38, borderTop: `1px solid #ECE7DC` }}>
               {stats.map((s, i) => (
                 <div key={i} style={{ padding: '22px 14px 18px', borderRight: i < stats.length - 1 ? `1px solid #ECE7DC` : undefined }}>
-                  <div className="font-serif" style={{ fontWeight: 600, fontSize: 34, color: NAVY, letterSpacing: '-0.01em', lineHeight: 1 }}>
+                  <div className="font-newsreader text-[34px]" style={{ fontWeight: 600, color: NAVY, letterSpacing: '-0.01em', lineHeight: 1 }}>
                     {s.value}
                   </div>
                   <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, lineHeight: 1.35 }}>
@@ -196,7 +196,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
                 Bilan de mandat
               </div>
-              <h2 className="font-serif" style={{ fontWeight: 600, fontSize: 30, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
+              <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
                 Répartition des votes
               </h2>
               <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '26px 30px' }}>
@@ -216,7 +216,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   ].map(({ color, label, pct }) => (
                     <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 10, height: 10, borderRadius: 999, background: color, flexShrink: 0 }} />
-                      {label} <span style={{ fontFamily: 'monospace', color: '#6B7280' }}>{pct}%</span>
+                      {label} <span className="font-mono" style={{ color: '#6B7280' }}>{pct}%</span>
                     </span>
                   ))}
                 </div>
@@ -232,7 +232,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                             {presencePct >= avgPresencePct ? '↑' : '↓'} moy. {avgPresencePct}%
                           </span>
                         )}
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 18, color: NAVY }}>{presencePct}%</span>
+                        <span className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: NAVY }}>{presencePct}%</span>
                       </div>
                     </div>
                     <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
@@ -260,7 +260,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
                 Votes marquants
               </div>
-              <h2 className="font-serif" style={{ fontWeight: 600, fontSize: 30, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
+              <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
                 Les votes récents de la législature
               </h2>
               <div style={{ position: 'relative', paddingLeft: 32 }}>
@@ -283,7 +283,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                           {v.voted_at && (
-                            <span style={{ fontFamily: 'monospace', fontSize: 12.5, color: '#9CA3AF', letterSpacing: '0.02em' }}>
+                            <span className="font-mono" style={{ fontSize: 12.5, color: '#9CA3AF', letterSpacing: '0.02em' }}>
                               {formatDate(v.voted_at)}
                             </span>
                           )}
@@ -302,7 +302,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                         </div>
 
                         <Link href={`/votes/${v.vote_id}`} style={{ textDecoration: 'none' }}>
-                          <div className="font-serif" style={{ fontSize: 21, color: NAVY, marginTop: 8, lineHeight: 1.3, cursor: 'pointer' }}>
+                          <div className="font-newsreader text-[21px]" style={{ color: NAVY, marginTop: 8, lineHeight: 1.3, cursor: 'pointer' }}>
                             {v.vote_title}
                           </div>
                         </Link>
