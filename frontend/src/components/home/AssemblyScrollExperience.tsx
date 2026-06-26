@@ -1,5 +1,6 @@
 'use client'
-
+// Typography exception: this cinematic scroll component uses inline styles throughout
+// because all colors, opacities, and sizes are computed dynamically by the animation engine.
 import { useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import Image from 'next/image'

@@ -92,8 +92,8 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
           }}>
             Annuaire des députés
           </div>
-          <h1 className="font-serif" style={{
-            fontWeight: 600, fontSize: 'clamp(32px,4vw,48px)', lineHeight: 1.05,
+          <h1 className="font-newsreader text-[clamp(32px,4vw,48px)]" style={{
+            fontWeight: 600, lineHeight: 1.05,
             letterSpacing: '-0.015em', color: NAVY, margin: 0, maxWidth: 760,
           }}>
             Les {initial.total} députés de l&apos;Assemblée nationale,{' '}
@@ -179,7 +179,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
           {/* Count row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>
-            <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#6B7280' }}>
+            <span className="font-mono" style={{ fontSize: 13, color: '#6B7280' }}>
               {filtered.length} député{filtered.length !== 1 ? 's' : ''}
             </span>
             {debouncedSearch && (

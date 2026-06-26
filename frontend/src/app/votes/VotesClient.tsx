@@ -100,7 +100,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
             Scrutins publics
           </div>
 
-          <h1 className="font-newsreader" style={{ fontWeight: 600, fontSize: 48, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: '16px 0 0', maxWidth: 760 }}>
+          <h1 className="font-newsreader text-display" style={{ fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: '16px 0 0', maxWidth: 760 }}>
             Les votes de l&apos;Assemblée nationale, <span style={{ color: '#C9302A' }}>en clair</span>.
           </h1>
 
@@ -112,7 +112,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
           <div style={{ display: 'flex', gap: 0, marginTop: 32, border: '1px solid #ECE7DC', borderRadius: 12, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: 700 }}>
             {heroStats.map((hs, i) => (
               <div key={i} style={{ flex: 1, padding: '18px 22px', borderRight: i < heroStats.length - 1 ? '1px solid #ECE7DC' : 'none' }}>
-                <div className="font-newsreader" style={{ fontWeight: 600, fontSize: 30, color: '#1B2B50', letterSpacing: '-0.01em' }}>{hs.value}</div>
+                <div className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: '#1B2B50', letterSpacing: '-0.01em' }}>{hs.value}</div>
                 <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, lineHeight: 1.35 }}>{hs.label}</div>
               </div>
             ))}
@@ -168,7 +168,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>
-            <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, color: '#6B7280' }}>
+            <span className="font-mono" style={{ fontSize: 13, color: '#6B7280' }}>
               {total.toLocaleString('fr-FR')} scrutins
               {result && ` · ${result.charAt(0).toUpperCase() + result.slice(1)}s`}
               {theme && ` · ${theme}`}
@@ -205,7 +205,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
 
                     {/* Date */}
-                    <div suppressHydrationWarning style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12, color: '#9CA3AF', lineHeight: 1.4 }}>
+                    <div suppressHydrationWarning className="font-mono" style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.4 }}>
                       {shortDate(vote.voted_at)}
                     </div>
 
@@ -237,7 +237,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                         <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', padding: '3px 10px', borderRadius: 999, background: adopted ? '#EAF5EF' : '#FBE9E7', color: adopted ? '#1F8A5B' : '#C9302A' }}>
                           {adopted ? 'Adopté' : 'Rejeté'}
                         </span>
-                        <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 11.5, color: '#6B7280' }}>
+                        <span className="font-mono" style={{ fontSize: 11.5, color: '#6B7280' }}>
                           {vote.votes_for} pour · {vote.votes_against} contre
                         </span>
                       </div>

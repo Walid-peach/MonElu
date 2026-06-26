@@ -144,7 +144,7 @@ export default function AProposPage() {
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 400px', gap: '80px', alignItems: 'center' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-5">Notre mission</div>
-            <h1 className="font-newsreader" style={{ fontWeight: 600, fontSize: '52px', lineHeight: 1.06, letterSpacing: '-0.02em', color: '#1B2B50', margin: '0 0 22px', maxWidth: '600px' }}>
+            <h1 className="font-newsreader text-headline" style={{ fontWeight: 600, lineHeight: 1.06, letterSpacing: '-0.02em', color: '#1B2B50', margin: '0 0 22px', maxWidth: '600px' }}>
               La démocratie mérite<br />des données <em>en clair</em>.
             </h1>
             <p style={{ fontSize: '18px', lineHeight: 1.65, color: '#4B5563', maxWidth: '500px', margin: '0 0 32px' }}>
@@ -173,10 +173,10 @@ export default function AProposPage() {
             {heroStats.map((s) => (
               <div key={s.label} style={{ padding: '16px 0', borderBottom: '1px solid #F0F1F3', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '16px' }}>
                 <span style={{ fontSize: '14px', color: '#6B7280', lineHeight: 1.35 }}>{s.label}</span>
-                <span className="font-newsreader" style={{ fontWeight: 600, fontSize: '28px', color: '#1B2B50', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>{s.value}</span>
+                <span className="font-newsreader text-[28px]" style={{ fontWeight: 600, color: '#1B2B50', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>{s.value}</span>
               </div>
             ))}
-            <div style={{ paddingTop: '16px', fontFamily: 'monospace', fontSize: '11.5px', color: '#9CA3AF' }}>
+            <div className="font-mono" style={{ paddingTop: '16px', fontSize: '11.5px', color: '#9CA3AF' }}>
               Mise à jour continue · flux officiel AN
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function AProposPage() {
             <div style={{ width: '40px', height: '3px', background: '#1B2B50', borderRadius: '2px' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            <p className="font-newsreader" style={{ fontWeight: 500, fontSize: '26px', lineHeight: 1.5, color: '#1B2B50', margin: 0 }}>
+            <p className="font-newsreader text-[26px]" style={{ fontWeight: 500, lineHeight: 1.5, color: '#1B2B50', margin: 0 }}>
               &laquo;&nbsp;Les données parlementaires existent — elles sont publiques, officielles, riches. Mais elles sont éparpillées, peu structurées, et inaccessibles au plus grand nombre.&nbsp;&raquo;
             </p>
             <p style={{ fontSize: '16px', lineHeight: 1.7, color: '#4B5563', margin: 0 }}>
@@ -209,7 +209,7 @@ export default function AProposPage() {
         <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
           <div style={{ marginBottom: '48px' }}>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Nos engagements</div>
-            <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: '38px', color: '#1B2B50', margin: 0, letterSpacing: '-0.015em' }}>Ce qui nous guide</h2>
+            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#1B2B50', margin: 0, letterSpacing: '-0.015em' }}>Ce qui nous guide</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px' }}>
             {valeurs.map((v) => (
@@ -231,7 +231,7 @@ export default function AProposPage() {
           <div style={{ marginBottom: '52px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '14px' }}>Architecture</div>
-              <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: '38px', color: '#fff', margin: 0, letterSpacing: '-0.015em' }}>
+              <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#fff', margin: 0, letterSpacing: '-0.015em' }}>
                 Une infrastructure de production,<br />pas un prototype.
               </h2>
             </div>
@@ -244,12 +244,12 @@ export default function AProposPage() {
           <div style={{ display: 'flex', alignItems: 'stretch', marginBottom: '48px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', overflow: 'hidden' }}>
             {pipeline.map((pl, i) => (
               <div key={pl.step} style={{ flex: 1, padding: '28px 22px', borderRight: i < pipeline.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
-                <div style={{ fontWeight: 700, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '14px', fontFamily: 'monospace' }}>{pl.step}</div>
+                <div className="font-mono" style={{ fontWeight: 700, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '14px' }}>{pl.step}</div>
                 <div style={{ fontWeight: 700, fontSize: '16px', color: '#fff', marginBottom: '8px' }}>{pl.title}</div>
                 <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#9CA3AF' }}>{pl.desc}</div>
                 <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {pl.tags.map((tag) => (
-                    <span key={tag} style={{ fontFamily: 'monospace', fontSize: '11px', padding: '3px 9px', borderRadius: '4px', background: 'rgba(255,255,255,0.07)', color: '#9CA3AF', border: '1px solid rgba(255,255,255,0.08)' }}>{tag}</span>
+                    <span key={tag} className="font-mono" style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', background: 'rgba(255,255,255,0.07)', color: '#9CA3AF', border: '1px solid rgba(255,255,255,0.08)' }}>{tag}</span>
                   ))}
                 </div>
               </div>
@@ -260,7 +260,7 @@ export default function AProposPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>
             {techCards.map((tc) => (
               <div key={tc.name} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '20px 18px' }}>
-                <div style={{ fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '10px' }}>{tc.cat}</div>
+                <div className="font-mono" style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '10px' }}>{tc.cat}</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff', marginBottom: '6px' }}>{tc.name}</div>
                 <div style={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.5 }}>{tc.desc}</div>
               </div>
@@ -274,7 +274,7 @@ export default function AProposPage() {
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 420px', gap: '72px', alignItems: 'start' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Transparence des données</div>
-            <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: '38px', color: '#1B2B50', margin: '0 0 22px', letterSpacing: '-0.015em' }}>D&apos;où viennent les données&nbsp;?</h2>
+            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#1B2B50', margin: '0 0 22px', letterSpacing: '-0.015em' }}>D&apos;où viennent les données&nbsp;?</h2>
             <p style={{ fontSize: '16px', lineHeight: 1.7, color: '#4B5563', margin: '0 0 36px' }}>
               Toutes les informations affichées sur MonÉlu proviennent de sources publiques officielles. Nous ne produisons pas de données — nous les structurons, les enrichissons et les rendons accessibles. Chaque entrée est horodatée et traçable.
             </p>
@@ -288,7 +288,7 @@ export default function AProposPage() {
                     <div style={{ fontWeight: 600, fontSize: '15px', color: '#1B2B50' }}>{src.name}</div>
                     <div style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '3px' }}>{src.desc}</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace', fontSize: '11px', color: '#1F8A5B', background: '#EAF5EF', padding: '5px 11px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                  <div className="font-mono" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1F8A5B', background: '#EAF5EF', padding: '5px 11px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
                     <span style={{ width: '6px', height: '6px', borderRadius: '999px', background: '#1F8A5B', flexShrink: 0, display: 'inline-block' }} />
                     {src.status}
                   </div>
@@ -304,7 +304,7 @@ export default function AProposPage() {
               {freshness.map((fr) => (
                 <div key={fr.label} style={{ padding: '14px 0', borderBottom: '1px solid #F0F1F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                   <span style={{ fontSize: '13.5px', color: '#374151' }}>{fr.label}</span>
-                  <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#6B7280' }}>{fr.cadence}</span>
+                  <span className="font-mono" style={{ fontSize: '12px', color: '#6B7280' }}>{fr.cadence}</span>
                 </div>
               ))}
               <div style={{ paddingTop: '18px', fontSize: '12.5px', lineHeight: 1.6, color: '#9CA3AF' }}>
@@ -325,7 +325,7 @@ export default function AProposPage() {
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 540px', gap: '80px', alignItems: 'center' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Pour les développeurs</div>
-            <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: '38px', color: '#1B2B50', margin: '0 0 20px', letterSpacing: '-0.015em' }}>
+            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#1B2B50', margin: '0 0 20px', letterSpacing: '-0.015em' }}>
               Une API REST pensée pour être utilisée.
             </h2>
             <p style={{ fontSize: '16px', lineHeight: 1.7, color: '#4B5563', margin: '0 0 32px' }}>
@@ -357,9 +357,9 @@ export default function AProposPage() {
               <span style={{ width: '11px', height: '11px', borderRadius: '999px', background: '#FF5F57', display: 'inline-block' }} />
               <span style={{ width: '11px', height: '11px', borderRadius: '999px', background: '#FEBC2E', display: 'inline-block' }} />
               <span style={{ width: '11px', height: '11px', borderRadius: '999px', background: '#28C840', display: 'inline-block' }} />
-              <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#4B5563', marginLeft: '8px' }}>Terminal</span>
+              <span className="font-mono" style={{ fontSize: '12px', color: '#4B5563', marginLeft: '8px' }}>Terminal</span>
             </div>
-            <div style={{ padding: '24px 24px 28px', fontFamily: 'monospace', fontSize: '13.5px', lineHeight: 2, color: '#E4E6EA', overflowX: 'auto' }}>
+            <div className="font-mono" style={{ padding: '24px 24px 28px', fontSize: '13.5px', lineHeight: 2, color: '#E4E6EA', overflowX: 'auto' }}>
               <div><span style={{ color: '#9CA3AF' }}># Votes d&apos;un député</span></div>
               <div style={{ marginTop: '8px' }}>
                 <span style={{ color: '#E0786E' }}>GET</span>
@@ -442,7 +442,7 @@ export default function AProposPage() {
               </div>
             </div>
             <div style={{ flexShrink: 0, background: '#fff', border: '1px solid #E4E6EA', borderRadius: '10px', padding: '16px 20px', minWidth: '200px' }}>
-              <div style={{ fontWeight: 700, fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '12px', fontFamily: 'monospace' }}>Temps de réponse</div>
+              <div className="font-mono" style={{ fontWeight: 700, fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '12px' }}>Temps de réponse</div>
               <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.6 }}>
                 Bugs &amp; questions techniques<br />
                 <span style={{ fontWeight: 600, color: '#1B2B50' }}>sous 48 h</span>
@@ -461,7 +461,7 @@ export default function AProposPage() {
       <div style={{ padding: '80px 56px', background: '#1B2B50' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '48px', flexWrap: 'wrap' }}>
           <div>
-            <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: '42px', color: '#fff', margin: '0 0 14px', letterSpacing: '-0.015em' }}>
+            <h2 className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: '#fff', margin: '0 0 14px', letterSpacing: '-0.015em' }}>
               Prêt à explorer les données&nbsp;?
             </h2>
             <p style={{ fontSize: '16px', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>

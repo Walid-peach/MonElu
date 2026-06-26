@@ -1,4 +1,7 @@
 'use client'
+// Typography exception: this page uses inline styles throughout because all colors and
+// sizes are computed dynamically from JS dark/light mode state (dk, txt1, txt2, bg0, …).
+// Converting to Tailwind classes would require a full theme rewrite.
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
