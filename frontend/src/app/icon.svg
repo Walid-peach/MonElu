@@ -1,26 +1,26 @@
 <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="100" height="100" rx="22" fill="#0D1F3C"/>
-  <rect x="6.44" y="72.84" width="12.24" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(90,12.56,75.00)"/>
-  <rect x="11.46" y="54.12" width="12.24" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(120,17.58,56.28)"/>
-  <rect x="25.16" y="40.42" width="12.24" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(150,31.28,42.58)"/>
-  <rect x="43.88" y="35.40" width="12.24" height="4.32" rx="2.16" fill="rgba(255,255,255,0.35)" transform="rotate(180,50.00,37.56)"/>
-  <rect x="62.60" y="40.42" width="12.24" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(210,68.72,42.58)"/>
-  <rect x="76.30" y="54.12" width="12.24" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(240,82.42,56.28)"/>
-  <rect x="81.32" y="72.84" width="12.24" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(270,87.44,75.00)"/>
-  <rect x="16.52" y="72.84" width="9.36" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(90,21.20,75.00)"/>
-  <rect x="20.38" y="58.44" width="9.36" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(120,25.06,60.60)"/>
-  <rect x="30.92" y="47.90" width="9.36" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(150,35.60,50.06)"/>
-  <rect x="45.32" y="44.04" width="9.36" height="4.32" rx="2.16" fill="rgba(255,255,255,0.35)" transform="rotate(180,50.00,46.20)"/>
-  <rect x="59.72" y="47.90" width="9.36" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(210,64.40,50.06)"/>
-  <rect x="70.26" y="58.44" width="9.36" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(240,74.94,60.60)"/>
-  <rect x="74.12" y="72.84" width="9.36" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(270,78.80,75.00)"/>
-  <rect x="26.60" y="72.84" width="6.48" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(90,29.84,75.00)"/>
-  <rect x="29.30" y="62.76" width="6.48" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(120,32.54,64.92)"/>
-  <rect x="36.68" y="55.38" width="6.48" height="4.32" rx="2.16" fill="#FFFFFF" transform="rotate(150,39.92,57.54)"/>
-  <rect x="46.76" y="52.68" width="6.48" height="4.32" rx="2.16" fill="rgba(255,255,255,0.35)" transform="rotate(180,50.00,54.84)"/>
-  <rect x="56.84" y="55.38" width="6.48" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(210,60.08,57.54)"/>
-  <rect x="64.22" y="62.76" width="6.48" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(240,67.46,64.92)"/>
-  <rect x="66.92" y="72.84" width="6.48" height="4.32" rx="2.16" fill="#C9302C" transform="rotate(270,70.16,75.00)"/>
-  <circle cx="50" cy="66.22" r="5.40" fill="#FFFFFF"/>
-  <rect x="43.88" y="71.62" width="12.24" height="9.36" rx="2.16" fill="#FFFFFF"/>
+  <rect x="1.60" y="69.60" width="13.60" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(90,8.40,72.00)"/>
+  <rect x="7.17" y="48.80" width="13.60" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(120,13.97,51.20)"/>
+  <rect x="22.40" y="33.57" width="13.60" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(150,29.20,35.97)"/>
+  <rect x="43.20" y="28.00" width="13.60" height="4.80" rx="2.40" fill="rgba(255,255,255,0.35)" transform="rotate(180,50.00,30.40)"/>
+  <rect x="64.00" y="33.57" width="13.60" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(210,70.80,35.97)"/>
+  <rect x="79.23" y="48.80" width="13.60" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(240,86.03,51.20)"/>
+  <rect x="84.80" y="69.60" width="13.60" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(270,91.60,72.00)"/>
+  <rect x="12.80" y="69.60" width="10.40" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(90,18.00,72.00)"/>
+  <rect x="17.09" y="53.60" width="10.40" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(120,22.29,56.00)"/>
+  <rect x="28.80" y="41.89" width="10.40" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(150,34.00,44.29)"/>
+  <rect x="44.80" y="37.60" width="10.40" height="4.80" rx="2.40" fill="rgba(255,255,255,0.35)" transform="rotate(180,50.00,40.00)"/>
+  <rect x="60.80" y="41.89" width="10.40" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(210,66.00,44.29)"/>
+  <rect x="72.51" y="53.60" width="10.40" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(240,77.71,56.00)"/>
+  <rect x="76.80" y="69.60" width="10.40" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(270,82.00,72.00)"/>
+  <rect x="24.00" y="69.60" width="7.20" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(90,27.60,72.00)"/>
+  <rect x="27.00" y="58.40" width="7.20" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(120,30.60,60.80)"/>
+  <rect x="35.20" y="50.20" width="7.20" height="4.80" rx="2.40" fill="#FFFFFF" transform="rotate(150,38.80,52.60)"/>
+  <rect x="46.40" y="47.20" width="7.20" height="4.80" rx="2.40" fill="rgba(255,255,255,0.35)" transform="rotate(180,50.00,49.60)"/>
+  <rect x="57.60" y="50.20" width="7.20" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(210,61.20,52.60)"/>
+  <rect x="65.80" y="58.40" width="7.20" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(240,69.40,60.80)"/>
+  <rect x="68.80" y="69.60" width="7.20" height="4.80" rx="2.40" fill="#C9302C" transform="rotate(270,72.40,72.00)"/>
+  <circle cx="50" cy="62.24" r="6.00" fill="#FFFFFF"/>
+  <rect x="43.20" y="68.24" width="13.60" height="10.40" rx="2.16" fill="#FFFFFF"/>
 </svg>
