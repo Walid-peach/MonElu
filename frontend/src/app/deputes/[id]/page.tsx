@@ -167,7 +167,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 </a>
                 <ShareButton
                   url={`/deputes/${id}`}
-                  title={`${deputy.full_name} — MonÉlu`}
+                  title={`${deputy.full_name} - MonÉlu`}
                   text={`Bilan de mandat et votes de ${deputy.full_name}`}
                   ariaLabel="Partager ce député"
                 />

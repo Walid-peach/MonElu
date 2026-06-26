@@ -217,7 +217,7 @@ export function VoteDetailClient(props: Props) {
                 </a>
                 <ShareButton
                   url={`/votes/${voteId}`}
-                  title={`${adopted ? 'Adopté' : 'Rejeté'} — ${voteTitle}`}
+                  title={`${adopted ? 'Adopté' : 'Rejeté'} - ${voteTitle}`}
                   text="Suivez ce scrutin sur MonÉlu"
                   ariaLabel="Partager ce vote"
                 />
