@@ -4,6 +4,7 @@
 // Converting to Tailwind classes would require a full theme rewrite.
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { SearchResult } from '@/lib/api'
 
@@ -102,7 +103,7 @@ function mdToHtml(text: string): string {
 
 // ── Source card helpers ────────────────────────────────────────────────────
 
-type SourceCard = { dot: string; label: string; sub: string; badge: string; badgeBg: string; badgeColor: string }
+type SourceCard = { dot: string; label: string; sub: string; badge: string; badgeBg: string; badgeColor: string; href?: string }
 
 function mapSource(src: SearchResult['sources'][0]): SourceCard {
   const meta = src.metadata || {}
@@ -114,6 +115,7 @@ function mapSource(src: SearchResult['sources'][0]): SourceCard {
       sub: [meta.department, meta.circonscription].filter(Boolean).join(' · ') || '',
       badge: meta.group_short || meta.group || '',
       badgeBg: '#F1F5F9', badgeColor: '#475569',
+      href: meta.deputy_id ? `/deputes/${meta.deputy_id}` : undefined,
     }
   }
   if (type === 'vote') {
@@ -125,6 +127,7 @@ function mapSource(src: SearchResult['sources'][0]): SourceCard {
       badge: meta.result || '',
       badgeBg: adopted ? '#DCFCE7' : '#FEE2E2',
       badgeColor: adopted ? '#15803D' : '#DC2626',
+      href: meta.vote_id ? `/votes/${meta.vote_id}` : undefined,
     }
   }
   return {
@@ -504,16 +507,24 @@ function ChatInner() {
                           <div style={{ marginTop: 18 }}>
                             <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: txt3, marginBottom: 9 }}>Sources</div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                              {sources.map((src, si) => (
-                                <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 10, background: dk ? '#162035' : '#fff', border: `1px solid ${dk ? 'rgba(255,255,255,0.08)' : '#E8EAED'}`, borderRadius: 9, padding: '9px 13px', maxWidth: 280, boxShadow: dk ? 'none' : '0 1px 3px rgba(0,0,0,0.05)' }}>
-                                  <div style={{ width: 9, height: 9, borderRadius: 999, background: src.dot, flexShrink: 0 }} />
-                                  <div style={{ minWidth: 0, flex: 1 }}>
-                                    <div style={{ fontSize: 12.5, fontWeight: 600, color: txt1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{src.label}</div>
-                                    {src.sub && <div style={{ fontSize: 11, color: txt3, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{src.sub}</div>}
-                                  </div>
-                                  {src.badge && <div style={{ flexShrink: 0, background: src.badgeBg, color: src.badgeColor, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap', letterSpacing: '0.02em' }}>{src.badge}</div>}
-                                </div>
-                              ))}
+                              {sources.map((src, si) => {
+                                const cardStyle = { display: 'flex', alignItems: 'center', gap: 10, background: dk ? '#162035' : '#fff', border: `1px solid ${dk ? 'rgba(255,255,255,0.08)' : '#E8EAED'}`, borderRadius: 9, padding: '9px 13px', maxWidth: 280, boxShadow: dk ? 'none' : '0 1px 3px rgba(0,0,0,0.05)' } as const
+                                const inner = (
+                                  <>
+                                    <div style={{ width: 9, height: 9, borderRadius: 999, background: src.dot, flexShrink: 0 }} />
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                      <div style={{ fontSize: 12.5, fontWeight: 600, color: txt1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{src.label}</div>
+                                      {src.sub && <div style={{ fontSize: 11, color: txt3, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{src.sub}</div>}
+                                    </div>
+                                    {src.badge && <div style={{ flexShrink: 0, background: src.badgeBg, color: src.badgeColor, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap', letterSpacing: '0.02em' }}>{src.badge}</div>}
+                                  </>
+                                )
+                                return src.href ? (
+                                  <Link key={si} href={src.href} style={{ ...cardStyle, textDecoration: 'none', cursor: 'pointer' }}>{inner}</Link>
+                                ) : (
+                                  <div key={si} style={cardStyle}>{inner}</div>
+                                )
+                              })}
                             </div>
                           </div>
                         )}
