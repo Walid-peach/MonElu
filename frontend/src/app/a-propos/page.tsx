@@ -499,7 +499,7 @@ export default function AProposPage() {
           <span style={{ fontWeight: 800, fontSize: '18px', color: '#fff', letterSpacing: '-0.01em' }}>
             Mon<span style={{ color: '#D93025' }}>É</span>lu
           </span>
-          <span style={{ fontSize: '13px', color: '#4B5563', marginLeft: '8px' }}>© 2024 — Données publiques Assemblée nationale</span>
+          <span style={{ fontSize: '13px', color: '#4B5563', marginLeft: '8px' }}>© {new Date().getFullYear()} - Données publiques Assemblée nationale</span>
         </div>
         <div style={{ display: 'flex', gap: '28px', fontSize: '13.5px' }}>
           <Link href="/deputes" style={{ color: '#6B7280', textDecoration: 'none' }}>Députés</Link>
