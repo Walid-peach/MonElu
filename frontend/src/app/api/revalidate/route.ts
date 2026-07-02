@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
   revalidatePath('/deputes')
   revalidatePath('/deputes/[id]', 'page')
   revalidatePath('/votes/[id]', 'page')
+  revalidatePath('/sitemap.xml')
 
   return Response.json({ revalidated: true, at: new Date().toISOString() })
 }
