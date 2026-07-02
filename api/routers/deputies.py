@@ -6,13 +6,16 @@ from starlette.requests import Request
 from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter
 from api.schemas import (
+    DeputyAlignment,
     DeputyDetail,
+    DeputyDissidentVotesResponse,
     DeputyListResponse,
     DeputyScorecard,
     DeputyStats,
     DeputySummary,
     DeputyVoteItem,
     DeputyVotesResponse,
+    DissidentVoteItem,
 )
 
 router = APIRouter()
@@ -171,3 +174,88 @@ def get_scorecard(request: Request, deputy_id: str):
     if not row:
         raise HTTPException(status_code=404, detail="Deputy not found")
     return DeputyScorecard(**row)
+
+
+@router.get("/{deputy_id}/alignment", response_model=DeputyAlignment)
+@limiter.limit("10/minute")
+def get_alignment(request: Request, deputy_id: str):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        deputy_id,
+                        full_name,
+                        party,
+                        total_votes,
+                        aligned_votes,
+                        dissident_votes,
+                        party_alignment_rate,
+                        dissident_rate,
+                        updated_at
+                    FROM analytics_marts.mart_party_alignment
+                    WHERE deputy_id = %s
+                    """,
+                    (deputy_id,),
+                )
+                row = cur.fetchone()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Deputy not found")
+    return DeputyAlignment(**row)
+
+
+@router.get("/{deputy_id}/dissident-votes", response_model=DeputyDissidentVotesResponse)
+@limiter.limit("10/minute")
+def get_dissident_votes(
+    request: Request,
+    deputy_id: str,
+    limit: int = Query(10, ge=1, le=50),
+):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM vote_positions vp
+                    JOIN deputies d ON d.deputy_id = vp.deputy_id
+                    JOIN analytics_intermediate.int_party_vote_majority m
+                        ON m.vote_id = vp.vote_id AND m.party = d.party
+                    WHERE vp.deputy_id = %s
+                      AND vp.position IN ('pour', 'contre', 'abstention')
+                      AND vp.position != m.majority_position
+                    """,
+                    (deputy_id,),
+                )
+                total = cur.fetchone()["count"]
+
+                cur.execute(
+                    """
+                    SELECT vp.vote_id, v.voted_at, v.vote_title, v.result,
+                           vp.position, m.majority_position
+                    FROM vote_positions vp
+                    JOIN deputies d ON d.deputy_id = vp.deputy_id
+                    JOIN analytics_intermediate.int_party_vote_majority m
+                        ON m.vote_id = vp.vote_id AND m.party = d.party
+                    JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
+                    WHERE vp.deputy_id = %s
+                      AND vp.position IN ('pour', 'contre', 'abstention')
+                      AND vp.position != m.majority_position
+                    ORDER BY v.voted_at DESC
+                    LIMIT %s
+                    """,
+                    (deputy_id, limit),
+                )
+                rows = cur.fetchall()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
+
+    return DeputyDissidentVotesResponse(
+        deputy_id=deputy_id,
+        total=total,
+        items=[DissidentVoteItem(**r) for r in rows],
+    )

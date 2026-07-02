@@ -37,7 +37,7 @@ def test_chunk_votes_filtered_by_ids(db_conn):
 @pytest.mark.integration
 def test_chunk_deputies_returns_seeded_deputies(db_conn):
     chunks = chunk_deputies()
-    assert len(chunks) == 3
+    assert len(chunks) == 4
     deputy_ids = {c["metadata"]["deputy_id"] for c in chunks}
     assert "PA001" in deputy_ids
     assert "PA002" in deputy_ids

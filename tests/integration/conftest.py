@@ -52,6 +52,28 @@ CREATE TABLE IF NOT EXISTS analytics_marts.mart_vote_summary (
     summary_plain TEXT,
     theme         TEXT
 );
+
+CREATE TABLE IF NOT EXISTS analytics_marts.mart_party_alignment (
+    deputy_id             TEXT PRIMARY KEY,
+    full_name             TEXT,
+    party                 TEXT,
+    department            TEXT,
+    total_votes           INTEGER,
+    aligned_votes         INTEGER,
+    dissident_votes       INTEGER,
+    party_alignment_rate  NUMERIC,
+    dissident_rate        NUMERIC,
+    updated_at            TIMESTAMPTZ
+);
+
+CREATE SCHEMA IF NOT EXISTS analytics_intermediate;
+
+CREATE TABLE IF NOT EXISTS analytics_intermediate.int_party_vote_majority (
+    party             TEXT,
+    vote_id           TEXT,
+    majority_position TEXT,
+    PRIMARY KEY (party, vote_id)
+);
 """
 
 # Fixture data ---------------------------------------------------------------
@@ -93,6 +115,24 @@ DEPUTY_C = {
     "party_short": "RE",
     "circonscription": "3ème circonscription de Paris",
     "department": "Paris",
+    "mandate_start": "2024-07-07",
+    "mandate_end": None,
+    "photo_url": None,
+}
+
+# Same party as PA001 — splits the first 5 votes 'pour'/'contre' so the party
+# majority ties and resolves to 'contre' (tie-break is alphabetical), making
+# PA001 a dissident on those 5 votes. Gives alignment/dissident-votes tests a
+# deterministic non-trivial scenario.
+DEPUTY_D = {
+    "deputy_id": "PA004",
+    "full_name": "Denis Lefebvre",
+    "first_name": "Denis",
+    "last_name": "Lefebvre",
+    "party": "Rassemblement National",
+    "party_short": "RN",
+    "circonscription": "4ème circonscription du Var",
+    "department": "Var",
     "mandate_start": "2024-07-07",
     "mandate_end": None,
     "photo_url": None,
@@ -180,14 +220,16 @@ def db_conn():
 
     # Seed base fixtures used by most tests
     with conn.cursor() as cur:
-        for deputy in (DEPUTY_A, DEPUTY_B, DEPUTY_C):
+        for deputy in (DEPUTY_A, DEPUTY_B, DEPUTY_C, DEPUTY_D):
             cur.execute(_DEPUTY_UPSERT, deputy)
 
         votes = [_make_vote(i, "adopté" if i % 3 != 0 else "rejeté") for i in range(1, 26)]
         for v in votes:
             cur.execute(_VOTE_UPSERT, v)
 
-        # Seed positions: PA001 voted pour on every vote, PA002 voted contre
+        # Seed positions: PA001 voted pour on every vote, PA002 voted contre.
+        # PA004 (same party as PA001) votes contre on the first 5 votes and
+        # pour on the rest — see DEPUTY_D comment for why.
         for v in votes:
             cur.execute(
                 _POSITION_UPSERT,
@@ -196,6 +238,15 @@ def db_conn():
             cur.execute(
                 _POSITION_UPSERT,
                 {"vote_id": v["vote_id"], "deputy_id": "PA002", "position": "contre"},
+            )
+        for i, v in enumerate(votes, start=1):
+            cur.execute(
+                _POSITION_UPSERT,
+                {
+                    "vote_id": v["vote_id"],
+                    "deputy_id": "PA004",
+                    "position": "contre" if i <= 5 else "pour",
+                },
             )
 
         # Seed mart_vote_summary mirror for pagination / scorecard tests
@@ -225,6 +276,45 @@ def db_conn():
             """
         )
 
+        # Seed int_party_vote_majority: RN ties 1-1 on the first 5 votes
+        # (PA001 pour, PA004 contre) — resolves to 'contre' alphabetically,
+        # making PA001 dissident there. RN is unanimous 'pour' on the rest.
+        for i, v in enumerate(votes, start=1):
+            majority = "contre" if i <= 5 else "pour"
+            cur.execute(
+                """
+                INSERT INTO analytics_intermediate.int_party_vote_majority
+                    (party, vote_id, majority_position)
+                VALUES ('Rassemblement National', %(vote_id)s, %(majority)s)
+                ON CONFLICT (party, vote_id) DO UPDATE SET majority_position = EXCLUDED.majority_position
+                """,
+                {"vote_id": v["vote_id"], "majority": majority},
+            )
+            cur.execute(
+                """
+                INSERT INTO analytics_intermediate.int_party_vote_majority
+                    (party, vote_id, majority_position)
+                VALUES ('La France Insoumise', %(vote_id)s, 'contre')
+                ON CONFLICT (party, vote_id) DO UPDATE SET majority_position = EXCLUDED.majority_position
+                """,
+                {"vote_id": v["vote_id"]},
+            )
+
+        # Seed mart_party_alignment for alignment/dissident-votes tests:
+        # PA001 is dissident on the first 5 votes (pour vs. tie-broken majority
+        # contre), aligned on the remaining 20.
+        cur.execute(
+            """
+            INSERT INTO analytics_marts.mart_party_alignment
+                (deputy_id, full_name, party, department, total_votes,
+                 aligned_votes, dissident_votes, party_alignment_rate,
+                 dissident_rate, updated_at)
+            VALUES ('PA001', 'Alice Martin', 'Rassemblement National', 'Var',
+                    25, 20, 5, 0.8, 0.2, NOW())
+            ON CONFLICT (deputy_id) DO NOTHING
+            """
+        )
+
     yield conn
 
     # Teardown — truncate all data so the schema can be reused by other test runs.
@@ -233,6 +323,8 @@ def db_conn():
     with conn.cursor() as cur:
         cur.execute("TRUNCATE analytics_marts.mart_vote_summary CASCADE")
         cur.execute("TRUNCATE analytics_marts.mart_deputy_scorecard CASCADE")
+        cur.execute("TRUNCATE analytics_marts.mart_party_alignment CASCADE")
+        cur.execute("TRUNCATE analytics_intermediate.int_party_vote_majority CASCADE")
         cur.execute("TRUNCATE vote_positions CASCADE")
         cur.execute("TRUNCATE votes CASCADE")
         cur.execute("TRUNCATE deputies CASCADE")
