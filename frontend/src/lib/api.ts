@@ -123,13 +123,14 @@ export const api = {
       apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?limit=${limit}`, { revalidate: 86400 }),
   },
   votes: {
-    list: (params?: { result?: string; theme?: string; limit?: number; offset?: number }) => {
+    list: (params?: { result?: string; theme?: string; limit?: number; offset?: number; before?: string }) => {
       const q = new URLSearchParams()
       if (params?.result) q.set('result', params.result)
       if (params?.theme)  q.set('theme',  params.theme)
       if (params?.limit) q.set('limit', String(params.limit))
       if (params?.offset) q.set('offset', String(params.offset))
-      return apiFetch<{ total: number; items: Vote[]; limit: number; offset: number }>(
+      if (params?.before) q.set('before', params.before)
+      return apiFetch<{ total: number; items: Vote[]; limit: number; offset: number; next_cursor: string | null }>(
         `/votes/?${q}`,
         { revalidate: 900 }
       )
