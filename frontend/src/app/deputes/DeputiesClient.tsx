@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Deputy } from '@/lib/api'
 import { getInitials, partyHex } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
+import { resolvePostalCode } from '@/lib/postal'
 
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 type SortKey = 'nom' | 'region' | 'parti'
@@ -29,6 +30,20 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     return () => clearTimeout(t)
   }, [search])
 
+  const [postalResult, setPostalResult] = useState<{ code: string; department: string | null } | null>(null)
+  useEffect(() => {
+    if (!/^\d{5}$/.test(debouncedSearch)) return
+    let cancelled = false
+    resolvePostalCode(debouncedSearch).then(department => {
+      if (!cancelled) setPostalResult({ code: debouncedSearch, department })
+    })
+    return () => { cancelled = true }
+  }, [debouncedSearch])
+
+  const postalMatch = postalResult?.code === debouncedSearch ? postalResult : null
+  const resolvedDepartment = postalMatch?.department ?? ''
+  const postalNotFound = postalMatch !== null && postalMatch.department === null
+
   const skipFirstSync = useRef(true)
   useEffect(() => {
     if (skipFirstSync.current) { skipFirstSync.current = false; return }
@@ -40,7 +55,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   }, [debouncedSearch, router])
 
   const filtered = useMemo(() => {
-    const q = debouncedSearch.toLowerCase()
+    const q = (resolvedDepartment || debouncedSearch).toLowerCase()
     const items = q
       ? initial.items.filter(d =>
           d.full_name.toLowerCase().includes(q) ||
@@ -53,7 +68,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     if (sort === 'region') return items.sort((a, b) => (a.department ?? '').localeCompare(b.department ?? '', 'fr'))
     if (sort === 'parti')  return items.sort((a, b) => (a.party ?? '').localeCompare(b.party ?? '', 'fr'))
     return items
-  }, [initial.items, debouncedSearch, sort])
+  }, [initial.items, debouncedSearch, resolvedDepartment, sort])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -196,7 +211,11 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
           {filtered.length === 0 ? (
             <div style={{ padding: '64px 0', textAlign: 'center' }}>
-              <p style={{ color: '#6B7280', fontSize: 15, marginBottom: 12 }}>Aucun résultat pour cette recherche</p>
+              <p style={{ color: '#6B7280', fontSize: 15, marginBottom: 12 }}>
+                {postalNotFound
+                  ? 'Code postal introuvable. Essayez un nom, une circonscription ou un département.'
+                  : 'Aucun résultat pour cette recherche'}
+              </p>
               <button
                 onClick={clearSearch}
                 style={{ fontSize: 14, color: NAVY, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
