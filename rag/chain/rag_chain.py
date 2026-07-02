@@ -30,7 +30,7 @@ def extract_confidence(answer: str) -> tuple[str, str]:
         level = match.group(1).upper()
         clean = _CONFIDENCE_PATTERN.sub("", answer).strip()
         return clean, level
-    return answer, "MEDIUM"
+    return answer, "medium"
 
 
 def compute_confidence(chunks: list[dict]) -> str:
@@ -39,15 +39,15 @@ def compute_confidence(chunks: list[dict]) -> str:
     Based on top chunk similarity and number of supporting chunks.
     """
     if not chunks:
-        return "FAIBLE"
+        return "low"
     top_sim = chunks[0].get("similarity", 0)
     strong_chunks = sum(1 for c in chunks if c.get("similarity", 0) >= 0.5)
 
     if top_sim >= 0.65 and strong_chunks >= 2:
-        return "ÉLEVÉ"
+        return "high"
     if top_sim >= 0.5:
-        return "MOYEN"
-    return "FAIBLE"
+        return "medium"
+    return "low"
 
 
 def ask(

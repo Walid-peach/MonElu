@@ -38,7 +38,7 @@ class SearchResponse(BaseModel):
     chunks_retrieved: int
     sources: list[SourceItem]
     query_type: str = "rag"
-    confidence: str = "MEDIUM"
+    confidence: str = "medium"
     data_source: str = "RAG"
     caveat: str | None = None
 
@@ -64,7 +64,7 @@ def search(request: Request, body: SearchRequest):
             chunks_retrieved=result["chunks_retrieved"],
             sources=[SourceItem(**s) for s in result.get("sources", [])],
             query_type=result.get("query_type", "rag"),
-            confidence=result.get("confidence", "MEDIUM"),
+            confidence=result.get("confidence", "medium"),
             data_source=result.get("data_source", "RAG"),
             caveat=result.get("caveat"),
         )
