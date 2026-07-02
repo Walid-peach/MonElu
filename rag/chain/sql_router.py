@@ -393,7 +393,7 @@ def route(question: str) -> dict | None:
         "chunks_retrieved": 0,
         "sources": [],
         "query_type": intent,
-        "confidence": "HIGH",
+        "confidence": "high",
         "data_source": "SQL",
         "caveat": "Données calculées directement depuis la base de données. Aucune génération IA.",
     }
