@@ -2,10 +2,11 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import type { DeputyVoteItem } from '@/lib/api'
+import type { DeputyVoteItem, DissidentVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
+import { InfoTooltip } from '@/components/InfoTooltip'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -40,13 +41,17 @@ const POS = {
 
 export default async function DeputyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [deputy, scorecard, deputyStats, recentVotes] = await Promise.all([
+  const [deputy, scorecard, deputyStats, recentVotes, alignment, dissidentVotes] = await Promise.all([
     api.deputies.get(id).catch(() => null),
     api.deputies.scorecard(id).catch(() => null),
     api.deputies.stats().catch(() => null),
     api.deputies.votes(id, 10).catch(() => null),
+    api.deputies.alignment(id).catch(() => null),
+    api.deputies.dissidentVotes(id, 10).catch(() => null),
   ])
   if (!deputy) notFound()
+
+  const alignmentPct = alignment ? Math.round(alignment.party_alignment_rate * 100) : null
 
   const presencePct    = scorecard ? Math.round((scorecard.presence_rate ?? 0) * 100) : null
   const avgPresencePct = deputyStats ? Math.round((deputyStats.avg_presence_rate ?? 0) * 100) : null
@@ -258,6 +263,74 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   </div>
                 )}
               </div>
+            </section>
+          )}
+
+          {/* Party alignment / dissident rate */}
+          {alignment && alignmentPct !== null && (
+            <section>
+              <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
+                Alignement avec son groupe
+              </div>
+              <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
+                Vote-t-il·elle avec son groupe politique ?
+              </h2>
+              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '26px 30px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    Vote avec son groupe
+                    <InfoTooltip text="Alignement calculé en comparant, vote par vote, la position du député à la position majoritaire de son groupe parlementaire actuel. Les votes non-votants sont exclus. Limite : l'historique est comparé au groupe actuel du député, même s'il en a changé en cours de mandat." />
+                  </span>
+                  <span className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: NAVY }}>{alignmentPct}%</span>
+                </div>
+                <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${alignmentPct}%`, transition: 'width 0.4s' }} />
+                </div>
+                <p style={{ fontSize: 13, color: '#6B7280', marginTop: 16 }}>
+                  <span style={{ fontWeight: 700, color: NAVY }}>{alignment.dissident_votes}</span> vote{alignment.dissident_votes !== 1 ? 's' : ''} dissident{alignment.dissident_votes !== 1 ? 's' : ''} sur {alignment.total_votes} vote{alignment.total_votes !== 1 ? 's' : ''} comptabilisé{alignment.total_votes !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              {dissidentVotes && dissidentVotes.items.length > 0 && (
+                <div style={{ marginTop: 22 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 12 }}>
+                    Votes dissidents récents
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {dissidentVotes.items.map((v: DissidentVoteItem) => (
+                      <Link
+                        key={v.vote_id}
+                        href={`/votes/${v.vote_id}`}
+                        style={{
+                          display: 'block', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10,
+                          padding: '14px 18px', textDecoration: 'none',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+                          {v.voted_at && (
+                            <span className="font-mono" style={{ fontSize: 12, color: '#9CA3AF' }}>
+                              {formatDate(v.voted_at)}
+                            </span>
+                          )}
+                          <span style={{
+                            fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
+                            color: POS[v.position as keyof typeof POS]?.color ?? NAVY,
+                            background: POS[v.position as keyof typeof POS]?.bg ?? LINE,
+                          }}>
+                            A voté {POS[v.position as keyof typeof POS]?.label ?? v.position}
+                          </span>
+                          <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+                            groupe : {POS[v.majority_position as keyof typeof POS]?.label ?? v.majority_position}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 15.5, color: NAVY, lineHeight: 1.35 }}>
+                          {v.vote_title}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )}
 

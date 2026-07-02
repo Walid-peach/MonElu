@@ -52,6 +52,33 @@ export type DeputyStats = {
   avg_presence_rate: number
 }
 
+export type Alignment = {
+  deputy_id: string
+  full_name: string
+  party: string | null
+  total_votes: number
+  aligned_votes: number
+  dissident_votes: number
+  party_alignment_rate: number
+  dissident_rate: number
+  updated_at: string | null
+}
+
+export type DissidentVoteItem = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string
+  result: string | null
+  position: string
+  majority_position: string
+}
+
+export type DissidentVotesResponse = {
+  deputy_id: string
+  total: number
+  items: DissidentVoteItem[]
+}
+
 export type DeputyVoteItem = {
   vote_id: string
   voted_at: string | null
@@ -121,6 +148,10 @@ export const api = {
     stats: () => apiFetch<DeputyStats>('/deputies/stats/', { revalidate: 3600 }),
     votes: (id: string, limit = 10) =>
       apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?limit=${limit}`, { revalidate: 86400 }),
+    alignment: (id: string) =>
+      apiFetch<Alignment>(`/deputies/${id}/alignment/`, { revalidate: 86400 }),
+    dissidentVotes: (id: string, limit = 10) =>
+      apiFetch<DissidentVotesResponse>(`/deputies/${id}/dissident-votes/?limit=${limit}`, { revalidate: 86400 }),
   },
   votes: {
     list: (params?: { result?: string; theme?: string; limit?: number; offset?: number; before?: string }) => {

@@ -154,6 +154,61 @@ def test_get_scorecard_not_found(client, mock_cursor):
     assert resp.status_code == 404
 
 
+def test_get_alignment(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {
+        "deputy_id": "PA1",
+        "full_name": "Jean Martin",
+        "party": "Rassemblement National",
+        "total_votes": 25,
+        "aligned_votes": 20,
+        "dissident_votes": 5,
+        "party_alignment_rate": 0.8,
+        "dissident_rate": 0.2,
+        "updated_at": None,
+    }
+    resp = client.get("/deputies/PA1/alignment")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["party_alignment_rate"] == 0.8
+    assert data["dissident_votes"] == 5
+
+
+def test_get_alignment_not_found(client, mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    resp = client.get("/deputies/NONEXISTENT/alignment")
+    assert resp.status_code == 404
+
+
+def test_get_dissident_votes(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": "VTANR5L17V1",
+            "voted_at": "2024-07-16T15:00:00",
+            "vote_title": "Vote sur le projet de loi de finances",
+            "result": "adopté",
+            "position": "pour",
+            "majority_position": "contre",
+        }
+    ]
+    resp = client.get("/deputies/PA1/dissident-votes")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["items"][0]["position"] == "pour"
+    assert data["items"][0]["majority_position"] == "contre"
+
+
+def test_get_dissident_votes_empty(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 0}
+    mock_cursor.fetchall.return_value = []
+    resp = client.get("/deputies/PA1/dissident-votes")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 0
+    assert data["items"] == []
+
+
 # ---------------------------------------------------------------------------
 # Votes
 # ---------------------------------------------------------------------------

@@ -61,6 +61,37 @@ class DeputyScorecard(_Base):
     abstention_pct: float = Field(description="abstentions / present_votes, 0–1")
 
 
+class DeputyAlignment(_Base):
+    """Party alignment / dissident rate for a single deputy (mart_party_alignment)."""
+
+    deputy_id: str
+    full_name: str
+    party: Optional[str] = None
+    total_votes: int = Field(description="Votes counted toward alignment (pour/contre/abstention)")
+    aligned_votes: int
+    dissident_votes: int
+    party_alignment_rate: float = Field(description="aligned_votes / total_votes, 0-1")
+    dissident_rate: float = Field(description="dissident_votes / total_votes, 0-1")
+    updated_at: Optional[datetime] = None
+
+
+class DissidentVoteItem(_Base):
+    """A single vote where the deputy diverged from their party's majority position."""
+
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: str
+    result: Optional[str] = None
+    position: str
+    majority_position: str
+
+
+class DeputyDissidentVotesResponse(_Base):
+    deputy_id: str
+    total: int
+    items: list[DissidentVoteItem]
+
+
 class DeputyStats(_Base):
     avg_presence_rate: Optional[float] = Field(
         None,
