@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
-import { getInitials, groupVotesByParty, partyHex } from '@/lib/utils'
+import { getInitials, groupVotesByParty, partyHex, partyShort } from '@/lib/utils'
 import { VoteDetailClient } from './VoteDetailClient'
 
 export const dynamicParams = true
@@ -100,6 +100,11 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
   // Full deputy roster (paginated — /deputies caps limit at 200) so "how did my
   // deputy vote?" can surface an explicit "absent / non enregistré" state for
   // deputies with no recorded position on this vote, not just an empty result.
+  // These 3 URLs are identical across every vote page, so Next's fetch data
+  // cache dedupes them to 3 real network calls per revalidate window rather
+  // than 3 × (number of statically generated vote pages) — relevant if this
+  // ever hits the API's 30 req/min limiter; failures degrade to an empty
+  // roster (via .catch) rather than failing the build.
   const rosterPages = await Promise.all(
     [0, 200, 400].map(offset => api.deputies.list({ limit: 200, offset }).catch(() => ({ items: [] })))
   )
@@ -109,7 +114,11 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
     return {
       deputy_id: d.deputy_id,
       full_name: d.full_name,
-      party: pos?.party_short ?? d.party,
+      // Always a short code, whether it comes from the recorded position or is
+      // derived from the deputy's full party name — keeps the lookup card and
+      // suggestion list visually consistent regardless of whether the deputy
+      // voted on this scrutin.
+      party: pos?.party_short ?? partyShort(d.party),
       department: d.department,
       position: pos?.position ?? null,
     }
