@@ -33,11 +33,11 @@ export function partyShort(party: string | null): string {
 
 
 export function groupVotesByParty(
-  positions: Array<{ party: string; position: string }>
+  positions: Array<{ party_short: string | null; position: string }>
 ): Record<string, Record<string, number>> {
   const map: Record<string, Record<string, number>> = {}
   for (const p of positions) {
-    const party = p.party || 'Non inscrit'
+    const party = p.party_short || 'Non inscrit'
     if (!map[party]) map[party] = { pour: 0, contre: 0, abstention: 0, nonVotant: 0 }
     map[party][p.position] = (map[party][p.position] || 0) + 1
   }

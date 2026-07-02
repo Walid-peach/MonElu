@@ -1,7 +1,17 @@
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { ShareButton } from '@/components/ShareButton'
+import { getInitials, partyHex } from '@/lib/utils'
+import { resolvePostalCode } from '@/lib/postal'
+
+interface DeputyLookupEntry {
+  deputy_id: string
+  full_name: string
+  party: string | null
+  department: string | null
+  position: string | null
+}
 
 interface GroupRow {
   name: string
@@ -50,6 +60,14 @@ interface Props {
   dissidents: Dissident[]
   related: RelatedVote[]
   apiUrl: string
+  deputyLookup: DeputyLookupEntry[]
+}
+
+const POSITION_LABELS: Record<string, string> = {
+  pour: 'Pour',
+  contre: 'Contre',
+  abstention: 'Abstention',
+  nonVotant: 'Non votant',
 }
 
 function shortDate(dateStr: string): string {
@@ -61,11 +79,40 @@ export function VoteDetailClient(props: Props) {
     voteId, voteTitle, result, votedAt, summary, theme,
     votesFor, votesAgainst, abstentions, totalVoters,
     pourPct, contrePct, abstPct,
-    groups, dissidents, related, apiUrl,
+    groups, dissidents, related, apiUrl, deputyLookup,
   } = props
 
   const [showBar, setShowBar] = useState(false)
   const obsRef = useRef<IntersectionObserver | null>(null)
+
+  // ── "Comment a voté votre député ?" lookup ──
+  const [lookupQuery, setLookupQuery] = useState('')
+  const [selected, setSelected] = useState<DeputyLookupEntry | null>(null)
+  const [postalResult, setPostalResult] = useState<{ code: string; department: string | null } | null>(null)
+
+  useEffect(() => {
+    const q = lookupQuery.trim()
+    if (!/^\d{5}$/.test(q)) return
+    let cancelled = false
+    resolvePostalCode(q).then(department => {
+      if (!cancelled) setPostalResult({ code: q, department })
+    })
+    return () => { cancelled = true }
+  }, [lookupQuery])
+
+  const postalMatch = postalResult?.code === lookupQuery.trim() ? postalResult : null
+  const resolvedDept = postalMatch?.department ?? null
+
+  const suggestions = useMemo(() => {
+    if (resolvedDept) {
+      return deputyLookup.filter(d => d.department === resolvedDept).slice(0, 6)
+    }
+    const q = lookupQuery.trim().toLowerCase()
+    if (!q || q.length < 2) return []
+    return deputyLookup
+      .filter(d => d.full_name.toLowerCase().includes(q))
+      .slice(0, 6)
+  }, [lookupQuery, deputyLookup, resolvedDept])
 
   const heroRef = useCallback((el: HTMLDivElement | null) => {
     if (obsRef.current) { obsRef.current.disconnect(); obsRef.current = null }
@@ -233,6 +280,72 @@ export function VoteDetailClient(props: Props) {
 
           {/* Main column */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 52 }}>
+
+            {/* Comment a voté votre député ? */}
+            <section>
+              <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C9302A' }}>Votre député</div>
+              <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: '#1B2B50', margin: '12px 0 4px', letterSpacing: '-0.01em' }}>Comment a voté votre député&nbsp;?</h2>
+              <p style={{ fontSize: 15, color: '#6B7280', margin: '0 0 18px', maxWidth: 560 }}>Tapez un nom ou un code postal pour retrouver sa position sur ce scrutin.</p>
+
+              <div style={{ position: 'relative', maxWidth: 440 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #E4E6EA', borderRadius: 10, padding: '0 16px', height: 48 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+                  <input
+                    type="text"
+                    value={lookupQuery}
+                    onChange={e => { setLookupQuery(e.target.value); setSelected(null) }}
+                    placeholder="Nom du député ou code postal…"
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14.5, color: '#1B2B50', background: 'transparent' }}
+                  />
+                </div>
+
+                {suggestions.length > 0 && !selected && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6, background: '#fff', border: '1px solid #E4E6EA', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 10, overflow: 'hidden' }}>
+                    {suggestions.map(d => (
+                      <button
+                        key={d.deputy_id}
+                        onClick={() => { setSelected(d); setLookupQuery(d.full_name) }}
+                        style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'none', border: 'none', borderBottom: '1px solid #F0F1F3', cursor: 'pointer', textAlign: 'left' }}
+                      >
+                        <span style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, color: '#fff', background: partyHex(d.party) }}>
+                          {getInitials(d.full_name)}
+                        </span>
+                        <span style={{ fontSize: 13.5, color: '#1B2B50', fontWeight: 500 }}>{d.full_name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {lookupQuery.trim().length >= 2 && suggestions.length === 0 && !selected && !/^\d{1,4}$/.test(lookupQuery.trim()) && (
+                  <div style={{ marginTop: 8, fontSize: 13, color: '#9CA3AF' }}>Aucun député trouvé pour « {lookupQuery} ».</div>
+                )}
+              </div>
+
+              {selected && (
+                <Link href={`/deputes/${selected.deputy_id}`} style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 16, maxWidth: 440, background: '#fff', border: '1px solid #E4E6EA', borderRadius: 12, padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', textDecoration: 'none' }}>
+                  <span style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#fff', background: partyHex(selected.party) }}>
+                    {getInitials(selected.full_name)}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: '#1B2B50' }}>{selected.full_name}</div>
+                    <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 2 }}>{selected.party ?? 'Parti inconnu'}</div>
+                  </div>
+                  {selected.position ? (
+                    <span style={{
+                      fontSize: 13, fontWeight: 700, padding: '6px 14px', borderRadius: 999,
+                      color: selected.position === 'pour' ? '#1F8A5B' : selected.position === 'contre' ? '#C9302A' : '#6B7280',
+                      background: selected.position === 'pour' ? '#EAF5EF' : selected.position === 'contre' ? '#FBE9E7' : '#F0F1F3',
+                    }}>
+                      {POSITION_LABELS[selected.position] ?? selected.position}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 13, fontWeight: 700, padding: '6px 14px', borderRadius: 999, color: '#9CA3AF', background: '#F2F3F5' }}>
+                      Absent · non enregistré
+                    </span>
+                  )}
+                </Link>
+              )}
+            </section>
 
             {/* Ventilation par groupe */}
             {groups.length > 0 && (

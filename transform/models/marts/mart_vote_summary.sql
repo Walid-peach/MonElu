@@ -1,3 +1,9 @@
+{{
+  config(
+    post_hook="create index if not exists idx_mart_vote_summary_fts on {{ this }} using gin (to_tsvector('french', vote_title || ' ' || coalesce(summary_plain, '')))"
+  )
+}}
+
 with votes as (
     select * from {{ ref('stg_votes') }}
 ),

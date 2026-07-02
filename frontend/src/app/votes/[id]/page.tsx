@@ -67,14 +67,15 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
     }
     for (const pos of vote.positions) {
       if (pos.position === 'nonVotant') continue
-      const majority = majorityByParty[pos.party]
+      const party = pos.party_short || 'Non inscrit'
+      const majority = majorityByParty[party]
       if (majority && pos.position !== majority && dissidents.length < 4) {
         dissidents.push({
           deputy_id: pos.deputy_id,
           full_name: pos.full_name,
           initials: getInitials(pos.full_name),
-          party: pos.party,
-          avatarColor: partyHex(pos.party),
+          party,
+          avatarColor: partyHex(party),
           vote: pos.position,
           note: 'Dissident · contre son groupe',
         })
@@ -96,6 +97,24 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'
 
+  // Full deputy roster (paginated — /deputies caps limit at 200) so "how did my
+  // deputy vote?" can surface an explicit "absent / non enregistré" state for
+  // deputies with no recorded position on this vote, not just an empty result.
+  const rosterPages = await Promise.all(
+    [0, 200, 400].map(offset => api.deputies.list({ limit: 200, offset }).catch(() => ({ items: [] })))
+  )
+  const positionByDeputy = new Map(vote.positions?.map(p => [p.deputy_id, p]) ?? [])
+  const deputyLookup = rosterPages.flatMap(page => page.items).map(d => {
+    const pos = positionByDeputy.get(d.deputy_id)
+    return {
+      deputy_id: d.deputy_id,
+      full_name: d.full_name,
+      party: pos?.party_short ?? d.party,
+      department: d.department,
+      position: pos?.position ?? null,
+    }
+  })
+
   return (
     <Suspense fallback={<div style={{ padding: '48px 32px', color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
       <VoteDetailClient
@@ -116,6 +135,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
         dissidents={dissidents}
         related={related}
         apiUrl={apiUrl}
+        deputyLookup={deputyLookup}
       />
     </Suspense>
   )
