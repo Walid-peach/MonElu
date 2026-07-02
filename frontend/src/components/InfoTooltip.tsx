@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useId } from 'react'
 
 type Props = {
   text: string
@@ -10,6 +10,7 @@ const NAVY = '#1B2B50'
 
 export function InfoTooltip({ text, ariaLabel = 'Plus d’informations' }: Props) {
   const [open, setOpen] = useState(false)
+  const tooltipId = useId()
 
   return (
     <span style={{ position: 'relative', display: 'inline-flex' }}>
@@ -22,6 +23,7 @@ export function InfoTooltip({ text, ariaLabel = 'Plus d’informations' }: Props
         onClick={e => { e.preventDefault(); setOpen(o => !o) }}
         aria-label={ariaLabel}
         aria-expanded={open}
+        aria-describedby={open ? tooltipId : undefined}
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: 16, height: 16, borderRadius: 999, border: `1px solid #C7CDD8`,
@@ -34,6 +36,7 @@ export function InfoTooltip({ text, ariaLabel = 'Plus d’informations' }: Props
       {open && (
         <span
           role="tooltip"
+          id={tooltipId}
           style={{
             position: 'absolute', bottom: '140%', left: '50%', transform: 'translateX(-50%)',
             width: 260, padding: '10px 12px', borderRadius: 8, background: NAVY, color: '#fff',
