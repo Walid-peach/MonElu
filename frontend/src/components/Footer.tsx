@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 const legalLinks = [
   { href: '/mentions-legales', label: 'Mentions légales' },
@@ -7,10 +10,19 @@ const legalLinks = [
 ]
 
 export function Footer() {
+  const pathname = usePathname()
+
+  // /chat is a fixed-viewport app shell (height: calc(100dvh - 4rem), internal
+  // scrolling only) — appending footer content below it would break that layout.
+  if (pathname.startsWith('/chat')) return null
+
   return (
     <footer
+      className="pb-20 md:pb-8"
       style={{
-        padding: '32px 56px',
+        paddingTop: '32px',
+        paddingLeft: '56px',
+        paddingRight: '56px',
         background: '#111C35',
         display: 'flex',
         alignItems: 'center',
