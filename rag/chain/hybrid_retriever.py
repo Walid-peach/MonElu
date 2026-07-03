@@ -18,7 +18,7 @@ from pgvector.psycopg2 import register_vector
 from rank_bm25 import BM25Okapi
 
 from rag.chain.retriever import detect_recency_intent
-from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES
+from rag.constants import EMBEDDING_MODEL
 from rag.db_utils import connect_with_retry
 
 load_dotenv()
@@ -53,7 +53,8 @@ def _get_candidates(
         with conn.cursor(cursor_factory=psycopg2.extensions.cursor) as plain_cur:
             register_vector(plain_cur)
         with conn.cursor() as cur:
-            cur.execute("SET LOCAL ivfflat.probes = %s", (IVFFLAT_PROBES,))
+            # exact cosine scan — the IVFFlat index was dropped in
+            # migration 003, no probes GUC to set
             cur.execute(
                 """
                 SELECT content, metadata,

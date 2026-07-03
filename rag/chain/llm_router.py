@@ -123,6 +123,25 @@ def classify_intent(question: str) -> str | None:
     return intent
 
 
+def _mentions_notable_deputy(question: str) -> bool:
+    """
+    True if the question names a notable deputy. Checks both the static
+    keyword map (rag/constants.py) and the DB-backed notable map used by
+    the retriever pin — the static map does not cover every indexed
+    notable (e.g. Braun-Pivet), and a missed name here sends a
+    deputy-specific question to a ranking intent.
+    """
+    if _has_notable_deputy(question):
+        return True
+    try:
+        from rag.chain.retriever import detect_notable_deputy, get_notable_deputy_ids
+
+        return detect_notable_deputy(question, get_notable_deputy_ids()) is not None
+    except Exception as exc:  # DB unavailable — fail open to RAG-safe side
+        log.warning("notable-deputy DB lookup failed in llm_router: %s", exc)
+        return True
+
+
 def llm_route(question: str) -> dict | None:
     """
     LLM-classified routing for questions the regex router missed.
@@ -130,7 +149,7 @@ def llm_route(question: str) -> dict | None:
     """
     # Deputy-specific questions belong to RAG (notable-deputy pin) —
     # cheaper to check here than to rely on the classifier.
-    if _has_notable_deputy(question):
+    if _mentions_notable_deputy(question):
         return None
 
     intent = classify_intent(question)
