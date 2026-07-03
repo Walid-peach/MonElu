@@ -121,6 +121,12 @@ RETRIEVAL_GOLDEN = [
         "expect_sql": False,
     },
     {
+        "question": "Quels votes ont été rejetés récemment ?",
+        "keywords": ["rejeté", "vote"],
+        "label": "retrieval — votes récents rejetés",
+        "expect_sql": False,
+    },
+    {
         "question": "Quels députés ont le plus d'abstentions ?",
         "keywords": ["abstention"],
         "label": "retrieval — députés abstentions",
