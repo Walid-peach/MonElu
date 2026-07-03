@@ -110,6 +110,28 @@ def detect_result_filter(question: str) -> str | None:
     return None
 
 
+_RECENCY_KEYWORDS = (
+    "récemment",
+    "récent",
+    "récente",
+    "récents",
+    "récentes",
+    "dernier",
+    "dernière",
+    "derniers",
+    "dernières",
+    "cette semaine",
+    "ce mois",
+)
+
+
+def detect_recency_intent(question: str) -> bool:
+    """True if the question asks for what's recent — cosine similarity alone
+    has no notion of time, so this triggers re-ranking by voted_at."""
+    q = question.lower()
+    return any(w in q for w in _RECENCY_KEYWORDS)
+
+
 def retrieve(
     question: str,
     k: int = 5,
@@ -117,6 +139,7 @@ def retrieve(
     deputy_id: str = None,
 ) -> list[dict]:
     result_filter = detect_result_filter(question)
+    recency = detect_recency_intent(question)
 
     notable_id = None
     if not deputy_id:
@@ -160,6 +183,11 @@ def retrieve(
 
             semantic_k = k - len(pinned)
             pinned_ids = {p["metadata"].get("deputy_id") for p in pinned}
+            # "récemment"/"dernier" etc. carry no signal for cosine similarity —
+            # widen the candidate pool so a post-hoc sort by voted_at has
+            # actually-recent votes to pick from, instead of just whatever
+            # happens to be closest in embedding space.
+            fetch_limit = (semantic_k + len(pinned)) * 4 if recency else semantic_k + len(pinned)
             cur.execute(
                 """
                 SELECT content, metadata,
@@ -180,7 +208,7 @@ def retrieve(
                     result_filter,
                     result_filter,
                     query_vector,
-                    semantic_k + len(pinned),
+                    fetch_limit,
                 ),
             )
             semantic_rows = [
@@ -193,6 +221,14 @@ def retrieve(
                 if row["metadata"].get("deputy_id") not in pinned_ids
                 or row["metadata"].get("chunk_type") != "notable_deputy"
             ]
+            if recency:
+                # Sort candidates with a voted_at by recency first; chunks
+                # without one (deputy/party/global_stats) keep their
+                # similarity-ranked position at the tail.
+                dated = [r for r in semantic_rows if r["metadata"].get("voted_at")]
+                undated = [r for r in semantic_rows if not r["metadata"].get("voted_at")]
+                dated.sort(key=lambda r: r["metadata"]["voted_at"], reverse=True)
+                semantic_rows = (dated + undated)[: semantic_k + len(pinned)]
     except Exception:
         broken = True
         raise
