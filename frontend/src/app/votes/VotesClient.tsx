@@ -62,17 +62,13 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
   }, [result, theme, router])
 
   const { data, isLoading } = useSWR(
-    `votes:${result}:${theme}:${offset}`,
-    () => api.votes.list({ result: result || undefined, theme: theme || undefined, limit: PAGE_SIZE, offset }),
+    `votes:${result}:${theme}:${search}:${offset}`,
+    () => api.votes.list({ result: result || undefined, theme: theme || undefined, search: search || undefined, limit: PAGE_SIZE, offset }),
     { keepPreviousData: true }
   )
 
-  const rawVotes = data?.items ?? initial.items
-  const total    = data?.total  ?? initial.total
-
-  const votes = search
-    ? rawVotes.filter(v => v.vote_title.toLowerCase().includes(search.toLowerCase()))
-    : rawVotes
+  const votes = data?.items ?? (search ? [] : initial.items)
+  const total = data?.total  ?? (search ? 0 : initial.total)
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 

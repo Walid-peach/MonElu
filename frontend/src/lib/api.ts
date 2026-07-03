@@ -43,7 +43,7 @@ export type VoteDetail = Vote & {
   positions?: Array<{
     deputy_id: string
     full_name: string
-    party: string
+    party_short: string | null
     position: string
   }>
 }
@@ -154,10 +154,11 @@ export const api = {
       apiFetch<DissidentVotesResponse>(`/deputies/${id}/dissident-votes/?limit=${limit}`, { revalidate: 86400 }),
   },
   votes: {
-    list: (params?: { result?: string; theme?: string; limit?: number; offset?: number; before?: string }) => {
+    list: (params?: { result?: string; theme?: string; search?: string; limit?: number; offset?: number; before?: string }) => {
       const q = new URLSearchParams()
       if (params?.result) q.set('result', params.result)
       if (params?.theme)  q.set('theme',  params.theme)
+      if (params?.search) q.set('search', params.search)
       if (params?.limit) q.set('limit', String(params.limit))
       if (params?.offset) q.set('offset', String(params.offset))
       if (params?.before) q.set('before', params.before)

@@ -45,6 +45,10 @@ def list_votes(
     ),
     result: str = Query(None, description="Filter by result: adopté | rejeté"),
     theme: str = Query(None, description="Filter by theme category"),
+    search: str = Query(
+        None,
+        description="Full-text search over vote_title and summary_plain (French stemming)",
+    ),
 ):
     # Decode before opening a connection so a bad cursor fails fast with 422.
     cursor_key = _decode_cursor(before) if before else None
@@ -62,6 +66,15 @@ def list_votes(
                 if theme:
                     conditions.append(sql.SQL("theme = %s"))
                     params.append(theme)
+
+                if search:
+                    conditions.append(
+                        sql.SQL(
+                            "to_tsvector('french', vote_title || ' ' || coalesce(summary_plain, ''))"
+                            " @@ plainto_tsquery('french', %s)"
+                        )
+                    )
+                    params.append(search)
 
                 # total reflects the full filtered set, independent of the cursor window.
                 count_where = (

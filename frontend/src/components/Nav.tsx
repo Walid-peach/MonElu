@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
+import { GlobalSearch } from './GlobalSearch'
 
 export const NAV_HEIGHT_PX = 64
 
@@ -38,11 +39,14 @@ export function Nav() {
           )
         })}
       </div>
-      <a href="https://monelu-production.up.railway.app/docs"
-        target="_blank"
-        className="text-sm border border-navy text-navy px-4 py-1.5 rounded hover:bg-navy hover:text-white transition-colors">
-        Explorer l&apos;API →
-      </a>
+      <div className="flex items-center gap-4">
+        <GlobalSearch />
+        <a href="https://monelu-production.up.railway.app/docs"
+          target="_blank"
+          className="text-sm border border-navy text-navy px-4 py-1.5 rounded hover:bg-navy hover:text-white transition-colors">
+          Explorer l&apos;API →
+        </a>
+      </div>
     </nav>
   )
 }
