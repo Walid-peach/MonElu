@@ -269,6 +269,10 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
       : sameKind.length
         ? sameKind[Math.floor(sameKind.length / 2)]
         : seats[Math.floor(seats.length / 2)]
+    // Force the hero seat's own kind to match heroKind so its dot color never
+    // disagrees with the ring/glow, even in the rare case where no seat of
+    // heroKind exists and we fell back to an arbitrary seat above.
+    hero.kind = heroKind
 
     seats.forEach(s => {
       const el = document.createElement('div')
@@ -578,32 +582,21 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
 
   // Prefer the deputy's real vote_positions row over the bill's overall
   // result so the badge always matches the highlighted hero seat (MON-102).
-  const votePosition = deputyInfo?.votePosition
-  const voteResultLabel =
-    votePosition === 'pour' ? 'A voté pour'
-      : votePosition === 'abstention' ? "S'est abstenu sur"
-      : votePosition === 'contre' ? 'A voté contre'
-      : leadVote.result.toLowerCase().includes('adopt') ? 'A voté pour' : 'A voté contre'
-  const voteResultIcon =
-    votePosition === 'pour' ? '✓'
-      : votePosition === 'abstention' ? '–'
-      : votePosition === 'contre' ? '✕'
-      : leadVote.result.toLowerCase().includes('adopt') ? '✓' : '✕'
-  const voteResultColor =
-    votePosition === 'pour' ? '#1fd4a6'
-      : votePosition === 'abstention' ? '#c7cfe0'
-      : votePosition === 'contre' ? '#f3b6b1'
-      : leadVote.result.toLowerCase().includes('adopt') ? '#1fd4a6' : '#f3b6b1'
-  const voteResultBg =
-    votePosition === 'pour' ? 'rgba(31,212,166,0.16)'
-      : votePosition === 'abstention' ? 'rgba(185,196,216,0.16)'
-      : votePosition === 'contre' ? 'rgba(217,48,37,0.16)'
-      : leadVote.result.toLowerCase().includes('adopt') ? 'rgba(31,212,166,0.16)' : 'rgba(217,48,37,0.16)'
-  const voteResultBorder =
-    votePosition === 'pour' ? 'rgba(31,212,166,0.35)'
-      : votePosition === 'abstention' ? 'rgba(185,196,216,0.35)'
-      : votePosition === 'contre' ? 'rgba(240,88,76,0.35)'
-      : leadVote.result.toLowerCase().includes('adopt') ? 'rgba(31,212,166,0.35)' : 'rgba(240,88,76,0.35)'
+  const billAdopted = leadVote.result.toLowerCase().includes('adopt')
+  const effectivePosition: 'pour' | 'contre' | 'abstention' =
+    deputyInfo?.votePosition ?? (billAdopted ? 'pour' : 'contre')
+  const VOTE_BADGE = {
+    pour: { label: 'A voté pour', icon: '✓', color: '#1fd4a6', bg: 'rgba(31,212,166,0.16)', border: 'rgba(31,212,166,0.35)' },
+    contre: { label: 'A voté contre', icon: '✕', color: '#f3b6b1', bg: 'rgba(217,48,37,0.16)', border: 'rgba(240,88,76,0.35)' },
+    abstention: { label: "S'est abstenu sur", icon: '–', color: '#c7cfe0', bg: 'rgba(185,196,216,0.16)', border: 'rgba(185,196,216,0.35)' },
+  } as const
+  const {
+    label: voteResultLabel,
+    icon: voteResultIcon,
+    color: voteResultColor,
+    bg: voteResultBg,
+    border: voteResultBorder,
+  } = VOTE_BADGE[effectivePosition]
 
   return (
     <div

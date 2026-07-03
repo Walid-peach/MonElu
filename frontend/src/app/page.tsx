@@ -46,23 +46,18 @@ async function getStats() {
     let picked: Deputy | null = null
     let pickedPosition: 'pour' | 'contre' | 'abstention' | null = null
 
+    const votingPositions = ['pour', 'contre', 'abstention'] as const
+    const isVotingPosition = (position: string): position is (typeof votingPositions)[number] =>
+      (votingPositions as readonly string[]).includes(position)
+
     if (featuredVote) {
       try {
         const voteDetail = await api.votes.get(featuredVote.vote_id)
-        const eligible = (voteDetail.positions ?? []).filter(
-          (p): p is typeof p & { position: 'pour' | 'contre' | 'abstention' } =>
-            p.position === 'pour' || p.position === 'contre' || p.position === 'abstention'
-        )
-        const withPhoto = eligible
-          .map(p => ({ pos: p, deputy: deputies?.find(d => d.deputy_id === p.deputy_id) }))
-          .find(x => x.deputy?.photo_url)
-        if (withPhoto?.deputy) {
-          picked = withPhoto.deputy
-          pickedPosition = withPhoto.pos.position
-        } else if (eligible.length) {
-          const fallback = eligible[Math.floor(eligible.length / 2)]
-          picked = await api.deputies.get(fallback.deputy_id)
-          pickedPosition = fallback.position
+        const eligible = (voteDetail.positions ?? []).filter(p => isVotingPosition(p.position))
+        if (eligible.length) {
+          const middle = eligible[Math.floor(eligible.length / 2)]
+          picked = await api.deputies.get(middle.deputy_id)
+          pickedPosition = middle.position as (typeof votingPositions)[number]
         }
       } catch { /* ignore */ }
     }
