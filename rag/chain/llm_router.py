@@ -20,9 +20,11 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from rag.chain.sql_router import (
+    _RESULT_WORDS,
     SQL_QUERIES,
     _has_notable_deputy,
     execute_intent,
+    normalize_text,
 )
 
 load_dotenv()
@@ -135,7 +137,15 @@ def llm_route(question: str) -> dict | None:
     if not intent:
         return None
 
-    log.debug("LLM router intent=%s — bypassing RAG", intent)
+    # Hard guard, mirroring detect_intent(): result-filtered recency
+    # questions ("les votes rejetés les plus récents") belong to the
+    # recency-sorted retriever — vote_latest/vote_first SQL has no
+    # result filter and would answer wrong. The system prompt asks the
+    # classifier to say "rag" here, but that instruction is soft.
+    if intent in ("vote_latest", "vote_first") and _RESULT_WORDS.search(normalize_text(question)):
+        return None
+
+    log.info("LLM router intent=%s — bypassing RAG", intent)
     result = execute_intent(intent, question)
     if result is not None:
         result["data_source"] = "SQL"

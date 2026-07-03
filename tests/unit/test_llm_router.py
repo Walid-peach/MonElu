@@ -59,6 +59,13 @@ def test_llm_route_yields_to_notable_deputy():
         mock_groq.chat.completions.create.assert_not_called()
 
 
+def test_llm_route_hard_guards_result_filtered_latest():
+    # Even if the classifier (wrongly) picks vote_latest for a
+    # result-filtered recency question, the hard guard yields to RAG.
+    with patch("rag.chain.llm_router.classify_intent", return_value="vote_latest"):
+        assert llm_route("Quels sont les votes rejetés les plus récents ?") is None
+
+
 def test_llm_route_tags_result_with_router_field():
     fake_answer = {
         "answer": "x",
