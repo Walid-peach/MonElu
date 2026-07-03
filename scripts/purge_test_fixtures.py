@@ -17,6 +17,9 @@ removed document_chunks source rows, rebuild the RAG index
 Usage:
     python -m scripts.purge_test_fixtures            # report only
     python -m scripts.purge_test_fixtures --apply    # delete
+
+Exit codes: 0 = clean (or --apply completed); 1 = dry run found rows,
+so a scheduled dry run can double as a contamination alarm.
 """
 
 import argparse
@@ -31,8 +34,23 @@ load_dotenv()
 FIXTURE_DEPUTY_IDS = ["PA001", "PA002", "PA003", "PA004"]
 FIXTURE_VOTE_TITLE_PATTERN = "Vote de test%"
 
-# (label, count SQL, delete SQL) — deletes ordered so FK children go first.
+# (label, count SQL, delete SQL). Ordering constraints:
+#   - document_chunks statements referencing `votes` must run BEFORE the
+#     `fixture votes` delete, or their subquery matches nothing.
+#   - FK children (vote_positions) before their parents (votes, deputies).
 STATEMENTS = [
+    (
+        "document_chunks of fixture votes",
+        """SELECT COUNT(*) FROM document_chunks
+           WHERE metadata->>'vote_id' IN (SELECT vote_id FROM votes WHERE vote_title LIKE %(title)s)""",
+        """DELETE FROM document_chunks
+           WHERE metadata->>'vote_id' IN (SELECT vote_id FROM votes WHERE vote_title LIKE %(title)s)""",
+    ),
+    (
+        "document_chunks of fixture deputies",
+        "SELECT COUNT(*) FROM document_chunks WHERE metadata->>'deputy_id' = ANY(%(ids)s)",
+        "DELETE FROM document_chunks WHERE metadata->>'deputy_id' = ANY(%(ids)s)",
+    ),
     (
         "vote_positions of fixture votes",
         """SELECT COUNT(*) FROM vote_positions
@@ -65,18 +83,6 @@ STATEMENTS = [
         "SELECT COUNT(*) FROM analytics_marts.mart_party_alignment WHERE deputy_id = ANY(%(ids)s)",
         "DELETE FROM analytics_marts.mart_party_alignment WHERE deputy_id = ANY(%(ids)s)",
     ),
-    (
-        "document_chunks of fixture deputies",
-        "SELECT COUNT(*) FROM document_chunks WHERE metadata->>'deputy_id' = ANY(%(ids)s)",
-        "DELETE FROM document_chunks WHERE metadata->>'deputy_id' = ANY(%(ids)s)",
-    ),
-    (
-        "document_chunks of fixture votes",
-        """SELECT COUNT(*) FROM document_chunks
-           WHERE metadata->>'vote_id' IN (SELECT vote_id FROM votes WHERE vote_title LIKE %(title)s)""",
-        """DELETE FROM document_chunks
-           WHERE metadata->>'vote_id' IN (SELECT vote_id FROM votes WHERE vote_title LIKE %(title)s)""",
-    ),
 ]
 
 
@@ -89,11 +95,15 @@ def purge(apply: bool) -> int:
     try:
         with conn.cursor() as cur:
             for label, count_sql, delete_sql in STATEMENTS:
+                # Savepoint so an UndefinedTable (e.g. mart schemas absent on
+                # a local DB) aborts only this statement, not the deletes
+                # already executed in the shared transaction.
+                cur.execute("SAVEPOINT stmt")
                 try:
                     cur.execute(count_sql, params)
                     n = cur.fetchone()[0]
                 except psycopg2.errors.UndefinedTable:
-                    conn.rollback()
+                    cur.execute("ROLLBACK TO SAVEPOINT stmt")
                     print(f"  {label:<42} table absent — skipped")
                     continue
                 total += n
@@ -101,6 +111,7 @@ def purge(apply: bool) -> int:
                 print(f"  {label:<42} {marker} {n}")
                 if apply and n:
                     cur.execute(delete_sql, params)
+                cur.execute("RELEASE SAVEPOINT stmt")
         if apply:
             conn.commit()
             print("\nCommitted. Rebuild the RAG index now: make rag-index")
