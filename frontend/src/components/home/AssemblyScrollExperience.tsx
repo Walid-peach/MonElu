@@ -255,9 +255,24 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
     const counts = { pour: 0, contre: 0, abst: 0 }
     seats.forEach(s => { counts[s.kind]++ })
 
+    // The hero seat must reflect the deputy's real vote_positions row (MON-102) —
+    // fall back to 'contre' only when no real position is available.
+    const heroKind: 'pour' | 'contre' | 'abst' =
+      deputyInfo?.votePosition === 'pour' ? 'pour'
+        : deputyInfo?.votePosition === 'abstention' ? 'abst'
+        : 'contre'
     let hero: Seat | null = null
-    const candidates = seats.filter(s => s.kind === 'contre' && s.x > 540 && s.x < 800 && s.y > 660 && s.y < 850)
-    hero = candidates.length ? candidates[Math.floor(candidates.length / 2)] : seats[Math.floor(seats.length / 2)]
+    const candidates = seats.filter(s => s.kind === heroKind && s.x > 540 && s.x < 800 && s.y > 660 && s.y < 850)
+    const sameKind = seats.filter(s => s.kind === heroKind)
+    hero = candidates.length
+      ? candidates[Math.floor(candidates.length / 2)]
+      : sameKind.length
+        ? sameKind[Math.floor(sameKind.length / 2)]
+        : seats[Math.floor(seats.length / 2)]
+    // Force the hero seat's own kind to match heroKind so its dot color never
+    // disagrees with the ring/glow, even in the rare case where no seat of
+    // heroKind exists and we fell back to an arbitrary seat above.
+    hero.kind = heroKind
 
     seats.forEach(s => {
       const el = document.createElement('div')
@@ -268,11 +283,16 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
       dotsLayer.appendChild(el)
     })
 
+    const heroColor = COLORS[heroKind]
+    // Keep the connective link line's color in sync with the hero dot (MON-102).
+    const linkStops = $$('[data-linkstop]') as unknown as SVGStopElement[]
+    linkStops.forEach(stop => stop.setAttribute('stop-color', heroColor.c))
+    if (linkPath) linkPath.style.filter = `drop-shadow(0 0 6px ${heroColor.g})`
     const heroRing = document.createElement('div')
-    heroRing.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:54px;height:54px;border-radius:999px;border:2px solid #f4564a;opacity:0;transform:translate(-50%,-50%) scale(0.5);will-change:opacity,transform;box-shadow:0 0 18px rgba(244,86,74,0.6);`
+    heroRing.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:54px;height:54px;border-radius:999px;border:2px solid ${heroColor.c};opacity:0;transform:translate(-50%,-50%) scale(0.5);will-change:opacity,transform;box-shadow:0 0 18px ${heroColor.g};`
     fxLayer.appendChild(heroRing)
     const heroGlow = document.createElement('div')
-    heroGlow.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:120px;height:120px;border-radius:999px;background:radial-gradient(circle,rgba(244,86,74,0.45) 0%,rgba(244,86,74,0) 70%);opacity:0;transform:translate(-50%,-50%) scale(0.6);will-change:opacity,transform;`
+    heroGlow.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:120px;height:120px;border-radius:999px;background:radial-gradient(circle,${heroColor.g} 0%,rgba(0,0,0,0) 70%);opacity:0;transform:translate(-50%,-50%) scale(0.6);will-change:opacity,transform;`
     fxLayer.appendChild(heroGlow)
 
     // ---- helpers ----
@@ -556,14 +576,27 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
       window.removeEventListener('resize', onResize)
       if (raf) cancelAnimationFrame(raf)
     }
-  }, [stats, leadVote])
+  }, [stats, leadVote, deputyInfo])
 
   const totalVotes = leadVote.votesFor + leadVote.votesAgainst + leadVote.abstentions
-  const voteResultLabel = leadVote.result.toLowerCase().includes('adopt') ? 'A voté pour' : 'A voté contre'
-  const voteResultIcon = leadVote.result.toLowerCase().includes('adopt') ? '✓' : '✕'
-  const voteResultColor = leadVote.result.toLowerCase().includes('adopt') ? '#1fd4a6' : '#f3b6b1'
-  const voteResultBg = leadVote.result.toLowerCase().includes('adopt') ? 'rgba(31,212,166,0.16)' : 'rgba(217,48,37,0.16)'
-  const voteResultBorder = leadVote.result.toLowerCase().includes('adopt') ? 'rgba(31,212,166,0.35)' : 'rgba(240,88,76,0.35)'
+
+  // Prefer the deputy's real vote_positions row over the bill's overall
+  // result so the badge always matches the highlighted hero seat (MON-102).
+  const billAdopted = leadVote.result.toLowerCase().includes('adopt')
+  const effectivePosition: 'pour' | 'contre' | 'abstention' =
+    deputyInfo?.votePosition ?? (billAdopted ? 'pour' : 'contre')
+  const VOTE_BADGE = {
+    pour: { label: 'A voté pour', icon: '✓', color: '#1fd4a6', bg: 'rgba(31,212,166,0.16)', border: 'rgba(31,212,166,0.35)' },
+    contre: { label: 'A voté contre', icon: '✕', color: '#f3b6b1', bg: 'rgba(217,48,37,0.16)', border: 'rgba(240,88,76,0.35)' },
+    abstention: { label: "S'est abstenu sur", icon: '–', color: '#c7cfe0', bg: 'rgba(185,196,216,0.16)', border: 'rgba(185,196,216,0.35)' },
+  } as const
+  const {
+    label: voteResultLabel,
+    icon: voteResultIcon,
+    color: voteResultColor,
+    bg: voteResultBg,
+    border: voteResultBorder,
+  } = VOTE_BADGE[effectivePosition]
 
   return (
     <div
@@ -626,12 +659,12 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
           <svg data-link width="100%" height="100%" style={{ position: 'absolute', inset: 0, overflow: 'visible', opacity: 0 }}>
             <defs>
               <linearGradient id="linkgrad" x1="0" y1="1" x2="1" y2="0">
-                <stop offset="0" stopColor="#F04438" stopOpacity="0.05" />
-                <stop offset="0.5" stopColor="#F04438" stopOpacity="0.95" />
-                <stop offset="1" stopColor="#F04438" stopOpacity="0.95" />
+                <stop data-linkstop offset="0" stopColor="#F04438" stopOpacity="0.05" />
+                <stop data-linkstop offset="0.5" stopColor="#F04438" stopOpacity="0.95" />
+                <stop data-linkstop offset="1" stopColor="#F04438" stopOpacity="0.95" />
               </linearGradient>
             </defs>
-            <path data-linkpath d="" fill="none" stroke="url(#linkgrad)" strokeWidth="2.4" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px rgba(240,68,56,0.7))' }} />
+            <path data-linkpath d="" fill="none" stroke="url(#linkgrad)" strokeWidth="2.4" strokeLinecap="round" />
           </svg>
 
           {/* corner chrome */}

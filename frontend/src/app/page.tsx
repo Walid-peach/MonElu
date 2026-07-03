@@ -18,6 +18,8 @@ export type DeputyInfo = {
   votesFor: number
   votesAgainst: number
   abstentions: number
+  /** This deputy's real position on the featured vote (pour/contre/abstention). */
+  votePosition: 'pour' | 'contre' | 'abstention' | null
 }
 
 async function getStats() {
@@ -36,10 +38,34 @@ async function getStats() {
       return total > bestTotal ? v : best
     }, null) ?? votes[0] ?? null
 
-    // Pick first deputy with a photo, fetch their scorecard
+    // Pick a deputy who actually voted on the featured scrutin, so the "your
+    // deputy" card reflects a real vote_positions row instead of an unrelated
+    // deputy (MON-102).
     let deputyInfo: DeputyInfo | null = null
     const deputies = deputyList?.items as Deputy[] | undefined
-    const picked = deputies?.find(d => d.photo_url) ?? deputies?.[0] ?? null
+    let picked: Deputy | null = null
+    let pickedPosition: 'pour' | 'contre' | 'abstention' | null = null
+
+    const votingPositions = ['pour', 'contre', 'abstention'] as const
+    const isVotingPosition = (position: string): position is (typeof votingPositions)[number] =>
+      (votingPositions as readonly string[]).includes(position)
+
+    if (featuredVote) {
+      try {
+        const voteDetail = await api.votes.get(featuredVote.vote_id)
+        const eligible = (voteDetail.positions ?? []).filter(p => isVotingPosition(p.position))
+        if (eligible.length) {
+          const middle = eligible[Math.floor(eligible.length / 2)]
+          picked = await api.deputies.get(middle.deputy_id)
+          pickedPosition = middle.position as (typeof votingPositions)[number]
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (!picked) {
+      picked = deputies?.find(d => d.photo_url) ?? deputies?.[0] ?? null
+    }
+
     if (picked) {
       try {
         const sc: Scorecard = await api.deputies.scorecard(picked.deputy_id)
@@ -54,6 +80,7 @@ async function getStats() {
           votesFor: sc.votes_for ?? 0,
           votesAgainst: sc.votes_against ?? 0,
           abstentions: sc.abstentions ?? 0,
+          votePosition: pickedPosition,
         }
       } catch { /* ignore */ }
     }
