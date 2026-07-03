@@ -32,6 +32,7 @@ def _fake_groq_response(text: str) -> MagicMock:
 def test_ask_returns_required_keys():
     with (
         patch("rag.chain.rag_chain.sql_route", return_value=None),
+        patch("rag.chain.rag_chain.llm_route", return_value=None),
         patch("rag.chain.rag_chain.retrieve", return_value=_FAKE_CHUNKS),
         patch("rag.chain.rag_chain._groq_client") as mock_groq,
     ):
@@ -49,12 +50,37 @@ def test_ask_returns_required_keys():
 def test_ask_propagates_groq_timeout():
     timeout_exc = groq.APITimeoutError(request=httpx.Request("POST", "https://api.groq.com"))
     with (
+        patch("rag.chain.rag_chain.sql_route", return_value=None),
+        patch("rag.chain.rag_chain.llm_route", return_value=None),
         patch("rag.chain.rag_chain.retrieve", return_value=_FAKE_CHUNKS),
         patch("rag.chain.rag_chain._groq_client") as mock_groq,
     ):
         mock_groq.chat.completions.create.side_effect = timeout_exc
         with pytest.raises(groq.APITimeoutError):
             ask("Question quelconque ?")
+
+
+def test_ask_stage_ordering():
+    """sql_route wins over llm_route; llm_route wins over retrieval."""
+    sql_answer = {"answer": "sql", "data_source": "SQL"}
+    llm_answer = {"answer": "llm", "data_source": "SQL", "router": "llm"}
+
+    with (
+        patch("rag.chain.rag_chain.sql_route", return_value=sql_answer),
+        patch("rag.chain.rag_chain.llm_route", return_value=llm_answer) as m_llm,
+        patch("rag.chain.rag_chain.retrieve") as m_retrieve,
+    ):
+        assert ask("q")["answer"] == "sql"
+        m_llm.assert_not_called()
+        m_retrieve.assert_not_called()
+
+    with (
+        patch("rag.chain.rag_chain.sql_route", return_value=None),
+        patch("rag.chain.rag_chain.llm_route", return_value=llm_answer),
+        patch("rag.chain.rag_chain.retrieve") as m_retrieve,
+    ):
+        assert ask("q")["answer"] == "llm"
+        m_retrieve.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

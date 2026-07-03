@@ -737,17 +737,16 @@ def run_sql_query(intent: str, params: dict | None = None) -> list[dict]:
         pool.putconn(conn, close=broken)
 
 
-def route(question: str) -> dict | None:
+def execute_intent(intent: str, question: str) -> dict | None:
     """
-    Main entry point.
-    Returns a structured answer dict if the question is an
-    aggregation query, or None if RAG should handle it.
+    Run a known intent's whitelisted SQL and format the answer.
+    Shared by the regex path (route) and the LLM classifier path
+    (rag/chain/llm_router.py). Returns None when required parameters
+    can't be resolved or the query yields nothing — callers fall back
+    to RAG.
     """
-    intent = detect_intent(question)
-    if not intent:
+    if intent not in SQL_QUERIES:
         return None
-
-    log.debug("SQL router intent=%s — bypassing RAG", intent)
 
     # Department queries need the detected code as a parameter.
     # If no department name is detected, fall back to RAG — a vague
@@ -759,24 +758,20 @@ def route(question: str) -> dict | None:
             return None
         circo = detect_circonscription(question)
         rows = run_sql_query("deputy_by_department", {"dept": dept_name, "circo": circo})
-        formatter_key = "deputy_by_department"
     elif intent == "votes_by_period":
         period = extract_period(question)
         if not period:
             return None
         rows = run_sql_query("votes_by_period", period)
-        formatter_key = "votes_by_period"
     elif intent in _TOP_N_INTENTS:
         rows = run_sql_query(intent, {"n": extract_top_n(question)})
-        formatter_key = intent
     else:
         rows = run_sql_query(intent)
-        formatter_key = intent
 
     if not rows:
         return None
 
-    formatter = FORMATTERS.get(formatter_key)
+    formatter = FORMATTERS.get(intent)
     answer_text = formatter(rows) if formatter else str(rows)
 
     return {
@@ -789,3 +784,17 @@ def route(question: str) -> dict | None:
         "data_source": "SQL",
         "caveat": "Données calculées directement depuis la base de données. Aucune génération IA.",
     }
+
+
+def route(question: str) -> dict | None:
+    """
+    Main entry point.
+    Returns a structured answer dict if the question is an
+    aggregation query, or None if RAG should handle it.
+    """
+    intent = detect_intent(question)
+    if not intent:
+        return None
+
+    log.debug("SQL router intent=%s — bypassing RAG", intent)
+    return execute_intent(intent, question)
