@@ -280,6 +280,10 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
     })
 
     const heroColor = COLORS[heroKind]
+    // Keep the connective link line's color in sync with the hero dot (MON-102).
+    const linkStops = $$('[data-linkstop]') as unknown as SVGStopElement[]
+    linkStops.forEach(stop => stop.setAttribute('stop-color', heroColor.c))
+    if (linkPath) linkPath.style.filter = `drop-shadow(0 0 6px ${heroColor.g})`
     const heroRing = document.createElement('div')
     heroRing.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:54px;height:54px;border-radius:999px;border:2px solid ${heroColor.c};opacity:0;transform:translate(-50%,-50%) scale(0.5);will-change:opacity,transform;box-shadow:0 0 18px ${heroColor.g};`
     fxLayer.appendChild(heroRing)
@@ -662,12 +666,12 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
           <svg data-link width="100%" height="100%" style={{ position: 'absolute', inset: 0, overflow: 'visible', opacity: 0 }}>
             <defs>
               <linearGradient id="linkgrad" x1="0" y1="1" x2="1" y2="0">
-                <stop offset="0" stopColor="#F04438" stopOpacity="0.05" />
-                <stop offset="0.5" stopColor="#F04438" stopOpacity="0.95" />
-                <stop offset="1" stopColor="#F04438" stopOpacity="0.95" />
+                <stop data-linkstop offset="0" stopColor="#F04438" stopOpacity="0.05" />
+                <stop data-linkstop offset="0.5" stopColor="#F04438" stopOpacity="0.95" />
+                <stop data-linkstop offset="1" stopColor="#F04438" stopOpacity="0.95" />
               </linearGradient>
             </defs>
-            <path data-linkpath d="" fill="none" stroke="url(#linkgrad)" strokeWidth="2.4" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px rgba(240,68,56,0.7))' }} />
+            <path data-linkpath d="" fill="none" stroke="url(#linkgrad)" strokeWidth="2.4" strokeLinecap="round" />
           </svg>
 
           {/* corner chrome */}
