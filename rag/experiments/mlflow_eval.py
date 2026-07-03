@@ -144,6 +144,20 @@ def _router_golden(counts: dict) -> list[dict]:
             "label": "router — llm classifier (assidus)",
             "expect_sql": True,
         },
+        {
+            # deterministic since Phase 3 (deputy_top_abstention intent)
+            "question": "Quels députés ont le plus d'abstentions ?",
+            "keywords": ["abstention"],
+            "label": "router — députés abstentions",
+            "expect_sql": True,
+        },
+        {
+            # deterministic since Phase 3 (deputy_by_department active-only)
+            "question": "Qui sont les députés des Yvelines ?",
+            "keywords": ["Yvelines"],
+            "label": "router — députés Yvelines",
+            "expect_sql": True,
+        },
     ]
 
 
@@ -173,20 +187,6 @@ RETRIEVAL_GOLDEN = [
         "keywords": ["rejeté", "vote"],
         "label": "retrieval — votes récents rejetés",
         "expect_sql": False,
-    },
-    {
-        # deterministic since Phase 3 (deputy_top_abstention intent)
-        "question": "Quels députés ont le plus d'abstentions ?",
-        "keywords": ["abstention"],
-        "label": "router — députés abstentions",
-        "expect_sql": True,
-    },
-    {
-        # deterministic since Phase 3 (deputy_by_department active-only)
-        "question": "Qui sont les députés des Yvelines ?",
-        "keywords": ["Yvelines"],
-        "label": "router — députés Yvelines",
-        "expect_sql": True,
     },
 ]
 
