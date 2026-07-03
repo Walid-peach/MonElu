@@ -10,6 +10,30 @@ models:
         tests: [not_null]
       - name: is_active
         tests: [not_null]
+      - name: party
+        description: >
+          Canonical 17th-legislature parliamentary group label. Keep this
+          list in sync with CANONICAL_LABELS in scripts/backfill_party_labels.py.
+          NULL is allowed (deputies whose group was never resolved); any
+          other label means the ingestion pipeline is fragmenting the
+          party dimension again.
+        tests:
+          - accepted_values:
+              values:
+                - 'Rassemblement National'
+                - 'Ensemble pour la République'
+                - 'La France insoumise - Nouveau Front Populaire'
+                - 'Socialistes et apparentés'
+                - 'Droite Républicaine'
+                - 'Écologiste et Social'
+                - 'Les Démocrates'
+                - 'Horizons & Indépendants'
+                - 'Libertés, Indépendants, Outre-mer et Territoires'
+                - 'Union des droites pour la République'
+                - 'Gauche Démocrate et Républicaine'
+                - 'Non inscrit'
+              config:
+                where: "party is not null"
 
   - name: stg_votes
     description: "Cleaned and typed vote records"
