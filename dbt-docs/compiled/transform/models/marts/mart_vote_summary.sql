@@ -1,3 +1,5 @@
+
+
 with votes as (
     select * from "postgres"."analytics_staging"."stg_votes"
 ),
