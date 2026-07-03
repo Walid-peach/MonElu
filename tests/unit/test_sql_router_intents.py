@@ -91,6 +91,19 @@ def test_recency_result_question_stays_rag():
     assert detect_intent("Quels votes ont été rejetés récemment ?") is None
 
 
+def test_result_filtered_latest_stays_rag():
+    assert detect_intent("Quels sont les votes rejetés les plus récents ?") is None
+
+
+def test_abstention_without_superlative_stays_rag():
+    q = "Combien de députés du RN se sont abstenus sur le PLFSS ?"
+    assert detect_intent(q) != "deputy_top_abstention"
+
+
+def test_abstention_le_moins_not_top_ranking():
+    assert detect_intent("Quel député s'abstient le moins ?") != "deputy_top_abstention"
+
+
 # ---------------------------------------------------------------------------
 # extract_top_n
 # ---------------------------------------------------------------------------
@@ -152,3 +165,72 @@ def test_circonscription_absent():
     from rag.chain.sql_router import detect_circonscription
 
     assert detect_circonscription("Qui sont les députés des Yvelines ?") is None
+
+
+# ---------------------------------------------------------------------------
+# FORMATTERS smoke test — every formatter must render its SQL's row shape
+# ---------------------------------------------------------------------------
+
+_SAMPLE_ROWS = {
+    "deputy_top_presence": [{"full_name": "A", "party": "P", "presence_pct": 99.0}],
+    "deputy_bottom_presence": [{"full_name": "A", "party": None, "presence_pct": 1.0}],
+    "deputy_top_abstention": [{"full_name": "A", "party": "P", "n": 10}],
+    "deputy_most_contre": [{"full_name": "A", "party": "P", "n": 10}],
+    "deputy_most_pour": [{"full_name": "A", "party": "P", "n": 10}],
+    "deputy_dissidents": [
+        {
+            "full_name": "A",
+            "party": "P",
+            "total_votes": 100,
+            "dissident_votes": 20,
+            "dissident_pct": 20.0,
+        }
+    ],
+    "vote_latest": [
+        {
+            "vote_title": "T",
+            "d": "2026-07-02",
+            "result": "adopté",
+            "votes_for": 1,
+            "votes_against": 2,
+            "abstentions": 0,
+            "total_voters": 3,
+        }
+    ]
+    * 2,
+    "vote_first": [
+        {
+            "vote_title": "T",
+            "d": "2025-07-01",
+            "result": "adopté",
+            "votes_for": 1,
+            "votes_against": 2,
+            "abstentions": 0,
+            "total_voters": 3,
+        }
+    ],
+    "vote_top_participation": [
+        {"vote_title": "T", "d": "2026-01-01", "result": "adopté", "total_voters": 500}
+    ],
+    "vote_closest": [
+        {
+            "vote_title": "T",
+            "d": "2026-01-01",
+            "result": "rejeté",
+            "votes_for": 77,
+            "votes_against": 77,
+            "total_voters": 154,
+            "margin": 0,
+        }
+    ],
+    "votes_by_period": [{"total": 10, "adopted": 4, "rejected": 6, "period_label": "en juin 2026"}],
+    "party_position_totals": [{"party": "P", "pour": 10, "contre": 5, "abstention": 1}],
+}
+
+
+def test_every_new_formatter_renders_its_row_shape():
+    from rag.chain.sql_router import FORMATTERS
+
+    for intent, rows in _SAMPLE_ROWS.items():
+        out = FORMATTERS[intent](rows)
+        assert isinstance(out, str) and out, intent

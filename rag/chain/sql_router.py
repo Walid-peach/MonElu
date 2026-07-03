@@ -139,7 +139,14 @@ PATTERNS = [
     (r"député.*(meilleur|plus (haut|élevé)|top).*présence", "deputy_top_presence"),
     (r"(meilleur|plus (haut|élevé)).*présence.*député", "deputy_top_presence"),
     (r"(top|classement).*député.*présence", "deputy_top_presence"),
-    (r"député.*(abstiennent|abstient|abstention)", "deputy_top_abstention"),
+    # superlative required, and "le moins" excluded: "combien de députés du
+    # RN se sont abstenus sur X" or "quel député s'abstient le moins" must
+    # NOT get the top-abstentions ranking
+    (
+        r"député.*(abstiennent|abstient|abstention).*(le plus|plus souvent|davantage)"
+        r"|député.*(le plus|plus souvent) d.abstentions?",
+        "deputy_top_abstention",
+    ),
     (r"député.*(voté|vote|votent).*contre.*(le plus|plus souvent)", "deputy_most_contre"),
     (r"(qui|quel député).*(le plus|plus souvent).*(voté |vote )?contre", "deputy_most_contre"),
     (r"député.*(voté|vote|votent).*pour.*(le plus|plus souvent)", "deputy_most_pour"),
@@ -689,6 +696,9 @@ def _has_notable_deputy(question: str) -> bool:
     return False
 
 
+_RESULT_WORDS = re.compile(r"adopté|rejeté|rejet\b|adoption")
+
+
 def detect_intent(question: str) -> str | None:
     """Return intent key if question matches an aggregation pattern."""
     q = normalize_text(question)
@@ -696,6 +706,11 @@ def detect_intent(question: str) -> str | None:
         if re.search(pattern, q):
             # Don't let global-aggregate patterns swallow deputy-specific questions
             if intent in _DEPUTY_NAME_INTENTS and _has_notable_deputy(question):
+                return None
+            # "les votes rejetés les plus récents" is a result-filtered
+            # recency question — retriever.py handles those (recency-sorted
+            # retrieval); the unfiltered latest-votes SQL would be wrong
+            if intent in ("vote_latest", "vote_first") and _RESULT_WORDS.search(q):
                 return None
             return intent
     return None
