@@ -167,7 +167,11 @@ ON CONFLICT (deputy_id) DO UPDATE SET
     full_name       = EXCLUDED.full_name,
     first_name      = EXCLUDED.first_name,
     last_name       = EXCLUDED.last_name,
-    party           = EXCLUDED.party,
+    -- AMO10 has no inline party; this script always inserts NULL and
+    -- update_party.py fills it afterwards. COALESCE keeps the previous
+    -- label instead of wiping it, so a run where update_party fails (or
+    -- a deputy leaves between the two steps) can't NULL out the party.
+    party           = COALESCE(EXCLUDED.party, deputies.party),
     party_short     = EXCLUDED.party_short,
     circonscription = EXCLUDED.circonscription,
     department      = EXCLUDED.department,

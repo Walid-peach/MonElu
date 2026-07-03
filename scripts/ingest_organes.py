@@ -68,7 +68,12 @@ def build_gp_map(zf: zipfile.ZipFile) -> dict[str, str]:
 def build_deputy_party_map(zf: zipfile.ZipFile, gp_map: dict[str, str]) -> dict[str, str]:
     """
     Returns {deputy_id: party_name} by scanning each acteur's mandats.
-    Priority: GP mandat > PARPOL mandat > None.
+    Priority: active GP mandat > most recent ended GP mandat > active PARPOL.
+
+    Ended GP mandats must not be skipped: deputies who left mid-legislature
+    otherwise fall back to their PARPOL label ("Rassemblement national",
+    "Renaissance", "Parti socialiste", …), which fragments the party
+    dimension with spellings that never match the GP group labels.
     """
     deputy_map: dict[str, str] = {}
     acteur_files = [
@@ -92,23 +97,26 @@ def build_deputy_party_map(zf: zipfile.ZipFile, gp_map: dict[str, str]) -> dict[
         if isinstance(mandats_raw, dict):
             mandats_raw = [mandats_raw]
 
-        gp_party = None
+        active_gp = None
+        ended_gps: list[tuple[str, str]] = []  # (date_fin, party)
         parpol_party = None
 
         for mandat in mandats_raw:
             type_organe = mandat.get("typeOrgane")
             date_fin = mandat.get("dateFin")
-            if date_fin:  # skip ended mandats
-                continue
             organe_ref = mandat.get("organes", {}).get("organeRef")
-            if not organe_ref:
+            if not organe_ref or organe_ref not in gp_map:
                 continue
-            if type_organe == "GP" and organe_ref in gp_map:
-                gp_party = gp_map[organe_ref]
-            elif type_organe == "PARPOL" and organe_ref in gp_map and not gp_party:
+            if type_organe == "GP":
+                if date_fin:
+                    ended_gps.append((date_fin, gp_map[organe_ref]))
+                else:
+                    active_gp = gp_map[organe_ref]
+            elif type_organe == "PARPOL" and not date_fin:
                 parpol_party = gp_map[organe_ref]
 
-        party = gp_party or parpol_party
+        latest_ended_gp = max(ended_gps, key=lambda t: t[0])[1] if ended_gps else None
+        party = active_gp or latest_ended_gp or parpol_party
         if party:
             deputy_map[deputy_id] = party
 

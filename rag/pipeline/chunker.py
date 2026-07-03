@@ -219,6 +219,8 @@ def chunk_party_summaries() -> list[dict]:
                 -- windowed — see docs/decisions.md), averaged per deputy so
                 -- high-vote deputies don't dominate the party mean
                 WITH deputy_presence AS (
+                    -- Active mandates only: group sizes and presence
+                    -- averages describe the current Assemblée
                     SELECT d.deputy_id, d.party,
                            LEAST(
                                COUNT(vp.position_id)::numeric / NULLIF((
@@ -231,6 +233,7 @@ def chunk_party_summaries() -> list[dict]:
                     FROM deputies d
                     LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
                     WHERE d.party IS NOT NULL
+                      AND d.mandate_end IS NULL
                     GROUP BY d.deputy_id
                 ),
                 party_positions AS (
@@ -300,6 +303,7 @@ def chunk_global_stats() -> list[dict]:
             cur.execute(
                 """
                 SELECT
+                  (SELECT COUNT(*) FROM deputies WHERE mandate_end IS NULL)   AS active_deputies,
                   (SELECT COUNT(*) FROM deputies)                             AS total_deputies,
                   (SELECT COUNT(*) FROM votes)                                AS total_votes,
                   (SELECT COUNT(*) FROM vote_positions)                       AS total_positions,
@@ -345,6 +349,7 @@ def chunk_global_stats() -> list[dict]:
     finally:
         conn.close()
 
+    active_dep = int(stats["active_deputies"] or 0)
     total_dep = int(stats["total_deputies"] or 0)
     total_votes = int(stats["total_votes"] or 0)
     total_pos = int(stats["total_positions"] or 0)
@@ -369,7 +374,8 @@ def chunk_global_stats() -> list[dict]:
         )
 
     content = (
-        f"MonÉlu suit {total_dep} députés de l'Assemblée Nationale française.\n"
+        f"MonÉlu suit {active_dep} députés en exercice à l'Assemblée Nationale française "
+        f"({total_dep} au total sur la 17e législature, mandats terminés compris).\n"
         f"Au total, {total_votes:,} votes ont été analysés.\n"
         f"{total_pos:,} positions individuelles de vote sont enregistrées.\n"
         f"Parmi les votes : {adopted:,} ont été adoptés et {rejected:,} ont été rejetés.\n"
