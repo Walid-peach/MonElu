@@ -10,10 +10,30 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 import psycopg2
 import psycopg2.extras
 import pytest
+
+# Hosts this fixture is allowed to write fixture/test data to. Anything else
+# (Supabase, or any other unrecognized remote host) is refused outright —
+# this suite truncates whole tables and upserts synthetic "Vote de test"
+# rows, which must never land in a shared or production database.
+_SAFE_DB_HOSTS = {"localhost", "127.0.0.1", "::1", "postgres", "db"}
+
+
+def _assert_safe_test_database(db_url: str) -> None:
+    host = (urlparse(db_url).hostname or "").lower()
+    if host not in _SAFE_DB_HOSTS:
+        pytest.fail(
+            f"Refusing to run integration tests against DATABASE_URL host "
+            f"'{host}'. This fixture truncates tables and inserts synthetic "
+            f"data — only {sorted(_SAFE_DB_HOSTS)} are allowed. If this is "
+            f"really a disposable local/CI database, add its host to "
+            f"_SAFE_DB_HOSTS in tests/integration/conftest.py."
+        )
+
 
 MIGRATIONS = [
     Path(__file__).parents[2] / "data" / "migrations" / "001_init.sql",
@@ -205,6 +225,7 @@ def db_conn():
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
         pytest.skip("DATABASE_URL not set — skipping integration tests")
+    _assert_safe_test_database(db_url)
 
     conn = psycopg2.connect(db_url, cursor_factory=psycopg2.extras.RealDictCursor)
     conn.autocommit = True
