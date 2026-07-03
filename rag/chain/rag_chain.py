@@ -13,6 +13,7 @@ from groq import Groq
 
 load_dotenv()
 
+from rag.chain.llm_router import llm_route  # noqa: E402
 from rag.chain.prompts import RAG_TEMPLATE, build_system_prompt  # noqa: E402
 from rag.chain.retriever import retrieve  # noqa: E402
 from rag.chain.sql_router import route as sql_route  # noqa: E402
@@ -55,10 +56,17 @@ def ask(
     deputy_id: str = None,
     chunk_type: str = None,
 ) -> dict:
-    # A1 — try SQL router first
+    # A1 — regex SQL router first (fast path, no LLM call)
     sql_result = sql_route(question)
     if sql_result is not None:
         return sql_result
+
+    # A2 — LLM intent classification over the same whitelisted SQL,
+    # for phrasings the regex patterns miss. Falls through to RAG on
+    # any failure or a "rag" verdict.
+    llm_result = llm_route(question)
+    if llm_result is not None:
+        return llm_result
 
     # B1 hybrid retrieval available in rag/chain/hybrid_retriever.py
     # Reverted to cosine-only: after SQL routing fixes, hybrid scored 0.644
