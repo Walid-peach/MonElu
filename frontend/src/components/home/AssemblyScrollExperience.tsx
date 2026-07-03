@@ -255,9 +255,20 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
     const counts = { pour: 0, contre: 0, abst: 0 }
     seats.forEach(s => { counts[s.kind]++ })
 
+    // The hero seat must reflect the deputy's real vote_positions row (MON-102) —
+    // fall back to 'contre' only when no real position is available.
+    const heroKind: 'pour' | 'contre' | 'abst' =
+      deputyInfo?.votePosition === 'pour' ? 'pour'
+        : deputyInfo?.votePosition === 'abstention' ? 'abst'
+        : 'contre'
     let hero: Seat | null = null
-    const candidates = seats.filter(s => s.kind === 'contre' && s.x > 540 && s.x < 800 && s.y > 660 && s.y < 850)
-    hero = candidates.length ? candidates[Math.floor(candidates.length / 2)] : seats[Math.floor(seats.length / 2)]
+    const candidates = seats.filter(s => s.kind === heroKind && s.x > 540 && s.x < 800 && s.y > 660 && s.y < 850)
+    const sameKind = seats.filter(s => s.kind === heroKind)
+    hero = candidates.length
+      ? candidates[Math.floor(candidates.length / 2)]
+      : sameKind.length
+        ? sameKind[Math.floor(sameKind.length / 2)]
+        : seats[Math.floor(seats.length / 2)]
 
     seats.forEach(s => {
       const el = document.createElement('div')
@@ -268,11 +279,12 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
       dotsLayer.appendChild(el)
     })
 
+    const heroColor = COLORS[heroKind]
     const heroRing = document.createElement('div')
-    heroRing.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:54px;height:54px;border-radius:999px;border:2px solid #f4564a;opacity:0;transform:translate(-50%,-50%) scale(0.5);will-change:opacity,transform;box-shadow:0 0 18px rgba(244,86,74,0.6);`
+    heroRing.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:54px;height:54px;border-radius:999px;border:2px solid ${heroColor.c};opacity:0;transform:translate(-50%,-50%) scale(0.5);will-change:opacity,transform;box-shadow:0 0 18px ${heroColor.g};`
     fxLayer.appendChild(heroRing)
     const heroGlow = document.createElement('div')
-    heroGlow.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:120px;height:120px;border-radius:999px;background:radial-gradient(circle,rgba(244,86,74,0.45) 0%,rgba(244,86,74,0) 70%);opacity:0;transform:translate(-50%,-50%) scale(0.6);will-change:opacity,transform;`
+    heroGlow.style.cssText = `position:absolute;left:${hero.x}px;top:${hero.y}px;width:120px;height:120px;border-radius:999px;background:radial-gradient(circle,${heroColor.g} 0%,rgba(0,0,0,0) 70%);opacity:0;transform:translate(-50%,-50%) scale(0.6);will-change:opacity,transform;`
     fxLayer.appendChild(heroGlow)
 
     // ---- helpers ----
@@ -556,14 +568,38 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
       window.removeEventListener('resize', onResize)
       if (raf) cancelAnimationFrame(raf)
     }
-  }, [stats, leadVote])
+  }, [stats, leadVote, deputyInfo])
 
   const totalVotes = leadVote.votesFor + leadVote.votesAgainst + leadVote.abstentions
-  const voteResultLabel = leadVote.result.toLowerCase().includes('adopt') ? 'A voté pour' : 'A voté contre'
-  const voteResultIcon = leadVote.result.toLowerCase().includes('adopt') ? '✓' : '✕'
-  const voteResultColor = leadVote.result.toLowerCase().includes('adopt') ? '#1fd4a6' : '#f3b6b1'
-  const voteResultBg = leadVote.result.toLowerCase().includes('adopt') ? 'rgba(31,212,166,0.16)' : 'rgba(217,48,37,0.16)'
-  const voteResultBorder = leadVote.result.toLowerCase().includes('adopt') ? 'rgba(31,212,166,0.35)' : 'rgba(240,88,76,0.35)'
+
+  // Prefer the deputy's real vote_positions row over the bill's overall
+  // result so the badge always matches the highlighted hero seat (MON-102).
+  const votePosition = deputyInfo?.votePosition
+  const voteResultLabel =
+    votePosition === 'pour' ? 'A voté pour'
+      : votePosition === 'abstention' ? "S'est abstenu sur"
+      : votePosition === 'contre' ? 'A voté contre'
+      : leadVote.result.toLowerCase().includes('adopt') ? 'A voté pour' : 'A voté contre'
+  const voteResultIcon =
+    votePosition === 'pour' ? '✓'
+      : votePosition === 'abstention' ? '–'
+      : votePosition === 'contre' ? '✕'
+      : leadVote.result.toLowerCase().includes('adopt') ? '✓' : '✕'
+  const voteResultColor =
+    votePosition === 'pour' ? '#1fd4a6'
+      : votePosition === 'abstention' ? '#c7cfe0'
+      : votePosition === 'contre' ? '#f3b6b1'
+      : leadVote.result.toLowerCase().includes('adopt') ? '#1fd4a6' : '#f3b6b1'
+  const voteResultBg =
+    votePosition === 'pour' ? 'rgba(31,212,166,0.16)'
+      : votePosition === 'abstention' ? 'rgba(185,196,216,0.16)'
+      : votePosition === 'contre' ? 'rgba(217,48,37,0.16)'
+      : leadVote.result.toLowerCase().includes('adopt') ? 'rgba(31,212,166,0.16)' : 'rgba(217,48,37,0.16)'
+  const voteResultBorder =
+    votePosition === 'pour' ? 'rgba(31,212,166,0.35)'
+      : votePosition === 'abstention' ? 'rgba(185,196,216,0.35)'
+      : votePosition === 'contre' ? 'rgba(240,88,76,0.35)'
+      : leadVote.result.toLowerCase().includes('adopt') ? 'rgba(31,212,166,0.35)' : 'rgba(240,88,76,0.35)'
 
   return (
     <div
