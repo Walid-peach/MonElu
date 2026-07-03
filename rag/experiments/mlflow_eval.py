@@ -28,23 +28,36 @@ def _get_live_counts() -> dict:
     try:
         with psycopg2.connect(url) as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM deputies")
-                total_deputies = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM deputies WHERE mandate_end IS NULL")
+                active_deputies = cur.fetchone()[0]
                 cur.execute("SELECT COUNT(*) FROM votes")
                 total_votes = cur.fetchone()[0]
                 cur.execute(
-                    "SELECT party, COUNT(*) AS n FROM deputies WHERE party IS NOT NULL "
+                    "SELECT party, COUNT(*) AS n FROM deputies "
+                    "WHERE party IS NOT NULL AND mandate_end IS NULL "
                     "GROUP BY party ORDER BY n DESC LIMIT 1"
                 )
                 row = cur.fetchone()
                 top_party, top_party_count = (
                     (row[0], row[1]) if row else ("Rassemblement National", 0)
                 )
+                cur.execute("SELECT MAX(voted_at)::date FROM votes")
+                latest_vote_date = str(cur.fetchone()[0])
+                cur.execute(
+                    "SELECT d.full_name FROM vote_positions vp "
+                    "JOIN deputies d ON d.deputy_id = vp.deputy_id "
+                    "WHERE vp.position = 'abstention' "
+                    "GROUP BY d.deputy_id ORDER BY COUNT(*) DESC LIMIT 1"
+                )
+                row = cur.fetchone()
+                top_abstention_deputy = row[0] if row else "?"
         return {
-            "total_deputies": str(total_deputies),
+            "total_deputies": str(active_deputies),
             "total_votes": str(total_votes),
             "top_party": top_party,
             "top_party_count": str(top_party_count),
+            "latest_vote_date": latest_vote_date,
+            "top_abstention_deputy": top_abstention_deputy,
         }
     except Exception as exc:
         print(f"[eval] live counts failed, using placeholders: {exc}")
@@ -53,6 +66,8 @@ def _get_live_counts() -> dict:
             "total_votes": "vote",
             "top_party": "Rassemblement National",
             "top_party_count": "122",
+            "latest_vote_date": "2026",
+            "top_abstention_deputy": "député",
         }
 
 
@@ -96,6 +111,39 @@ def _router_golden(counts: dict) -> list[dict]:
             "label": "router — discipline RN",
             "expect_sql": True,
         },
+        # Phase 3/4 intents — ground truth from live DB at eval time
+        {
+            "question": "Quel est le dernier vote à l'Assemblée ?",
+            "keywords": [counts["latest_vote_date"]],
+            "label": "router — dernier vote",
+            "expect_sql": True,
+        },
+        {
+            "question": "Quels sont les 3 députés qui s'abstiennent le plus ?",
+            "keywords": [counts["top_abstention_deputy"]],
+            "label": "router — top abstentions députés",
+            "expect_sql": True,
+        },
+        {
+            "question": "Quels sont les 5 députés avec le meilleur taux de présence ?",
+            "keywords": ["présence", "%"],
+            "label": "router — top présence députés",
+            "expect_sql": True,
+        },
+        {
+            "question": "Quels sont les 5 votes avec le plus de participation ?",
+            "keywords": ["votants"],
+            "label": "router — top participation",
+            "expect_sql": True,
+        },
+        {
+            # phrasing outside the regex patterns — exercises the LLM
+            # classifier stage (Phase 4)
+            "question": "Donne-moi le classement des députés les plus assidus",
+            "keywords": ["présence", "%"],
+            "label": "router — llm classifier (assidus)",
+            "expect_sql": True,
+        },
     ]
 
 
@@ -127,16 +175,18 @@ RETRIEVAL_GOLDEN = [
         "expect_sql": False,
     },
     {
+        # deterministic since Phase 3 (deputy_top_abstention intent)
         "question": "Quels députés ont le plus d'abstentions ?",
         "keywords": ["abstention"],
-        "label": "retrieval — députés abstentions",
-        "expect_sql": False,
+        "label": "router — députés abstentions",
+        "expect_sql": True,
     },
     {
+        # deterministic since Phase 3 (deputy_by_department active-only)
         "question": "Qui sont les députés des Yvelines ?",
         "keywords": ["Yvelines"],
-        "label": "retrieval — députés Yvelines",
-        "expect_sql": False,
+        "label": "router — députés Yvelines",
+        "expect_sql": True,
     },
 ]
 
@@ -156,10 +206,15 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
 
     # Monkey-patch the imported names inside rag_chain so ask() sees the changes
     original_sql_route = _rag_chain.sql_route
+    original_llm_route = _rag_chain.llm_route
     original_retrieve = _rag_chain.retrieve
 
     if not use_sql_router:
+        # Disable both routing stages so the config isolates retrieval
+        # quality — otherwise the Phase 4 LLM classifier would still
+        # answer the router-suite questions via SQL.
         _rag_chain.sql_route = lambda q: None
+        _rag_chain.llm_route = lambda q: None
 
     # Swap retriever based on type, and enforce k override if needed
     if retriever_type == "hybrid":
@@ -235,6 +290,7 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
 
     finally:
         _rag_chain.sql_route = original_sql_route
+        _rag_chain.llm_route = original_llm_route
         _rag_chain.retrieve = original_retrieve
 
     return {

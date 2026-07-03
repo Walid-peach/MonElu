@@ -62,8 +62,31 @@ def test_llm_route_yields_to_notable_deputy():
 def test_llm_route_hard_guards_result_filtered_latest():
     # Even if the classifier (wrongly) picks vote_latest for a
     # result-filtered recency question, the hard guard yields to RAG.
-    with patch("rag.chain.llm_router.classify_intent", return_value="vote_latest"):
+    with (
+        patch("rag.chain.llm_router._mentions_notable_deputy", return_value=False),
+        patch("rag.chain.llm_router.classify_intent", return_value="vote_latest"),
+    ):
         assert llm_route("Quels sont les votes rejetés les plus récents ?") is None
+
+
+def test_llm_route_yields_to_db_backed_notable():
+    # Braun-Pivet is not in the static keyword map but is in the
+    # DB-backed notable map — llm_route must still yield to RAG.
+    with (
+        patch(
+            "rag.chain.retriever.get_notable_deputy_ids", return_value={"PA1": "Yaël Braun-Pivet"}
+        ),
+        patch("rag.chain.llm_router._groq_client") as mock_groq,
+    ):
+        assert llm_route("Quel est le taux de présence de Yaël Braun-Pivet ?") is None
+        mock_groq.chat.completions.create.assert_not_called()
+
+
+def test_llm_route_fails_open_to_rag_when_db_lookup_breaks():
+    with patch(
+        "rag.chain.retriever.get_notable_deputy_ids", side_effect=ConnectionError("db down")
+    ):
+        assert llm_route("Une question quelconque sans nom de député ?") is None
 
 
 def test_llm_route_tags_result_with_router_field():
@@ -78,6 +101,7 @@ def test_llm_route_tags_result_with_router_field():
         "caveat": "c",
     }
     with (
+        patch("rag.chain.llm_router._mentions_notable_deputy", return_value=False),
         patch("rag.chain.llm_router.classify_intent", return_value="vote_latest"),
         patch("rag.chain.llm_router.execute_intent", return_value=dict(fake_answer)),
     ):

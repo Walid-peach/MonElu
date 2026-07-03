@@ -54,7 +54,15 @@ Règles absolues :
 6. Cite toujours les chiffres exacts quand ils sont disponibles.
 7. Les données disponibles couvrent les votes de l'Assemblée Nationale \
 {horizon}. Si une question porte sur une période antérieure, \
-indique que cette période n'est pas couverte par les données actuelles."""
+indique que cette période n'est pas couverte par les données actuelles.
+8. Les sources fournies sont des EXTRAITS, pas la base complète. \
+Ne calcule JAMAIS de classement, de maximum, de minimum, de total \
+global ou de comparaison entre groupes à partir des seuls extraits \
+fournis : les députés ou votes mentionnés ne sont pas un échantillon \
+représentatif. Si la question demande un classement ou un agrégat \
+global que les sources ne donnent pas déjà sous forme calculée, \
+réponds : "Je ne peux pas établir ce classement à partir des extraits \
+fournis." """
 
 
 SUMMARY_PROMPT = (
@@ -88,4 +96,8 @@ Question : {question}
 Instructions :
 - Réponds en te basant UNIQUEMENT sur les sources ci-dessus
 - Si plusieurs sources sont pertinentes, synthétise-les
-- Si une source contredit une autre, signale-le"""
+- Si une source contredit une autre, signale-le
+- Les sources sont des extraits : ne calcule AUCUN classement, total \
+global ou comparaison entre groupes à partir des députés ou votes \
+mentionnés. Si la réponse exige un tel calcul et qu'aucune source ne \
+le donne déjà, dis que tu ne peux pas l'établir à partir des extraits."""
