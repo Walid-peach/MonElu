@@ -115,7 +115,7 @@ def build_deputy_party_map(zf: zipfile.ZipFile, gp_map: dict[str, str]) -> dict[
             elif type_organe == "PARPOL" and not date_fin:
                 parpol_party = gp_map[organe_ref]
 
-        latest_ended_gp = max(ended_gps)[1] if ended_gps else None
+        latest_ended_gp = max(ended_gps, key=lambda t: t[0])[1] if ended_gps else None
         party = active_gp or latest_ended_gp or parpol_party
         if party:
             deputy_map[deputy_id] = party

@@ -146,9 +146,12 @@ PATTERNS = [
 
 SQL_QUERIES = {
     "deputy_by_department": """
+        -- Active mandates only — same "en exercice" policy as the
+        -- deputy count intents
         SELECT full_name, party, department
         FROM deputies
         WHERE department = %(dept)s
+          AND mandate_end IS NULL
         ORDER BY full_name
     """,
     "deputy_by_department_all": """

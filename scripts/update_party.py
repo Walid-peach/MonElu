@@ -128,6 +128,19 @@ DEPT_NAMES = {
 
 
 def update_parties(conn, deputy_map: dict[str, str]) -> None:
+    from scripts.backfill_party_labels import CANONICAL_LABELS
+
+    # Never write a non-canonical label: the PARPOL fallback in
+    # build_deputy_party_map can produce party spellings ("Renaissance",
+    # "Parti socialiste") that fragment the party dimension and fail the
+    # dbt accepted_values gate the next day. Warn and keep the old value.
+    skipped = {
+        deputy_id: party for deputy_id, party in deputy_map.items() if party not in CANONICAL_LABELS
+    }
+    for deputy_id, party in skipped.items():
+        print(f"  WARNING: skipping non-canonical label {party!r} for {deputy_id}")
+    deputy_map = {k: v for k, v in deputy_map.items() if k not in skipped}
+
     print(f"\nUpdating party for {len(deputy_map)} deputies …")
     rows = [(party, deputy_id) for deputy_id, party in deputy_map.items()]
     with conn.cursor() as cur:

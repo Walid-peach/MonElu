@@ -98,10 +98,15 @@ def compute_changes(rows: list[tuple]) -> tuple[list[tuple], list[tuple]]:
     for deputy_id, full_name, current in rows:
         if current is None:
             continue
+        if current in CANONICAL_LABELS:
+            # Already canonical — never touch it, even if an OVERRIDE
+            # exists: the deputy may have legitimately changed groups
+            # since the override was written.
+            continue
         target = OVERRIDES.get(deputy_id) or LABEL_MAP.get(current)
         if target and target != current:
             changes.append((deputy_id, full_name, current, target))
-        elif target is None and current not in CANONICAL_LABELS:
+        elif target is None:
             unmapped.append((deputy_id, full_name, current))
     return changes, unmapped
 
