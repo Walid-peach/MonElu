@@ -17,6 +17,7 @@ from openai import OpenAI
 from pgvector.psycopg2 import register_vector
 from rank_bm25 import BM25Okapi
 
+from rag.chain.retriever import detect_recency_intent
 from rag.constants import EMBEDDING_MODEL, IVFFLAT_PROBES
 from rag.db_utils import connect_with_retry
 
@@ -44,6 +45,7 @@ def _get_candidates(
     chunk_type: str | None,
     deputy_id: str | None,
     result_filter: str | None,
+    recency: bool = False,
 ) -> list[dict]:
     """Fetch top-k_candidates by cosine similarity (candidate pool for BM25 reranking)."""
     conn = connect_with_retry(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
@@ -133,12 +135,21 @@ def retrieve_hybrid(
     Hybrid retrieval: pgvector candidate fetch + BM25 rerank.
     Drop-in replacement for retrieve() in retriever.py.
     """
+    recency = detect_recency_intent(question)
     question_vector = _embed(question)
+    # Widen the candidate pool for recency questions — same rationale as
+    # retriever.py: cosine/BM25 relevance alone won't surface what's recent.
     candidates = _get_candidates(
         question_vector,
-        k_candidates=min(20, k * 4),
+        k_candidates=min(80, k * 16) if recency else min(20, k * 4),
         chunk_type=chunk_type,
         deputy_id=deputy_id,
         result_filter=result_filter,
     )
-    return _bm25_rerank(question, candidates, k=k, alpha=alpha)
+    ranked = _bm25_rerank(question, candidates, k=k * 4 if recency else k, alpha=alpha)
+    if not recency:
+        return ranked[:k]
+    dated = [r for r in ranked if r["metadata"].get("voted_at")]
+    undated = [r for r in ranked if not r["metadata"].get("voted_at")]
+    dated.sort(key=lambda r: r["metadata"]["voted_at"], reverse=True)
+    return (dated + undated)[:k]
