@@ -81,7 +81,20 @@ When reviewing a pull request or branch, follow this workflow:
    - Needs changes before merge
    - Scope should be reduced or split
 
-9. Produce the review in this format:
+9. Compute an attention score.
+   Follow the rule table in `docs/pr-attention-score.md` exactly — it is a deterministic formula, not a separate judgment call:
+   - Start at 100 and apply every penalty that matches (Must Fix / Should Fix counts, verdict, high-risk paths touched, diff size, missing tests, non-empty Testing/Validation Gaps, anything you could not verify).
+   - Clamp to `[0, 100]`.
+   - Score >= 70 → `SAFE TO SKIM`. Score < 70 → `NEEDS YOUR ATTENTION`.
+   - Show the arithmetic line by line so the number is auditable, and write one sentence explaining why the PR can be skimmed or needs a closer look.
+
+10. Produce the review in this format:
+
+## Attention Score
+**<score>/100 - <SAFE TO SKIM | NEEDS YOUR ATTENTION>**
+- Base 100
+- <penalty line per signal that applied>
+Reason: <one sentence>
 
 ## Summary
 Two to four sentences summarizing what the PR does and the overall review outcome.
@@ -113,16 +126,17 @@ One of:
 - Needs changes before merge
 - Scope should be reduced or split
 
-10. If an existing PR description is available, compare it against the diff.
+11. If an existing PR description is available, compare it against the diff.
    - Check whether the PR description accurately reflects the implementation.
    - Call out mismatches between the description and the actual changes.
    - Note when the PR title or description should be updated.
 
-11. If the branch is messy or mixed:
+12. If the branch is messy or mixed:
    - Explicitly recommend splitting unrelated work
    - Call out accidental edits, debug code, commented-out code, temporary files, or generated noise
 
-12. Final behavior:
+13. Final behavior:
    - Review the PR
-   - Generate the structured review comment
+   - Generate the structured review comment, with the Attention Score section first
    - Post that review comment directly on the pull request using the `mcp__github__pull_request_review_write` tool with `method: create` and `event: COMMENT`. If the MCP tool is unavailable, fall back to `gh pr review <number> --comment -b '<review>'`.
+   - Apply exactly one label to the PR via `gh pr edit <number> --add-label <label>`: `needs-attention` if score < 70, `safe-to-skim` if score >= 70. Remove the other of the two labels if it is present from a prior review pass (`gh pr edit <number> --remove-label <other-label>`).
