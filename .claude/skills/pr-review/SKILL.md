@@ -126,16 +126,17 @@ One of:
 - Needs changes before merge
 - Scope should be reduced or split
 
-10. If an existing PR description is available, compare it against the diff.
+11. If an existing PR description is available, compare it against the diff.
    - Check whether the PR description accurately reflects the implementation.
    - Call out mismatches between the description and the actual changes.
    - Note when the PR title or description should be updated.
 
-11. If the branch is messy or mixed:
+12. If the branch is messy or mixed:
    - Explicitly recommend splitting unrelated work
    - Call out accidental edits, debug code, commented-out code, temporary files, or generated noise
 
-12. Final behavior:
+13. Final behavior:
    - Review the PR
-   - Generate the structured review comment
+   - Generate the structured review comment, with the Attention Score section first
    - Post that review comment directly on the pull request using the `mcp__github__pull_request_review_write` tool with `method: create` and `event: COMMENT`. If the MCP tool is unavailable, fall back to `gh pr review <number> --comment -b '<review>'`.
+   - Apply exactly one label to the PR via `gh pr edit <number> --add-label <label>`: `needs-attention` if score < 70, `safe-to-skim` if score >= 70. Remove the other of the two labels if it is present from a prior review pass (`gh pr edit <number> --remove-label <other-label>`).
