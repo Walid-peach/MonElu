@@ -81,7 +81,20 @@ When reviewing a pull request or branch, follow this workflow:
    - Needs changes before merge
    - Scope should be reduced or split
 
-9. Produce the review in this format:
+9. Compute an attention score.
+   Follow the rule table in `docs/pr-attention-score.md` exactly — it is a deterministic formula, not a separate judgment call:
+   - Start at 100 and apply every penalty that matches (Must Fix / Should Fix counts, verdict, high-risk paths touched, diff size, missing tests, non-empty Testing/Validation Gaps, anything you could not verify).
+   - Clamp to `[0, 100]`.
+   - Score >= 70 → `SAFE TO SKIM`. Score < 70 → `NEEDS YOUR ATTENTION`.
+   - Show the arithmetic line by line so the number is auditable, and write one sentence explaining why the PR can be skimmed or needs a closer look.
+
+10. Produce the review in this format:
+
+## Attention Score
+**<score>/100 - <SAFE TO SKIM | NEEDS YOUR ATTENTION>**
+- Base 100
+- <penalty line per signal that applied>
+Reason: <one sentence>
 
 ## Summary
 Two to four sentences summarizing what the PR does and the overall review outcome.
