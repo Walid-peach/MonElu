@@ -25,14 +25,26 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
 # ---------------------------------------------------------------------------
 # Error tracking (MON-99) — no-ops safely when SENTRY_DSN is unset, so this
 # is safe to leave in place before the Sentry project/DSN exists.
 # ---------------------------------------------------------------------------
+def _traces_sample_rate() -> float:
+    raw = os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning(
+            "⚠️  SENTRY_TRACES_SAMPLE_RATE=%r is not a valid float — defaulting to 0.1", raw
+        )
+        return 0.1
+
+
 sentry_sdk.init(
     dsn=os.getenv("SENTRY_DSN"),
     environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
-    traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+    traces_sample_rate=_traces_sample_rate(),
 )
 
 # ---------------------------------------------------------------------------
