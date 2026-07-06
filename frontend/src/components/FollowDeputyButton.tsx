@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getFollowedDeputyId, setFollowedDeputyId, clearFollowedDeputyId } from '@/lib/mon-depute'
 
@@ -8,7 +8,14 @@ const LINE = '#E4E6EA'
 
 export function FollowDeputyButton({ deputyId }: { deputyId: string }) {
   const router = useRouter()
-  const [following, setFollowing] = useState(() => getFollowedDeputyId() === deputyId)
+  // Starts false to match the server render (localStorage is unavailable server-side);
+  // the effect corrects it after mount via a microtask so React treats it as an
+  // async update rather than a synchronous one, avoiding a hydration mismatch.
+  const [following, setFollowing] = useState(false)
+
+  useEffect(() => {
+    Promise.resolve().then(() => setFollowing(getFollowedDeputyId() === deputyId))
+  }, [deputyId])
 
   function toggle() {
     if (following) {

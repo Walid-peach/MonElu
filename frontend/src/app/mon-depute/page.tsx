@@ -32,10 +32,21 @@ type DashboardData = {
 
 export default function MonDeputePage() {
   const router = useRouter()
-  const [deputyId, setDeputyId] = useState<string | null>(() => getFollowedDeputyId())
+  // Both start at their server-safe defaults (localStorage doesn't exist server-side);
+  // the mount effect below corrects deputyId asynchronously via a microtask so React
+  // treats it as a post-hydration update rather than a synchronous one, avoiding a
+  // hydration mismatch between the server render and the client's first paint.
+  const [deputyId, setDeputyId] = useState<string | null>(null)
+  const [checkedStorage, setCheckedStorage] = useState(false)
   const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(() => getFollowedDeputyId() !== null)
   const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setDeputyId(getFollowedDeputyId())
+      setCheckedStorage(true)
+    })
+  }, [])
 
   useEffect(() => {
     if (!deputyId) return
@@ -50,8 +61,10 @@ export default function MonDeputePage() {
     ]).then(([deputy, scorecard, alignment, recent, since]) => {
       if (cancelled) return
       if (!deputy) {
+        // Stale followed-deputy id (e.g. the deputy record disappeared) — clear it
+        // so the visitor lands on the picker instead of a permanent dead end.
+        clearFollowedDeputyId()
         setNotFound(true)
-        setLoading(false)
         return
       }
       setData({
@@ -63,10 +76,11 @@ export default function MonDeputePage() {
         hadPriorVisit: lastSeenAt !== null,
       })
       setLastSeenAt(deputyId, new Date().toISOString())
-      setLoading(false)
     })
     return () => { cancelled = true }
   }, [deputyId])
+
+  const loading = !checkedStorage || (deputyId !== null && !data && !notFound)
 
   function unfollow() {
     clearFollowedDeputyId()

@@ -149,7 +149,7 @@ export const api = {
     votes: (id: string, limit = 10, since?: string) => {
       const q = new URLSearchParams({ limit: String(limit) })
       if (since) q.set('since', since)
-      return apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?${q}`, { revalidate: since ? 0 : 86400 })
+      return apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?${q}`, { revalidate: 86400 })
     },
     alignment: (id: string) =>
       apiFetch<Alignment>(`/deputies/${id}/alignment/`, { revalidate: 86400 }),
