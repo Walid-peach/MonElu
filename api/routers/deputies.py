@@ -4,7 +4,7 @@ from psycopg2 import sql
 from starlette.requests import Request
 
 from api.db import MART_UNAVAILABLE, get_conn
-from api.limiter import limiter
+from api.limiter import limiter, tiered_limit
 from api.schemas import (
     DeputyAlignment,
     DeputyDetail,
@@ -22,7 +22,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=DeputyListResponse)
-@limiter.limit("30/minute")
+@limiter.limit(tiered_limit(30))
 def list_deputies(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
@@ -76,7 +76,7 @@ def list_deputies(
 
 
 @router.get("/stats", response_model=DeputyStats)
-@limiter.limit("30/minute")
+@limiter.limit(tiered_limit(30))
 def get_deputy_stats(request: Request):
     try:
         with get_conn() as conn:
@@ -93,7 +93,7 @@ def get_deputy_stats(request: Request):
 
 
 @router.get("/{deputy_id}", response_model=DeputyDetail)
-@limiter.limit("30/minute")
+@limiter.limit(tiered_limit(30))
 def get_deputy(request: Request, deputy_id: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -106,7 +106,7 @@ def get_deputy(request: Request, deputy_id: str):
 
 
 @router.get("/{deputy_id}/votes", response_model=DeputyVotesResponse)
-@limiter.limit("30/minute")
+@limiter.limit(tiered_limit(30))
 def get_deputy_votes(
     request: Request,
     deputy_id: str,
@@ -144,7 +144,7 @@ def get_deputy_votes(
 
 
 @router.get("/{deputy_id}/scorecard", response_model=DeputyScorecard)
-@limiter.limit("10/minute")
+@limiter.limit(tiered_limit(10))
 def get_scorecard(request: Request, deputy_id: str):
     try:
         with get_conn() as conn:
@@ -177,7 +177,7 @@ def get_scorecard(request: Request, deputy_id: str):
 
 
 @router.get("/{deputy_id}/alignment", response_model=DeputyAlignment)
-@limiter.limit("10/minute")
+@limiter.limit(tiered_limit(10))
 def get_alignment(request: Request, deputy_id: str):
     try:
         with get_conn() as conn:
@@ -209,7 +209,7 @@ def get_alignment(request: Request, deputy_id: str):
 
 
 @router.get("/{deputy_id}/dissident-votes", response_model=DeputyDissidentVotesResponse)
-@limiter.limit("10/minute")
+@limiter.limit(tiered_limit(10))
 def get_dissident_votes(
     request: Request,
     deputy_id: str,

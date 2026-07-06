@@ -5,7 +5,7 @@ import groq
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from api.limiter import limiter
+from api.limiter import limiter, tiered_limit
 from rag.chain.rag_chain import ask
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class SearchResponse(BaseModel):
     response_model=SearchResponse,
     summary="Posez une question sur les votes et les députés",
 )
-@limiter.limit("10/minute")
+@limiter.limit(tiered_limit(10))
 def search(request: Request, body: SearchRequest):
     # Plain `def` on purpose: ask() does blocking psycopg2 + Groq I/O, so FastAPI
     # must run it in the threadpool, not on the event loop.

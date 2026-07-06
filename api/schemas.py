@@ -169,3 +169,20 @@ class VoteListResponse(_Base):
         description="Opaque keyset cursor — pass as ?before= to fetch the next page; "
         "null when there are no more rows.",
     )
+
+
+# ---------------------------------------------------------------------------
+# API keys (MON-98)
+# ---------------------------------------------------------------------------
+
+
+class ApiKeyUsageDay(_Base):
+    endpoint: str
+    day: date
+    request_count: int
+
+
+class ApiKeyUsageResponse(_Base):
+    label: str
+    rate_limit_multiplier: int
+    items: list[ApiKeyUsageDay]

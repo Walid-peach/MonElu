@@ -9,7 +9,7 @@ from psycopg2 import sql
 from starlette.requests import Request
 
 from api.db import MART_UNAVAILABLE, get_conn
-from api.limiter import limiter
+from api.limiter import limiter, tiered_limit
 from api.schemas import VoteDetail, VoteListResponse, VotePosition, VoteSummary
 
 router = APIRouter()
@@ -32,7 +32,7 @@ def _decode_cursor(token: str) -> tuple[datetime, str]:
 
 
 @router.get("/", response_model=VoteListResponse)
-@limiter.limit("30/minute")
+@limiter.limit(tiered_limit(30))
 def list_votes(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
@@ -133,7 +133,7 @@ def list_votes(
 
 
 @router.get("/latest", response_model=list[VoteSummary])
-@limiter.limit("30/minute")
+@limiter.limit(tiered_limit(30))
 def latest_votes(request: Request):
     try:
         with get_conn() as conn:
@@ -155,7 +155,7 @@ def latest_votes(request: Request):
 
 
 @router.get("/{vote_id}", response_model=VoteDetail)
-@limiter.limit("30/minute")
+@limiter.limit(tiered_limit(30))
 def get_vote(request: Request, vote_id: str):
     try:
         with get_conn() as conn:

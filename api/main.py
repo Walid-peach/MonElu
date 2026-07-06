@@ -47,6 +47,9 @@ _warn_if_placeholder("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 _warn_if_placeholder("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
 _warn_if_placeholder("DATABASE_URL", os.getenv("DATABASE_URL"), context="the API")
 
+from starlette.concurrency import run_in_threadpool  # noqa: E402
+
+from api.auth import API_KEY_HEADER, record_usage, resolve_api_key  # noqa: E402
 from api.db import close_pool, get_conn, init_pool  # noqa: E402
 from api.limiter import limiter  # noqa: E402
 from rag.chain.sql_router import warm_pool as _warm_sql_pool  # noqa: E402
@@ -116,6 +119,21 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 
 app.add_exception_handler(Exception, _unhandled_exception_handler)
 
+
+# ---------------------------------------------------------------------------
+# API key usage logging (MON-98) — only keyed requests touch the DB; anonymous
+# traffic is unaffected. Runs in the threadpool so a slow write never blocks
+# the event loop.
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def _log_api_key_usage(request: Request, call_next):
+    response = await call_next(request)
+    record = resolve_api_key(request.headers.get(API_KEY_HEADER))
+    if record:
+        await run_in_threadpool(record_usage, record.id, request.url.path)
+    return response
+
+
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
@@ -137,12 +155,13 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
-from api.routers import deputies, votes  # noqa: E402
+from api.routers import deputies, keys, votes  # noqa: E402
 from api.routers.search import router as search_router  # noqa: E402
 
 app.include_router(deputies.router, prefix="/deputies", tags=["Deputies"])
 app.include_router(votes.router, prefix="/votes", tags=["Votes"])
 app.include_router(search_router, prefix="/search", tags=["Search"])
+app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
 
 
 # ---------------------------------------------------------------------------
