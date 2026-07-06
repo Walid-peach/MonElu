@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
 import { GlobalSearch } from './GlobalSearch'
+import { FollowedDeputyChip } from './FollowedDeputyChip'
 
 export const NAV_HEIGHT_PX = 64
 
@@ -40,6 +41,7 @@ export function Nav() {
         })}
       </div>
       <div className="flex items-center gap-4">
+        <FollowedDeputyChip />
         <GlobalSearch />
         <a href="https://monelu-production.up.railway.app/docs"
           target="_blank"
