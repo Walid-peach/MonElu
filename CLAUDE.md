@@ -150,6 +150,8 @@ Assemblée Nationale Open Data (ZIPs)
 | `votes` | Legislative votes (title, result adopté/rejeté, aggregate counts) |
 | `vote_positions` | Per-deputy position per vote (pour/contre/abstention/nonVotant) |
 | `document_chunks` | Phase 2: content + JSONB metadata + vector(1536) |
+| `api_keys` | Manually-issued public API keys (sha256 hash, label, rate_limit_multiplier) |
+| `api_key_usage` | Per-key, per-endpoint, per-day request counters for usage accounting |
 
 Important data quirks:
 - `nonVotant` ≠ `abstention`: present in chamber but did not vote vs. formally abstained
