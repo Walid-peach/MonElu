@@ -105,6 +105,7 @@ class DeputyVoteItem(_Base):
     vote_title: str
     result: Optional[str] = None
     position: str
+    summary_plain: Optional[str] = None
 
 
 class DeputyVotesResponse(_Base):

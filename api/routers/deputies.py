@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Optional
+
 import psycopg2.errors
 from fastapi import APIRouter, HTTPException, Query
 from psycopg2 import sql
@@ -111,6 +114,11 @@ def get_deputy_votes(
     request: Request,
     deputy_id: str,
     limit: int = Query(10, ge=1, le=50),
+    since: Optional[datetime] = Query(
+        None,
+        description="Only return votes after this timestamp (ISO 8601) — used to "
+        "surface what changed since a visitor's last visit.",
+    ),
 ):
     try:
         with get_conn() as conn:
@@ -121,16 +129,19 @@ def get_deputy_votes(
                 )
                 total = cur.fetchone()["count"]
 
+                since_clause = "AND v.voted_at > %s" if since else ""
+                params = (deputy_id, since, limit) if since else (deputy_id, limit)
                 cur.execute(
-                    """
-                    SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position
+                    f"""
+                    SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
+                           v.summary_plain
                     FROM vote_positions vp
                     JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
-                    WHERE vp.deputy_id = %s
+                    WHERE vp.deputy_id = %s {since_clause}
                     ORDER BY v.voted_at DESC
                     LIMIT %s
                     """,
-                    (deputy_id, limit),
+                    params,
                 )
                 rows = cur.fetchall()
     except psycopg2.errors.UndefinedTable:

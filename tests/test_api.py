@@ -209,6 +209,45 @@ def test_get_dissident_votes_empty(client, mock_cursor):
     assert data["items"] == []
 
 
+def test_get_deputy_votes_includes_summary_plain(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": "VTANR5L17V1",
+            "voted_at": "2024-07-16T15:00:00",
+            "vote_title": "Vote sur le projet de loi de finances",
+            "result": "adopté",
+            "position": "pour",
+            "summary_plain": "Ce texte prévoit...",
+        }
+    ]
+    resp = client.get("/deputies/PA1/votes")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["items"][0]["summary_plain"] == "Ce texte prévoit..."
+
+
+def test_get_deputy_votes_since_filter(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 5}
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": "VTANR5L17V2",
+            "voted_at": "2026-07-05T15:00:00",
+            "vote_title": "Vote récent",
+            "result": "adopté",
+            "position": "contre",
+            "summary_plain": None,
+        }
+    ]
+    resp = client.get("/deputies/PA1/votes?since=2026-07-01T00:00:00")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 5
+    assert len(data["items"]) == 1
+    executed_sql = mock_cursor.execute.call_args_list[-1].args[0]
+    assert "v.voted_at > %s" in executed_sql
+
+
 # ---------------------------------------------------------------------------
 # Votes
 # ---------------------------------------------------------------------------
