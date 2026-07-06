@@ -11,6 +11,7 @@ import traceback
 from contextlib import asynccontextmanager
 
 import psycopg2.errors
+import sentry_sdk
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +24,16 @@ from starlette.requests import Request
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Error tracking (MON-99) — no-ops safely when SENTRY_DSN is unset, so this
+# is safe to leave in place before the Sentry project/DSN exists.
+# ---------------------------------------------------------------------------
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
+    traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+)
 
 # ---------------------------------------------------------------------------
 # Startup secret validation — warn loudly if keys are missing or placeholder
@@ -111,6 +122,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
         request.url.path,
         traceback.format_exc(),
     )
+    sentry_sdk.capture_exception(exc)
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error", "status": 500},
