@@ -129,19 +129,22 @@ def get_deputy_votes(
                 )
                 total = cur.fetchone()["count"]
 
-                since_clause = "AND v.voted_at > %s" if since else ""
-                params = (deputy_id, since, limit) if since else (deputy_id, limit)
+                conditions = [sql.SQL("vp.deputy_id = %s")]
+                params: list = [deputy_id]
+                if since:
+                    conditions.append(sql.SQL("v.voted_at > %s"))
+                    params.append(since)
+                where = sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
+
                 cur.execute(
-                    f"""
-                    SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
-                           v.summary_plain
-                    FROM vote_positions vp
-                    JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
-                    WHERE vp.deputy_id = %s {since_clause}
-                    ORDER BY v.voted_at DESC
-                    LIMIT %s
-                    """,
-                    params,
+                    sql.SQL("""
+                        SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
+                               v.summary_plain
+                        FROM vote_positions vp
+                        JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
+                        {} ORDER BY v.voted_at DESC LIMIT %s
+                    """).format(where),
+                    params + [limit],
                 )
                 rows = cur.fetchall()
     except psycopg2.errors.UndefinedTable:
