@@ -33,6 +33,9 @@ jobs:
             exit 1
           fi
           echo "All required secrets are present."
+          # MAIL_SERVER/MAIL_PORT/MAIL_USERNAME/MAIL_PASSWORD/NOTIFY_EMAIL_TO
+          # (MON-99) are optional here — if unset the failure-notify step below
+          # is skipped and only the job-log error/summary fire, same as before.
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -124,3 +127,26 @@ jobs:
           echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo "## ❌ Ingestion failed" >> "$GITHUB_STEP_SUMMARY"
           echo "See the failed step above. Data goes stale until this is fixed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Email failure alert
+        # Covers both a hard step failure above and a stale-data failure from
+        # "dbt snapshot + source freshness" (error_after thresholds in
+        # transform/models/staging/_sources.yml). Skipped entirely if the mail
+        # secrets aren't configured yet (e.g. before MON-99 setup is finished).
+        if: failure() && secrets.MAIL_SERVER != '' && secrets.NOTIFY_EMAIL_TO != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "MonÉlu: daily ingestion failed"
+          to: ${{ secrets.NOTIFY_EMAIL_TO }}
+          from: MonÉlu CI <${{ secrets.MAIL_USERNAME }}>
+          body: |
+            Daily ingestion (or the dbt source-freshness check) failed.
+
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            This could be a hard ingestion failure, or stale production data
+            (see transform/models/staging/_sources.yml for freshness thresholds).
