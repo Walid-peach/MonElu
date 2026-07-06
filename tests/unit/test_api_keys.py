@@ -90,3 +90,41 @@ def test_get_key_usage_returns_usage_for_valid_key(client, mock_cursor):
     assert data["label"] == "Test NGO"
     assert data["rate_limit_multiplier"] == 4
     assert data["items"][0]["request_count"] == 12
+
+
+def test_end_to_end_keyed_request_gets_higher_effective_limit():
+    """Drives a real @limiter.limit(tiered_limit(...)) route end to end: anonymous is
+    capped at the base limit, a keyed request with a multiplier gets base * multiplier —
+    proving the decorator, key_func, and tiered_limit actually compose correctly, not
+    just in isolation."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient as FastAPITestClient
+    from slowapi import _rate_limit_exceeded_handler
+    from slowapi.errors import RateLimitExceeded
+    from slowapi.middleware import SlowAPIMiddleware
+    from starlette.requests import Request as StarletteRequest
+
+    from api.limiter import limiter, tiered_limit
+
+    test_app = FastAPI()
+    test_app.state.limiter = limiter
+    test_app.add_middleware(SlowAPIMiddleware)
+    test_app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    @test_app.get("/_test_tiered_limit_endpoint")
+    @limiter.limit(tiered_limit(1))
+    def _tiered_endpoint(request: StarletteRequest):
+        return {"ok": True}
+
+    with FastAPITestClient(test_app) as tc:
+        # Anonymous: 1 request/minute — the second in the same window is rejected.
+        assert tc.get("/_test_tiered_limit_endpoint").status_code == 200
+        assert tc.get("/_test_tiered_limit_endpoint").status_code == 429
+
+        # Keyed with a 3x multiplier: 3 requests succeed before the 4th trips the limit.
+        record = auth.ApiKeyRecord(id=99, label="E2E", rate_limit_multiplier=3)
+        headers = {"X-API-Key": "whatever"}
+        with patch("api.limiter.resolve_api_key", return_value=record):
+            for _ in range(3):
+                assert tc.get("/_test_tiered_limit_endpoint", headers=headers).status_code == 200
+            assert tc.get("/_test_tiered_limit_endpoint", headers=headers).status_code == 429

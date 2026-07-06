@@ -122,15 +122,20 @@ app.add_exception_handler(Exception, _unhandled_exception_handler)
 
 # ---------------------------------------------------------------------------
 # API key usage logging (MON-98) — only keyed requests touch the DB; anonymous
-# traffic is unaffected. Runs in the threadpool so a slow write never blocks
-# the event loop.
+# traffic is unaffected. Both the key lookup (which can hit the DB on a cache
+# miss) and the usage write run in the threadpool so neither ever blocks the
+# event loop.
 # ---------------------------------------------------------------------------
 @app.middleware("http")
 async def _log_api_key_usage(request: Request, call_next):
     response = await call_next(request)
-    record = resolve_api_key(request.headers.get(API_KEY_HEADER))
+    record = await run_in_threadpool(resolve_api_key, request.headers.get(API_KEY_HEADER))
     if record:
-        await run_in_threadpool(record_usage, record.id, request.url.path)
+        # Route template ("/deputies/{deputy_id}") once routing has resolved, so usage
+        # aggregates per endpoint rather than fragmenting per resource id.
+        route = request.scope.get("route")
+        endpoint = route.path if route is not None else request.url.path
+        await run_in_threadpool(record_usage, record.id, endpoint)
     return response
 
 
