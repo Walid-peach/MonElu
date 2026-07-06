@@ -48,7 +48,7 @@ export function Footer() {
       <div style={{ display: 'flex', gap: '28px', fontSize: '13.5px', flexWrap: 'wrap' }}>
         <Link href="/deputes" style={{ color: '#6B7280', textDecoration: 'none' }}>Députés</Link>
         <Link href="/votes" style={{ color: '#6B7280', textDecoration: 'none' }}>Votes</Link>
-        <a href="https://monelu-production.up.railway.app/docs" target="_blank" rel="noopener noreferrer" style={{ color: '#6B7280', textDecoration: 'none' }}>API</a>
+        <Link href="/developpeurs" style={{ color: '#6B7280', textDecoration: 'none' }}>Développeurs</Link>
         <a href="https://github.com/Walid-peach" target="_blank" rel="noopener noreferrer" style={{ color: '#6B7280', textDecoration: 'none' }}>GitHub</a>
         {legalLinks.map((l) => (
           <Link key={l.href} href={l.href} style={{ color: '#6B7280', textDecoration: 'none' }}>{l.label}</Link>
