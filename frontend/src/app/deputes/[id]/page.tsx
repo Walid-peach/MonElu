@@ -2,11 +2,14 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import type { DeputyVoteItem, DissidentVoteItem } from '@/lib/api'
+import type { DissidentVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
+import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { FollowDeputyButton } from '@/components/FollowDeputyButton'
+import { VoteTimelineItem } from '@/components/VoteTimelineItem'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -30,13 +33,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     openGraph: { title: `${deputy.full_name} - MonÉlu`, description },
     twitter:   { card: 'summary_large_image', title: `${deputy.full_name} - MonÉlu`, description },
   }
-}
-
-const POS = {
-  pour:       { label: 'Pour',       color: '#1F8A5B', bg: '#EAF5EF' },
-  contre:     { label: 'Contre',     color: RED,        bg: '#FBE9E7' },
-  abstention: { label: 'Abstention', color: '#6B7280',  bg: '#F0F1F3' },
-  nonVotant:  { label: 'Non votant', color: '#9CA3AF',  bg: '#F5F6F7' },
 }
 
 export default async function DeputyPage({ params }: { params: Promise<{ id: string }> }) {
@@ -176,6 +172,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   text={`Bilan de mandat et votes de ${deputy.full_name}`}
                   ariaLabel="Partager ce député"
                 />
+                <FollowDeputyButton deputyId={id} />
               </div>
             </div>
           </div>
@@ -314,13 +311,13 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                           )}
                           <span style={{
                             fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
-                            color: POS[v.position as keyof typeof POS]?.color ?? NAVY,
-                            background: POS[v.position as keyof typeof POS]?.bg ?? LINE,
+                            color: positionStyle(v.position).color,
+                            background: positionStyle(v.position).bg,
                           }}>
-                            A voté {POS[v.position as keyof typeof POS]?.label ?? v.position}
+                            A voté {positionStyle(v.position).label}
                           </span>
                           <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                            groupe : {POS[v.majority_position as keyof typeof POS]?.label ?? v.majority_position}
+                            groupe : {positionStyle(v.majority_position).label}
                           </span>
                         </div>
                         <div style={{ fontSize: 15.5, color: NAVY, lineHeight: 1.35 }}>
@@ -348,53 +345,9 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 <div style={{ position: 'absolute', left: 6, top: 8, bottom: 8, width: 2, background: '#E7E2D6', borderRadius: 2 }} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-                  {recentVotes.items.map((v: DeputyVoteItem) => {
-                    const pos = POS[v.position as keyof typeof POS] ?? POS.nonVotant
-                    return (
-                      <div key={v.vote_id} style={{ position: 'relative' }}>
-                        {/* Dot */}
-                        <span style={{
-                          position: 'absolute', left: -32, top: 5,
-                          width: 13, height: 13, borderRadius: 999,
-                          background: pos.color,
-                          border: `3px solid ${CREAM}`,
-                          boxShadow: `0 0 0 1px ${pos.color}`,
-                        }} />
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                          {v.voted_at && (
-                            <span className="font-mono" style={{ fontSize: 12.5, color: '#9CA3AF', letterSpacing: '0.02em' }}>
-                              {formatDate(v.voted_at)}
-                            </span>
-                          )}
-                          <span style={{
-                            fontSize: 12.5, fontWeight: 700, letterSpacing: '0.04em',
-                            padding: '4px 12px', borderRadius: 999,
-                            color: pos.color, background: pos.bg,
-                          }}>
-                            {pos.label}
-                          </span>
-                          {v.result && (
-                            <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                              Scrutin : {v.result}
-                            </span>
-                          )}
-                        </div>
-
-                        <Link href={`/votes/${v.vote_id}`} style={{ textDecoration: 'none' }}>
-                          <div className="font-newsreader text-[21px]" style={{ color: NAVY, marginTop: 8, lineHeight: 1.3, cursor: 'pointer' }}>
-                            {v.vote_title}
-                          </div>
-                        </Link>
-
-                        {v.summary_plain && (
-                          <div style={{ fontSize: 14.5, color: '#4B5563', lineHeight: 1.55, marginTop: 5, maxWidth: 680, fontStyle: 'italic' }}>
-                            {v.summary_plain}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
+                  {recentVotes.items.map(v => (
+                    <VoteTimelineItem key={v.vote_id} vote={v} dotBorderColor={CREAM} />
+                  ))}
                 </div>
               </div>
 
