@@ -40,6 +40,7 @@ Production API: https://monelu-production.up.railway.app
 | RAG inference | Groq `llama-3.3-70b-versatile` | temperature=0.2; free tier, faster than OpenAI |
 | Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
 | CI/CD | GitHub Actions (4 workflows) | See Workflows section |
+| Error tracking | Sentry (API + frontend) | Opt-in via `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` — no-ops when unset. See `docs/monitoring.md` |
 | Experiment tracking | MLflow (local) | router suite + retrieval suite eval (11 questions total) |
 | IaC | Terraform ~> 5.0 (AWS, archived) | `archive/infra-aws/` — not applied, kept as reference |
 
