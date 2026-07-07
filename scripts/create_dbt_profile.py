@@ -24,5 +24,6 @@ profile = {
 
 pathlib.Path("transform/profiles.yml").write_text(yaml.safe_dump(profile))
 print(
-    f"transform/profiles.yml written (host={os.environ['DBT_HOST']}, dbname={os.environ['DBT_DBNAME']})"
+    f"transform/profiles.yml written "
+    f"(host={os.environ['DBT_HOST']}, dbname={os.environ['DBT_DBNAME']})"
 )

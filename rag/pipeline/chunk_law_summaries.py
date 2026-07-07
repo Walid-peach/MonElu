@@ -84,7 +84,8 @@ def build_law_chunk(vote: dict, breakdown: list[dict]) -> str:
     ]
     for p in breakdown:
         lines.append(
-            f"- {p['party']} : {p['pour']} pour, {p['contre']} contre, {p['abstention']} abstentions"
+            f"- {p['party']} : {p['pour']} pour, {p['contre']} contre, "
+            f"{p['abstention']} abstentions"
         )
     return "\n".join(lines)
 

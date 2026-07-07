@@ -42,9 +42,13 @@ STATEMENTS = [
     (
         "document_chunks of fixture votes",
         """SELECT COUNT(*) FROM document_chunks
-           WHERE metadata->>'vote_id' IN (SELECT vote_id FROM votes WHERE vote_title LIKE %(title)s)""",
+           WHERE metadata->>'vote_id' IN (
+               SELECT vote_id FROM votes WHERE vote_title LIKE %(title)s
+           )""",
         """DELETE FROM document_chunks
-           WHERE metadata->>'vote_id' IN (SELECT vote_id FROM votes WHERE vote_title LIKE %(title)s)""",
+           WHERE metadata->>'vote_id' IN (
+               SELECT vote_id FROM votes WHERE vote_title LIKE %(title)s
+           )""",
     ),
     (
         "document_chunks of fixture deputies",

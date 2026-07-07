@@ -140,9 +140,11 @@ def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
     _DEPUTY_SELECT = """
                 SELECT d.deputy_id, d.full_name, d.party, d.department,
                        COUNT(vp.position_id) AS total_votes,
-                       COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour')       AS pour_count,
-                       COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre')     AS contre_count,
-                       COUNT(vp.position_id) FILTER (WHERE vp.position = 'abstention') AS abstention_count,
+                       COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour') AS pour_count,
+                       COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre') AS contre_count,
+                       COUNT(vp.position_id) FILTER (
+                           WHERE vp.position = 'abstention'
+                       ) AS abstention_count,
                        -- canonical presence: all recorded positions (incl.
                        -- nonVotant) over votes during the mandate window —
                        -- see docs/decisions.md
@@ -239,9 +241,11 @@ def chunk_party_summaries() -> list[dict]:
                 party_positions AS (
                     SELECT
                         d.party,
-                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour')       AS total_pour,
-                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre')     AS total_contre,
-                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'abstention') AS total_abstention
+                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour') AS total_pour,
+                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre') AS total_contre,
+                        COUNT(vp.position_id) FILTER (
+                            WHERE vp.position = 'abstention'
+                        ) AS total_abstention
                     FROM deputies d
                     LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
                     WHERE d.party IS NOT NULL
@@ -407,9 +411,10 @@ def chunk_notable_deputies() -> list[dict]:
                     d.full_name, d.party, d.department,
                     v.vote_id, v.vote_title, v.voted_at, v.result, vp.position,
                     CASE
-                        WHEN v.vote_title ILIKE '%%financement de la sécurité sociale%%' THEN 'plfss'
-                        WHEN v.vote_title ILIKE '%%projet de loi de finances%%'           THEN 'plf'
-                        WHEN v.vote_title ILIKE '%%motion de censure%%'                   THEN 'censure'
+                        WHEN v.vote_title ILIKE '%%financement de la sécurité sociale%%'
+                            THEN 'plfss'
+                        WHEN v.vote_title ILIKE '%%projet de loi de finances%%' THEN 'plf'
+                        WHEN v.vote_title ILIKE '%%motion de censure%%' THEN 'censure'
                         ELSE NULL
                     END AS key_category,
                     ROW_NUMBER() OVER (
@@ -418,9 +423,10 @@ def chunk_notable_deputies() -> list[dict]:
                     ROW_NUMBER() OVER (
                         PARTITION BY vp.deputy_id,
                         CASE
-                            WHEN v.vote_title ILIKE '%%financement de la sécurité sociale%%' THEN 'plfss'
-                            WHEN v.vote_title ILIKE '%%projet de loi de finances%%'           THEN 'plf'
-                            WHEN v.vote_title ILIKE '%%motion de censure%%'                   THEN 'censure'
+                            WHEN v.vote_title ILIKE '%%financement de la sécurité sociale%%'
+                                THEN 'plfss'
+                            WHEN v.vote_title ILIKE '%%projet de loi de finances%%' THEN 'plf'
+                            WHEN v.vote_title ILIKE '%%motion de censure%%' THEN 'censure'
                             ELSE NULL
                         END
                         ORDER BY v.voted_at DESC

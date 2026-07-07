@@ -98,7 +98,8 @@ def build_index(since: str | None = None) -> None:
 
     if new_vote_ids:
         print(
-            f"New votes to index: {len(new_vote_ids)}  Affected deputies: {len(affected_deputy_ids)}"
+            f"New votes to index: {len(new_vote_ids)}  "
+            f"Affected deputies: {len(affected_deputy_ids)}"
         )
         chunks += chunk_votes(vote_ids=new_vote_ids)
         # Delete stale deputy chunks and rebuild for affected deputies only
@@ -128,7 +129,8 @@ def _delete_chunks_by_ids(chunk_type: str, id_key: str, ids: set[str]) -> None:
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "DELETE FROM document_chunks WHERE metadata->>'chunk_type' = %s AND metadata->>%s = ANY(%s)",
+                "DELETE FROM document_chunks "
+                "WHERE metadata->>'chunk_type' = %s AND metadata->>%s = ANY(%s)",
                 (chunk_type, id_key, list(ids)),
             )
         conn.commit()

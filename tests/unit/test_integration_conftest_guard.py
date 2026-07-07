@@ -14,12 +14,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "integration"))
 
 from conftest import _assert_safe_test_database  # noqa: E402
 
+_SUPABASE_URL = (
+    "postgresql://postgres:pw@db.example.supabase.co:5432/postgres"  # pragma: allowlist secret
+)
+
 
 def test_rejects_supabase_host():
     with pytest.raises(pytest.fail.Exception):
-        _assert_safe_test_database(
-            "postgresql://postgres:pw@db.example.supabase.co:5432/postgres"  # pragma: allowlist secret
-        )
+        _assert_safe_test_database(_SUPABASE_URL)
 
 
 def test_rejects_unknown_remote_host():

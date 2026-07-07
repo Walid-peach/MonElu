@@ -307,7 +307,8 @@ def db_conn():
                 INSERT INTO analytics_intermediate.int_party_vote_majority
                     (party, vote_id, majority_position)
                 VALUES ('Rassemblement National', %(vote_id)s, %(majority)s)
-                ON CONFLICT (party, vote_id) DO UPDATE SET majority_position = EXCLUDED.majority_position
+                ON CONFLICT (party, vote_id)
+                    DO UPDATE SET majority_position = EXCLUDED.majority_position
                 """,
                 {"vote_id": v["vote_id"], "majority": majority},
             )
@@ -316,7 +317,8 @@ def db_conn():
                 INSERT INTO analytics_intermediate.int_party_vote_majority
                     (party, vote_id, majority_position)
                 VALUES ('La France Insoumise', %(vote_id)s, 'contre')
-                ON CONFLICT (party, vote_id) DO UPDATE SET majority_position = EXCLUDED.majority_position
+                ON CONFLICT (party, vote_id)
+                    DO UPDATE SET majority_position = EXCLUDED.majority_position
                 """,
                 {"vote_id": v["vote_id"]},
             )

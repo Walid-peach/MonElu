@@ -71,7 +71,10 @@ def search(request: Request, body: SearchRequest):
     except groq.APITimeoutError as e:
         raise HTTPException(
             status_code=504,
-            detail="Le service de recherche est temporairement indisponible. Réessayez dans quelques secondes.",
+            detail=(
+                "Le service de recherche est temporairement indisponible. "
+                "Réessayez dans quelques secondes."
+            ),
         ) from e
     except Exception:
         logger.exception("RAG pipeline error for question %r", body.question)

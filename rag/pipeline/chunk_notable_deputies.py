@@ -210,12 +210,15 @@ def build_notable_deputy_index(n: int = 100) -> dict:
                                COUNT(vp.position_id) as total_votes,
                                COUNT(vp.position_id) FILTER (WHERE vp.position='pour') as pour,
                                COUNT(vp.position_id) FILTER (WHERE vp.position='contre') as contre,
-                               COUNT(vp.position_id) FILTER (WHERE vp.position='abstention') as abstention,
+                               COUNT(vp.position_id) FILTER (
+                                   WHERE vp.position='abstention'
+                               ) as abstention,
                                -- canonical presence — see docs/decisions.md
                                ROUND(LEAST(
                                    COUNT(vp.position_id)::numeric / NULLIF((
                                        SELECT COUNT(*) FROM votes v
-                                       WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
+                                       WHERE (d.mandate_start IS NULL
+                                              OR v.voted_at >= d.mandate_start)
                                          AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
                                    ), 0),
                                    1

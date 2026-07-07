@@ -546,7 +546,8 @@ FORMATTERS = {
     ),
     "deputy_by_department": lambda rows: (
         (
-            f"{len(rows)} député(s) dans les {CODE_TO_DEPT_NAME.get(rows[0]['department'], rows[0]['department'])} "
+            f"{len(rows)} député(s) dans les "
+            f"{CODE_TO_DEPT_NAME.get(rows[0]['department'], rows[0]['department'])} "
             f"(département {rows[0]['department']}) :\n"
             + "\n".join(f"- {r['full_name']} ({r['party'] or 'parti non renseigné'})" for r in rows)
         )
@@ -717,7 +718,10 @@ def detect_intent(question: str) -> str | None:
 
 
 def run_sql_query(intent: str, params: dict | None = None) -> list[dict]:
-    """Run the SQL query for a detected intent. Returns [] on any failure so route() falls back to RAG."""
+    """Run the SQL query for a detected intent.
+
+    Returns [] on any failure so route() falls back to RAG.
+    """
     sql = SQL_QUERIES.get(intent)
     if not sql:
         return []

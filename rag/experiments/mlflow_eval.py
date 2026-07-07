@@ -321,15 +321,15 @@ if __name__ == "__main__":
     print("\n" + "=" * 46)
     print("  MonÉlu RAG — Phase B Results")
     print("=" * 46)
+    n_questions = len(results["phase_a_k5"]["per_question"])
+    print(f"  Phase A (cosine, {n_questions} questions):  {results['phase_a_k5']['score']:.3f}")
     print(
-        f"  Phase A (cosine, {len(results['phase_a_k5']['per_question'])} questions):  {results['phase_a_k5']['score']:.3f}"
-    )
-    print(
-        f"  Phase B (hybrid BM25):           {results['phase_b_hybrid']['score']:.3f}  ← regression, reverted"
+        f"  Phase B (hybrid BM25):           {results['phase_b_hybrid']['score']:.3f}"
+        "  ← regression, reverted"
     )
     print(f"  Phase B (cosine + B2 + B3):      {results['phase_b_final']['score']:.3f}")
     print(
-        f"  SQL routed questions:             {results['phase_a_k5']['sql_routed']}/{len(results['phase_a_k5']['per_question'])}"
+        f"  SQL routed questions:             {results['phase_a_k5']['sql_routed']}/{n_questions}"
     )
     print(f"  Routing accuracy:                 {results['phase_a_k5']['routing_accuracy']:.3f}")
     print("=" * 46)

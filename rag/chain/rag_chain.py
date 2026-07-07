@@ -114,7 +114,6 @@ if __name__ == "__main__":
         result = ask(q)
         print(f"\nQ: {q}")
         print(f"A: {result['answer']}")
-        print(
-            f"Sources: {result['chunks_retrieved']} chunks, top similarity: {result['sources'][0]['similarity']:.3f}"
-        )
+        top_similarity = result["sources"][0]["similarity"]
+        print(f"Sources: {result['chunks_retrieved']} chunks, top similarity: {top_similarity:.3f}")
         print("---")
