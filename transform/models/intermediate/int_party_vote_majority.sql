@@ -1,3 +1,10 @@
+{{
+    config(
+        materialized='table',
+        indexes=[{'columns': ['vote_id', 'party'], 'unique': true}]
+    )
+}}
+
 with position_counts as (
     select
         d.party,
