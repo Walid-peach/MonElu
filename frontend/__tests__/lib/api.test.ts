@@ -49,6 +49,23 @@ describe('api.search', () => {
   })
 })
 
+describe('api.deputies.votes', () => {
+  it('omits since from the query string when not provided', async () => {
+    mockFetch(200, { deputy_id: 'PA1', total: 0, items: [] })
+    await api.deputies.votes('PA1', 10)
+    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string
+    expect(url).toContain('limit=10')
+    expect(url).not.toContain('since=')
+  })
+
+  it('includes since in the query string when provided', async () => {
+    mockFetch(200, { deputy_id: 'PA1', total: 0, items: [] })
+    await api.deputies.votes('PA1', 50, '2026-07-01T00:00:00.000Z')
+    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string
+    expect(url).toContain('since=2026-07-01T00%3A00%3A00.000Z')
+  })
+})
+
 describe('apiFetch (via api.health)', () => {
   it('throws on a non-ok response', async () => {
     mockFetch(503, { detail: 'Service Unavailable' })

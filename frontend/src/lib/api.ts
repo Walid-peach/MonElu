@@ -85,7 +85,7 @@ export type DeputyVoteItem = {
   vote_title: string
   result: string | null
   position: string
-  summary_plain?: string | null
+  summary_plain: string | null
 }
 
 export type DeputyVotesResponse = {
@@ -146,8 +146,11 @@ export const api = {
     get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`, { revalidate: 86400 }),
     scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`, { revalidate: 86400 }),
     stats: () => apiFetch<DeputyStats>('/deputies/stats/', { revalidate: 3600 }),
-    votes: (id: string, limit = 10) =>
-      apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?limit=${limit}`, { revalidate: 86400 }),
+    votes: (id: string, limit = 10, since?: string) => {
+      const q = new URLSearchParams({ limit: String(limit) })
+      if (since) q.set('since', since)
+      return apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?${q}`, { revalidate: 86400 })
+    },
     alignment: (id: string) =>
       apiFetch<Alignment>(`/deputies/${id}/alignment/`, { revalidate: 86400 }),
     dissidentVotes: (id: string, limit = 10) =>
