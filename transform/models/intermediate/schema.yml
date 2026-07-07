@@ -8,6 +8,11 @@ models:
       excluded by design. Parties that cast exclusively nonvotant on a given
       vote produce no row, and those deputies are excluded from
       mart_party_alignment totals for that vote.
+
+      Materialized as a table (overriding the intermediate-layer view
+      default) because the API queries it directly for GET
+      /{deputy_id}/dissident-votes — as a view it recomputed a full join of
+      vote_positions x deputies on every request (MON-118).
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [party, vote_id]
