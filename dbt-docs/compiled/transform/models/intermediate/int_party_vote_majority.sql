@@ -1,3 +1,5 @@
+
+
 with position_counts as (
     select
         d.party,
