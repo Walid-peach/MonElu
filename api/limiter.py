@@ -24,7 +24,10 @@ def rate_limit_key(request: Request) -> str:
 
 
 def tiered_limit(base_per_minute: int):
-    """Build a dynamic slowapi limit: anonymous keeps `base`, keyed requests get base * multiplier."""
+    """Build a dynamic slowapi limit.
+
+    Anonymous requests keep `base`; keyed requests get base * multiplier.
+    """
 
     def _limit(key: str) -> str:
         if key.startswith("apikey:"):

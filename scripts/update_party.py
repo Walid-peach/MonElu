@@ -200,7 +200,8 @@ def print_summary(conn) -> None:
 
         print("\n  Top 10 departments:")
         cur.execute(
-            "SELECT department, COUNT(*) as n FROM deputies GROUP BY department ORDER BY n DESC LIMIT 10"
+            "SELECT department, COUNT(*) as n FROM deputies "
+            "GROUP BY department ORDER BY n DESC LIMIT 10"
         )
         for r in cur.fetchall():
             print(f"    {(r['department'] or 'NULL'):<35}  {r['n']}")

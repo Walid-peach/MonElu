@@ -70,7 +70,8 @@ def list_votes(
                 if search:
                     conditions.append(
                         sql.SQL(
-                            "to_tsvector('french', vote_title || ' ' || coalesce(summary_plain, ''))"
+                            "to_tsvector('french', vote_title || ' ' "
+                            "|| coalesce(summary_plain, ''))"
                             " @@ plainto_tsquery('french', %s)"
                         )
                     )

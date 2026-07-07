@@ -122,7 +122,8 @@ def parse_deputy(item: dict) -> dict | None:
         circonscription = place.get("numCirco")
         department = place.get("numDepartement")
 
-        # Party (groupe politique) — separate call not available inline; store organeRef as party_short
+        # Party (groupe politique) — separate call not available inline;
+        # store organeRef as party_short
         party = None
         party_short = organe_ref
 

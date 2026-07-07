@@ -152,7 +152,10 @@ def main() -> None:
     parser.add_argument(
         "--since",
         default=None,
-        help="Only ingest positions for votes on/after this date (YYYY-MM-DD). Default: all known votes.",
+        help=(
+            "Only ingest positions for votes on/after this date (YYYY-MM-DD). "
+            "Default: all known votes."
+        ),
     )
     parser.add_argument(
         "--zip-path",

@@ -48,7 +48,10 @@ SCRUTINS_ZIP_PATH = "/static/openData/repository/17/loi/scrutins/Scrutins.json.z
 
 
 def fetch_all_scrutins(since: str | None = None, zip_path: str | None = None) -> list[dict]:
-    """Load scrutins from a local ZIP (zip_path) or download one, filtered to dateScrutin >= since."""
+    """Load scrutins from a local ZIP (zip_path) or download one.
+
+    Filtered to dateScrutin >= since.
+    """
     if zip_path:
         log.info("Reading scrutins ZIP from %s…", zip_path)
         with open(zip_path, "rb") as fh:

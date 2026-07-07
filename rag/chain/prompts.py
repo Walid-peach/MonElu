@@ -72,7 +72,8 @@ SUMMARY_PROMPT = (
     'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
     "Theme doit être EXACTEMENT l'un de :\n"
     "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
-    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | International | Autre"
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
 )
 
 SUMMARY_PROMPT_PROCEDURAL = (
@@ -85,7 +86,8 @@ SUMMARY_PROMPT_PROCEDURAL = (
     'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
     "Theme doit être EXACTEMENT l'un de :\n"
     "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
-    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | International | Autre"
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
 )
 
 RAG_TEMPLATE = """Sources disponibles :
