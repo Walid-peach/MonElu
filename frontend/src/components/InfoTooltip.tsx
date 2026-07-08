@@ -1,14 +1,16 @@
 'use client'
 import { useState, useId } from 'react'
+import Link from 'next/link'
 
 type Props = {
   text: string
   ariaLabel?: string
+  href?: string
 }
 
 const NAVY = '#1B2B50'
 
-export function InfoTooltip({ text, ariaLabel = 'Plus d’informations' }: Props) {
+export function InfoTooltip({ text, ariaLabel = 'Plus d’informations', href }: Props) {
   const [open, setOpen] = useState(false)
   const tooltipId = useId()
 
@@ -45,6 +47,14 @@ export function InfoTooltip({ text, ariaLabel = 'Plus d’informations' }: Props
           }}
         >
           {text}
+          {href && (
+            <Link
+              href={href}
+              style={{ display: 'block', marginTop: 6, color: '#8FB2FF', fontWeight: 600 }}
+            >
+              En savoir plus →
+            </Link>
+          )}
           <span style={{
             position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
             width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent',

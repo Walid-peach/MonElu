@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { animate, motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { InfoTooltip } from '@/components/InfoTooltip'
 
 export type AssemblyStats = {
   deputies: number
@@ -83,7 +84,12 @@ export function LiveAssemblyPulse({
       : 'border border-red-300/30 bg-red-civic/15 px-2 py-0.5 text-xs font-semibold text-red-100'
 
   const statItems = [
-    { value: stats.deputies, label: 'députés suivis', compact: false },
+    {
+      value: stats.deputies,
+      label: 'députés suivis',
+      compact: false,
+      tooltip: "Nombre de député·e·s ayant siégé au moins une fois depuis le début de la législature (2024-07-07), pas le nombre de sièges actuels (577).",
+    },
     { value: stats.votes, label: 'votes analysés', compact: false },
     { value: stats.positions, label: 'positions individuelles', compact: true },
   ]
@@ -120,8 +126,11 @@ export function LiveAssemblyPulse({
             <p className="font-serif text-3xl leading-none md:text-4xl">
               <CountUpNumber value={item.value} compact={item.compact} />
             </p>
-            <p className="mt-2 text-[10px] font-semibold uppercase opacity-55 md:text-xs">
+            <p className="mt-2 flex items-center gap-1 text-[10px] font-semibold uppercase opacity-55 md:text-xs">
               {item.label}
+              {item.tooltip && (
+                <InfoTooltip text={item.tooltip} href="/a-propos#nombre-deputes" />
+              )}
             </p>
           </div>
         ))}

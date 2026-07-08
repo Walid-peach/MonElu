@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { ShareButton } from '@/components/ShareButton'
+import { InfoTooltip } from '@/components/InfoTooltip'
 import { getInitials, partyHex } from '@/lib/utils'
 import { resolvePostalCode } from '@/lib/postal'
 
@@ -355,14 +356,22 @@ export function VoteDetailClient(props: Props) {
                 <p style={{ fontSize: 15, color: '#6B7280', margin: '0 0 22px', maxWidth: 560 }}>Position majoritaire exprimée par les membres de chaque groupe parlementaire.</p>
 
                 <div style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px', gap: 14, padding: '12px 24px', borderBottom: '1px solid #E4E6EA', background: '#FBFAF6', font: '600 11px/1 var(--font-sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
-                    <span>Groupe</span><span>Position</span><span style={{ textAlign: 'right' }}>Pour</span><span style={{ textAlign: 'right' }}>Contre</span><span style={{ textAlign: 'right' }}>Abst.</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px 90px', gap: 14, padding: '12px 24px', borderBottom: '1px solid #E4E6EA', background: '#FBFAF6', font: '600 11px/1 var(--font-sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+                    <span>Groupe</span><span>Position</span><span style={{ textAlign: 'right' }}>Pour</span><span style={{ textAlign: 'right' }}>Contre</span>
+                    <span style={{ textAlign: 'right' }}>Abst.</span>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 5 }}>
+                      Non-vot.
+                      <InfoTooltip
+                        text="Non-votant : présent en séance mais n'a pas pris position. Différent de l'abstention, qui est une position exprimée."
+                        href="/a-propos#nonvotant-abstention"
+                      />
+                    </span>
                   </div>
                   {groups.map((g) => {
                     const posColor = g.position === 'Pour' ? '#1F8A5B' : g.position === 'Contre' ? '#C9302A' : '#B45309'
                     const posBg   = g.position === 'Pour' ? '#EAF5EF' : g.position === 'Contre' ? '#FBE9E7' : '#FEF3C7'
                     return (
-                      <div key={g.name} style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px', gap: 14, padding: '16px 24px', borderBottom: '1px solid #F0F1F3', alignItems: 'center', background: '#fff' }}>
+                      <div key={g.name} style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px 90px', gap: 14, padding: '16px 24px', borderBottom: '1px solid #F0F1F3', alignItems: 'center', background: '#fff' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                           <span style={{ width: 9, height: 9, borderRadius: 999, flexShrink: 0, background: g.color, display: 'inline-block' }} />
                           <span style={{ fontSize: 13.5, color: '#374151', fontWeight: 500 }}>{g.name}</span>
@@ -377,6 +386,7 @@ export function VoteDetailClient(props: Props) {
                         <div className="font-mono" style={{ fontSize: 13, color: '#1F8A5B', textAlign: 'right', fontWeight: 600 }}>{g.pour}</div>
                         <div className="font-mono" style={{ fontSize: 13, color: '#C9302A', textAlign: 'right', fontWeight: 600 }}>{g.contre}</div>
                         <div className="font-mono" style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'right' }}>{g.abst}</div>
+                        <div className="font-mono" style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'right' }}>{g.nonVotant}</div>
                       </div>
                     )
                   })}
