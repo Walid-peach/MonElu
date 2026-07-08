@@ -27,9 +27,17 @@ export function LegalPageLayout({ eyebrow, title, children }: LegalPageLayoutPro
   )
 }
 
-export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
+export function LegalSection({
+  id,
+  title,
+  children,
+}: {
+  id?: string
+  title: string
+  children: ReactNode
+}) {
   return (
-    <section>
+    <section id={id} style={id ? { scrollMarginTop: '88px' } : undefined}>
       <h2 style={{ fontWeight: 700, fontSize: '17px', color: '#1B2B50', margin: '0 0 12px' }}>{title}</h2>
       {children}
     </section>
