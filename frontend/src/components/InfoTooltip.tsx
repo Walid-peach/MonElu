@@ -6,11 +6,23 @@ type Props = {
   text: string
   ariaLabel?: string
   href?: string
+  /** Direction the bubble opens relative to the trigger. Use 'bottom' when the trigger
+   *  sits near the top of a container with `overflow: hidden` (e.g. a table header). */
+  placement?: 'top' | 'bottom'
+  /** Horizontal anchor. Use 'right' when the trigger sits at the right edge of its
+   *  container to avoid the bubble overflowing past it. */
+  align?: 'center' | 'right'
 }
 
 const NAVY = '#1B2B50'
 
-export function InfoTooltip({ text, ariaLabel = 'Plus d’informations', href }: Props) {
+export function InfoTooltip({
+  text,
+  ariaLabel = 'Plus d’informations',
+  href,
+  placement = 'top',
+  align = 'center',
+}: Props) {
   const [open, setOpen] = useState(false)
   const tooltipId = useId()
 
@@ -40,7 +52,11 @@ export function InfoTooltip({ text, ariaLabel = 'Plus d’informations', href }:
           role="tooltip"
           id={tooltipId}
           style={{
-            position: 'absolute', bottom: '140%', left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute',
+            ...(placement === 'top' ? { bottom: '140%' } : { top: '140%' }),
+            ...(align === 'center'
+              ? { left: '50%', transform: 'translateX(-50%)' }
+              : { right: 0 }),
             width: 260, padding: '10px 12px', borderRadius: 8, background: NAVY, color: '#fff',
             fontSize: 12.5, lineHeight: 1.5, boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
             zIndex: 10,
@@ -56,9 +72,12 @@ export function InfoTooltip({ text, ariaLabel = 'Plus d’informations', href }:
             </Link>
           )}
           <span style={{
-            position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute',
+            ...(placement === 'top'
+              ? { top: '100%', borderTop: `6px solid ${NAVY}` }
+              : { bottom: '100%', borderBottom: `6px solid ${NAVY}` }),
+            ...(align === 'center' ? { left: '50%', transform: 'translateX(-50%)' } : { right: 8 }),
             width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-            borderTop: `6px solid ${NAVY}`,
           }} />
         </span>
       )}

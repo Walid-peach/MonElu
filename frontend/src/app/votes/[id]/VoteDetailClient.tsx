@@ -364,6 +364,8 @@ export function VoteDetailClient(props: Props) {
                       <InfoTooltip
                         text="Non-votant : présent en séance mais n'a pas pris position. Différent de l'abstention, qui est une position exprimée."
                         href="/a-propos#nonvotant-abstention"
+                        placement="bottom"
+                        align="right"
                       />
                     </span>
                   </div>
