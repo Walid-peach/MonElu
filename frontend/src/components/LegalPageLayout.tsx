@@ -36,6 +36,8 @@ export function LegalSection({
   title: string
   children: ReactNode
 }) {
+  // 88px = Nav.tsx's NAV_HEIGHT_PX (64) + 24px breathing room, so an anchor
+  // jump doesn't land the heading under the sticky nav.
   return (
     <section id={id} style={id ? { scrollMarginTop: '88px' } : undefined}>
       <h2 style={{ fontWeight: 700, fontSize: '17px', color: '#1B2B50', margin: '0 0 12px' }}>{title}</h2>
