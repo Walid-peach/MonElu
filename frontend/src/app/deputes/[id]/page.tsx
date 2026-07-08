@@ -234,7 +234,13 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 {presencePct !== null && (
                   <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                      <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500 }}>Taux de présence aux votes</span>
+                      <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        Taux de présence aux votes
+                        <InfoTooltip
+                          text="Un·e député·e est compté·e présent·e dès qu'une position est enregistrée, y compris non-votant (présent en séance sans prise de position). Le dénominateur ne compte que les scrutins tenus pendant son mandat."
+                          href="/methodologie#presence"
+                        />
+                      </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {avgPresencePct !== null && (
                           <span style={{ fontSize: 13, color: presencePct >= avgPresencePct ? '#1F8A5B' : RED }}>
