@@ -345,7 +345,7 @@ Lint config: `ruff.toml` — line length 100, `T201` (print) allowed in `scripts
 
 ## Data Notes
 
-- **`nonVotant` ≠ `abstention`** — present in chamber but did not vote; excluded from `presence_rate`
+- **`nonVotant` ≠ `abstention`** — present in chamber but did not vote; counts *toward* `presence_rate` (a nonVotant deputy was present) but is excluded from the pour/contre/abstention percentages (see ADR-019 in `docs/decisions.md`)
 - **Yaël Braun-Pivet at 100% presence** — Présidente de l'AN, recorded on every scrutin by the AN data system
 - **`rejeté` outnumbers `adopté`** — the 17th legislature has no stable majority
 - **Party names** — resolved from `Organes.json` GP mandats; 575/577 deputies covered (2 have no active parliamentary group — expected edge case)
