@@ -45,12 +45,12 @@ Never commit to master.
 
 - **Baseline before judging**: the full suite has known local-DB connection errors when Docker is down.
   Run `venv/bin/python -m pytest tests/ -q` before or right after changes and compare - only *new* failures block.
-  `tests/unit/` must stay green: `venv/bin/python -m pytest tests/unit/ -q`.
+  The CI blocking gate is `pytest tests/ -m "not integration"` (plus a separate integration job) - that selection must stay green: `venv/bin/python -m pytest tests/ -m "not integration" -q`.
 - **Lint repo-wide, not just touched files**: CI runs `ruff format --check` over the whole repo, so pre-existing drift in untouched files fails the PR.
   Run `venv/bin/ruff check .` and `venv/bin/ruff format --check .`; if an unrelated file has drifted, format it and include it (mention it in the PR body).
-- **Frontend work**: `cd frontend && npm run lint && npm run build`.
+- **Frontend work**: `cd frontend && npm run lint && npm test && npm run build` (CI runs lint, `tsc --noEmit`, and the Jest suite; `next build` covers the type check).
   A `sitemap.xml` prerender error that reproduces identically on master is known noise - confirm on master before blaming the change.
-- Exercise the change for real (the `verify` skill), not just tests: hit the endpoint, load the page, run the script.
+- Exercise the change for real (via the global `verify` skill when available), not just tests: hit the endpoint, load the page, run the script.
 - Run the `docs-sync` skill if the change touches anything CLAUDE.md, `docs/`, or the README describes.
 
 ### 6. Commit and push - watch for the auto-committer
