@@ -129,7 +129,7 @@ export function LiveAssemblyPulse({
             <p className="mt-2 flex items-center gap-1 text-[10px] font-semibold uppercase opacity-55 md:text-xs">
               {item.label}
               {item.tooltip && (
-                <InfoTooltip text={item.tooltip} href="/a-propos#nombre-deputes" />
+                <InfoTooltip text={item.tooltip} href="/methodologie#deputes-suivis" />
               )}
             </p>
           </div>

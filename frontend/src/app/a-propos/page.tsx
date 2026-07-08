@@ -225,46 +225,6 @@ export default function AProposPage() {
         </div>
       </div>
 
-      {/* ====== METHODOLOGIE ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#F7F4ED' }}>
-        <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '48px' }}>
-            <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Comment lire les chiffres</div>
-            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#1B2B50', margin: 0, letterSpacing: '-0.015em' }}>Méthodologie</h2>
-          </div>
-
-          <div id="methodologie-presence" style={{ scrollMarginTop: '96px', background: '#fff', border: '1px solid #E4E6EA', borderRadius: '12px', padding: '28px 30px', marginBottom: '20px' }}>
-            <div style={{ fontWeight: 700, fontSize: '16px', color: '#1B2B50', marginBottom: '10px' }}>Le taux de présence</div>
-            <p style={{ fontSize: '15px', lineHeight: 1.7, color: '#4B5563', margin: '0 0 12px' }}>
-              Un·e député·e est compté·e présent·e dès qu&apos;une position — <strong>pour</strong>, <strong>contre</strong>, <strong>abstention</strong> ou <strong>non-votant</strong> — est enregistrée sur un scrutin. Un non-votant était en séance mais n&apos;a pas pris position ; c&apos;est un cas documenté d&apos;absence de vote, pas une absence physique, donc il compte comme présent.
-            </p>
-            <p style={{ fontSize: '15px', lineHeight: 1.7, color: '#4B5563', margin: '0 0 12px' }}>
-              Le dénominateur ne compte que les scrutins tenus pendant le mandat du·de la député·e — un·e élu·e arrivé·e en cours de législature n&apos;est pas pénalisé·e pour des votes antérieurs à son entrée en fonction.
-            </p>
-            <p style={{ fontSize: '15px', lineHeight: 1.7, color: '#4B5563', margin: 0 }}>
-              C&apos;est pourquoi la Présidente de l&apos;Assemblée nationale, qui apparaît sur chaque scrutin par fonction, affiche 100&nbsp;% de présence.
-            </p>
-          </div>
-
-          <div id="nonvotant-abstention" style={{ scrollMarginTop: '96px', background: '#fff', border: '1px solid #E4E6EA', borderRadius: '12px', padding: '28px 30px', marginBottom: '20px' }}>
-            <div style={{ fontWeight: 700, fontSize: '16px', color: '#1B2B50', marginBottom: '10px' }}>Non-votant ≠ abstention</div>
-            <p style={{ fontSize: '15px', lineHeight: 1.7, color: '#4B5563', margin: '0 0 12px' }}>
-              Ce sont deux positions distinctes dans les données officielles de l&apos;Assemblée nationale : <strong>abstention</strong> est une position exprimée volontairement — le·la député·e a choisi de ne pencher ni pour ni contre. <strong>Non-votant</strong> signifie qu&apos;aucune position n&apos;a été enregistrée, pour des raisons variées (mandat, empêchement, choix de ne pas participer au vote).
-            </p>
-            <p style={{ fontSize: '15px', lineHeight: 1.7, color: '#4B5563', margin: 0 }}>
-              Les pourcentages pour/contre/abstention affichés sur les fiches de scrutin ne portent que sur les positions exprimées (pour + contre + abstention) — le nombre de non-votants est affiché à part, jamais mélangé dans ce calcul.
-            </p>
-          </div>
-
-          <div id="nombre-deputes" style={{ scrollMarginTop: '96px', background: '#fff', border: '1px solid #E4E6EA', borderRadius: '12px', padding: '28px 30px' }}>
-            <div style={{ fontWeight: 700, fontSize: '16px', color: '#1B2B50', marginBottom: '10px' }}>Pourquoi le nombre de députés varie</div>
-            <p style={{ fontSize: '15px', lineHeight: 1.7, color: '#4B5563', margin: 0 }}>
-              L&apos;Assemblée nationale compte 577 sièges. Le compteur affiché sur la page d&apos;accueil dénombre l&apos;ensemble des député·e·s ayant siégé au moins une fois depuis le début de la XVIIᵉ législature (7 juillet 2024) — y compris celles et ceux remplacé·e·s en cours de mandat (décès, nomination au gouvernement, invalidation). Ce total est donc naturellement supérieur à 577.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* ====== STACK TECHNIQUE ====== */}
       <div style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#111C35' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto' }}>

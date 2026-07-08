@@ -58,6 +58,16 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
+      <LegalSection id="deputes-suivis" title="Pourquoi le nombre de députés varie">
+        <p style={textStyle}>
+          L&apos;Assemblée nationale compte 577 sièges. Le compteur &laquo;&nbsp;députés suivis&nbsp;&raquo;
+          affiché sur MonÉlu dénombre l&apos;ensemble des député·e·s ayant siégé au moins une fois depuis le
+          début de la XVIIᵉ législature (7 juillet 2024) - y compris celles et ceux remplacé·e·s en cours de
+          mandat (décès, nomination au gouvernement, invalidation d&apos;élection). Ce total est donc
+          naturellement supérieur à 577.
+        </p>
+      </LegalSection>
+
       <LegalSection id="alignement" title="Alignement de parti et votes dissidents">
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Pour chaque scrutin, MonÉlu calcule la <strong>position majoritaire</strong> du groupe parlementaire du

@@ -238,7 +238,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                         Taux de présence aux votes
                         <InfoTooltip
                           text="Un·e député·e est compté·e présent·e dès qu'une position est enregistrée, y compris non-votant (présent en séance sans prise de position). Le dénominateur ne compte que les scrutins tenus pendant son mandat."
-                          href="/a-propos#methodologie-presence"
+                          href="/methodologie#presence"
                         />
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
