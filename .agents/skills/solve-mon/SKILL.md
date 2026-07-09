@@ -1,13 +1,27 @@
 ---
 name: solve-mon
-description: Resolves a Linear (MonElu) issue end-to-end - reads the MON issue, branches on its gitBranchName, implements, verifies, opens a PR, updates Linear, watches CI, runs pr-review and applies the fixes. Stops before merge. Use as /solve-mon <MON-id>, e.g. /solve-mon MON-75. Replaces the retired solve-axis skill.
+description: Resolves a Linear (MonElu) issue end-to-end - reads the MON issue, branches on its gitBranchName, implements, verifies, opens a PR, updates Linear, watches CI, runs pr-review and applies the fixes. Stops before merge. Use as /solve-mon <MON-id> (e.g. /solve-mon MON-75) or /solve-mon next to auto-pick the top unblocked non-epic backlog issue (WIP-limited to 3 open PRs). Replaces the retired solve-axis skill.
 ---
 
 Resolve one Linear backlog issue for the MonÉlu project end-to-end, following the cycle proven on the diagnostic axes (PRs #139-#151) and the feature waves (PRs #154-#174).
 Work through the PR review and its fixes, but **never merge** - merging and moving the issue to Done stay the user's call.
 
-ARGUMENTS: one or more MON-ids (e.g. `MON-75` or `MON-66 MON-68`).
+ARGUMENTS: one or more MON-ids (e.g. `MON-75` or `MON-66 MON-68`), or the keyword `next`.
 Multiple ids mean the issues are small and related enough to share one branch and one PR - if they are not, say so and ask which one to start with.
+
+## `next` mode - pick the next backlog issue automatically
+
+When invoked as `/solve-mon next`, select the issue instead of receiving one:
+
+1. **WIP limit first**: count open PRs authored by this workflow (`gh pr list --state open --author @me`).
+   If **3 or more** are open, stop and report the open PRs - the user must merge or close some before new work starts.
+   This prevents unmerged PRs from piling up and conflicting with each other.
+2. **Candidate set**: `list_issues` for team MonElu, status Backlog or Todo, excluding issues labeled `epic` (route those to `/plan-epic`) or `decision` (route those to the `adr-skill`), and excluding issues with incomplete blockers (`blockedBy` pointing at a non-Done issue).
+3. **Ordering**: priority first (Urgent > High > Medium > Low > none), then milestone order (M0 - Hardening before M1 before M2 ...), then oldest `createdAt`.
+4. **Overlap check**: skip a candidate whose files would clearly collide with an already-open PR's diff (e.g. two issues rewriting the same page); take the next one instead and say why.
+5. Announce the pick (id, title, priority, why it won) and proceed with the normal workflow below from step 1.
+
+In `next` mode the skipped-over candidates are not touched - the next invocation re-evaluates from scratch, so board changes between runs are picked up naturally.
 
 Linear writes (`mcp__linear-server__save_issue`, `save_comment`) are allowlisted in `.claude/settings.local.json` - apply Linear updates directly.
 If the Linear MCP is unavailable, say so and output the exact updates for manual application instead.
