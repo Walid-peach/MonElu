@@ -20,7 +20,7 @@ If the Linear MCP is unavailable, still write the report and roadmap update, and
 ### 1. Establish the baseline
 
 - Read the axis section in `notes/dispatch/diagnostic_roadmap.md`: last diag date, headline findings, remediation PRs.
-- Read the axis's previous report (`notes/dispatch/<axis>_diagnostic_<date>.md`; transform and rag share `transform_rag_diagnostic_*.md`) to know what was already found - the new pass must not re-report fixed or known-open findings.
+- Read the axis's previous report (`notes/dispatch/<axis>_diagnostic_<date>.md`; two naming exceptions: transform and rag share `transform_rag_diagnostic_*.md`, and deploy-config is `deployment_config_diagnostic_*.md`) to know what was already found - the new pass must not re-report fixed or known-open findings.
 - List what changed since: `git log --oneline --since=<last diag date> -- <axis paths>`.
   If nothing changed and the previous findings are all resolved, say so, stamp the roadmap with a "re-checked, clean" note, and stop - a diagnostic of unchanged code is noise.
 
@@ -30,12 +30,12 @@ Read the axis's actual code, top to bottom, with fresh eyes - the previous repor
 Per axis, the core surfaces are:
 
 - `ingestion`: `scripts/ingest_*.py`, `run_ingestion_prod.py`, `generate_vote_summaries.py`, `.github/workflows/ingest_prod.yml`
-- `database`: `data/migrations/`, `migrate.py`, `docker-compose*.yml`, index and constraint health
+- `database`: `data/migrations/`, `scripts/migrate.py`, `docker-compose*.yml`, index and constraint health
 - `api`: `api/` (routers, schemas, limiter, main), connection handling, blocking I/O, rate limits
 - `transform`: `transform/models/`, tests, sources freshness, marts vs API expectations
 - `rag`: `rag/` (chunker, embedder, retriever, prompts, chain, sql_router), eval suite honesty
 - `cicd`: `.github/workflows/`, gates that can silently pass, pins, concurrency, notifications
-- `deploy-config`: `railway.json`, `Procfile`, `requirements*.txt` pin coherence, env-var contract vs `.env.example`
+- `deploy-config`: `railway.json`, `requirements*.txt` pin coherence, env-var contract vs `.env.example`
 - `infra`: `archive/infra-aws/` status, Railway/Supabase/Vercel config drift vs docs
 - `frontend`: `frontend/src/`, build health, caching/revalidate coherence, accessibility, CI coverage
 - `tests`: what CI actually runs vs what exists, rot, mock-only tests, missing tiers
@@ -54,7 +54,7 @@ Findings must be new or materially changed since the last report; reference the 
 
 Before filing anything, `list_issues` (team MonElu, all statuses) and check each finding against existing issues by title and content similarity.
 - Already tracked and open: add a comment on the existing issue with the fresh evidence instead of duplicating.
-- Tracked and Done but regressed: file a new issue linking the old one (`relatedTo`).
+- Tracked and Done but regressed: file a new issue linking the old one (`relatedTo`; if the relation fails to apply, reference the old MON-id in the description instead).
 - New: proceed to filing.
 
 ### 5. File the findings as Linear issues

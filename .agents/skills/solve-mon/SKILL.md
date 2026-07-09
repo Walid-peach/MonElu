@@ -13,7 +13,7 @@ Multiple ids mean the issues are small and related enough to share one branch an
 
 When invoked as `/solve-mon next`, select the issue instead of receiving one:
 
-1. **WIP limit first**: count open PRs authored by this workflow (`gh pr list --state open --author @me`).
+1. **WIP limit first**: count open PRs (`gh pr list --state open --author @me` - this counts all of the user's open PRs, which is the intended conservative behavior).
    If **3 or more** are open, stop and report the open PRs - the user must merge or close some before new work starts.
    This prevents unmerged PRs from piling up and conflicting with each other.
 2. **Candidate set**: `list_issues` for team MonElu, status Backlog or Todo, excluding issues labeled `epic` (route those to `/plan-epic`) or `decision` (route those to the `adr-skill`), and excluding issues with incomplete blockers (`blockedBy` pointing at a non-Done issue).
