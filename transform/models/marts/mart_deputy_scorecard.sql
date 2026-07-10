@@ -28,6 +28,41 @@ eligible_votes as (
     group by d.deputy_id
 ),
 
+-- Scrutins solennels only (vote_type = 'sps') — scheduled whole-text votes
+-- where chamber-wide attendance is expected, unlike the amendment-by-
+-- amendment scrutins publics ordinaires that dominate eligible_votes.
+-- Motions de censure ('moc') are excluded: only the motion's supporters
+-- vote on those by design, so counting them punishes majority deputies
+-- for a strategic choice, not an absence (see MON-124's empirical writeup
+-- in notes/dispatch/presence_kpi_comparison_2026-07-09.md, finding #3).
+eligible_solennels as (
+    select
+        d.deputy_id,
+        count(v.vote_id) as eligible
+    from deputies d
+    left join votes v
+        on v.vote_type = 'sps'
+        and (d.mandate_started_at is null or v.voted_at >= d.mandate_started_at)
+        and (d.mandate_ended_at is null or v.voted_at <= d.mandate_ended_at)
+    group by d.deputy_id
+),
+
+-- Voting-day denominator: distinct calendar days on which at least one
+-- scrutin was held during the mandate window. Collapses same-day amendment
+-- marathons (a single sitting can hold dozens of scrutins) into one
+-- observation, so this proxies physical attendance far better than
+-- per-scrutin counting.
+eligible_voting_days as (
+    select
+        d.deputy_id,
+        count(distinct date_trunc('day', v.voted_at)) as eligible
+    from deputies d
+    left join votes v
+        on (d.mandate_started_at is null or v.voted_at >= d.mandate_started_at)
+        and (d.mandate_ended_at is null or v.voted_at <= d.mandate_ended_at)
+    group by d.deputy_id
+),
+
 deputy_stats as (
     select
         p.deputy_id,
@@ -40,6 +75,19 @@ deputy_stats as (
             where p.position in ('pour', 'contre', 'abstention')
         )                                                     as votes_expressed
     from positions p
+    group by p.deputy_id
+),
+
+-- Solennel participation and voting-day presence both require the vote's
+-- vote_type / voted_at, so this joins positions to votes rather than
+-- reusing deputy_stats (which aggregates over positions alone).
+deputy_solennel_stats as (
+    select
+        p.deputy_id,
+        count(*) filter (where v.vote_type = 'sps')            as solennels_cast,
+        count(distinct date_trunc('day', v.voted_at))          as voting_days_present
+    from positions p
+    join votes v on v.vote_id = p.vote_id
     group by p.deputy_id
 ),
 
@@ -88,12 +136,33 @@ final as (
             else 0
         end                                                  as abstention_pct,
 
+        -- solennels: eligible=0 (no scrutin solennel yet in the deputy's
+        -- window) reads as 0, matching the presence_rate convention above.
+        coalesce(so.solennels_cast, 0)                       as total_solennels_cast,
+        coalesce(es.eligible, 0)                             as eligible_solennels,
+        case
+            when es.eligible > 0
+            then least(round(coalesce(so.solennels_cast, 0)::numeric / es.eligible, 4), 1)
+            else 0
+        end                                                  as solennel_participation_rate,
+
+        coalesce(so.voting_days_present, 0)                  as total_voting_days_present,
+        coalesce(ed.eligible, 0)                             as eligible_voting_days,
+        case
+            when ed.eligible > 0
+            then least(round(coalesce(so.voting_days_present, 0)::numeric / ed.eligible, 4), 1)
+            else 0
+        end                                                  as voting_days_rate,
+
         -- metadata: reflects last ingest, not query time — makes recency test meaningful
         l.ingested_at                                        as updated_at
 
     from deputies d
     left join deputy_stats s on d.deputy_id = s.deputy_id
     left join eligible_votes e on d.deputy_id = e.deputy_id
+    left join eligible_solennels es on d.deputy_id = es.deputy_id
+    left join eligible_voting_days ed on d.deputy_id = ed.deputy_id
+    left join deputy_solennel_stats so on d.deputy_id = so.deputy_id
     cross join last_ingested l
 )
 

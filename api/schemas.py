@@ -59,6 +59,22 @@ class DeputyScorecard(_Base):
     abstentions: int
     votes_for_pct: float = Field(description="votes_for / present_votes, 0–1")
     abstention_pct: float = Field(description="abstentions / present_votes, 0–1")
+    eligible_solennels: int = Field(
+        description="Scrutins solennels held during the deputy's mandate window"
+    )
+    solennels_cast: int = Field(description="Of those, how many the deputy voted on")
+    solennel_participation_rate: float = Field(
+        description="solennels_cast / eligible_solennels, 0–1 (see MON-124)"
+    )
+    eligible_voting_days: int = Field(
+        description="Distinct calendar days with at least one scrutin during the mandate window"
+    )
+    voting_days_present: int = Field(
+        description="Of those, how many days the deputy cast at least one vote"
+    )
+    voting_days_rate: float = Field(
+        description="voting_days_present / eligible_voting_days, 0–1 (see MON-124)"
+    )
 
 
 class DeputyAlignment(_Base):
@@ -96,6 +112,14 @@ class DeputyStats(_Base):
     avg_presence_rate: Optional[float] = Field(
         None,
         description="Average presence_rate across all deputies, 0–1; null when the mart is empty",
+    )
+    avg_solennel_participation_rate: Optional[float] = Field(
+        None,
+        description="Average solennel_participation_rate across all deputies, 0–1 (MON-124)",
+    )
+    avg_voting_days_rate: Optional[float] = Field(
+        None,
+        description="Average voting_days_rate across all deputies, 0–1 (MON-124)",
     )
 
 

@@ -18,7 +18,13 @@ SELECT
     total_contre                              AS votes_against,
     total_abstention                          AS abstentions,
     votes_for_pct,
-    abstention_pct
+    abstention_pct,
+    eligible_solennels,
+    total_solennels_cast                      AS solennels_cast,
+    solennel_participation_rate,
+    eligible_voting_days,
+    total_voting_days_present                 AS voting_days_present,
+    voting_days_rate
 FROM analytics_marts.mart_deputy_scorecard
 WHERE deputy_id = %s
 """
@@ -39,6 +45,9 @@ def test_scorecard_row_returned(db_conn):
     assert float(row["presence_rate"]) == 1.0
     assert row["votes_for"] == 25
     assert row["votes_against"] == 0
+    assert row["eligible_solennels"] == 0  # seed row has no solennel data
+    assert float(row["solennel_participation_rate"]) == 0.0
+    assert float(row["voting_days_rate"]) == 0.0
 
 
 @pytest.mark.integration

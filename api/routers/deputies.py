@@ -85,14 +85,24 @@ def get_deputy_stats(request: Request):
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT AVG(presence_rate) AS avg_presence_rate "
+                    "SELECT AVG(presence_rate) AS avg_presence_rate, "
+                    "AVG(solennel_participation_rate) AS avg_solennel_participation_rate, "
+                    "AVG(voting_days_rate) AS avg_voting_days_rate "
                     "FROM analytics_marts.mart_deputy_scorecard"
                 )
                 row = cur.fetchone()
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
-    avg = row["avg_presence_rate"]
-    return DeputyStats(avg_presence_rate=float(avg) if avg is not None else None)
+
+    def _avg(key: str) -> Optional[float]:
+        value = row[key]
+        return float(value) if value is not None else None
+
+    return DeputyStats(
+        avg_presence_rate=_avg("avg_presence_rate"),
+        avg_solennel_participation_rate=_avg("avg_solennel_participation_rate"),
+        avg_voting_days_rate=_avg("avg_voting_days_rate"),
+    )
 
 
 @router.get("/{deputy_id}", response_model=DeputyDetail)
@@ -175,7 +185,13 @@ def get_scorecard(request: Request, deputy_id: str):
                         total_contre                              AS votes_against,
                         total_abstention                          AS abstentions,
                         votes_for_pct,
-                        abstention_pct
+                        abstention_pct,
+                        eligible_solennels,
+                        total_solennels_cast                      AS solennels_cast,
+                        solennel_participation_rate,
+                        eligible_voting_days,
+                        total_voting_days_present                 AS voting_days_present,
+                        voting_days_rate
                     FROM analytics_marts.mart_deputy_scorecard
                     WHERE deputy_id = %s
                     """,

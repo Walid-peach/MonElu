@@ -51,6 +51,19 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
   const presencePct    = scorecard ? Math.round((scorecard.presence_rate ?? 0) * 100) : null
   const avgPresencePct = deputyStats ? Math.round((deputyStats.avg_presence_rate ?? 0) * 100) : null
+
+  // MON-124: the all-scrutins presence_rate above is dominated by amendment
+  // scrutins where only ~15% of deputies vote, which reads as absenteeism
+  // even for deputies with strong attendance. These two metrics have
+  // denominators where absence is actually meaningful — see
+  // notes/dispatch/presence_kpi_comparison_2026-07-09.md.
+  const solennelPct    = scorecard ? Math.round((scorecard.solennel_participation_rate ?? 0) * 100) : null
+  const avgSolennelPct = deputyStats?.avg_solennel_participation_rate != null
+    ? Math.round(deputyStats.avg_solennel_participation_rate * 100) : null
+  const votingDaysPct    = scorecard ? Math.round((scorecard.voting_days_rate ?? 0) * 100) : null
+  const avgVotingDaysPct = deputyStats?.avg_voting_days_rate != null
+    ? Math.round(deputyStats.avg_voting_days_rate * 100) : null
+
   const denom          = scorecard ? (scorecard.present_votes || 1) : 1
   const pourPct        = scorecard ? Math.round(scorecard.votes_for     / denom * 100) : 0
   const contrePct      = scorecard ? Math.round(scorecard.votes_against / denom * 100) : 0
@@ -230,7 +243,89 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   ))}
                 </div>
 
-                {/* Presence bar */}
+                {/* Participation aux scrutins solennels (MON-124) */}
+                {solennelPct !== null && (
+                  <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        Participation aux scrutins solennels
+                        <InfoTooltip
+                          text="Les scrutins solennels sont des votes programmés sur l'ensemble d'un texte, où la présence de tous les groupes est attendue — contrairement aux scrutins d'amendements, votés en petit comité. C'est la mesure la plus proche de « présence aux votes qui comptent »."
+                          href="/methodologie#presence"
+                        />
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {avgSolennelPct !== null && (
+                          <span style={{ fontSize: 13, color: solennelPct >= avgSolennelPct ? '#1F8A5B' : RED }}>
+                            {solennelPct >= avgSolennelPct ? '↑' : '↓'} moy. {avgSolennelPct}%
+                          </span>
+                        )}
+                        <span className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: NAVY }}>
+                          {solennelPct}%
+                          <span style={{ fontWeight: 400, fontSize: 13, color: '#9CA3AF', marginLeft: 6 }}>
+                            ({scorecard?.solennels_cast}/{scorecard?.eligible_solennels})
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${solennelPct}%`, transition: 'width 0.4s' }} />
+                    </div>
+                    {avgSolennelPct !== null && (
+                      <div style={{ position: 'relative', height: 0 }}>
+                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'rgba(0,0,0,0.25)', left: `${avgSolennelPct}%` }} aria-hidden="true" />
+                      </div>
+                    )}
+                    {avgSolennelPct !== null && (
+                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                        Trait vertical = moyenne nationale ({avgSolennelPct}%)
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Présence par jour de vote (MON-124) */}
+                {votingDaysPct !== null && (
+                  <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        Présence par jour de vote
+                        <InfoTooltip
+                          text="Une journée de séance peut contenir plusieurs dizaines de scrutins sur un même texte. Ce taux compte les journées où le·la député·e a voté au moins une fois, plutôt que chaque scrutin séparément — un meilleur indicateur de présence physique."
+                          href="/methodologie#presence"
+                        />
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {avgVotingDaysPct !== null && (
+                          <span style={{ fontSize: 13, color: votingDaysPct >= avgVotingDaysPct ? '#1F8A5B' : RED }}>
+                            {votingDaysPct >= avgVotingDaysPct ? '↑' : '↓'} moy. {avgVotingDaysPct}%
+                          </span>
+                        )}
+                        <span className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: NAVY }}>
+                          {votingDaysPct}%
+                          <span style={{ fontWeight: 400, fontSize: 13, color: '#9CA3AF', marginLeft: 6 }}>
+                            ({scorecard?.voting_days_present}/{scorecard?.eligible_voting_days} jours)
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${votingDaysPct}%`, transition: 'width 0.4s' }} />
+                    </div>
+                    {avgVotingDaysPct !== null && (
+                      <div style={{ position: 'relative', height: 0 }}>
+                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'rgba(0,0,0,0.25)', left: `${avgVotingDaysPct}%` }} aria-hidden="true" />
+                      </div>
+                    )}
+                    {avgVotingDaysPct !== null && (
+                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                        Trait vertical = moyenne nationale ({avgVotingDaysPct}%)
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Presence bar (all scrutins — see MON-124 for the copy/demotion follow-up) */}
                 {presencePct !== null && (
                   <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
