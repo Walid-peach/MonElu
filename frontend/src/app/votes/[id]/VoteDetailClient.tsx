@@ -46,6 +46,7 @@ interface RelatedVote {
 interface Props {
   voteId: string
   voteTitle: string
+  voteType: string | null
   result: string
   votedAt: string
   summary: string | null
@@ -77,7 +78,7 @@ function shortDate(dateStr: string): string {
 
 export function VoteDetailClient(props: Props) {
   const {
-    voteId, voteTitle, result, votedAt, summary, theme,
+    voteId, voteTitle, voteType, result, votedAt, summary, theme,
     votesFor, votesAgainst, abstentions, totalVoters,
     pourPct, contrePct, abstPct,
     groups, dissidents, related, apiUrl, deputyLookup,
@@ -194,6 +195,11 @@ export function VoteDetailClient(props: Props) {
                 <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 999, background: adopted ? '#EAF5EF' : '#FBE9E7', color: adopted ? '#1F8A5B' : '#C9302A' }}>
                   {adopted ? 'Adopté' : 'Rejeté'}
                 </span>
+                {voteType === 'sps' && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 999, background: '#EEF0F7', color: '#1B2B50' }}>
+                    Scrutin solennel
+                  </span>
+                )}
                 {theme && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 999, background: '#E8EFFE', color: '#2A5DB0' }}>
                     {theme}

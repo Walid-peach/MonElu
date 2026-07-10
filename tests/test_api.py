@@ -33,6 +33,7 @@ _VOTE_SUMMARY = {
     "vote_id": "VTANR5L17V1",
     "voted_at": "2024-07-16T15:00:00",
     "vote_title": "Vote sur le projet de loi de finances",
+    "vote_type": "spo",
     "result": "adopté",
     "votes_for": 289,
     "votes_against": 250,
@@ -42,7 +43,6 @@ _VOTE_SUMMARY = {
 
 _VOTE_DETAIL = {
     **_VOTE_SUMMARY,
-    "vote_type": None,
     "dossier_id": None,
     "ingested_at": None,
 }
@@ -284,6 +284,7 @@ def test_list_votes(client, mock_cursor):
     assert "total" in data
     assert "items" in data
     assert len(data["items"]) == 1
+    assert data["items"][0]["vote_type"] == "spo"
     # Partial page (1 row < default limit) → no further pages.
     assert data["next_cursor"] is None
 

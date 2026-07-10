@@ -156,6 +156,9 @@ class VoteSummary(_Base):
     vote_id: str
     voted_at: Optional[datetime] = None
     vote_title: str
+    vote_type: Optional[str] = Field(
+        None, description="'spo' (ordinaire), 'sps' (solennel), or 'moc' (motion de censure)"
+    )
     result: Optional[str] = None
     votes_for: Optional[int] = None
     votes_against: Optional[int] = None
@@ -178,7 +181,6 @@ class VotePosition(_Base):
 class VoteDetail(VoteSummary):
     """Full vote — used in GET /votes/{vote_id}."""
 
-    vote_type: Optional[str] = None
     dossier_id: Optional[str] = None
     ingested_at: Optional[datetime] = None
     positions: list[VotePosition] = []

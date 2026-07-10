@@ -73,7 +73,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
   const stats = scorecard ? [
     { value: scorecard.total_votes.toLocaleString('fr-FR'),    label: 'scrutins votés' },
-    { value: `${presencePct ?? '—'}%`,                        label: 'présence aux votes' },
+    { value: `${presencePct ?? '—'}%`,                        label: 'participation (tous scrutins)' },
     { value: scorecard.votes_for.toLocaleString('fr-FR'),      label: 'votes Pour' },
     { value: scorecard.votes_against.toLocaleString('fr-FR'),  label: 'votes Contre' },
     { value: scorecard.abstentions.toLocaleString('fr-FR'),    label: 'abstentions' },
@@ -325,14 +325,17 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   </div>
                 )}
 
-                {/* Presence bar (all scrutins — see MON-124 for the copy/demotion follow-up) */}
+                {/* Participation rate — all scrutins. Demoted below the two metrics above
+                    (MON-124): its denominator includes amendment scrutins that only ~15%
+                    of deputies attend, so it reads as absenteeism on its own. Kept as
+                    detail context, no longer the headline. */}
                 {presencePct !== null && (
                   <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                       <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        Taux de présence aux votes
+                        Participation aux scrutins publics (tous types)
                         <InfoTooltip
-                          text="Un·e député·e est compté·e présent·e dès qu'une position est enregistrée, y compris non-votant (présent en séance sans prise de position). Le dénominateur ne compte que les scrutins tenus pendant son mandat."
+                          text="Un·e député·e est compté·e comme ayant participé dès qu'une position est enregistrée, y compris non-votant (présent en séance sans prise de position). Le dénominateur inclut tous les scrutins, y compris les amendements auxquels seule une minorité de députés participe généralement — voir les deux mesures ci-dessus pour une lecture plus fidèle de l'assiduité."
                           href="/methodologie#presence"
                         />
                       </span>

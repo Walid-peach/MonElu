@@ -222,7 +222,7 @@ export default function MonDeputePage() {
           <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             {presencePct !== null && (
               <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '22px 24px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 10 }}>Taux de présence</div>
+                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 10 }}>Participation aux scrutins publics</div>
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: 28, color: NAVY }}>{presencePct}%</div>
                 <div style={{ position: 'relative', height: 8, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden', marginTop: 12 }}>
                   <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${presencePct}%` }} />

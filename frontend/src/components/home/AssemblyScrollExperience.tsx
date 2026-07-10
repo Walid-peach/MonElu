@@ -794,7 +794,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
               <div style={{ width: 1, background: 'rgba(120,150,210,0.2)' }} />
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontFamily: 'monospace', fontWeight: 500, fontSize: 'clamp(17px,2vw,22px)', color: '#fff' }}>{deputyInfo ? `${deputyInfo.presenceRate}%` : `${stats.deputies}`}</div>
-                <div style={{ fontSize: 12, color: 'rgba(180,196,228,0.66)', marginTop: 3, letterSpacing: '0.04em' }}>{deputyInfo ? 'présence' : 'sièges'}</div>
+                <div style={{ fontSize: 12, color: 'rgba(180,196,228,0.66)', marginTop: 3, letterSpacing: '0.04em' }}>{deputyInfo ? 'participation' : 'sièges'}</div>
               </div>
               <div style={{ width: 1, background: 'rgba(120,150,210,0.2)' }} />
               <div style={{ textAlign: 'center' }}>

@@ -129,6 +129,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
       <VoteDetailClient
         voteId={vote.vote_id}
         voteTitle={vote.vote_title}
+        voteType={vote.vote_type ?? null}
         result={vote.result}
         votedAt={vote.voted_at}
         summary={vote.summary_plain ?? null}

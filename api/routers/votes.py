@@ -107,7 +107,7 @@ def list_votes(
 
                 cur.execute(
                     sql.SQL("""
-                        SELECT vote_id, voted_at, vote_title, result,
+                        SELECT vote_id, voted_at, vote_title, vote_type, result,
                                votes_for, votes_against, abstentions, total_voters,
                                summary_plain, theme
                         FROM analytics_marts.mart_vote_summary {}
@@ -141,7 +141,7 @@ def latest_votes(request: Request):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT vote_id, voted_at, vote_title, result,
+                    SELECT vote_id, voted_at, vote_title, vote_type, result,
                            votes_for, votes_against, abstentions, total_voters,
                            summary_plain, theme
                     FROM analytics_marts.mart_vote_summary

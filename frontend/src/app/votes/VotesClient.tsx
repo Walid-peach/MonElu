@@ -233,6 +233,11 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                         <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', padding: '3px 10px', borderRadius: 999, background: adopted ? '#EAF5EF' : '#FBE9E7', color: adopted ? '#1F8A5B' : '#C9302A' }}>
                           {adopted ? 'Adopté' : 'Rejeté'}
                         </span>
+                        {vote.vote_type === 'sps' && (
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 999, background: '#EEF0F7', color: '#1B2B50' }}>
+                            Solennel
+                          </span>
+                        )}
                         <span className="font-mono" style={{ fontSize: 11.5, color: '#6B7280' }}>
                           {vote.votes_for} pour · {vote.votes_against} contre
                         </span>

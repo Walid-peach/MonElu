@@ -443,6 +443,60 @@ FastAPI app — a different module set than what's archived here.
 
 ---
 
+## ADR-022 — Three participation metrics, not one misleading "presence" number (supersedes ADR-019's framing)
+**Date:** 2026-07-10
+**Status:** Final
+
+**Decision:** ADR-019's formula for `mart_deputy_scorecard.presence_rate` is
+still correct and unchanged — every recorded position counts (including
+`nonVotant`), denominator is the deputy's mandate window, capped at 1. What
+changes is that MonÉlu now computes and displays **three** participation
+metrics side by side instead of headlining that one number as "présence":
+
+1. **`presence_rate`** (unchanged from ADR-019) — every scrutin in the
+   mandate window. Renamed in UI/RAG copy from "taux de présence" to
+   "participation aux scrutins publics (tous types)"; demoted to a detail
+   stat, no longer the headline.
+2. **`solennel_participation_rate`** (new) — restricted to `vote_type = 'sps'`
+   (scrutins solennels), explicitly excluding `'moc'` (motions de censure,
+   where only the motion's supporters vote by design — including them would
+   punish majority deputies for a strategic abstention, not measure absence).
+3. **`voting_days_rate`** (new) — distinct calendar days with at least one
+   recorded position, over distinct voting days in the mandate window.
+   Collapses same-day amendment marathons into one observation.
+
+All three live in `mart_deputy_scorecard` (see
+`transform/models/marts/mart_deputy_scorecard.sql`), follow the same
+`least(round(...,4),1)` cap and 0-when-no-eligible-scrutins convention, and
+are covered by `not_null` + `accepted_range 0-1` dbt tests.
+
+**Reason:** empirical analysis on 5 example deputies
+(`notes/dispatch/presence_kpi_comparison_2026-07-09.md`) showed
+`presence_rate` alone is misleading, not wrong: a former Prime Minister and
+an ordinary backbencher both scored ~15%, because most scrutins are
+amendment votes only ~15% of deputies attend structurally. Marine Le Pen
+scored lowest of the five on `presence_rate` (11.8%) but highest on
+`solennel_participation_rate` (97.1%) — the all-scrutins number was
+presenting a big-votes-only voting pattern as the least "present" deputy of
+the five. A single renamed number would still mislead; three metrics with
+different denominators tell the real story.
+
+**Rule (supersedes ADR-019's rule):** any new consumer of participation data
+reads one of the three `mart_deputy_scorecard` rate columns above, or copies
+the exact matching formula. Do not invent a fourth definition. Do not
+display `presence_rate` as a citizen-facing headline without
+`solennel_participation_rate` or `voting_days_rate` alongside it — shown
+alone, it reads as absenteeism.
+
+**Where "présence" wording still appears intentionally:** the SQL router's
+regex intent patterns (`rag/chain/sql_router.py`) still match user questions
+containing "présence" — that is ordinary French for what citizens ask about,
+and matching their phrasing is correct. Only *our own generated output*
+(chunker prose, formatter response text, UI labels) was renamed to
+"participation aux scrutins publics".
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code

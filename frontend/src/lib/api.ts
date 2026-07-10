@@ -35,6 +35,7 @@ export type Scorecard = {
 export type Vote = {
   vote_id: string
   vote_title: string
+  vote_type?: string | null // 'spo' (ordinaire), 'sps' (solennel), 'moc' (motion de censure)
   result: string
   voted_at: string
   votes_for: number

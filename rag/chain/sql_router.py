@@ -451,7 +451,7 @@ def _fmt_vote_line(r: dict) -> str:
 
 FORMATTERS = {
     "deputy_top_presence": lambda rows: (
-        "Députés en exercice avec le meilleur taux de présence "
+        "Députés en exercice avec la meilleure participation aux scrutins publics "
         f"(au moins {_MIN_WINDOW_VOTES} votes sur leur mandat) :\n"
         + "\n".join(
             f"- {r['full_name']} ({r['party'] or 'groupe non renseigné'}) : {r['presence_pct']}%"
@@ -459,7 +459,7 @@ FORMATTERS = {
         )
     ),
     "deputy_bottom_presence": lambda rows: (
-        "Députés en exercice avec le plus faible taux de présence "
+        "Députés en exercice avec la plus faible participation aux scrutins publics "
         f"(au moins {_MIN_WINDOW_VOTES} votes sur leur mandat) :\n"
         + "\n".join(
             f"- {r['full_name']} ({r['party'] or 'groupe non renseigné'}) : {r['presence_pct']}%"
@@ -579,7 +579,7 @@ FORMATTERS = {
         )
     ),
     "party_presence_rate": lambda rows: (
-        "Taux de présence moyen par groupe parlementaire :\n"
+        "Participation moyenne aux scrutins publics par groupe parlementaire :\n"
         + "\n".join(
             f"- {r['party']} : {r['avg_presence_pct']}% ({r['deputies']} députés)" for r in rows
         )
