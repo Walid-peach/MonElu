@@ -24,6 +24,12 @@ export type Scorecard = {
   abstentions: number
   votes_for_pct: number
   abstention_pct: number
+  eligible_solennels: number
+  solennels_cast: number
+  solennel_participation_rate: number
+  eligible_voting_days: number
+  voting_days_present: number
+  voting_days_rate: number
 }
 
 export type Vote = {
@@ -50,6 +56,8 @@ export type VoteDetail = Vote & {
 
 export type DeputyStats = {
   avg_presence_rate: number
+  avg_solennel_participation_rate: number | null
+  avg_voting_days_rate: number | null
 }
 
 export type Alignment = {

@@ -47,16 +47,22 @@ _MART_DDL = """
 CREATE SCHEMA IF NOT EXISTS analytics_marts;
 
 CREATE TABLE IF NOT EXISTS analytics_marts.mart_deputy_scorecard (
-    deputy_id        TEXT PRIMARY KEY,
-    full_name        TEXT,
-    total_votes_cast INTEGER,
-    total_nonvotant  INTEGER,
-    presence_rate    NUMERIC,
-    total_pour       INTEGER,
-    total_contre     INTEGER,
-    total_abstention INTEGER,
-    votes_for_pct    NUMERIC,
-    abstention_pct   NUMERIC
+    deputy_id                    TEXT PRIMARY KEY,
+    full_name                    TEXT,
+    total_votes_cast             INTEGER,
+    total_nonvotant              INTEGER,
+    presence_rate                NUMERIC,
+    total_pour                   INTEGER,
+    total_contre                 INTEGER,
+    total_abstention             INTEGER,
+    votes_for_pct                NUMERIC,
+    abstention_pct               NUMERIC,
+    eligible_solennels           INTEGER DEFAULT 0,
+    total_solennels_cast         INTEGER DEFAULT 0,
+    solennel_participation_rate  NUMERIC DEFAULT 0,
+    eligible_voting_days         INTEGER DEFAULT 0,
+    total_voting_days_present    INTEGER DEFAULT 0,
+    voting_days_rate             NUMERIC DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS analytics_marts.mart_vote_summary (

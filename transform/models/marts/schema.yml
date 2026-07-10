@@ -8,7 +8,12 @@ models:
       recorded position counts as present (including nonVotant), and the
       denominator is the number of votes held during the deputy's mandate
       window. votes_for_pct / abstention_pct divide by expressed positions
-      (pour + contre + abstention) only.
+      (pour + contre + abstention) only. solennel_participation_rate and
+      voting_days_rate are complementary participation metrics (MON-124):
+      the former restricts to scrutins solennels only (scheduled whole-text
+      votes where absence is meaningful), the latter to distinct voting
+      days rather than per-scrutin counts, so a single sitting with dozens
+      of amendment scrutins doesn't inflate or deflate the denominator.
     tests:
       - dbt_utils.recency:
           datepart: day
@@ -37,6 +42,18 @@ models:
               max_value: 1
       - name: total_votes_cast
         tests: [not_null]
+      - name: solennel_participation_rate
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+      - name: voting_days_rate
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
 
   - name: mart_vote_summary
     description: "One row per vote — result, participation, pct breakdown"

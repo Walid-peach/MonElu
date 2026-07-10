@@ -140,12 +140,20 @@ def test_get_scorecard(client, mock_cursor):
         "abstentions": 10,
         "votes_for_pct": 0.667,
         "abstention_pct": 0.111,
+        "eligible_solennels": 35,
+        "solennels_cast": 32,
+        "solennel_participation_rate": 0.914,
+        "eligible_voting_days": 126,
+        "voting_days_present": 77,
+        "voting_days_rate": 0.611,
     }
     resp = client.get("/deputies/PA1/scorecard")
     assert resp.status_code == 200
     data = resp.json()
     assert 0.0 <= data["presence_rate"] <= 1.0
     assert data["total_votes"] == 100
+    assert data["solennel_participation_rate"] == 0.914
+    assert data["voting_days_rate"] == 0.611
 
 
 def test_get_scorecard_not_found(client, mock_cursor):
@@ -372,11 +380,19 @@ def test_scorecard_zero_votes(client, mock_cursor):
         "abstentions": 0,
         "votes_for_pct": 0.0,
         "abstention_pct": 0.0,
+        "eligible_solennels": 0,
+        "solennels_cast": 0,
+        "solennel_participation_rate": 0.0,
+        "eligible_voting_days": 0,
+        "voting_days_present": 0,
+        "voting_days_rate": 0.0,
     }
     resp = client.get("/deputies/PA99/scorecard")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_votes"] == 0
+    assert data["solennel_participation_rate"] == 0.0
+    assert data["voting_days_rate"] == 0.0
     assert data["presence_rate"] == 0.0
     assert data["votes_for_pct"] == 0.0
     assert data["abstention_pct"] == 0.0
