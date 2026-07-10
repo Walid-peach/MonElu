@@ -71,9 +71,14 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
   const hex = partyHex(deputy.party)
 
+  // MON-124: the hero strip headlines solennel participation, not the
+  // all-scrutins presence_rate — that number reads as absenteeism on its
+  // own (see notes/dispatch/presence_kpi_comparison_2026-07-09.md and
+  // ADR-022). The all-scrutins rate is still shown, demoted, further down
+  // in the "Bilan de mandat" card.
   const stats = scorecard ? [
     { value: scorecard.total_votes.toLocaleString('fr-FR'),    label: 'scrutins votés' },
-    { value: `${presencePct ?? '—'}%`,                        label: 'participation (tous scrutins)' },
+    { value: `${solennelPct ?? '—'}%`,                        label: 'scrutins solennels' },
     { value: scorecard.votes_for.toLocaleString('fr-FR'),      label: 'votes Pour' },
     { value: scorecard.votes_against.toLocaleString('fr-FR'),  label: 'votes Contre' },
     { value: scorecard.abstentions.toLocaleString('fr-FR'),    label: 'abstentions' },
