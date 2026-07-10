@@ -81,8 +81,20 @@ def row_count(conn, table: str) -> int:
         return cur.fetchone()[0]
 
 
-def run_step(label: str, script: str, extra_args: list[str] | None = None) -> float:
-    """Run a script file as a subprocess, streaming its output. Returns elapsed seconds."""
+def run_step(
+    label: str, script: str, extra_args: list[str] | None = None, critical: bool = True
+) -> float | None:
+    """Run a script file as a subprocess, streaming its output. Returns elapsed seconds.
+
+    Non-critical steps (party/department enrichment, vote summaries) must not take
+    down the whole pipeline: deputies/votes/positions have already committed by the
+    time these run, and a crash here previously aborted main() before the `new_votes`
+    GITHUB_OUTPUT was written, which silently skipped the downstream RAG rebuild and
+    dbt run/test/snapshot workflow steps too (2026-07 incident: an unrelated organeRef
+    parsing bug in the party step blocked mart refreshes for days even though votes
+    and positions had ingested fine). A non-critical failure logs a `::error::`
+    annotation, visible in the run summary, and returns None instead of raising.
+    """
     script_path = os.path.join(PROJECT_ROOT, "scripts", script)
     cmd = [sys.executable, script_path] + (extra_args or [])
     log.info("━━━ Starting: %s ━━━", label)
@@ -91,7 +103,12 @@ def run_step(label: str, script: str, extra_args: list[str] | None = None) -> fl
     result = subprocess.run(cmd, cwd=PROJECT_ROOT, env=env)
     elapsed = time.perf_counter() - t0
     if result.returncode != 0:
-        raise RuntimeError(f"{label} failed with exit code {result.returncode}")
+        message = f"{label} failed with exit code {result.returncode}"
+        if critical:
+            raise RuntimeError(message)
+        print(f"::error::{message} (non-critical - pipeline continues)")
+        log.error("━━━ Failed (non-critical): %s ━━━", label)
+        return None
     log.info("━━━ Done: %s (%.1fs) ━━━", label, elapsed)
     return elapsed
 
@@ -122,6 +139,11 @@ def main() -> None:
     log.info("Advisory lock acquired (key=%d).", _INGESTION_LOCK_KEY)
     total_start = time.perf_counter()
 
+    soft_failures: list[str] = []
+
+    def _fmt(elapsed: float | None) -> str:
+        return f"{elapsed:5.1f}s" if elapsed is not None else " skip "
+
     try:
         votes_before = row_count(lock_conn, "votes")
 
@@ -138,8 +160,13 @@ def main() -> None:
                 ["--since", args.since, "--zip-path", scrutins_zip],
             )
             t_party = run_step(
-                "Fix party + department names", "update_party.py", ["--zip-path", deputies_zip]
+                "Fix party + department names",
+                "update_party.py",
+                ["--zip-path", deputies_zip],
+                critical=False,
             )
+            if t_party is None:
+                soft_failures.append("Fix party + department names")
 
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
@@ -148,8 +175,8 @@ def main() -> None:
         new_votes = n_votes - votes_before
         log.info("New votes ingested this run: %d", new_votes)
 
-        # Write the output as soon as it is known — a summaries failure below must
-        # not lose the new_votes signal for downstream workflow steps.
+        # Write new_votes as soon as it is known — a summaries failure below must
+        # not lose this signal for downstream workflow steps.
         github_output = os.getenv("GITHUB_OUTPUT")
         if github_output:
             with open(github_output, "a") as f:
@@ -157,12 +184,22 @@ def main() -> None:
 
         # Always run summaries: the `summary_plain IS NULL` query no-ops when there is
         # nothing to do, and this retries summaries that failed on a previous run
-        # instead of waiting for the next new vote.
+        # instead of waiting for the next new vote. Non-critical: a Groq/OpenAI outage
+        # here must not block the dbt run/RAG rebuild that follows this script.
         t_summaries = run_step(
             "Vote summaries",
             "generate_vote_summaries.py",
             ["--since", args.since],
+            critical=False,
         )
+        if t_summaries is None:
+            soft_failures.append("Vote summaries")
+
+        # soft_failures is only fully known once every non-critical step has run,
+        # so it is written last, separately from new_votes above.
+        if github_output:
+            with open(github_output, "a") as f:
+                f.write(f"soft_failures={','.join(soft_failures)}\n")
 
         total_elapsed = time.perf_counter() - total_start
 
@@ -173,11 +210,18 @@ def main() -> None:
         log.info("║  Deputies  : %6d   (%5.1fs)      ║", n_deputies, t_deputies)
         log.info("║  Votes     : %6d   (%5.1fs)      ║", n_votes, t_votes)
         log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
-        log.info("║  Party fix :          (%5.1fs)      ║", t_party)
-        log.info("║  Summaries :          (%5.1fs)      ║", t_summaries)
+        log.info("║  Party fix :          (%s)      ║", _fmt(t_party))
+        log.info("║  Summaries :          (%s)      ║", _fmt(t_summaries))
         log.info("╠══════════════════════════════════════╣")
         log.info("║  Total time: %.1fs                   ║", total_elapsed)
         log.info("╚══════════════════════════════════════╝")
+
+        if soft_failures:
+            print(
+                f"::warning::Ingestion completed with non-critical failures: "
+                f"{', '.join(soft_failures)}. Core data (deputies/votes/positions) is fine; "
+                f"these steps should be re-run or fixed."
+            )
     except Exception:
         log.error("Ingestion failed — see above for details.")
         raise
