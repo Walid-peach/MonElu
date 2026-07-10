@@ -276,6 +276,11 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                         <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'rgba(0,0,0,0.25)', left: `${avgSolennelPct}%` }} aria-hidden="true" />
                       </div>
                     )}
+                    {avgSolennelPct !== null && (
+                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                        Trait vertical = moyenne nationale ({avgSolennelPct}%)
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -311,6 +316,11 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       <div style={{ position: 'relative', height: 0 }}>
                         <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'rgba(0,0,0,0.25)', left: `${avgVotingDaysPct}%` }} aria-hidden="true" />
                       </div>
+                    )}
+                    {avgVotingDaysPct !== null && (
+                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                        Trait vertical = moyenne nationale ({avgVotingDaysPct}%)
+                      </p>
                     )}
                   </div>
                 )}
