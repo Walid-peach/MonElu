@@ -104,8 +104,14 @@ def build_deputy_party_map(zf: zipfile.ZipFile, gp_map: dict[str, str]) -> dict[
         for mandat in mandats_raw:
             type_organe = mandat.get("typeOrgane")
             date_fin = mandat.get("dateFin")
-            organe_ref = mandat.get("organes", {}).get("organeRef")
-            if not organe_ref or organe_ref not in gp_map:
+            organe_refs = mandat.get("organes", {}).get("organeRef")
+            # organeRef collapses to a bare string for a single occurrence but becomes
+            # a list when a mandat carries several (e.g. a MINISTERE mandat referencing
+            # more than one governmental organe) - normalize before the gp_map lookup.
+            if isinstance(organe_refs, str):
+                organe_refs = [organe_refs]
+            organe_ref = next((ref for ref in organe_refs or [] if ref in gp_map), None)
+            if not organe_ref:
                 continue
             if type_organe == "GP":
                 if date_fin:
