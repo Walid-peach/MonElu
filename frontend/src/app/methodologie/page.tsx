@@ -27,24 +27,45 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="presence" title="Taux de présence">
+      <LegalSection id="presence" title="Participation et présence : trois mesures, trois usages">
         <p style={{ ...textStyle, marginBottom: '10px' }}>
-          Le taux de présence d&apos;un député compte <strong>toute position enregistrée</strong> lors d&apos;un
-          scrutin : pour, contre, abstention, <strong>et non-votant</strong>. Un député &laquo;&nbsp;non-votant&nbsp;&raquo;
-          était présent dans l&apos;hémicycle sans exprimer de vote - c&apos;est une particularité documentée des
-          données de l&apos;Assemblée, pas une absence.
+          MonÉlu affiche trois mesures complémentaires plutôt qu&apos;un seul &laquo;&nbsp;taux de
+          présence&nbsp;&raquo;, parce qu&apos;aucune donnée de scrutin ne peut à elle seule répondre à &laquo;&nbsp;ce
+          député est-il assidu ?&nbsp;&raquo;. Toutes trois comptent <strong>toute position enregistrée</strong> comme
+          participation : pour, contre, abstention, <strong>et non-votant</strong>. Un député
+          &laquo;&nbsp;non-votant&nbsp;&raquo; était présent dans l&apos;hémicycle sans exprimer de vote - c&apos;est
+          une particularité documentée des données de l&apos;Assemblée, pas une absence.
         </p>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
-          Le dénominateur n&apos;est pas &laquo;&nbsp;tous les scrutins depuis juillet 2024&nbsp;&raquo; mais
-          uniquement les scrutins tenus <strong>pendant le mandat</strong> du député (entre sa date de début et sa
-          date de fin de mandat, le cas échéant). Un député élu en cours de législature n&apos;est donc pas
-          pénalisé pour des votes antérieurs à son entrée en fonction.
+          <strong>Participation aux scrutins solennels</strong> ne compte que les votes programmés sur
+          l&apos;ensemble d&apos;un texte, où la présence de tous les groupes est attendue - c&apos;est la mesure la
+          plus proche de &laquo;&nbsp;présence aux votes qui comptent&nbsp;&raquo;, et la plus comparable à ce que
+          publient d&apos;autres sites de transparence parlementaire.
+        </p>
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          <strong>Présence par jour de vote</strong> compte les journées de séance où le député a voté au moins une
+          fois, plutôt que chaque scrutin séparément. Une seule journée peut contenir plusieurs dizaines de scrutins
+          sur un même texte (amendements successifs) : les compter un par un ferait paraître absent un député qui a
+          suivi toute la séance mais n&apos;a pas voté sur chaque amendement.
+        </p>
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          <strong>Participation aux scrutins publics (tous types)</strong> compte l&apos;ensemble des scrutins,
+          amendements compris. C&apos;est la mesure la plus complète mais aussi la plus trompeuse prise seule : la
+          plupart des scrutins sont des votes sur amendements auxquels seule une minorité de députés (souvent moins de
+          20&nbsp;%) participe généralement, si bien qu&apos;un taux de 15&nbsp;% peut correspondre à une assiduité
+          tout à fait normale. Nous l&apos;affichons en complément, jamais seule.
+        </p>
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          Pour les trois mesures, le dénominateur n&apos;est pas &laquo;&nbsp;tous les scrutins depuis juillet
+          2024&nbsp;&raquo; mais uniquement les scrutins tenus <strong>pendant le mandat</strong> du député (entre sa
+          date de début et sa date de fin de mandat, le cas échéant). Un député élu en cours de législature
+          n&apos;est donc pas pénalisé pour des votes antérieurs à son entrée en fonction.
         </p>
         <p style={textStyle}>
-          Ce calcul unique est la <strong>seule</strong> définition de la présence utilisée sur MonÉlu - l&apos;API,
-          l&apos;assistant de recherche et les fiches députés s&apos;y conforment tous. C&apos;est pourquoi Yaël
-          Braun-Pivet, Présidente de l&apos;Assemblée nationale, affiche 100&nbsp;% de présence : elle est recensée
-          sur chaque scrutin par construction des données de l&apos;AN.
+          Ces calculs sont la <strong>seule</strong> définition de la participation utilisée sur MonÉlu -
+          l&apos;API, l&apos;assistant de recherche et les fiches députés s&apos;y conforment tous. C&apos;est
+          pourquoi Yaël Braun-Pivet, Présidente de l&apos;Assemblée nationale, affiche 100&nbsp;% sur les trois
+          mesures : elle est recensée sur chaque scrutin par construction des données de l&apos;AN.
         </p>
         <p style={sourceLineStyle}>
           Source :{' '}
@@ -53,7 +74,7 @@ export default function MethodologiePage() {
           </a>{' '}
           ·{' '}
           <a href={`${REPO_BASE}/docs/decisions.md`} target="_blank" rel="noopener noreferrer" style={linkStyle}>
-            ADR-019, décision architecturale
+            ADR-022, décision architecturale
           </a>
         </p>
       </LegalSection>

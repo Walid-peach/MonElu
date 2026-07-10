@@ -192,7 +192,7 @@ def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
             f"{name} est député(e) {prep}{sep}{dept}, membre du parti {party}.\n"
             f"Sur {total} votes enregistrés, il/elle a voté pour {pour} fois, "
             f"contre {contre} fois, abstention {abst} fois.\n"
-            f"Taux de présence : {rate_pct}%."
+            f"Participation aux scrutins publics : {rate_pct}%."
         )
         metadata = {
             "chunk_type": "deputy",
@@ -283,7 +283,7 @@ def chunk_party_summaries() -> list[dict]:
             f"- Pour : {pour:,} fois\n"
             f"- Contre : {contre:,} fois\n"
             f"- Abstention : {abst:,} fois\n"
-            f"Taux de présence moyen du groupe : {avg_p}%."
+            f"Participation moyenne aux scrutins publics du groupe : {avg_p}%."
         )
         metadata = {
             "chunk_type": "party",
@@ -373,7 +373,8 @@ def chunk_global_stats() -> list[dict]:
         sep = "" if prep.endswith("'") else " "
         ybp_block = (
             f"\n{ybp_name} est la Présidente de l'Assemblée Nationale.\n"
-            f"Son taux de présence est de {ybp_rate}% sur {ybp_votes} votes enregistrés.\n"
+            f"Sa participation aux scrutins publics est de {ybp_rate}% "
+            f"sur {ybp_votes} votes enregistrés.\n"
             f"Elle est membre du parti {ybp_party}, députée {prep}{sep}{ybp_dept}."
         )
 

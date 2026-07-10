@@ -136,7 +136,7 @@ def build_chunk(deputy: dict, votes: list[dict]) -> str:
         f"Sur {deputy['total_votes']} votes enregistrés : "
         f"{deputy['pour']} pour, {deputy['contre']} contre, "
         f"{deputy['abstention']} abstentions.",
-        f"Taux de présence : {presence}%.",
+        f"Participation aux scrutins publics : {presence}%.",
         "",
         "Votes récents et votes clés :",
     ]
