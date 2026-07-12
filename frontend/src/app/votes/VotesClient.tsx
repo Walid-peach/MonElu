@@ -90,22 +90,22 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
 
       {/* ── Hero ── */}
       <div style={{ padding: '50px 56px 40px', background: 'linear-gradient(180deg,#fff 0%,#F7F4ED 100%)', borderBottom: '1px solid #ECE7DC' }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+        <div className="xl:grid xl:grid-cols-[1fr_340px] xl:gap-16 xl:items-start" style={{ maxWidth: 1180, margin: '0 auto' }}>
 
-          <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C9302A' }}>
+          <div className="xl:col-start-1 xl:row-start-1" style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C9302A' }}>
             Scrutins publics
           </div>
 
-          <h1 className="font-newsreader text-display" style={{ fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: '16px 0 0', maxWidth: 760 }}>
+          <h1 className="font-newsreader text-display xl:col-start-1 xl:row-start-2" style={{ fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: '16px 0 0', maxWidth: 760 }}>
             Les votes de l&apos;Assemblée nationale, <span style={{ color: '#C9302A' }}>en clair</span>.
           </h1>
 
-          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 540 }}>
+          <p className="xl:col-start-1 xl:row-start-3" style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 540 }}>
             Retrouvez chaque scrutin public de la XVII&#7497; législature — texte voté, résultat, et ventilation par groupe.
           </p>
 
-          {/* Stats strip */}
-          <div style={{ display: 'flex', gap: 0, marginTop: 32, border: '1px solid #ECE7DC', borderRadius: 12, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: 700 }}>
+          {/* Stats strip (below xl) */}
+          <div className="xl:hidden" style={{ display: 'flex', gap: 0, marginTop: 32, border: '1px solid #ECE7DC', borderRadius: 12, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: 700 }}>
             {heroStats.map((hs, i) => (
               <div key={i} style={{ flex: 1, padding: '18px 22px', borderRight: i < heroStats.length - 1 ? '1px solid #ECE7DC' : 'none' }}>
                 <div className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: '#1B2B50', letterSpacing: '-0.01em' }}>{hs.value}</div>
@@ -114,8 +114,18 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
             ))}
           </div>
 
+          {/* Stats column (xl and up) */}
+          <div className="hidden xl:flex xl:flex-col xl:gap-3 xl:col-start-2 xl:row-start-1 xl:row-span-5 xl:self-start">
+            {heroStats.map((hs, i) => (
+              <div key={i} style={{ padding: '18px 22px', border: '1px solid #ECE7DC', borderRadius: 12, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <div className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: '#1B2B50', letterSpacing: '-0.01em' }}>{hs.value}</div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, lineHeight: 1.35 }}>{hs.label}</div>
+              </div>
+            ))}
+          </div>
+
           {/* Search bar */}
-          <div style={{ display: 'flex', gap: 12, marginTop: 28, maxWidth: 720 }}>
+          <div className="xl:col-start-1 xl:row-start-4" style={{ display: 'flex', gap: 12, marginTop: 28, maxWidth: 720 }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #E4E6EA', borderRadius: 10, padding: '0 18px', height: 54, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
               <input
@@ -135,7 +145,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
           </div>
 
           {/* Filter chips */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 18, alignItems: 'center' }}>
+          <div className="xl:col-start-1 xl:row-start-5" style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 18, alignItems: 'center' }}>
             {(['', 'adopté', 'rejeté'] as const).map((r) => {
               const label = r === '' ? 'Tous les scrutins' : r === 'adopté' ? 'Adoptés' : 'Rejetés'
               const active = result === r && theme === ''

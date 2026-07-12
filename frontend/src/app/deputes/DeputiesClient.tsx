@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Deputy } from '@/lib/api'
-import { getInitials, partyHex } from '@/lib/utils'
+import { getInitials, partyHex, partyShort } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { resolvePostalCode } from '@/lib/postal'
 
@@ -74,6 +74,18 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const safePage = Math.min(page, totalPages)
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
+  const groupCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const d of initial.items) {
+      const key = d.party ?? 'Non inscrit'
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([party, count]) => ({ party, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [initial.items])
+  const maxGroupCount = groupCounts[0]?.count ?? 1
+
   function clearSearch() { setSearch(''); setPage(1) }
 
   function getPageNumbers(): (number | '…')[] {
@@ -102,26 +114,55 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
           borderBottom: '1px solid #ECE7DC',
         }}
       >
-        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-          <div style={{
+        <div className="xl:grid xl:grid-cols-[1fr_340px] xl:gap-16 xl:items-start" style={{ maxWidth: 1180, margin: '0 auto' }}>
+          <div className="xl:col-start-1 xl:row-start-1" style={{
             fontWeight: 700, fontSize: 12, letterSpacing: '0.18em',
             textTransform: 'uppercase', color: '#C9302A', marginBottom: 16,
           }}>
             Annuaire des députés
           </div>
-          <h1 className="font-newsreader text-[clamp(32px,4vw,48px)]" style={{
+          <h1 className="font-newsreader text-[clamp(32px,4vw,48px)] xl:col-start-1 xl:row-start-2" style={{
             fontWeight: 600, lineHeight: 1.05,
             letterSpacing: '-0.015em', color: NAVY, margin: 0, maxWidth: 760,
           }}>
             Les {initial.total} députés de l&apos;Assemblée nationale,{' '}
             <span style={{ color: '#C9302A' }}>en clair</span>.
           </h1>
-          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 540 }}>
+          <p className="xl:col-start-1 xl:row-start-3" style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 540 }}>
             Recherchez un élu, filtrez par groupe ou par territoire, et accédez à son bilan de vote complet.
           </p>
 
+          {/* Group distribution */}
+          <div className="hidden xl:block xl:col-start-2 xl:row-start-1 xl:row-span-5 xl:self-start" style={{ width: 340 }}>
+            <div style={{
+              background: '#fff', border: '1px solid ' + LINE, borderRadius: 14,
+              padding: '24px 26px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            }}>
+              <div style={{
+                fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
+                textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 18,
+              }}>
+                Répartition par groupe
+              </div>
+              {groupCounts.map(g => (
+                <div key={g.party} style={{ marginBottom: 13 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 999, flexShrink: 0, background: partyHex(g.party) }} />
+                      <span style={{ color: '#374151', fontWeight: 600 }}>{partyShort(g.party)}</span>
+                    </span>
+                    <span className="font-mono" style={{ color: '#9CA3AF' }}>{g.count}</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 999, background: '#F0F1F3', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${(g.count / maxGroupCount) * 100}%`, background: partyHex(g.party), borderRadius: 999 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Search row */}
-          <div className="flex flex-col sm:flex-row gap-3 mt-7 max-w-[720px]">
+          <div className="flex flex-col sm:flex-row gap-3 mt-7 max-w-[720px] xl:col-start-1 xl:row-start-4">
             <label htmlFor="deputy-search" className="sr-only">Rechercher un député</label>
             <div style={{
               flex: 1, display: 'flex', alignItems: 'center', gap: 12,
@@ -169,7 +210,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
           </div>
 
           {/* Sort dropdown */}
-          <div style={{ display: 'flex', gap: 9, marginTop: 18, alignItems: 'center' }}>
+          <div className="xl:col-start-1 xl:row-start-5" style={{ display: 'flex', gap: 9, marginTop: 18, alignItems: 'center' }}>
             <label htmlFor="deputy-sort" style={{ fontSize: 13.5, color: '#9CA3AF', marginRight: 4 }}>Trier par</label>
             <select
               id="deputy-sort"
