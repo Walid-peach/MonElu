@@ -120,6 +120,36 @@ jobs:
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
 
+      - name: Notify soft failures
+        # Non-critical steps (party/department enrichment, vote summaries) can fail
+        # without failing the job, so this run still shows green and the RAG/dbt
+        # steps above still ran. Surface it anyway, or it goes unnoticed like the
+        # 2026-07 organeRef incident did.
+        if: steps.ingest.outputs.soft_failures != ''
+        run: |
+          echo "::warning::Non-critical ingestion steps failed: ${{ steps.ingest.outputs.soft_failures }}"
+          echo "## ⚠️ Ingestion succeeded with warnings" >> "$GITHUB_STEP_SUMMARY"
+          echo "Core data (deputies/votes/positions) ingested fine. These non-critical steps failed and should be checked: ${{ steps.ingest.outputs.soft_failures }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Email soft-failure alert
+        if: steps.ingest.outputs.soft_failures != '' && secrets.MAIL_SERVER != '' && secrets.NOTIFY_EMAIL_TO != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "MonÉlu: ingestion succeeded with warnings"
+          to: ${{ secrets.NOTIFY_EMAIL_TO }}
+          from: MonÉlu CI <${{ secrets.MAIL_USERNAME }}>
+          body: |
+            Core data (deputies/votes/positions) ingested successfully, but the
+            following non-critical steps failed and should be investigated:
+
+            ${{ steps.ingest.outputs.soft_failures }}
+
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
       - name: Notify failure
         if: failure()
         run: |

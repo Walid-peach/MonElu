@@ -113,19 +113,17 @@ def parse_deputy(item: dict) -> dict | None:
         mandate_start = mandat_start_raw[:10] if mandat_start_raw else None
         mandate_end = mandat_end_raw[:10] if mandat_end_raw else None
 
-        organe_ref = mandat.get("organes", {}).get("organeRef")
-        if isinstance(organe_ref, list):
-            organe_ref = organe_ref[0] if organe_ref else None
-
         # Circonscription / department
         place = mandat.get("election", {}).get("lieu", {})
         circonscription = place.get("numCirco")
         department = place.get("numDepartement")
 
-        # Party (groupe politique) — separate call not available inline;
-        # store organeRef as party_short
+        # Party (groupe politique) — not available inline in AMO10; both
+        # left NULL here and filled by update_party.py, which resolves them
+        # from the same canonical label so party_short never regresses to
+        # a raw organeRef (see MON-119).
         party = None
-        party_short = organe_ref
+        party_short = None
 
         numeric_id = uid.lstrip("PA")
         photo_url = (
@@ -173,7 +171,7 @@ ON CONFLICT (deputy_id) DO UPDATE SET
     -- label instead of wiping it, so a run where update_party fails (or
     -- a deputy leaves between the two steps) can't NULL out the party.
     party           = COALESCE(EXCLUDED.party, deputies.party),
-    party_short     = EXCLUDED.party_short,
+    party_short     = COALESCE(EXCLUDED.party_short, deputies.party_short),
     circonscription = EXCLUDED.circonscription,
     department      = EXCLUDED.department,
     mandate_start   = EXCLUDED.mandate_start,

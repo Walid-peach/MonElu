@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
-import { getInitials, groupVotesByParty, partyHex, partyShort } from '@/lib/utils'
+import { getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyShort } from '@/lib/utils'
 import { VoteDetailClient } from './VoteDetailClient'
 
 export const dynamicParams = true
@@ -67,7 +67,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
     }
     for (const pos of vote.positions) {
       if (pos.position === 'nonVotant') continue
-      const party = pos.party_short || 'Non inscrit'
+      const party = normalizePartyShort(pos.party_short) || 'Non inscrit'
       const majority = majorityByParty[party]
       if (majority && pos.position !== majority && dissidents.length < 4) {
         dissidents.push({
@@ -118,7 +118,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
       // derived from the deputy's full party name — keeps the lookup card and
       // suggestion list visually consistent regardless of whether the deputy
       // voted on this scrutin.
-      party: pos?.party_short ?? partyShort(d.party),
+      party: normalizePartyShort(pos?.party_short ?? null) ?? partyShort(d.party),
       department: d.department,
       position: pos?.position ?? null,
     }

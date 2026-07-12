@@ -32,34 +32,63 @@ export function partyShort(party: string | null): string {
 }
 
 
+// Deputies ingested before update_party.py has resolved their group still
+// carry the raw AN organe ID in party_short (e.g. "PO838901") — treat that
+// as unresolved rather than rendering it as a group name (MON-119).
+const RAW_ORGANE_ID = /^PO\d+$/
+
+export function normalizePartyShort(partyShortValue: string | null): string | null {
+  if (!partyShortValue || RAW_ORGANE_ID.test(partyShortValue)) return null
+  return partyShortValue
+}
+
 export function groupVotesByParty(
   positions: Array<{ party_short: string | null; position: string }>
 ): Record<string, Record<string, number>> {
   const map: Record<string, Record<string, number>> = {}
   for (const p of positions) {
-    const party = p.party_short || 'Non inscrit'
+    const party = normalizePartyShort(p.party_short) || 'Non inscrit'
     if (!map[party]) map[party] = { pour: 0, contre: 0, abstention: 0, nonVotant: 0 }
     map[party][p.position] = (map[party][p.position] || 0) + 1
   }
   return map
 }
 
+const PARTY_HEX: Record<string, string> = {
+  'Rassemblement National':                           '#003189',
+  'Ensemble pour la République':                      '#C79A2E',
+  'La France insoumise - Nouveau Front Populaire':    '#C9302A',
+  'Socialistes et apparentés':                        '#E07A2E',
+  'Droite Républicaine':                              '#0066CC',
+  'Écologiste et Social':                             '#1F8A5B',
+  'Les Démocrates':                                   '#F97316',
+  'Horizons & Indépendants':                          '#0D9488',
+  'Libertés, Indépendants, Outre-mer et Territoires': '#7C3AED',
+  'Union des droites pour la République':             '#DC2626',
+  'Gauche Démocrate et Républicaine':                 '#B45309',
+}
+
+// party_short values (e.g. "EPR") resolve through this table before the
+// PARTY_HEX lookup, so partyHex() works whether it's given a full party
+// name (deputy profile pages) or a short code (vote group breakdown).
+const SHORT_TO_FULL_PARTY: Record<string, string> = {
+  RN: 'Rassemblement National',
+  EPR: 'Ensemble pour la République',
+  LFI: 'La France insoumise - Nouveau Front Populaire',
+  SOC: 'Socialistes et apparentés',
+  DR: 'Droite Républicaine',
+  ECS: 'Écologiste et Social',
+  DEM: 'Les Démocrates',
+  HOR: 'Horizons & Indépendants',
+  LIOT: 'Libertés, Indépendants, Outre-mer et Territoires',
+  UDR: 'Union des droites pour la République',
+  GDR: 'Gauche Démocrate et Républicaine',
+}
+
 export function partyHex(party: string | null): string {
   if (!party) return '#9CA3AF'
-  const map: Record<string, string> = {
-    'Rassemblement National':                           '#003189',
-    'Ensemble pour la République':                      '#C79A2E',
-    'La France insoumise - Nouveau Front Populaire':    '#C9302A',
-    'Socialistes et apparentés':                        '#E07A2E',
-    'Droite Républicaine':                              '#0066CC',
-    'Écologiste et Social':                             '#1F8A5B',
-    'Les Démocrates':                                   '#F97316',
-    'Horizons & Indépendants':                          '#0D9488',
-    'Libertés, Indépendants, Outre-mer et Territoires': '#7C3AED',
-    'Union des droites pour la République':             '#DC2626',
-    'Gauche Démocrate et Républicaine':                 '#B45309',
-  }
-  const color = map[party]
+  const fullName = SHORT_TO_FULL_PARTY[party] ?? party
+  const color = PARTY_HEX[fullName]
   if (!color && process.env.NODE_ENV === 'development') {
     console.warn(`partyHex: unknown party "${party}", using fallback. Add it to the map in lib/utils.ts.`)
   }

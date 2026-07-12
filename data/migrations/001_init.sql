@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS deputies (
     first_name      TEXT NOT NULL,
     last_name       TEXT NOT NULL,
     party           TEXT,                       -- full group name
-    party_short     TEXT,                       -- organeRef, e.g. "PO845401"
+    party_short     TEXT,                       -- short group code, e.g. "EPR" (see update_party.py)
     circonscription TEXT,
     department      TEXT,
     mandate_start   DATE,

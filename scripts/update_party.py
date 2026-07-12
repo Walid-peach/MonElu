@@ -128,7 +128,7 @@ DEPT_NAMES = {
 
 
 def update_parties(conn, deputy_map: dict[str, str]) -> None:
-    from scripts.backfill_party_labels import CANONICAL_LABELS
+    from scripts.backfill_party_labels import CANONICAL_LABELS, CANONICAL_SHORT_LABELS
 
     # Never write a non-canonical label: the PARPOL fallback in
     # build_deputy_party_map can produce party spellings ("Renaissance",
@@ -141,12 +141,18 @@ def update_parties(conn, deputy_map: dict[str, str]) -> None:
         print(f"  WARNING: skipping non-canonical label {party!r} for {deputy_id}")
     deputy_map = {k: v for k, v in deputy_map.items() if k not in skipped}
 
+    # party_short is derived from the same canonical label used for party,
+    # not from the AN organe abbreviation — this guarantees it matches the
+    # keys the frontend's partyHex()/partyShort() already use, instead of
+    # depending on a separately-resolved string that could drift.
     print(f"\nUpdating party for {len(deputy_map)} deputies …")
-    rows = [(party, deputy_id) for deputy_id, party in deputy_map.items()]
+    rows = [
+        (party, CANONICAL_SHORT_LABELS[party], deputy_id) for deputy_id, party in deputy_map.items()
+    ]
     with conn.cursor() as cur:
         psycopg2.extras.execute_batch(
             cur,
-            "UPDATE deputies SET party = %s WHERE deputy_id = %s",
+            "UPDATE deputies SET party = %s, party_short = %s WHERE deputy_id = %s",
             rows,
             page_size=200,
         )

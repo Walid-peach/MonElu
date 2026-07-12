@@ -107,11 +107,13 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     <div style={{ background: CREAM, minHeight: '100vh' }}>
 
       {/* Hero */}
-      <div style={{
-        padding: '50px 56px 40px',
-        background: 'linear-gradient(180deg,#fff 0%,' + CREAM + ' 100%)',
-        borderBottom: '1px solid #ECE7DC',
-      }}>
+      <div
+        className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8 sm:pb-10"
+        style={{
+          background: 'linear-gradient(180deg,#fff 0%,' + CREAM + ' 100%)',
+          borderBottom: '1px solid #ECE7DC',
+        }}
+      >
         <div className="xl:grid xl:grid-cols-[1fr_340px] xl:gap-16 xl:items-start" style={{ maxWidth: 1180, margin: '0 auto' }}>
           <div className="xl:col-start-1 xl:row-start-1" style={{
             fontWeight: 700, fontSize: 12, letterSpacing: '0.18em',
@@ -160,7 +162,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
           </div>
 
           {/* Search row */}
-          <div className="xl:col-start-1 xl:row-start-4" style={{ display: 'flex', gap: 12, marginTop: 28, maxWidth: 720 }}>
+          <div className="flex flex-col sm:flex-row gap-3 mt-7 max-w-[720px] xl:col-start-1 xl:row-start-4">
             <label htmlFor="deputy-search" className="sr-only">Rechercher un député</label>
             <div style={{
               flex: 1, display: 'flex', alignItems: 'center', gap: 12,
@@ -195,6 +197,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             </div>
             <button
               onClick={() => setDebouncedSearch(search)}
+              className="w-full sm:w-auto justify-center"
               style={{
                 display: 'flex', alignItems: 'center', background: ACCENT, color: '#fff',
                 height: 54, padding: '0 30px', borderRadius: 10, fontWeight: 600,
@@ -232,7 +235,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
       </div>
 
       {/* Table section */}
-      <div style={{ padding: '32px 56px 72px' }}>
+      <div className="px-5 sm:px-14 pt-8 pb-14 sm:pb-[72px]">
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
 
           {/* Count row */}
@@ -273,16 +276,17 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
               }}>
                 {/* Header */}
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '1fr 260px 34px',
-                  gap: 18, padding: '13px 26px',
-                  borderBottom: '1px solid ' + LINE, background: '#FBFAF6',
-                  font: '600 11.5px/1 var(--font-body)',
-                  letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF',
-                }}>
+                <div
+                  className="grid grid-cols-[1fr_20px] sm:grid-cols-[1fr_260px_34px] gap-3 sm:gap-[18px] px-4 sm:px-[26px] py-[13px]"
+                  style={{
+                    borderBottom: '1px solid ' + LINE, background: '#FBFAF6',
+                    font: '600 11.5px/1 var(--font-body)',
+                    letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF',
+                  }}
+                >
                   <span>Député·e</span>
-                  <span>Groupe</span>
-                  <span />
+                  <span className="hidden sm:inline">Groupe</span>
+                  <span className="hidden sm:inline" />
                 </div>
 
                 {/* Rows */}
@@ -291,9 +295,8 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                   return (
                     <Link key={d.deputy_id} href={`/deputes/${d.deputy_id}`} style={{ textDecoration: 'none' }}>
                       <div
+                        className="grid grid-cols-[1fr_20px] sm:grid-cols-[1fr_260px_34px] gap-3 sm:gap-[18px] px-4 sm:px-[26px] py-[13px]"
                         style={{
-                          display: 'grid', gridTemplateColumns: '1fr 260px 34px',
-                          gap: 18, padding: '13px 26px',
                           borderBottom: '1px solid #F0F1F3',
                           alignItems: 'center', cursor: 'pointer',
                           background: '#fff', transition: 'background 0.12s',
@@ -315,15 +318,15 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                         </div>
 
                         {/* Group */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }} title={d.party ?? undefined}>
                           <span style={{ width: 9, height: 9, borderRadius: 999, flexShrink: 0, background: hex }} />
-                          <span style={{ fontSize: 14, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span className="hidden sm:inline" style={{ fontSize: 14, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {d.party ?? '—'}
                           </span>
                         </div>
 
                         {/* Arrow */}
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C4C9D2" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                        <svg className="hidden sm:block" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C4C9D2" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
                           <path d="m9 6 6 6-6 6"/>
                         </svg>
                       </div>
