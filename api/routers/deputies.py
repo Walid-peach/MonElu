@@ -152,7 +152,7 @@ def get_deputy_votes(
                                v.summary_plain
                         FROM vote_positions vp
                         JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
-                        {} ORDER BY v.voted_at DESC LIMIT %s
+                        {} ORDER BY v.voted_at DESC NULLS LAST LIMIT %s
                     """).format(where),
                     params + [limit],
                 )
@@ -275,7 +275,7 @@ def get_dissident_votes(
                     WHERE vp.deputy_id = %s
                       AND vp.position IN ('pour', 'contre', 'abstention')
                       AND vp.position != m.majority_position
-                    ORDER BY v.voted_at DESC
+                    ORDER BY v.voted_at DESC NULLS LAST
                     LIMIT %s
                     """,
                     (deputy_id, limit),

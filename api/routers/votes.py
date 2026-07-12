@@ -15,18 +15,23 @@ from api.schemas import VoteDetail, VoteListResponse, VotePosition, VoteSummary
 router = APIRouter()
 
 
-def _encode_cursor(voted_at: datetime, vote_id: str) -> str:
-    """Opaque keyset cursor over the list's sort key (voted_at, vote_id)."""
-    raw = f"{voted_at.isoformat()}|{vote_id}"
+def _encode_cursor(voted_at: Optional[datetime], vote_id: str) -> str:
+    """Opaque keyset cursor over the list's sort key (voted_at, vote_id).
+
+    voted_at may be None — undated votes sort last (NULLS LAST) and still
+    need a cursor to page past them.
+    """
+    ts = voted_at.isoformat() if voted_at is not None else ""
+    raw = f"{ts}|{vote_id}"
     return base64.urlsafe_b64encode(raw.encode()).decode()
 
 
-def _decode_cursor(token: str) -> tuple[datetime, str]:
+def _decode_cursor(token: str) -> tuple[Optional[datetime], str]:
     """Reverse of _encode_cursor; raises 422 on a malformed token."""
     try:
         raw = base64.urlsafe_b64decode(token.encode()).decode()
         ts, vote_id = raw.rsplit("|", 1)
-        return datetime.fromisoformat(ts), vote_id
+        return (datetime.fromisoformat(ts) if ts else None), vote_id
     except (ValueError, binascii.Error) as exc:
         raise HTTPException(status_code=422, detail="Invalid cursor") from exc
 
@@ -92,7 +97,17 @@ def list_votes(
                 page_conditions = list(conditions)
                 page_params = list(params)
                 if cursor_key:
-                    page_conditions.append(sql.SQL("(voted_at, vote_id) < (%s, %s)"))
+                    # NULLS LAST puts undated votes after all dated ones; coalescing
+                    # both sides to '-infinity' before comparing keeps the row
+                    # constructor total-ordered even when voted_at is NULL — a bare
+                    # (voted_at, vote_id) < (%s, %s) comparison evaluates to NULL
+                    # (and silently drops the row) whenever either side is NULL.
+                    page_conditions.append(
+                        sql.SQL(
+                            "(COALESCE(voted_at, '-infinity'::timestamptz), vote_id) < "
+                            "(COALESCE(%s::timestamptz, '-infinity'::timestamptz), %s)"
+                        )
+                    )
                     page_params.extend(cursor_key)
 
                 where = (
@@ -111,7 +126,7 @@ def list_votes(
                                votes_for, votes_against, abstentions, total_voters,
                                summary_plain, theme
                         FROM analytics_marts.mart_vote_summary {}
-                        ORDER BY voted_at DESC, vote_id DESC LIMIT %s OFFSET %s
+                        ORDER BY voted_at DESC NULLS LAST, vote_id DESC LIMIT %s OFFSET %s
                     """).format(where),
                     page_params + [limit, effective_offset],
                 )
@@ -145,7 +160,7 @@ def latest_votes(request: Request):
                            votes_for, votes_against, abstentions, total_voters,
                            summary_plain, theme
                     FROM analytics_marts.mart_vote_summary
-                    ORDER BY voted_at DESC
+                    ORDER BY voted_at DESC NULLS LAST
                     LIMIT 10
                     """
                 )

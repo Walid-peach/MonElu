@@ -25,7 +25,12 @@ def _list_page(cur, *, limit: int, cursor=None, result_filter=None):
     page_conditions = list(conditions)
     page_params = list(params)
     if cursor_key:
-        page_conditions.append(sql.SQL("(voted_at, vote_id) < (%s, %s)"))
+        page_conditions.append(
+            sql.SQL(
+                "(COALESCE(voted_at, '-infinity'::timestamptz), vote_id) < "
+                "(COALESCE(%s::timestamptz, '-infinity'::timestamptz), %s)"
+            )
+        )
         page_params.extend(cursor_key)
 
     where = (
@@ -39,7 +44,7 @@ def _list_page(cur, *, limit: int, cursor=None, result_filter=None):
             """
             SELECT vote_id, voted_at, result
             FROM analytics_marts.mart_vote_summary {}
-            ORDER BY voted_at DESC, vote_id DESC
+            ORDER BY voted_at DESC NULLS LAST, vote_id DESC
             LIMIT %s
             """
         ).format(where),
@@ -112,6 +117,14 @@ def test_cursor_encode_decode_roundtrip(db_conn):
     assert decoded_id == vote_id
 
 
+def test_cursor_encode_decode_roundtrip_with_null_voted_at():
+    """A cursor built from an undated (voted_at=None) row must round-trip to None."""
+    vote_id = "VTANR5L17VNULL"
+    decoded_ts, decoded_id = _decode_cursor(_encode_cursor(None, vote_id))
+    assert decoded_ts is None
+    assert decoded_id == vote_id
+
+
 @pytest.mark.integration
 def test_result_filter_scopes_pages(db_conn):
     """Filtering by result='rejeté' must return only rejected votes."""
@@ -128,3 +141,45 @@ def test_result_filter_scopes_pages(db_conn):
 
     # conftest seeds i%3==0 as "rejeté": i=3,6,9,12,15,18,21,24 → 8 votes
     assert len(all_ids) == 8
+
+
+@pytest.mark.integration
+def test_null_voted_at_sorts_last_and_paginates_correctly(db_conn):
+    """A NULL-dated vote must never rank before dated votes, and the keyset
+    cursor must still reach it — without NULLS LAST, Postgres puts NULLs
+    first on DESC; without coalescing the cursor comparison, a bare
+    (voted_at, vote_id) < (%s, %s) evaluates to NULL (dropping the row)
+    whenever either side is NULL."""
+    null_vote_id = "VTANR5L17VNULL"
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO analytics_marts.mart_vote_summary
+                (vote_id, voted_at, vote_title, vote_type, result,
+                 votes_for, votes_against, abstentions, total_voters)
+            VALUES (%s, NULL, 'Vote de test sans date', 'SPO', 'adopté', 300, 100, 50, 450)
+            ON CONFLICT (vote_id) DO UPDATE SET voted_at = NULL
+            """,
+            (null_vote_id,),
+        )
+
+    try:
+        all_rows = []
+        cursor = None
+        with db_conn.cursor() as cur:
+            while True:
+                rows, cursor = _list_page(cur, limit=10, cursor=cursor)
+                all_rows.extend(rows)
+                if cursor is None:
+                    break
+
+        assert len(all_rows) == 26, "26 seeded votes (25 dated + 1 undated) must all be reachable"
+        assert all_rows[-1]["vote_id"] == null_vote_id, "undated vote must sort last, not first"
+        ids = [r["vote_id"] for r in all_rows]
+        assert len(ids) == len(set(ids)), "pagination must not skip or duplicate rows"
+    finally:
+        with db_conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM analytics_marts.mart_vote_summary WHERE vote_id = %s",
+                (null_vote_id,),
+            )
