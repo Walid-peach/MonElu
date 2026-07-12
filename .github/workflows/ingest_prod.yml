@@ -13,6 +13,11 @@ jobs:
   ingest:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Promoted from secrets so step-level `if:` conditions below can check
+      # them — the `secrets` context isn't allowed in step `if:` expressions.
+      MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+      NOTIFY_EMAIL_TO: ${{ secrets.NOTIFY_EMAIL_TO }}
     steps:
       - uses: actions/checkout@v4
 
@@ -132,7 +137,7 @@ jobs:
           echo "Core data (deputies/votes/positions) ingested fine. These non-critical steps failed and should be checked: ${{ steps.ingest.outputs.soft_failures }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Email soft-failure alert
-        if: steps.ingest.outputs.soft_failures != '' && secrets.MAIL_SERVER != '' && secrets.NOTIFY_EMAIL_TO != ''
+        if: steps.ingest.outputs.soft_failures != '' && env.MAIL_SERVER != '' && env.NOTIFY_EMAIL_TO != ''
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.MAIL_SERVER }}
@@ -163,7 +168,7 @@ jobs:
         # "dbt snapshot + source freshness" (error_after thresholds in
         # transform/models/staging/_sources.yml). Skipped entirely if the mail
         # secrets aren't configured yet (e.g. before MON-99 setup is finished).
-        if: failure() && secrets.MAIL_SERVER != '' && secrets.NOTIFY_EMAIL_TO != ''
+        if: failure() && env.MAIL_SERVER != '' && env.NOTIFY_EMAIL_TO != ''
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.MAIL_SERVER }}
