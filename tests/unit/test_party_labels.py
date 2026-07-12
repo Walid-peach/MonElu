@@ -9,7 +9,12 @@ import io
 import json
 import zipfile
 
-from scripts.backfill_party_labels import CANONICAL_LABELS, LABEL_MAP, compute_changes
+from scripts.backfill_party_labels import (
+    CANONICAL_LABELS,
+    CANONICAL_SHORT_LABELS,
+    LABEL_MAP,
+    compute_changes,
+)
 from scripts.ingest_organes import build_deputy_party_map
 
 # ---------------------------------------------------------------------------
@@ -59,6 +64,20 @@ def test_unknown_label_is_reported_not_guessed():
 
 def test_label_map_targets_are_canonical():
     assert set(LABEL_MAP.values()) <= CANONICAL_LABELS
+
+
+def test_canonical_short_labels_cover_every_canonical_label():
+    # party_short is derived from this map for every canonical party (see
+    # update_party.py / backfill_party_labels.py) — a missing entry would
+    # raise a KeyError at write time, so the two sets must stay in lockstep.
+    assert set(CANONICAL_SHORT_LABELS.keys()) == CANONICAL_LABELS
+
+
+def test_canonical_short_labels_are_unique():
+    # Two full names collapsing to the same short code would silently merge
+    # distinct groups in the vote breakdown table.
+    codes = list(CANONICAL_SHORT_LABELS.values())
+    assert len(codes) == len(set(codes))
 
 
 # ---------------------------------------------------------------------------

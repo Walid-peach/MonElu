@@ -56,6 +56,25 @@ CANONICAL_LABELS = {
     "Non inscrit",
 }
 
+# Canonical full name → short group code, one entry per CANONICAL_LABELS.
+# Keep in sync with frontend/src/lib/utils.ts::partyShort() — party_short is
+# read directly by the frontend (vote group breakdown, dissident detection)
+# and must match the keys that map/utils there expect.
+CANONICAL_SHORT_LABELS: dict[str, str] = {
+    "Rassemblement National": "RN",
+    "Ensemble pour la République": "EPR",
+    "La France insoumise - Nouveau Front Populaire": "LFI",
+    "Socialistes et apparentés": "SOC",
+    "Droite Républicaine": "DR",
+    "Écologiste et Social": "ECS",
+    "Les Démocrates": "DEM",
+    "Horizons & Indépendants": "HOR",
+    "Libertés, Indépendants, Outre-mer et Territoires": "LIOT",
+    "Union des droites pour la République": "UDR",
+    "Gauche Démocrate et Républicaine": "GDR",
+    "Non inscrit": "NI",
+}
+
 # Variant → canonical. Only mappings that hold for every deputy carrying
 # the variant label (verified against the deputies concerned, 2026-07).
 LABEL_MAP = {
@@ -132,8 +151,11 @@ def backfill(apply: bool) -> None:
             with conn.cursor() as cur:
                 execute_batch(
                     cur,
-                    "UPDATE deputies SET party = %s WHERE deputy_id = %s",
-                    [(new, deputy_id) for deputy_id, _, _, new in changes],
+                    "UPDATE deputies SET party = %s, party_short = %s WHERE deputy_id = %s",
+                    [
+                        (new, CANONICAL_SHORT_LABELS[new], deputy_id)
+                        for deputy_id, _, _, new in changes
+                    ],
                     page_size=200,
                 )
             conn.commit()

@@ -1,4 +1,4 @@
-import { formatDate, formatPct, getInitials, partyShort, partyColor } from '@/lib/utils'
+import { formatDate, formatPct, getInitials, groupVotesByParty, normalizePartyShort, partyColor, partyHex, partyShort } from '@/lib/utils'
 
 describe('formatDate', () => {
   it('formats a valid ISO date in French locale', () => {
@@ -58,6 +58,63 @@ describe('partyShort', () => {
 
   it('falls back to first 3 chars uppercase for unknown party', () => {
     expect(partyShort('Mouvement Indépendant')).toBe('MOU')
+  })
+})
+
+describe('normalizePartyShort', () => {
+  it('returns a resolved short code as-is', () => {
+    expect(normalizePartyShort('EPR')).toBe('EPR')
+  })
+
+  it('returns null for a raw unresolved organe ID', () => {
+    expect(normalizePartyShort('PO838901')).toBeNull()
+  })
+
+  it('returns null for null input', () => {
+    expect(normalizePartyShort(null)).toBeNull()
+  })
+})
+
+describe('groupVotesByParty', () => {
+  it('groups positions by party_short', () => {
+    const result = groupVotesByParty([
+      { party_short: 'EPR', position: 'pour' },
+      { party_short: 'EPR', position: 'contre' },
+      { party_short: 'RN', position: 'contre' },
+    ])
+    expect(result).toEqual({
+      EPR: { pour: 1, contre: 1, abstention: 0, nonVotant: 0 },
+      RN: { pour: 0, contre: 1, abstention: 0, nonVotant: 0 },
+    })
+  })
+
+  it('buckets unresolved raw organe IDs under Non inscrit instead of one row per ID', () => {
+    const result = groupVotesByParty([
+      { party_short: 'PO838901', position: 'pour' },
+      { party_short: 'PO111222', position: 'contre' },
+    ])
+    expect(result).toEqual({
+      'Non inscrit': { pour: 1, contre: 1, abstention: 0, nonVotant: 0 },
+    })
+  })
+})
+
+describe('partyHex', () => {
+  it('resolves a full party name to its color', () => {
+    expect(partyHex('Rassemblement National')).toBe('#003189')
+  })
+
+  it('resolves a short code to the same color as its full name', () => {
+    expect(partyHex('RN')).toBe(partyHex('Rassemblement National'))
+    expect(partyHex('LFI')).toBe(partyHex('La France insoumise - Nouveau Front Populaire'))
+  })
+
+  it('returns fallback gray for null', () => {
+    expect(partyHex(null)).toBe('#9CA3AF')
+  })
+
+  it('returns fallback gray for an unrecognized value', () => {
+    expect(partyHex('PO838901')).toBe('#6B7280')
   })
 })
 
