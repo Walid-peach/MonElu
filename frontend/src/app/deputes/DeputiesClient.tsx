@@ -6,6 +6,7 @@ import { Deputy } from '@/lib/api'
 import { getInitials, partyHex, partyShort } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { resolvePostalCode } from '@/lib/postal'
+import { departmentLabel } from '@/lib/departments'
 
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 type SortKey = 'nom' | 'region' | 'parti'
@@ -312,7 +313,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                               {d.full_name}
                             </div>
                             <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 3 }}>
-                              {d.department ?? '—'}
+                              {departmentLabel(d.department) ?? '—'}
                             </div>
                           </div>
                         </div>

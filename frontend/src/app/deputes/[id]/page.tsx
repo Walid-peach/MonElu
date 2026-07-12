@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { DissidentVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
+import { departmentLabel } from '@/lib/departments'
 import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const deputy = await api.deputies.get(id).catch(() => null)
   if (!deputy) return {}
   const description = `Bilan de mandat, votes et présence de ${deputy.full_name}${
-    deputy.party ? ` (${deputy.party})` : deputy.department ? ` - ${deputy.department}` : ''
+    deputy.party ? ` (${deputy.party})` : deputy.department ? ` - ${departmentLabel(deputy.department)}` : ''
   }.`
   return {
     title: `${deputy.full_name} - MonÉlu`,
@@ -70,14 +71,24 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
   const abstPct        = scorecard ? Math.round(scorecard.abstentions   / denom * 100) : 0
 
   const hex = partyHex(deputy.party)
+  const deptLabel = departmentLabel(deputy.department)
 
-  const stats = scorecard ? [
+  // MON-123: "votes exprimés" (present_votes = pour + contre + abstention)
+  // duplicated "scrutins votés" whenever the deputy has no non-votant
+  // position — show the non-votant count instead.
+  const nonVotant = scorecard ? scorecard.total_votes - scorecard.present_votes : 0
+
+  const stats: { value: string; label: string; tooltip?: string }[] = scorecard ? [
     { value: scorecard.total_votes.toLocaleString('fr-FR'),    label: 'scrutins votés' },
     { value: `${presencePct ?? '—'}%`,                        label: 'présence aux votes' },
     { value: scorecard.votes_for.toLocaleString('fr-FR'),      label: 'votes Pour' },
     { value: scorecard.votes_against.toLocaleString('fr-FR'),  label: 'votes Contre' },
     { value: scorecard.abstentions.toLocaleString('fr-FR'),    label: 'abstentions' },
-    { value: scorecard.present_votes.toLocaleString('fr-FR'),  label: 'votes exprimés' },
+    {
+      value: nonVotant.toLocaleString('fr-FR'),
+      label: 'non-votant',
+      tooltip: "Présent·e en séance sans exprimer de vote — distinct de l'abstention, qui est une position exprimée.",
+    },
   ] : []
 
   return (
@@ -114,14 +125,6 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid #ECE7DC`, boxShadow: '0 6px 20px rgba(27,43,80,0.12)' }}>
                 <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="2xl" priority />
               </div>
-              {deputy.department && (
-                <div style={{ marginTop: 14, fontSize: 12.5, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                    <path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/>
-                  </svg>
-                  {deputy.department}
-                </div>
-              )}
             </div>
 
             {/* Right: identity */}
@@ -135,9 +138,12 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               }}>
                 {deputy.full_name}
               </h1>
-              {deputy.department && (
-                <div style={{ fontSize: 20, color: '#4B5563', marginTop: 10 }}>
-                  {deputy.department}
+              {deptLabel && (
+                <div style={{ fontSize: 20, color: '#4B5563', marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/>
+                  </svg>
+                  {deptLabel}
                 </div>
               )}
               {deputy.party && (
@@ -198,8 +204,9 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   <div className="font-newsreader text-[34px]" style={{ fontWeight: 600, color: NAVY, letterSpacing: '-0.01em', lineHeight: 1 }}>
                     {s.value}
                   </div>
-                  <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, lineHeight: 1.35 }}>
+                  <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {s.label}
+                    {s.tooltip && <InfoTooltip text={s.tooltip} href="/methodologie" />}
                   </div>
                 </div>
               ))}
