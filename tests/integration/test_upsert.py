@@ -47,6 +47,39 @@ def test_deputy_upsert_updates_row(db_conn):
 
 
 @pytest.mark.integration
+def test_deputy_upsert_preserves_party_short_when_omitted(db_conn):
+    """A re-ingest with party_short=NULL (AMO10 has no inline label) must not
+    wipe a previously-resolved value — the COALESCE guard added for MON-119."""
+    resolved = {
+        "deputy_id": "PA001",
+        "full_name": "Alice Martin",
+        "first_name": "Alice",
+        "last_name": "Martin",
+        "party": "Horizons & Indépendants",
+        "party_short": "HOR",
+        "circonscription": "1ère circonscription du Var",
+        "department": "Var",
+        "mandate_start": "2024-07-07",
+        "mandate_end": None,
+        "photo_url": None,
+    }
+    with db_conn.cursor() as cur:
+        cur.execute(DEPUTY_UPSERT_SQL, resolved)
+
+        # Simulate a daily ingest run, which never has a resolved party_short
+        reingested = {**resolved, "party_short": None}
+        cur.execute(DEPUTY_UPSERT_SQL, reingested)
+
+        cur.execute("SELECT party_short FROM deputies WHERE deputy_id = 'PA001'")
+        assert cur.fetchone()["party_short"] == "HOR"
+
+        # Restore original fixture value
+        cur.execute(
+            DEPUTY_UPSERT_SQL, {**resolved, "party": "Rassemblement National", "party_short": "RN"}
+        )
+
+
+@pytest.mark.integration
 def test_deputy_upsert_single_row(db_conn):
     """Three upserts of the same deputy_id must leave exactly one row."""
     row = {
