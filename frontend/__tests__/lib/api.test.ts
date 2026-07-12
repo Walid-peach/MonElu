@@ -66,6 +66,45 @@ describe('api.deputies.votes', () => {
   })
 })
 
+describe('apiFetch 429 backoff (via api.health)', () => {
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  function mockResponse(status: number, body: unknown = {}) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      json: () => Promise.resolve(body),
+    } as Response
+  }
+
+  it('retries a 429 with backoff and succeeds once the limiter clears', async () => {
+    jest.useFakeTimers()
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(mockResponse(429))
+      .mockResolvedValueOnce(mockResponse(429))
+      .mockResolvedValueOnce(mockResponse(200, { deputies: 577 }))
+    const promise = api.health()
+    await jest.runAllTimersAsync()
+    const result = await promise
+    expect(result.deputies).toBe(577)
+    expect(global.fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('throws after exhausting 429 retries', async () => {
+    jest.useFakeTimers()
+    global.fetch = jest.fn().mockResolvedValue(mockResponse(429))
+    const promise = api.health()
+    const assertion = expect(promise).rejects.toThrow('API error: 429')
+    await jest.runAllTimersAsync()
+    await assertion
+    // 1 initial attempt + 4 backoff retries
+    expect(global.fetch).toHaveBeenCalledTimes(5)
+  })
+})
+
 describe('apiFetch (via api.health)', () => {
   it('throws on a non-ok response', async () => {
     mockFetch(503, { detail: 'Service Unavailable' })

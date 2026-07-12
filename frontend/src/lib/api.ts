@@ -111,18 +111,34 @@ export type SearchResult = {
   sources: Array<{ content: string; metadata: Record<string, string>; similarity: number }>
 }
 
+// 5xx: transient upstream hiccups, short retries.
+// 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
+// where prerendering ~117 pages from one IP exceeds the budget and fails the
+// whole Vercel deploy. Long waits let the per-minute window reset; build time
+// is the only cost.
+const SERVER_ERROR_DELAYS_MS = [200, 400]
+const RATE_LIMIT_DELAYS_MS = [2_000, 15_000, 30_000, 61_000]
+
 async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promise<T> {
-  const delays = [200, 400]
   let lastStatus = 0
-  for (let attempt = 0; attempt <= delays.length; attempt++) {
+  let serverErrorAttempt = 0
+  let rateLimitAttempt = 0
+  for (;;) {
     const res = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
       next: { revalidate: opts?.revalidate ?? 300 },
     })
     if (res.ok) return res.json()
     lastStatus = res.status
-    if (res.status < 500 || attempt === delays.length) break
-    await new Promise(r => setTimeout(r, delays[attempt]))
+    if (res.status === 429 && rateLimitAttempt < RATE_LIMIT_DELAYS_MS.length) {
+      await new Promise(r => setTimeout(r, RATE_LIMIT_DELAYS_MS[rateLimitAttempt++]))
+      continue
+    }
+    if (res.status >= 500 && serverErrorAttempt < SERVER_ERROR_DELAYS_MS.length) {
+      await new Promise(r => setTimeout(r, SERVER_ERROR_DELAYS_MS[serverErrorAttempt++]))
+      continue
+    }
+    break
   }
   throw new Error(`API error: ${lastStatus}`)
 }
