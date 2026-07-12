@@ -12,6 +12,7 @@ import {
   setLastSeenAt,
 } from '@/lib/mon-depute'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
+import { departmentLabel } from '@/lib/departments'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
 
@@ -153,7 +154,7 @@ export default function MonDeputePage() {
               </h1>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                 {deputy.department && (
-                  <span style={{ fontSize: 14, color: '#6B7280' }}>{deputy.department}</span>
+                  <span style={{ fontSize: 14, color: '#6B7280' }}>{departmentLabel(deputy.department)}</span>
                 )}
                 {deputy.party && (
                   <span style={{

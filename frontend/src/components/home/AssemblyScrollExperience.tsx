@@ -12,6 +12,7 @@ import { HeroSearch } from '@/components/HeroSearch'
 import { TrustRow } from './TrustRow'
 import type { DeputyInfo } from '@/app/page'
 import { NAV_HEIGHT_PX } from '@/components/Nav'
+import { departmentLabel } from '@/lib/departments'
 
 type Props = {
   stats: AssemblyStats
@@ -777,7 +778,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
               </div>
             </div>
             <div style={{ textAlign: 'center', fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 700, fontSize: 'clamp(18px,2.2vw,24px)', color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.2 }}>{deputyInfo?.name ?? '17ème Législature'}</div>
-            <div style={{ textAlign: 'center', fontSize: 'clamp(12px,1.3vw,15px)', color: 'rgba(220,228,245,0.78)', marginTop: 6 }}>{deputyInfo?.department ?? 'Assemblée Nationale'}</div>
+            <div style={{ textAlign: 'center', fontSize: 'clamp(12px,1.3vw,15px)', color: 'rgba(220,228,245,0.78)', marginTop: 6 }}>{departmentLabel(deputyInfo?.department) ?? 'Assemblée Nationale'}</div>
             <div style={{ textAlign: 'center', fontSize: 'clamp(12px,1.3vw,14px)', color: '#7fd9b6', marginTop: 6 }}>{deputyInfo?.party ?? `${stats.deputies} députés actifs`}</div>
             <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: voteResultBg, border: `1px solid ${voteResultBorder}`, padding: '8px 20px', borderRadius: 999 }}>
