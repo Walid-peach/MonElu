@@ -60,13 +60,16 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     const items = q
       ? initial.items.filter(d =>
           d.full_name.toLowerCase().includes(q) ||
+          // Match the label users see ("Polynésie française (987)"), not just
+          // the raw stored value, which is still a bare code for some deputies
+          (departmentLabel(d.department)?.toLowerCase().includes(q) ?? false) ||
           (d.department?.toLowerCase().includes(q) ?? false) ||
           (d.party?.toLowerCase().includes(q) ?? false)
         )
       : [...initial.items]
 
     if (sort === 'nom')    return items.sort((a, b) => a.full_name.localeCompare(b.full_name, 'fr'))
-    if (sort === 'region') return items.sort((a, b) => (a.department ?? '').localeCompare(b.department ?? '', 'fr'))
+    if (sort === 'region') return items.sort((a, b) => (departmentLabel(a.department) ?? '').localeCompare(departmentLabel(b.department) ?? '', 'fr'))
     if (sort === 'parti')  return items.sort((a, b) => (a.party ?? '').localeCompare(b.party ?? '', 'fr'))
     return items
   }, [initial.items, debouncedSearch, resolvedDepartment, sort])
