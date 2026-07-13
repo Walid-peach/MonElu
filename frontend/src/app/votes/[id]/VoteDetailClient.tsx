@@ -131,7 +131,13 @@ export function VoteDetailClient(props: Props) {
 
   const adopted = result === 'adopté'
   const headline = summary || voteTitle
-  const dossierUrl = dossierId ? `https://www.assemblee-nationale.fr/dyn/17/dossiers/${dossierId}` : null
+  // Some legacy rows still have a stringified-dict dossier_id from a past
+  // ingestion bug (MON-89) — only link when it looks like a real AN ref
+  // (e.g. "DLR5L17N53980"), so a corrupted value silently shows no link
+  // instead of a broken one.
+  const dossierUrl = dossierId && /^[A-Za-z0-9-]+$/.test(dossierId)
+    ? `https://www.assemblee-nationale.fr/dyn/17/dossiers/${dossierId}`
+    : null
 
   return (
     <div style={{ background: '#F7F4ED', minHeight: '100vh' }}>
