@@ -45,13 +45,13 @@ export function VoteTimelineItem({ vote: v, dotBorderColor }: Props) {
 
       <Link href={`/votes/${v.vote_id}`} style={{ textDecoration: 'none' }}>
         <div className="font-newsreader text-[21px]" style={{ color: NAVY, marginTop: 8, lineHeight: 1.3, cursor: 'pointer' }}>
-          {v.vote_title}
+          {v.summary_plain || v.vote_title}
         </div>
       </Link>
 
       {v.summary_plain && (
         <div style={{ fontSize: 14.5, color: '#4B5563', lineHeight: 1.55, marginTop: 5, maxWidth: 680, fontStyle: 'italic' }}>
-          {v.summary_plain}
+          {v.vote_title}
         </div>
       )}
     </div>
