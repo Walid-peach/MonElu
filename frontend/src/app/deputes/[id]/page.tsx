@@ -11,6 +11,8 @@ import { ShareButton } from '@/components/ShareButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { FollowDeputyButton } from '@/components/FollowDeputyButton'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
+import { JsonLd } from '@/components/JsonLd'
+import { SITE_URL, buildPersonJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -80,7 +82,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
   const stats: { value: string; label: string; tooltip?: string }[] = scorecard ? [
     { value: scorecard.total_votes.toLocaleString('fr-FR'),    label: 'scrutins votés' },
-    { value: `${presencePct ?? '—'}%`,                        label: 'présence aux votes' },
+    { value: `${solennelPct ?? '—'}%`,                        label: 'participation aux scrutins solennels' },
     { value: scorecard.votes_for.toLocaleString('fr-FR'),      label: 'votes Pour' },
     { value: scorecard.votes_against.toLocaleString('fr-FR'),  label: 'votes Contre' },
     { value: scorecard.abstentions.toLocaleString('fr-FR'),    label: 'abstentions' },
@@ -93,6 +95,12 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
   return (
     <div style={{ background: CREAM, minHeight: '100vh' }}>
+      <JsonLd data={buildPersonJsonLd(deputy)} />
+      <JsonLd data={buildBreadcrumbJsonLd([
+        { name: 'Accueil', url: SITE_URL },
+        { name: 'Députés', url: `${SITE_URL}/deputes` },
+        { name: deputy.full_name, url: `${SITE_URL}/deputes/${id}` },
+      ])} />
 
       {/* Hero band */}
       <div style={{

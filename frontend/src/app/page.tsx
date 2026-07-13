@@ -14,7 +14,7 @@ export type DeputyInfo = {
   photoUrl: string | null
   deputyId: string
   totalVotes: number
-  presenceRate: number
+  solennelParticipationRate: number
   votesFor: number
   votesAgainst: number
   abstentions: number
@@ -76,7 +76,7 @@ async function getStats() {
           photoUrl: picked.photo_url,
           deputyId: picked.deputy_id,
           totalVotes: sc.total_votes ?? 0,
-          presenceRate: Math.round((sc.presence_rate ?? 0) * 100),
+          solennelParticipationRate: Math.round((sc.solennel_participation_rate ?? 0) * 100),
           votesFor: sc.votes_for ?? 0,
           votesAgainst: sc.votes_against ?? 0,
           abstentions: sc.abstentions ?? 0,

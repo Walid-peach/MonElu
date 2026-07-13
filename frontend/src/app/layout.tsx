@@ -8,6 +8,8 @@ import { BottomNav } from '@/components/BottomNav'
 import { PageTransition } from '@/components/PageTransition'
 import { FreshnessBadge } from '@/components/FreshnessBadge'
 import { Footer } from '@/components/Footer'
+import { JsonLd } from '@/components/JsonLd'
+import { buildWebsiteJsonLd } from '@/lib/seo'
 
 const serif = DM_Serif_Display({
   subsets: ['latin'],
@@ -63,6 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`}>
       <body className="bg-gray-off min-h-screen">
+        <JsonLd data={buildWebsiteJsonLd()} />
         <Nav />
         <FreshnessBadge />
         <main className="pb-20 md:pb-0"><PageTransition>{children}</PageTransition></main>
