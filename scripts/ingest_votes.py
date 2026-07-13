@@ -130,6 +130,8 @@ def parse_vote(item: dict) -> dict | None:
         if not dossier_ref:
             obj = item.get("objet") or {}
             dossier_ref = obj.get("dossierLegislatif") or None
+            if isinstance(dossier_ref, dict):
+                dossier_ref = dossier_ref.get("dossierRef") or dossier_ref.get("#text")
 
         return {
             "vote_id": uid,

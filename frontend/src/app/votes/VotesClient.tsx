@@ -219,10 +219,12 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 15, color: '#1B2B50', lineHeight: 1.3 }}
                         className="line-clamp-2">
-                        {vote.vote_title}
+                        {vote.summary_plain || vote.vote_title}
                       </div>
-                      <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 4 }}>
+                      <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 4 }}
+                        className="line-clamp-1">
                         Scrutin n°{vote.vote_id}
+                        {vote.summary_plain && ` · ${vote.vote_title}`}
                       </div>
                     </div>
 

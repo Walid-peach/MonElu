@@ -46,6 +46,7 @@ export type Vote = {
 }
 
 export type VoteDetail = Vote & {
+  dossier_id?: string | null
   positions?: Array<{
     deputy_id: string
     full_name: string

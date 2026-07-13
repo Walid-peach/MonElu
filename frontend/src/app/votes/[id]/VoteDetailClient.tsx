@@ -49,6 +49,7 @@ interface Props {
   result: string
   votedAt: string
   summary: string | null
+  dossierId: string | null
   theme: string | null
   votesFor: number
   votesAgainst: number
@@ -77,7 +78,7 @@ function shortDate(dateStr: string): string {
 
 export function VoteDetailClient(props: Props) {
   const {
-    voteId, voteTitle, result, votedAt, summary, theme,
+    voteId, voteTitle, result, votedAt, summary, dossierId, theme,
     votesFor, votesAgainst, abstentions, totalVoters,
     pourPct, contrePct, abstPct,
     groups, dissidents, related, apiUrl, deputyLookup,
@@ -129,6 +130,14 @@ export function VoteDetailClient(props: Props) {
   }, [])
 
   const adopted = result === 'adopté'
+  const headline = summary || voteTitle
+  // Some legacy rows still have a stringified-dict dossier_id from a past
+  // ingestion bug (MON-89) — only link when it looks like a real AN ref
+  // (e.g. "DLR5L17N53980"), so a corrupted value silently shows no link
+  // instead of a broken one.
+  const dossierUrl = dossierId && /^[A-Za-z0-9-]+$/.test(dossierId)
+    ? `https://www.assemblee-nationale.fr/dyn/17/dossiers/${dossierId}`
+    : null
 
   return (
     <div style={{ background: '#F7F4ED', minHeight: '100vh' }}>
@@ -148,7 +157,7 @@ export function VoteDetailClient(props: Props) {
             </span>
             <span style={{ fontSize: 12, color: '#D1D5DB' }}>·</span>
             <span style={{ fontWeight: 600, fontSize: 15, color: '#1B2B50', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {voteTitle}
+              {headline}
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 999, background: adopted ? '#EAF5EF' : '#FBE9E7', color: adopted ? '#1F8A5B' : '#C9302A', flexShrink: 0 }}>
               {adopted ? 'Adopté' : 'Rejeté'}
@@ -187,7 +196,7 @@ export function VoteDetailClient(props: Props) {
               </div>
 
               <h1 className="font-newsreader text-title" style={{ fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#1B2B50', margin: 0, maxWidth: 620 }}>
-                {voteTitle}
+                {headline}
               </h1>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
@@ -205,9 +214,16 @@ export function VoteDetailClient(props: Props) {
               </div>
 
               {summary && (
-                <p style={{ margin: '22px 0 0', fontSize: 16, lineHeight: 1.65, color: '#4B5563', maxWidth: 600 }}>
-                  <span style={{ fontWeight: 600, color: '#C9302A' }}>En clair :</span> {summary}
+                <p style={{ margin: '22px 0 0', fontSize: 15, lineHeight: 1.6, color: '#9CA3AF', maxWidth: 600 }}>
+                  <span style={{ fontWeight: 600 }}>Titre officiel :</span> {voteTitle}
                 </p>
+              )}
+
+              {dossierUrl && (
+                <a href={dossierUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', marginTop: 14, fontSize: 14, fontWeight: 600, color: '#C9302A', textDecoration: 'none' }}>
+                  Voir le dossier officiel →
+                </a>
               )}
             </div>
 
@@ -265,7 +281,7 @@ export function VoteDetailClient(props: Props) {
                 </a>
                 <ShareButton
                   url={`/votes/${voteId}`}
-                  title={`${adopted ? 'Adopté' : 'Rejeté'} - ${voteTitle}`}
+                  title={`${adopted ? 'Adopté' : 'Rejeté'} - ${headline}`}
                   text="Suivez ce scrutin sur MonÉlu"
                   ariaLabel="Partager ce vote"
                 />

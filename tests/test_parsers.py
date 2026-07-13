@@ -80,6 +80,31 @@ def test_parse_vote_titre_dict():
     assert result["result"] == "rejeté"
 
 
+def test_parse_vote_dossier_legislatif_dict_extracts_ref():
+    """objet.dossierLegislatif can be a dict ({libelle, dossierRef}) — must
+    extract the plain ref string, not stringify the whole dict (MON-89)."""
+    item = {
+        "uid": "VTANR5L17V3",
+        "dateScrutin": "2024-09-01",
+        "titre": "Amendement",
+        "sort": {"code": "rejeté"},
+        "syntheseVote": {
+            "nombreVotants": "100",
+            "decompte": {"pour": "40", "contre": "60", "abstentions": "0"},
+        },
+        "typeVote": {"codeTypeVote": "SFS"},
+        "objet": {
+            "dossierLegislatif": {
+                "libelle": "Projet de loi visant à offrir des réponses immédiates",
+                "dossierRef": "DLR5L17N53980",
+            }
+        },
+    }
+    result = parse_vote(item)
+    assert result is not None
+    assert result["dossier_id"] == "DLR5L17N53980"
+
+
 def test_parse_vote_missing_uid_returns_none():
     assert parse_vote({"dateScrutin": "2024-07-16", "titre": "X"}) is None
 
