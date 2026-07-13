@@ -237,13 +237,15 @@ Key architectural choices made during the build and why. Consult this before pro
 
 **Why:** OpenAI embeddings are the quality baseline for French text and are cheap at this corpus size ($0.006 per full re-index). Groq inference is free-tier, significantly faster than OpenAI Chat, and produces adequate quality for civic Q&A at temperature=0.2. Separating the embedding and inference providers gives independent cost and quality control over each.
 
-### 5. IVFFlat + notable-deputy pin for RAG retrieval
+### 5. IVFFlat dropped; notable-deputy retrieval pin removed (MON-76)
 
-**Decision (revised 2026-06-11):** the IVFFlat index was dropped (migration 003) — it had been built on an empty table (degenerate clustering) and at ~3.7k chunks an exact cosine scan is faster *and* exact. The notable-deputy pin (hard-coded name list) remains for now; re-evaluating it is part of the RAG-axis remediation.
+**Decision (revised 2026-07-13):** the IVFFlat index was dropped (migration 003) — it had been built on an empty table (degenerate clustering) and at ~3.7k chunks an exact cosine scan is faster *and* exact. The notable-deputy retrieval pin was re-evaluated with a local MLflow run (pin-on vs pin-off, retrieval suite) and removed: pin-off matched pin-on on keyword_score (0.875 = 0.875) and scored *higher* on average top similarity (0.622 vs 0.571) — the exact cosine scan alone already ranks the deputy's own chunk first. See decision ADR-008 in `docs/decisions.md` for the full eval writeup.
 
-**Original decision:** pgvector uses IVFFlat (not HNSW) with `ivfflat.probes=10`. A hard-coded name list (Attal, Le Pen, etc.) pins the named deputy's chunk as the first result, bypassing the index.
+**Original decision:** pgvector uses IVFFlat (not HNSW) with `ivfflat.probes=10`. A DB-backed map of indexed `notable_deputy` chunks pins the named deputy's chunk as the first result, bypassing the index.
 
-**Why:** At 3 741 chunks, IVFFlat is fast enough and simpler to tune than HNSW. However, IVFFlat has known recall gaps for high-profile deputies whose names appear across many chunks — the index can return a generic vote chunk instead of the deputy profile. The pin is a targeted workaround: it adds one exact-match lookup before the vector search and is cheaper than retuning the entire index. This should be revisited if the corpus grows substantially or if HNSW becomes the default.
+**Why it existed:** At 3 741 chunks, IVFFlat had known recall gaps for high-profile deputies whose names appear across many chunks — the index could return a generic vote chunk instead of the deputy profile. The pin was a targeted workaround: it added one exact-match lookup before the vector search, cheaper than retuning the entire index.
+
+**Why it's gone:** IVFFlat itself is gone (see above), so the recall gap the pin was compensating for no longer exists. `get_notable_deputy_ids()` / `detect_notable_deputy()` still live in `rag/chain/retriever.py` — they're used by `rag/chain/llm_router.py` to route deputy-specific questions to RAG instead of a ranking-intent SQL query, which is a routing concern, not a retrieval-ranking one.
 
 ### 6. dbt for the transform layer
 

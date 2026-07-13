@@ -91,8 +91,7 @@ def test_ask_stage_ordering():
 def _make_retriever_mocks(semantic_rows: list[dict]):
     """Build (mock_openai_client, mock_pool) for use in retrieve() tests.
 
-    Patches _openai_client (already created at import time, not the class),
-    get_notable_deputy_ids (bypasses DB for notable-deputy lookup),
+    Patches _openai_client (already created at import time, not the class)
     and _get_retriever_pool (bypasses real connection pool creation).
     """
     embedding_resp = MagicMock()
@@ -105,8 +104,6 @@ def _make_retriever_mocks(semantic_rows: list[dict]):
     cursor = MagicMock()
     cursor.__enter__ = lambda s: s
     cursor.__exit__ = MagicMock(return_value=False)
-    # With get_notable_deputy_ids returning {} there is no pin query; only the
-    # semantic fetchall runs (one call).
     cursor.fetchall.return_value = semantic_rows
 
     conn = MagicMock()
@@ -130,7 +127,6 @@ def test_retrieve_returns_list_with_correct_keys():
 
     with (
         patch("rag.chain.retriever._openai_client", mock_openai),
-        patch("rag.chain.retriever.get_notable_deputy_ids", return_value={}),
         patch("rag.chain.retriever._get_retriever_pool", return_value=mock_pool),
         patch("rag.chain.retriever.register_vector"),
     ):
@@ -151,10 +147,35 @@ def test_retrieve_returns_empty_list_when_no_chunks():
 
     with (
         patch("rag.chain.retriever._openai_client", mock_openai),
-        patch("rag.chain.retriever.get_notable_deputy_ids", return_value={}),
         patch("rag.chain.retriever._get_retriever_pool", return_value=mock_pool),
         patch("rag.chain.retriever.register_vector"),
     ):
         results = retrieve("Question sans résultat")
 
     assert results == []
+
+
+def test_retrieve_runs_single_semantic_query_no_pin():
+    """MON-76: the notable-deputy pin (a second, separate query that forced a
+    notable_deputy chunk to the front) was removed — exact cosine scan has
+    perfect recall at this corpus size (see decision 5 in docs/decisions.md).
+    retrieve() must issue exactly one SELECT against document_chunks."""
+    semantic_rows = [
+        {
+            "content": "Yaël Braun-Pivet est député(e) des Yvelines.",
+            "metadata": {"chunk_type": "deputy", "deputy_id": "PA1"},
+            "similarity": 0.65,
+        }
+    ]
+    mock_openai, mock_pool = _make_retriever_mocks(semantic_rows)
+    cursor = mock_pool.getconn.return_value.cursor.return_value
+
+    with (
+        patch("rag.chain.retriever._openai_client", mock_openai),
+        patch("rag.chain.retriever._get_retriever_pool", return_value=mock_pool),
+        patch("rag.chain.retriever.register_vector"),
+    ):
+        results = retrieve("Quel est le taux de présence de Yaël Braun-Pivet ?")
+
+    assert cursor.execute.call_count == 1
+    assert results[0]["metadata"]["chunk_type"] == "deputy"

@@ -53,6 +53,11 @@ def get_notable_deputy_ids() -> dict:
     Fetch all notable_deputy chunk deputy_ids from document_chunks.
     Returns {deputy_id: full_name} for all indexed notable deputies.
     Refreshed at most once per hour so the serving process stays current.
+
+    Used by rag.chain.llm_router to route deputy-specific questions to RAG
+    instead of a ranking-intent SQL query — not for retrieval pinning
+    (removed in MON-76: exact cosine scan has perfect recall at this corpus
+    size, see decision 5 in docs/decisions.md).
     """
     now = time.monotonic()
     if _notable_cache["value"] is not None and now - _notable_cache["ts"] < _NOTABLE_TTL:
@@ -141,13 +146,6 @@ def retrieve(
     result_filter = detect_result_filter(question)
     recency = detect_recency_intent(question)
 
-    notable_id = None
-    if not deputy_id:
-        notable_map = get_notable_deputy_ids()
-        notable_id = detect_notable_deputy(question, notable_map)
-        if notable_id:
-            log.debug("[retriever] Notable deputy pinned: %s", notable_map[notable_id])
-
     response = _openai_client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
     query_vector = np.array(response.data[0].embedding, dtype=np.float32)
 
@@ -160,34 +158,11 @@ def retrieve(
         with conn.cursor(cursor_factory=psycopg2.extensions.cursor) as plain_cur:
             register_vector(plain_cur)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            pinned = []
-            if notable_id:
-                cur.execute(
-                    """
-                    SELECT content, metadata,
-                           1 - (embedding <=> %s::vector) AS similarity
-                    FROM document_chunks
-                    WHERE metadata->>'chunk_type' = 'notable_deputy'
-                      AND metadata->>'deputy_id' = %s
-                    """,
-                    (query_vector, notable_id),
-                )
-                for row in cur.fetchall():
-                    pinned.append(
-                        {
-                            "content": row["content"],
-                            "metadata": dict(row["metadata"]),
-                            "similarity": float(row["similarity"]),
-                        }
-                    )
-
-            semantic_k = k - len(pinned)
-            pinned_ids = {p["metadata"].get("deputy_id") for p in pinned}
             # "récemment"/"dernier" etc. carry no signal for cosine similarity —
             # widen the candidate pool so a post-hoc sort by voted_at has
             # actually-recent votes to pick from, instead of just whatever
             # happens to be closest in embedding space.
-            fetch_limit = (semantic_k + len(pinned)) * 4 if recency else semantic_k + len(pinned)
+            fetch_limit = k * 4 if recency else k
             cur.execute(
                 """
                 SELECT content, metadata,
@@ -218,8 +193,6 @@ def retrieve(
                     "similarity": float(row["similarity"]),
                 }
                 for row in cur.fetchall()
-                if row["metadata"].get("deputy_id") not in pinned_ids
-                or row["metadata"].get("chunk_type") != "notable_deputy"
             ]
             if recency:
                 # Sort candidates with a voted_at by recency first; chunks
@@ -228,14 +201,14 @@ def retrieve(
                 dated = [r for r in semantic_rows if r["metadata"].get("voted_at")]
                 undated = [r for r in semantic_rows if not r["metadata"].get("voted_at")]
                 dated.sort(key=lambda r: r["metadata"]["voted_at"], reverse=True)
-                semantic_rows = (dated + undated)[: semantic_k + len(pinned)]
+                semantic_rows = (dated + undated)[:k]
     except Exception:
         broken = True
         raise
     finally:
         pool.putconn(conn, close=broken)
 
-    results = (pinned + semantic_rows)[:k]
+    results = semantic_rows[:k]
 
     top_sim = results[0]["similarity"] if results else 0.0
     log.debug(

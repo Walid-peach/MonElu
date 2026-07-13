@@ -168,10 +168,22 @@ revealed that aggregate facts (total deputies = 577, party counts) were not
 in any individual chunk, causing 3 of 4 retrieval failures. Adding party
 chunks and a global stats chunk raised keyword_score from 0.58 to 0.80+.
 
-**Notable deputy pinning:** Retriever bypasses cosine search for known
-deputy names (Attal, Le Pen) and fetches their chunk directly, then fills
-remaining slots with semantic search. Solves IVFFlat recall gap on rare
-named entities.
+**Notable deputy pinning (removed MON-76):** Retriever used to bypass cosine
+search for known deputy names (Attal, Le Pen) and fetch their chunk
+directly, then fill remaining slots with semantic search — a workaround for
+an IVFFlat recall gap on rare named entities. Migration 003 dropped IVFFlat
+in favor of an exact cosine scan (perfect recall at this corpus size, see
+decision 5 in CLAUDE.md), so the pin became scaffolding around a problem
+that no longer existed. Re-evaluated with a local MLflow run comparing
+pin-on vs pin-off on the retrieval suite: identical keyword_score (0.875 =
+0.875) and *higher* average top similarity with the pin off (0.622 vs
+0.571) — the plain cosine scan on its own ranks the richer `deputy` chunk
+above the hand-authored `notable_deputy` chunk. The pin, its DB-backed
+notable-deputy map, and the forced-first-result logic in `retrieve()` were
+removed; `get_notable_deputy_ids()` / `detect_notable_deputy()` remain in
+`rag/chain/retriever.py` because `rag/chain/llm_router.py` still uses them
+to route deputy-specific questions to RAG instead of a ranking-intent SQL
+query — that is a routing concern, not a retrieval-ranking one.
 
 **Total index:** 3,739 chunks. Cost: $0.0064 one-time (OpenAI
 text-embedding-3-small). Per-query cost: ~$0 (question embedding only).
