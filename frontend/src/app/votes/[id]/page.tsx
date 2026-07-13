@@ -4,6 +4,8 @@ import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyShort } from '@/lib/utils'
 import { VoteDetailClient } from './VoteDetailClient'
+import { JsonLd } from '@/components/JsonLd'
+import { SITE_URL, buildVoteJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -125,27 +127,35 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
   })
 
   return (
-    <Suspense fallback={<div style={{ padding: '48px 32px', color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
-      <VoteDetailClient
-        voteId={vote.vote_id}
-        voteTitle={vote.vote_title}
-        result={vote.result}
-        votedAt={vote.voted_at}
-        summary={vote.summary_plain ?? null}
-        theme={vote.theme ?? null}
-        votesFor={vote.votes_for}
-        votesAgainst={vote.votes_against}
-        abstentions={vote.abstentions}
-        totalVoters={vote.total_voters}
-        pourPct={pourPct}
-        contrePct={contrePct}
-        abstPct={abstPct}
-        groups={groups}
-        dissidents={dissidents}
-        related={related}
-        apiUrl={apiUrl}
-        deputyLookup={deputyLookup}
-      />
-    </Suspense>
+    <>
+      <JsonLd data={buildVoteJsonLd(vote)} />
+      <JsonLd data={buildBreadcrumbJsonLd([
+        { name: 'Accueil', url: SITE_URL },
+        { name: 'Votes', url: `${SITE_URL}/votes` },
+        { name: vote.vote_title, url: `${SITE_URL}/votes/${vote.vote_id}` },
+      ])} />
+      <Suspense fallback={<div style={{ padding: '48px 32px', color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
+        <VoteDetailClient
+          voteId={vote.vote_id}
+          voteTitle={vote.vote_title}
+          result={vote.result}
+          votedAt={vote.voted_at}
+          summary={vote.summary_plain ?? null}
+          theme={vote.theme ?? null}
+          votesFor={vote.votes_for}
+          votesAgainst={vote.votes_against}
+          abstentions={vote.abstentions}
+          totalVoters={vote.total_voters}
+          pourPct={pourPct}
+          contrePct={contrePct}
+          abstPct={abstPct}
+          groups={groups}
+          dissidents={dissidents}
+          related={related}
+          apiUrl={apiUrl}
+          deputyLookup={deputyLookup}
+        />
+      </Suspense>
+    </>
   )
 }
