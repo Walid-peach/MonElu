@@ -82,7 +82,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
   const stats: { value: string; label: string; tooltip?: string }[] = scorecard ? [
     { value: scorecard.total_votes.toLocaleString('fr-FR'),    label: 'scrutins votés' },
-    { value: `${presencePct ?? '—'}%`,                        label: 'présence aux votes' },
+    { value: `${solennelPct ?? '—'}%`,                        label: 'participation aux scrutins solennels' },
     { value: scorecard.votes_for.toLocaleString('fr-FR'),      label: 'votes Pour' },
     { value: scorecard.votes_against.toLocaleString('fr-FR'),  label: 'votes Contre' },
     { value: scorecard.abstentions.toLocaleString('fr-FR'),    label: 'abstentions' },
