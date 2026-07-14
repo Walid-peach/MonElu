@@ -109,6 +109,7 @@ export type SearchResult = {
   chunks_retrieved: number
   confidence: string
   data_source: string
+  caveat?: string | null
   sources: Array<{ content: string; metadata: Record<string, string>; similarity: number }>
 }
 
