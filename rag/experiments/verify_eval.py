@@ -25,8 +25,6 @@ import psycopg2
 
 from rag.chain.verify import verify_claim
 
-_POSITION_WORDS = {"pour": "pour", "contre": "contre", "abstention": None, "nonVotant": None}
-
 
 def _live_golden_claims() -> list[dict]:
     """Build golden claims from a real, clear-cut position in the live DB."""

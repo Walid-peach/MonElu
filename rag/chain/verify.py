@@ -241,7 +241,9 @@ def verify_claim(claim: str) -> dict:
             "party": deputy_map[deputy_id]["party"],
         }
 
-    chunks = retrieve(claim, k=CANDIDATE_K, chunk_type="vote")
+    # No auto result filter: the claim's own "adopté"/"rejeté" wording must
+    # not exclude the scrutin that would contradict it.
+    chunks = retrieve(claim, k=CANDIDATE_K, chunk_type="vote", auto_result_filter=False)
     confidence = compute_confidence(chunks)
 
     if not chunks or chunks[0]["similarity"] < MIN_TOP_SIMILARITY:

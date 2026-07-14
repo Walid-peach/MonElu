@@ -197,6 +197,18 @@ def test_unparseable_llm_output_returns_inverifiable():
     assert result["citations"] == []
 
 
+def test_retrieval_disables_auto_result_filter():
+    """A claim's own "adopté"/"rejeté" wording must not exclude the scrutin
+    that would contradict it — verify_claim opts out of the auto filter."""
+    with (
+        patch.object(verify_mod, "get_deputy_map", return_value=_DEPUTY_MAP),
+        patch.object(verify_mod, "retrieve", return_value=[]) as mock_retrieve,
+        patch.object(verify_mod, "get_data_horizon_start", return_value="2025-07-01"),
+    ):
+        verify_claim("Attal a voté pour la loi rejetée")
+    assert mock_retrieve.call_args.kwargs["auto_result_filter"] is False
+
+
 def test_inverifiable_verdict_allowed_without_citations():
     payload = {
         "verdict": "inverifiable",
