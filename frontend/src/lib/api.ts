@@ -132,6 +132,27 @@ export type SearchResult = {
   sources: Array<{ content: string; metadata: Record<string, string>; similarity: number }>
 }
 
+export type VerifyCitation = {
+  vote_id: string
+  title: string
+  voted_at: string
+  result: string | null
+  deputy_position: string | null
+}
+
+export type VerifyResult = {
+  id: string
+  claim: string
+  verdict: 'vrai' | 'faux' | 'trompeur' | 'inverifiable'
+  explanation: string
+  deputy: { deputy_id: string; name: string; party: string | null } | null
+  citations: VerifyCitation[]
+  confidence: 'ÉLEVÉ' | 'MOYEN' | 'FAIBLE'
+  data_horizon: string | null
+  verified_at: string
+  share_url: string
+}
+
 // 5xx: transient upstream hiccups, short retries.
 // 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
 // where prerendering ~117 pages from one IP exceeds the budget and fails the
@@ -229,6 +250,9 @@ export const api = {
     get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`, { revalidate: 86400 }),
   },
   search: (question: string) => apiPost<SearchResult>('/search/', { question }),
+  verify: (claim: string) => apiPost<VerifyResult>('/verify/', { claim }),
+  // Verdicts are immutable snapshots (ADR-022) — cache aggressively.
+  verification: (id: string) => apiFetch<VerifyResult>(`/verify/${id}`, { revalidate: 86400 }),
   feedback: {
     chat: (vote: 'up' | 'down', question: string, answer: string, sources: SearchResult['sources']) =>
       apiPost<{ status: string }>('/feedback/chat', { vote, question, answer, sources }),
