@@ -12,6 +12,7 @@ from api.schemas import (
     DeputyAlignment,
     DeputyDetail,
     DeputyDissidentVotesResponse,
+    DeputyDivergingVotesResponse,
     DeputyListResponse,
     DeputyScorecard,
     DeputyStats,
@@ -19,6 +20,7 @@ from api.schemas import (
     DeputyVoteItem,
     DeputyVotesResponse,
     DissidentVoteItem,
+    DivergingVoteItem,
 )
 
 router = APIRouter()
@@ -80,15 +82,28 @@ def list_deputies(
 
 @router.get("/stats", response_model=DeputyStats)
 @limiter.limit(tiered_limit(30))
-def get_deputy_stats(request: Request):
+def get_deputy_stats(
+    request: Request,
+    party: str = Query(
+        None,
+        description="Scope the averages to one party (for deputy-vs-party comparison, MON-92)",
+    ),
+):
+    where = sql.SQL(" WHERE party = %s") if party else sql.SQL("")
+    params = [party] if party else []
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT AVG(presence_rate) AS avg_presence_rate, "
-                    "AVG(solennel_participation_rate) AS avg_solennel_participation_rate, "
-                    "AVG(voting_days_rate) AS avg_voting_days_rate "
-                    "FROM analytics_marts.mart_deputy_scorecard"
+                    sql.SQL(
+                        "SELECT AVG(presence_rate) AS avg_presence_rate, "
+                        "AVG(solennel_participation_rate) AS avg_solennel_participation_rate, "
+                        "AVG(voting_days_rate) AS avg_voting_days_rate, "
+                        "AVG(votes_for_pct) AS avg_votes_for_pct, "
+                        "AVG(abstention_pct) AS avg_abstention_pct "
+                        "FROM analytics_marts.mart_deputy_scorecard{}"
+                    ).format(where),
+                    params,
                 )
                 row = cur.fetchone()
     except psycopg2.errors.UndefinedTable:
@@ -102,6 +117,8 @@ def get_deputy_stats(request: Request):
         avg_presence_rate=_avg("avg_presence_rate"),
         avg_solennel_participation_rate=_avg("avg_solennel_participation_rate"),
         avg_voting_days_rate=_avg("avg_voting_days_rate"),
+        avg_votes_for_pct=_avg("avg_votes_for_pct"),
+        avg_abstention_pct=_avg("avg_abstention_pct"),
     )
 
 
@@ -288,4 +305,62 @@ def get_dissident_votes(
         deputy_id=deputy_id,
         total=total,
         items=[DissidentVoteItem(**r) for r in rows],
+    )
+
+
+@router.get(
+    "/{deputy_id}/diverging-votes",
+    response_model=DeputyDivergingVotesResponse,
+)
+@limiter.limit(tiered_limit(10))
+def get_diverging_votes(
+    request: Request,
+    deputy_id: str,
+    other_deputy_id: str = Query(..., description="The other deputy to compare against (MON-92)"),
+    limit: int = Query(10, ge=1, le=50),
+):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM vote_positions vpa
+                    JOIN vote_positions vpb
+                        ON vpb.vote_id = vpa.vote_id AND vpb.deputy_id = %s
+                    WHERE vpa.deputy_id = %s
+                      AND vpa.position IN ('pour', 'contre', 'abstention')
+                      AND vpb.position IN ('pour', 'contre', 'abstention')
+                      AND vpa.position != vpb.position
+                    """,
+                    (other_deputy_id, deputy_id),
+                )
+                total = cur.fetchone()["count"]
+
+                cur.execute(
+                    """
+                    SELECT vpa.vote_id, v.voted_at, v.vote_title, v.result, v.summary_plain,
+                           vpa.position AS position_a, vpb.position AS position_b
+                    FROM vote_positions vpa
+                    JOIN vote_positions vpb
+                        ON vpb.vote_id = vpa.vote_id AND vpb.deputy_id = %s
+                    JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vpa.vote_id
+                    WHERE vpa.deputy_id = %s
+                      AND vpa.position IN ('pour', 'contre', 'abstention')
+                      AND vpb.position IN ('pour', 'contre', 'abstention')
+                      AND vpa.position != vpb.position
+                    ORDER BY v.voted_at DESC NULLS LAST
+                    LIMIT %s
+                    """,
+                    (other_deputy_id, deputy_id, limit),
+                )
+                rows = cur.fetchall()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
+
+    return DeputyDivergingVotesResponse(
+        deputy_a_id=deputy_id,
+        deputy_b_id=other_deputy_id,
+        total=total,
+        items=[DivergingVoteItem(**r) for r in rows],
     )

@@ -200,6 +200,17 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   ariaLabel="Partager ce député"
                 />
                 <FollowDeputyButton deputyId={id} />
+                <Link
+                  href={`/deputes/comparer?a=${id}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    background: '#fff', border: `1px solid ${LINE}`, color: NAVY,
+                    padding: '12px 22px', borderRadius: 9, fontWeight: 600,
+                    fontSize: 15, textDecoration: 'none',
+                  }}
+                >
+                  Comparer
+                </Link>
               </div>
             </div>
           </div>

@@ -217,6 +217,73 @@ def test_get_dissident_votes_empty(client, mock_cursor):
     assert data["items"] == []
 
 
+def test_get_diverging_votes(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": "VTANR5L17V1",
+            "voted_at": "2024-07-16T15:00:00",
+            "vote_title": "Vote sur le projet de loi de finances",
+            "result": "adopté",
+            "summary_plain": "Ce texte prévoit...",
+            "position_a": "pour",
+            "position_b": "contre",
+        }
+    ]
+    resp = client.get("/deputies/PA1/diverging-votes?other_deputy_id=PA2")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["deputy_a_id"] == "PA1"
+    assert data["deputy_b_id"] == "PA2"
+    assert data["total"] == 1
+    assert data["items"][0]["position_a"] == "pour"
+    assert data["items"][0]["position_b"] == "contre"
+
+
+def test_get_diverging_votes_requires_other_deputy_id(client, mock_cursor):
+    resp = client.get("/deputies/PA1/diverging-votes")
+    assert resp.status_code == 422
+
+
+def test_get_diverging_votes_empty(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 0}
+    mock_cursor.fetchall.return_value = []
+    resp = client.get("/deputies/PA1/diverging-votes?other_deputy_id=PA2")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 0
+    assert data["items"] == []
+
+
+def test_get_deputy_stats(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {
+        "avg_presence_rate": 0.8,
+        "avg_solennel_participation_rate": 0.75,
+        "avg_voting_days_rate": 0.7,
+        "avg_votes_for_pct": 0.6,
+        "avg_abstention_pct": 0.1,
+    }
+    resp = client.get("/deputies/stats")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["avg_votes_for_pct"] == 0.6
+    assert data["avg_abstention_pct"] == 0.1
+
+
+def test_get_deputy_stats_scoped_to_party(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {
+        "avg_presence_rate": 0.85,
+        "avg_solennel_participation_rate": 0.8,
+        "avg_voting_days_rate": 0.75,
+        "avg_votes_for_pct": 0.65,
+        "avg_abstention_pct": 0.05,
+    }
+    resp = client.get("/deputies/stats?party=Renaissance")
+    assert resp.status_code == 200
+    select_params = mock_cursor.execute.call_args_list[-1].args[1]
+    assert select_params == ["Renaissance"]
+
+
 def test_get_deputy_votes_includes_summary_plain(client, mock_cursor):
     mock_cursor.fetchone.return_value = {"count": 1}
     mock_cursor.fetchall.return_value = [
