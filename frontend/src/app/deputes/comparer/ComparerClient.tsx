@@ -41,7 +41,7 @@ function DeputyPicker({
   selected,
 }: {
   placeholder: string
-  onSelect: (d: Deputy) => void
+  onSelect: (d: Deputy | null) => void
   selected: Deputy | null
 }) {
   const [query, setQuery] = useState('')
@@ -87,7 +87,7 @@ function DeputyPicker({
           <div style={{ fontSize: 12.5, color: '#9CA3AF' }}>{selected.party ?? '—'}</div>
         </div>
         <button
-          onClick={() => { setQuery(''); setResults([]); onSelect(null as unknown as Deputy) }}
+          onClick={() => { setQuery(''); setResults([]); onSelect(null) }}
           aria-label="Changer de député"
           style={{ color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}
         >
@@ -251,10 +251,14 @@ export function ComparerClient() {
         if (cancelled) return
         setSideB(b)
         setDivergingVotes(diverging?.items ?? [])
-      } else if (mode === 'party') {
-        const s = await api.deputies.stats(deputyA.party ?? undefined).catch(() => null)
+      } else if (mode === 'party' && deputyA.party) {
+        const s = await api.deputies.stats(deputyA.party).catch(() => null)
         if (cancelled) return
         setStats(s)
+      } else if (mode === 'party') {
+        // No party ("non inscrit") — never substitute the national average under a
+        // "group" label, that would silently misrepresent whose data is shown.
+        setStats(null)
       } else if (mode === 'national') {
         const s = await api.deputies.stats().catch(() => null)
         if (cancelled) return
@@ -269,10 +273,12 @@ export function ComparerClient() {
   const scorecardA = sideA?.scorecard ?? null
   const scorecardB = sideB?.scorecard ?? null
 
+  const noPartyForComparison = mode === 'party' && !!deputyA && !deputyA.party
+
   const bLabel = mode === 'deputy'
     ? (deputyB?.full_name ?? 'Second député')
     : mode === 'party'
-      ? `Moyenne du groupe${deputyA?.party ? ` (${deputyA.party})` : ''}`
+      ? (deputyA?.party ? `Moyenne du groupe (${deputyA.party})` : 'Aucun groupe')
       : 'Moyenne nationale'
 
   const rows = [
@@ -380,11 +386,17 @@ export function ComparerClient() {
               </div>
 
               {/* Stat rows */}
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '10px 26px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                {rows.map(r => (
-                  <CompareRow key={r.key} label={r.label} aPct={r.a} bPct={r.b} aColor={NAVY} bColor={ACCENT} />
-                ))}
-              </div>
+              {noPartyForComparison ? (
+                <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '24px 26px', color: '#6B7280', fontSize: 14 }}>
+                  {deputyA.full_name} n&apos;est rattaché·e à aucun groupe politique — la comparaison par groupe n&apos;est pas disponible. Essayez la moyenne nationale, ou comparez à un autre député.
+                </div>
+              ) : (
+                <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '10px 26px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  {rows.map(r => (
+                    <CompareRow key={r.key} label={r.label} aPct={r.a} bPct={r.b} aColor={NAVY} bColor={ACCENT} />
+                  ))}
+                </div>
+              )}
 
               {/* Party alignment (deputy-vs-deputy only) */}
               {mode === 'deputy' && sideA.alignment && sideB?.alignment && (
