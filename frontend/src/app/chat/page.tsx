@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { SearchResult } from '@/lib/api'
+import { InfoTooltip } from '@/components/InfoTooltip'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -108,22 +109,22 @@ type SourceCard = { dot: string; label: string; sub: string; badge: string; badg
 function mapSource(src: SearchResult['sources'][0]): SourceCard {
   const meta = src.metadata || {}
   const type = meta.chunk_type || 'stat'
-  if (type === 'deputy') {
+  if (type === 'deputy' || type === 'notable_deputy') {
     return {
       dot: meta.group_color || '#1B2B50',
-      label: meta.deputy_name || meta.name || 'Député',
-      sub: [meta.department, meta.circonscription].filter(Boolean).join(' · ') || '',
-      badge: meta.group_short || meta.group || '',
+      label: meta.deputy_name || meta.full_name || meta.name || 'Député',
+      sub: [meta.department, meta.circonscription, meta.party].filter(Boolean).join(' · ') || '',
+      badge: meta.group_short || meta.group || meta.party || '',
       badgeBg: '#F1F5F9', badgeColor: '#475569',
       href: meta.deputy_id ? `/deputes/${meta.deputy_id}` : undefined,
     }
   }
-  if (type === 'vote') {
+  if (type === 'vote' || type === 'law_summary') {
     const adopted = (meta.result || '').toLowerCase().includes('adopt')
     return {
       dot: adopted ? '#15803D' : '#DC2626',
-      label: meta.title || src.content.slice(0, 60),
-      sub: meta.date || '',
+      label: meta.title || meta.vote_title || src.content.slice(0, 60),
+      sub: meta.date || meta.voted_at || '',
       badge: meta.result || '',
       badgeBg: adopted ? '#DCFCE7' : '#FEE2E2',
       badgeColor: adopted ? '#15803D' : '#DC2626',
@@ -137,6 +138,23 @@ function mapSource(src: SearchResult['sources'][0]): SourceCard {
     badge: type, badgeBg: '#EFF3FB', badgeColor: '#1B2B50',
   }
 }
+
+// ── Confidence badge helpers ────────────────────────────────────────────────
+// compute_confidence() in rag/chain/rag_chain.py derives this from retrieval
+// quality (top similarity + supporting chunk count), not LLM self-rating.
+
+const CONFIDENCE_META: Record<string, { label: string; bg: string; color: string; bgDark: string; colorDark: string }> = {
+  high:   { label: 'Haute confiance',   bg: '#DCFCE7', color: '#15803D', bgDark: 'rgba(21,128,61,0.20)', colorDark: '#4ADE80' },
+  medium: { label: 'Confiance moyenne', bg: '#FEF3C7', color: '#92400E', bgDark: 'rgba(180,83,9,0.20)',  colorDark: '#FBBF24' },
+  low:    { label: 'Basse confiance',   bg: '#FEE2E2', color: '#B91C1C', bgDark: 'rgba(185,28,28,0.20)', colorDark: '#F87171' },
+}
+
+const CONFIDENCE_EXPLANATION =
+  "La confiance reflète la qualité des sources retrouvées dans la base de données (similarité et nombre), " +
+  "pas l'auto-évaluation du modèle. " +
+  'Haute confiance : plusieurs sources très proches de la question. ' +
+  'Confiance moyenne : sources partiellement pertinentes. ' +
+  'Basse confiance : peu de sources vraiment pertinentes — vérifiez la réponse à la source.'
 
 // ── Main component ─────────────────────────────────────────────────────────
 
@@ -498,11 +516,30 @@ function ChatInner() {
 
                 if (msg.role === 'assistant') {
                   const sources = (msg.result.sources || []).slice(0, 3).map(mapSource)
+                  const conf = CONFIDENCE_META[msg.result.confidence]
                   return (
                     <div key={i} style={{ display: 'flex', gap: 13, marginBottom: 28, alignItems: 'flex-start' }}>
                       <AiAvatar />
                       <div style={{ flex: 1, minWidth: 0, marginTop: 4 }}>
+                        {conf && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, letterSpacing: '0.02em', background: dk ? conf.bgDark : conf.bg, color: dk ? conf.colorDark : conf.color }}>
+                              {conf.label}
+                            </span>
+                            <InfoTooltip text={CONFIDENCE_EXPLANATION} ariaLabel="Qu'est-ce que la confiance ?" />
+                          </div>
+                        )}
                         <div style={{ fontSize: 15, lineHeight: 1.75, color: dk ? 'rgba(255,255,255,0.85)' : '#1F2937' }} dangerouslySetInnerHTML={{ __html: mdToHtml(msg.result.answer) }} />
+                        {msg.result.caveat && (
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, padding: '9px 12px', borderRadius: 8, background: dk ? 'rgba(251,191,36,0.10)' : '#FFFBEB', border: `1px solid ${dk ? 'rgba(251,191,36,0.22)' : '#FDE68A'}` }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dk ? '#FBBF24' : '#B45309'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                              <line x1="12" y1="9" x2="12" y2="13" />
+                              <line x1="12" y1="17" x2="12.01" y2="17" />
+                            </svg>
+                            <span style={{ fontSize: 12.5, lineHeight: 1.55, color: dk ? 'rgba(255,255,255,0.75)' : '#92400E' }}>{msg.result.caveat}</span>
+                          </div>
+                        )}
                         {sources.length > 0 && (
                           <div style={{ marginTop: 18 }}>
                             <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: txt3, marginBottom: 9 }}>Sources</div>
