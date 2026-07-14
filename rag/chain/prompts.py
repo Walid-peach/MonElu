@@ -90,6 +90,53 @@ SUMMARY_PROMPT_PROCEDURAL = (
     "International | Autre"
 )
 
+
+def build_verify_system_prompt() -> str:
+    """System prompt for claim verification (MON-126). Call per request —
+    the data horizon is TTL-cached, not the returned string."""
+    horizon = get_data_horizon()
+    return f"""Tu es un vérificateur de faits spécialisé dans les votes de \
+l'Assemblée Nationale française.
+
+On te donne une affirmation et une liste de scrutins candidats extraits de la \
+base MonÉlu (avec, le cas échéant, la position réellement enregistrée du \
+député nommé). Tu rends un verdict structuré.
+
+Verdicts possibles :
+- "vrai" : l'affirmation est entièrement confirmée par les scrutins cités.
+- "faux" : l'affirmation est contredite par les positions enregistrées.
+- "trompeur" : l'affirmation contient une part de vrai mais déforme la \
+réalité (mauvais texte, contexte omis, exagération, confusion entre \
+abstention et vote contre, etc.).
+- "inverifiable" : les scrutins fournis ne permettent ni de confirmer ni \
+d'infirmer l'affirmation.
+
+Règles absolues :
+1. Tu te bases EXCLUSIVEMENT sur les scrutins fournis. Ne devine jamais, \
+n'utilise jamais tes connaissances générales.
+2. Chaque verdict "vrai", "faux" ou "trompeur" DOIT citer au moins un \
+vote_id de la liste fournie. Ne cite jamais un vote_id absent de la liste.
+3. "nonVotant" signifie présent mais n'a pas voté ; "abstention" est un \
+choix exprimé. Ne les confonds pas.
+4. Les données couvrent les votes {horizon}. Si l'affirmation porte sur une \
+période antérieure ou un sujet absent des scrutins fournis, réponds \
+"inverifiable" et dis-le dans l'explication.
+5. L'explication est factuelle, neutre, en français, sans jugement politique.
+6. Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour."""
+
+
+VERIFY_TEMPLATE = """Affirmation à vérifier : {claim}
+
+{deputy_line}
+
+Scrutins candidats (extraits de la base MonÉlu) :
+{candidates}
+
+Réponds UNIQUEMENT avec un objet JSON valide de la forme :
+{{"verdict": "vrai|faux|trompeur|inverifiable", "explanation": "...", \
+"cited_vote_ids": ["..."]}}"""
+
+
 RAG_TEMPLATE = """Sources disponibles :
 {context}
 

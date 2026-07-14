@@ -463,3 +463,109 @@ def test_health_degraded_when_openai_key_is_placeholder(client, mock_cursor):
     assert data["status"] == "degraded"
     assert data["openai"] == "degraded"
     assert data["db"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Verify (MON-126)
+# ---------------------------------------------------------------------------
+
+_VERIFY_KEYS_SET = {
+    "GROQ_API_KEY": "gsk_test_not_a_real_key",  # pragma: allowlist secret
+    "OPENAI_API_KEY": "sk-test-not-a-real-key",  # pragma: allowlist secret
+}
+
+_VERIFY_CHAIN_RESULT = {
+    "claim": "Gabriel Attal a voté contre l'augmentation du SMIC",
+    "verdict": "faux",
+    "explanation": "Le scrutin cité montre un vote pour.",
+    "deputy": {"deputy_id": "PA2", "name": "Gabriel Attal", "party": "EPR"},
+    "citations": [
+        {
+            "vote_id": "VTANR5L17V1",
+            "title": "Vote sur l'augmentation du SMIC",
+            "voted_at": "2025-09-01",
+            "result": "rejeté",
+            "deputy_position": "pour",
+        }
+    ],
+    "confidence": "ÉLEVÉ",
+    "data_horizon": "2025-07-01",
+}
+
+_VERIFY_ROW = {
+    "id": "3f0e8a4e-6f0f-4a63-9c40-df3a54d9c001",
+    "claim": _VERIFY_CHAIN_RESULT["claim"],
+    "verdict": _VERIFY_CHAIN_RESULT["verdict"],
+    "explanation": _VERIFY_CHAIN_RESULT["explanation"],
+    "deputy": _VERIFY_CHAIN_RESULT["deputy"],
+    "citations": _VERIFY_CHAIN_RESULT["citations"],
+    "confidence": "ÉLEVÉ",
+    "data_horizon": "2025-07-01",
+    "created_at": datetime(2026, 7, 14, 12, 0, 0),
+}
+
+
+def test_verify_post_persists_and_returns_verdict(client, mock_cursor):
+    mock_cursor.fetchone.return_value = dict(_VERIFY_ROW)
+    with (
+        patch("api.routers.verify.verify_claim", return_value=dict(_VERIFY_CHAIN_RESULT)),
+        patch.dict("os.environ", _VERIFY_KEYS_SET),
+    ):
+        resp = client.post("/verify/", json={"claim": _VERIFY_CHAIN_RESULT["claim"]})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["verdict"] == "faux"
+    assert data["id"] == _VERIFY_ROW["id"]
+    assert data["share_url"].endswith(f"/verifier/v/{_VERIFY_ROW['id']}")
+    assert data["citations"][0]["vote_id"] == "VTANR5L17V1"
+    assert data["citations"][0]["deputy_position"] == "pour"
+    assert data["deputy"]["name"] == "Gabriel Attal"
+    assert data["confidence"] == "ÉLEVÉ"
+    assert data["data_horizon"] == "2025-07-01"
+    assert data["verified_at"] == "2026-07-14T12:00:00"
+
+
+def test_verify_post_503_when_keys_unset(client):
+    placeholders = {
+        "GROQ_API_KEY": "gsk_...",  # pragma: allowlist secret
+        "OPENAI_API_KEY": "sk-...",  # pragma: allowlist secret
+    }
+    with patch.dict("os.environ", placeholders):
+        resp = client.post("/verify/", json={"claim": "Une affirmation à vérifier ici"})
+    assert resp.status_code == 503
+    assert "configurée" in resp.json()["detail"]
+
+
+def test_verify_post_claim_too_short_rejected(client):
+    resp = client.post("/verify/", json={"claim": "court"})
+    assert resp.status_code == 422
+
+
+def test_verify_post_groq_timeout_returns_504(client):
+    exc = groq.APITimeoutError(request=httpx.Request("POST", "https://api.groq.com"))
+    with (
+        patch("api.routers.verify.verify_claim", side_effect=exc),
+        patch.dict("os.environ", _VERIFY_KEYS_SET),
+    ):
+        resp = client.post("/verify/", json={"claim": "Une affirmation à vérifier ici"})
+    assert resp.status_code == 504
+
+
+def test_verify_get_found(client, mock_cursor):
+    mock_cursor.fetchone.return_value = dict(_VERIFY_ROW)
+    resp = client.get(f"/verify/{_VERIFY_ROW['id']}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["verdict"] == "faux"
+    assert data["share_url"].endswith(f"/verifier/v/{_VERIFY_ROW['id']}")
+
+
+def test_verify_get_not_found(client, mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    resp = client.get("/verify/3f0e8a4e-6f0f-4a63-9c40-df3a54d9c999")
+    assert resp.status_code == 404
+
+
+def test_verify_get_invalid_uuid_rejected(client):
+    resp = client.get("/verify/not-a-uuid")
+    assert resp.status_code == 422

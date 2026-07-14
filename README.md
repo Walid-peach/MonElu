@@ -54,6 +54,8 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 | GET | `/votes/{id}` | Vote detail + all individual positions |
 | GET | `/health` | API status + live record counts + dbt mart row counts |
 | POST | `/search` | Natural language query over the legislative corpus *(Phase 2)* |
+| POST | `/verify` | Fact-check a claim about a deputy's votes — structured verdict + citations |
+| GET | `/verify/{id}` | Stored verdict snapshot (no LLM call) — backs the share URL |
 
 ---
 
@@ -66,6 +68,7 @@ Implemented with [slowapi](https://github.com/laurentS/slowapi), keyed by remote
 | Global default | 30 req / min |
 | `GET /deputies/{id}/scorecard` | 10 req / min |
 | `POST /search` | 10 req / min |
+| `POST /verify` | 10 req / min |
 
 On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}` · `Retry-After` + `X-RateLimit-*` headers.
 
@@ -279,6 +282,7 @@ design.
 | `routers/deputies.py` | Deputy list, profile, and scorecard endpoints |
 | `routers/votes.py` | Vote list, latest, and detail endpoints |
 | `routers/search.py` | `POST /search` — RAG query endpoint |
+| `routers/verify.py` | `POST /verify` + `GET /verify/{id}` — fact-check verdicts (ADR-022) |
 | `schemas.py` | Pydantic response models (all fields `Optional` to match DB NULLs) |
 
 ### Frontend (`frontend/`)
