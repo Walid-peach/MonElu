@@ -59,6 +59,8 @@ export type DeputyStats = {
   avg_presence_rate: number
   avg_solennel_participation_rate: number | null
   avg_voting_days_rate: number | null
+  avg_votes_for_pct: number | null
+  avg_abstention_pct: number | null
 }
 
 export type Alignment = {
@@ -86,6 +88,23 @@ export type DissidentVotesResponse = {
   deputy_id: string
   total: number
   items: DissidentVoteItem[]
+}
+
+export type DivergingVoteItem = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string
+  result: string | null
+  summary_plain: string | null
+  position_a: string
+  position_b: string
+}
+
+export type DivergingVotesResponse = {
+  deputy_a_id: string
+  deputy_b_id: string
+  total: number
+  items: DivergingVoteItem[]
 }
 
 export type DeputyVoteItem = {
@@ -171,7 +190,12 @@ export const api = {
     },
     get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`, { revalidate: 86400 }),
     scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`, { revalidate: 86400 }),
-    stats: () => apiFetch<DeputyStats>('/deputies/stats/', { revalidate: 3600 }),
+    stats: (party?: string) => {
+      const q = new URLSearchParams()
+      if (party) q.set('party', party)
+      const qs = q.toString()
+      return apiFetch<DeputyStats>(`/deputies/stats/${qs ? `?${qs}` : ''}`, { revalidate: 3600 })
+    },
     votes: (id: string, limit = 10, since?: string) => {
       const q = new URLSearchParams({ limit: String(limit) })
       if (since) q.set('since', since)
@@ -181,6 +205,11 @@ export const api = {
       apiFetch<Alignment>(`/deputies/${id}/alignment/`, { revalidate: 86400 }),
     dissidentVotes: (id: string, limit = 10) =>
       apiFetch<DissidentVotesResponse>(`/deputies/${id}/dissident-votes/?limit=${limit}`, { revalidate: 86400 }),
+    divergingVotes: (id: string, otherId: string, limit = 10) =>
+      apiFetch<DivergingVotesResponse>(
+        `/deputies/${id}/diverging-votes/?other_deputy_id=${encodeURIComponent(otherId)}&limit=${limit}`,
+        { revalidate: 86400 }
+      ),
   },
   votes: {
     list: (params?: { result?: string; theme?: string; search?: string; limit?: number; offset?: number; before?: string }) => {

@@ -108,6 +108,25 @@ class DeputyDissidentVotesResponse(_Base):
     items: list[DissidentVoteItem]
 
 
+class DivergingVoteItem(_Base):
+    """A vote where two deputies (a and b) cast opposite expressed positions."""
+
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: str
+    result: Optional[str] = None
+    summary_plain: Optional[str] = None
+    position_a: str
+    position_b: str
+
+
+class DeputyDivergingVotesResponse(_Base):
+    deputy_a_id: str
+    deputy_b_id: str
+    total: int
+    items: list[DivergingVoteItem]
+
+
 class DeputyStats(_Base):
     avg_presence_rate: Optional[float] = Field(
         None,
@@ -120,6 +139,14 @@ class DeputyStats(_Base):
     avg_voting_days_rate: Optional[float] = Field(
         None,
         description="Average voting_days_rate across all deputies, 0–1 (MON-124)",
+    )
+    avg_votes_for_pct: Optional[float] = Field(
+        None,
+        description="Average votes_for_pct, 0–1; scoped to `party` when set (MON-92)",
+    )
+    avg_abstention_pct: Optional[float] = Field(
+        None,
+        description="Average abstention_pct, 0–1; scoped to `party` when set (MON-92)",
     )
 
 
