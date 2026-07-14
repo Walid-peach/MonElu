@@ -109,7 +109,7 @@ Assemblée Nationale Open Data (ZIPs)
 
 **`api/`** — FastAPI application
 - `main.py`: App factory, CORS (GET + POST — POST is needed for `/search`; an empty `CORS_ORIGINS` blocks all cross-origin requests and logs a startup warning), slowapi rate limiting (30 req/min global, 10 req/min on scorecard and search), global exception handler. `/health` returns DB status, record counts, last ingestion timestamp, and dbt mart row counts. The landing page is now the Next.js frontend (`frontend/`), not a FastAPI-served HTML page.
-- `routers/deputies.py`, `routers/votes.py`, `routers/search.py`: All DB queries — direct SQL, no ORM
+- `routers/deputies.py`, `routers/votes.py`, `routers/search.py`, `routers/verify.py`: All DB queries — direct SQL, no ORM. `verify.py` is the fact-check surface (MON-126, ADR-022): `POST /verify/` runs the verification chain and stores an immutable verdict snapshot; `GET /verify/{id}` serves stored verdicts with no LLM call.
 - `schemas.py`: Pydantic response models; all fields `Optional` to match DB NULLs
 - `limiter.py`: Shared slowapi `Limiter` instance imported by routers
 
@@ -131,6 +131,7 @@ Assemblée Nationale Open Data (ZIPs)
 - `chain/retriever.py`: Exact cosine similarity via pgvector `<=>`. Supports `chunk_type`, `deputy_id`, and auto-detected `result` filters (`adopté`/`rejeté`). Notable deputy names detected and their chunk pinned as first result. TTL-cached notable-deputy map (1h). Note: `register_vector` requires a plain psycopg2 cursor, not a `RealDictCursor`.
 - `chain/prompts.py`: TTL-cached system prompt (data horizon refreshed hourly) via `build_system_prompt()`. Call per request — do not cache the return value.
 - `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `llama-3.3-70b-versatile` (temperature=0.2)
+- `chain/verify.py`: `verify_claim()` — claim verification (MON-126, ADR-022): deputy detection over all deputies, vote-chunk retrieval, positions join, structured JSON verdict (`vrai`/`faux`/`trompeur`/`inverifiable`). Cited vote_ids are validated against the votes table in code; low similarity, parse failure, or a factual verdict with no valid citation all force `inverifiable`.
 - `experiments/mlflow_eval.py`: 11 golden Q&A pairs split into router suite (live SQL ground truth) and retrieval suite (keyword scoring).
 - ~5,900 chunks in production (2026-07): 5,105 vote + 645 deputy + 12 party + 1 global_stats + 102 notable_deputy + 20 law_summary · party and global chunks count active mandates only
 
@@ -153,6 +154,7 @@ Assemblée Nationale Open Data (ZIPs)
 | `document_chunks` | Phase 2: content + JSONB metadata + vector(1536) |
 | `api_keys` | Manually-issued public API keys (sha256 hash, label, rate_limit_multiplier) |
 | `api_key_usage` | Per-key, per-endpoint, per-day request counters for usage accounting |
+| `verifications` | Stored fact-check verdicts (ADR-022): immutable snapshots behind `/verifier/v/<id>` share URLs |
 
 Important data quirks:
 - `nonVotant` ≠ `abstention`: present in chamber but did not vote vs. formally abstained

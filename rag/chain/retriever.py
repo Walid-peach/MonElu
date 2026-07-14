@@ -142,8 +142,13 @@ def retrieve(
     k: int = 5,
     chunk_type: str = None,
     deputy_id: str = None,
+    auto_result_filter: bool = True,
 ) -> list[dict]:
-    result_filter = detect_result_filter(question)
+    # auto_result_filter=False for claim verification: a claim's own
+    # "adopté"/"rejeté" wording must not exclude the scrutin that would
+    # contradict it (a false "la loi a été rejetée" claim needs the
+    # adopted scrutin retrieved to be judged "faux").
+    result_filter = detect_result_filter(question) if auto_result_filter else None
     recency = detect_recency_intent(question)
 
     response = _openai_client.embeddings.create(input=[question], model=EMBEDDING_MODEL)
