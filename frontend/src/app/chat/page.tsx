@@ -155,6 +155,7 @@ function ChatInner() {
   })
   const [activeConvId, setActiveConvId]   = useState<string | null>(null)
   const [copied, setCopied]       = useState(false)
+  const [feedbackByMsg, setFeedbackByMsg] = useState<Record<number, 'pending' | 'up' | 'down' | 'error'>>({})
 
   const scrollRef     = useRef<HTMLDivElement>(null)
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
@@ -289,6 +290,13 @@ function ChatInner() {
       setTimeout(() => setCopied(false), 1800)
     })
   }, [messages])
+
+  const submitFeedback = useCallback((i: number, vote: 'up' | 'down', result: SearchResult) => {
+    setFeedbackByMsg(prev => ({ ...prev, [i]: 'pending' }))
+    api.feedback.chat(vote, result.question, result.answer, result.sources)
+      .then(() => setFeedbackByMsg(prev => ({ ...prev, [i]: vote })))
+      .catch(() => setFeedbackByMsg(prev => ({ ...prev, [i]: 'error' })))
+  }, [])
 
   const hasMessages = messages.length > 0
   const canSend = inputVal.trim().length > 0 && !loading
@@ -535,12 +543,31 @@ function ChatInner() {
                             </svg>
                             {copied ? 'Copié !' : 'Copier'}
                           </ActionBtn>
-                          <ActionBtn dark={dk}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                              <path d="M7 11 C7 7.13 10.13 4 14 4 C17.87 4 21 7.13 21 11 C21 14.87 17.87 18 14 18 L7 18 L3 22 L3 11 Z"/>
-                            </svg>
-                            Feedback
-                          </ActionBtn>
+                          {feedbackByMsg[i] === 'pending' && (
+                            <span style={{ fontSize: 12, color: txt3, padding: '5px 9px' }}>Envoi…</span>
+                          )}
+                          {(feedbackByMsg[i] === 'up' || feedbackByMsg[i] === 'down') && (
+                            <span style={{ fontSize: 12, color: txt3, padding: '5px 9px' }}>Merci pour votre retour !</span>
+                          )}
+                          {feedbackByMsg[i] === 'error' && (
+                            <ActionBtn onClick={() => setFeedbackByMsg(prev => { const next = { ...prev }; delete next[i]; return next })} dark={dk}>
+                              Erreur, réessayez
+                            </ActionBtn>
+                          )}
+                          {feedbackByMsg[i] === undefined && (
+                            <>
+                              <ActionBtn onClick={() => submitFeedback(i, 'up', msg.result)} dark={dk}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                                </svg>
+                              </ActionBtn>
+                              <ActionBtn onClick={() => submitFeedback(i, 'down', msg.result)} dark={dk}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
+                                </svg>
+                              </ActionBtn>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
