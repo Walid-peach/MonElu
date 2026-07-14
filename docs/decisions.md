@@ -455,6 +455,49 @@ FastAPI app — a different module set than what's archived here.
 
 ---
 
+## ADR-022 - Fact-check verdicts are stored, not recomputed (MON-125)
+**Date:** 2026-07-14
+**Status:** Final
+
+**Decision:** The "Vérifier une affirmation" feature (MON-111) persists each verification in a new `verifications` table.
+The share URL is `/verifier/v/<id>` where `<id>` is a server-generated UUID.
+A shared verdict is an immutable snapshot; it is never recomputed on view.
+
+**Reason:** The rejected alternative was a stateless share URL that encodes the claim in the query string and re-runs the verification chain on every load.
+It fails on three counts:
+
+- **The share moment is the product.** A verdict link posted under a viral claim gets hit by social-media crawlers and burst traffic. Stateless means every preview fetch and every click runs retrieval + a Groq call: seconds of latency behind a 10 req/min rate limit, exactly when the link matters most. Stored verdicts are indexed DB reads.
+- **Unauthenticated LLM-cost surface.** A URL that triggers an LLM call on arbitrary attacker-controlled text is an abuse vector (crawler loops, scripted hammering). Stored ids make shared pages LLM-free; only the explicit "vérifier" action costs a model call.
+- **Verdict integrity.** A fact-check that silently changes between the moment it was shared and the moment it is read undermines the trust the feature exists to build. The snapshot states "vérifié le \<date\>" and the data horizon; freshness is handled by an explicit "re-vérifier" action that creates a new verification, not by mutating the old one.
+
+Costs accepted: one additive migration (idempotent, follows the `schema_migrations` ledger pattern) and persisting short user-submitted claim text.
+Mitigations: no user identity is stored with a claim, UUIDs are unguessable so stored claims are not enumerable, and there is no public listing of verifications.
+
+**Canonical `VerifyResponse` schema** (MON-126 implements this verbatim; all fields present on every verdict, nullable where noted):
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID string | Verification id; path segment of the share URL |
+| `claim` | string | The claim as verified (trimmed, length-capped) |
+| `verdict` | enum | `vrai` \| `faux` \| `trompeur` \| `inverifiable` |
+| `explanation` | string | French prose justification citing the scrutins |
+| `deputy` | object \| null | `{deputy_id, name, party}`; null when no deputy was identified |
+| `citations` | array | `[{vote_id, title, voted_at, result, deputy_position}]`; may be empty only when verdict is `inverifiable`; every `vote_id` must exist in `votes` (enforced in code) |
+| `confidence` | enum | `ÉLEVÉ` \| `MOYEN` \| `FAIBLE`, retrieval-based per ADR-016, never LLM self-rated |
+| `data_horizon` | string (ISO date) | Earliest vote date in the production window |
+| `verified_at` | string (ISO datetime) | When this verification was computed |
+| `share_url` | string | Absolute URL `/verifier/v/<id>` |
+
+**Impact:**
+- MON-126 adds the `verifications` table (additive migration) and `POST /verify/` returning this schema; `GET /verify/<id>` serves stored verdicts with no LLM call.
+- MON-127/MON-128 build the share page and OG card from the stored verdict only; they must not trigger verification on view.
+- Do NOT recompute a verdict on page load, and do NOT add a claim query-string mode that runs the chain on GET.
+- Do NOT add listing/browsing of stored verifications without a moderation decision first.
+
+**Trigger to revisit:** if verifications become a moderation or storage problem (spam volume, legal takedown requests), revisit retention and add an expiry policy; if the Supabase free tier nears its limit, verifications are the first table to get a TTL.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
