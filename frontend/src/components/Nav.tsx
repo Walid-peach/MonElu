@@ -12,6 +12,7 @@ const navLinks = [
   { href: '/deputes', label: 'Députés' },
   { href: '/votes', label: 'Votes' },
   { href: '/chat', label: 'Chat IA' },
+  { href: '/verifier', label: 'Vérifier' },
   { href: '/a-propos', label: 'À propos' },
 ]
 

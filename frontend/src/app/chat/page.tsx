@@ -491,6 +491,12 @@ function ChatInner() {
                   </button>
                 ))}
               </div>
+              <Link
+                href="/verifier"
+                style={{ marginTop: 28, fontSize: 13, color: txt2, textDecoration: 'underline' }}
+              >
+                Vous voulez vérifier une affirmation précise ? Essayez « Vérifier une affirmation » →
+              </Link>
             </div>
           )}
 
