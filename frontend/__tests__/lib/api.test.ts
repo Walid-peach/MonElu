@@ -49,6 +49,26 @@ describe('api.search', () => {
   })
 })
 
+describe('api.feedback.chat', () => {
+  it('posts the vote, question, answer, and sources and returns the response', async () => {
+    mockFetch(200, { status: 'ok' })
+    const result = await api.feedback.chat('up', 'question', 'answer', [])
+    expect(result.status).toBe('ok')
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${API_BASE}/feedback/chat`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ vote: 'up', question: 'question', answer: 'answer', sources: [] }),
+      })
+    )
+  })
+
+  it('throws on a non-ok HTTP response', async () => {
+    mockFetch(500, { detail: 'Internal Server Error' })
+    await expect(api.feedback.chat('down', 'q', 'a', [])).rejects.toThrow('API error: 500')
+  })
+})
+
 describe('api.deputies.votes', () => {
   it('omits since from the query string when not provided', async () => {
     mockFetch(200, { deputy_id: 'PA1', total: 0, items: [] })

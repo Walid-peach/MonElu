@@ -200,5 +200,9 @@ export const api = {
     get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`, { revalidate: 86400 }),
   },
   search: (question: string) => apiPost<SearchResult>('/search/', { question }),
+  feedback: {
+    chat: (vote: 'up' | 'down', question: string, answer: string, sources: SearchResult['sources']) =>
+      apiPost<{ status: string }>('/feedback/chat', { vote, question, answer, sources }),
+  },
   health: () => apiFetch<Record<string, unknown>>('/health/', { revalidate: 300 }),
 }
