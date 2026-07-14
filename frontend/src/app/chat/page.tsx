@@ -532,7 +532,7 @@ function ChatInner() {
                         <div style={{ fontSize: 15, lineHeight: 1.75, color: dk ? 'rgba(255,255,255,0.85)' : '#1F2937' }} dangerouslySetInnerHTML={{ __html: mdToHtml(msg.result.answer) }} />
                         {msg.result.caveat && (
                           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, padding: '9px 12px', borderRadius: 8, background: dk ? 'rgba(251,191,36,0.10)' : '#FFFBEB', border: `1px solid ${dk ? 'rgba(251,191,36,0.22)' : '#FDE68A'}` }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dk ? '#FBBF24' : '#B45309'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dk ? '#FBBF24' : '#B45309'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
                               <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                               <line x1="12" y1="9" x2="12" y2="13" />
                               <line x1="12" y1="17" x2="12.01" y2="17" />
