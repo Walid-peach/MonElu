@@ -16,7 +16,7 @@ class ChatFeedbackRequest(BaseModel):
     vote: str = Field(..., pattern="^(up|down)$")
     question: str = Field(..., min_length=1, max_length=500)
     answer: str = Field(..., min_length=1, max_length=8000)
-    sources: list[dict] = Field(default_factory=list)
+    sources: list[dict] = Field(default_factory=list, max_length=10)
 
 
 class FeedbackResponse(BaseModel):

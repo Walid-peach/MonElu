@@ -20,6 +20,14 @@ def test_chat_feedback_request_rejects_bad_vote():
         ChatFeedbackRequest(vote="maybe", question="Q", answer="A", sources=[])
 
 
+def test_chat_feedback_request_rejects_too_many_sources():
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        ChatFeedbackRequest(vote="up", question="Q", answer="A", sources=[{}] * 11)
+
+
 def test_submit_chat_feedback_inserts_row(client, mock_cursor):
     resp = client.post(
         "/feedback/chat",

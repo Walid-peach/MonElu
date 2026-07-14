@@ -258,6 +258,7 @@ function ChatInner() {
 
   const newChat = useCallback(() => {
     setMessages([])
+    setFeedbackByMsg({})
     setInputVal('')
     setActiveConvId(null)
     activeConvRef.current = null
@@ -267,6 +268,7 @@ function ChatInner() {
   const restoreConv = useCallback((conv: StoredConv) => {
     setActiveConvId(conv.id)
     setMessages(conv.messages as Message[])
+    setFeedbackByMsg({})
   }, [])
 
   const handleTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
