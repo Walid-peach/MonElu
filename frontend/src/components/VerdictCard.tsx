@@ -20,7 +20,9 @@ const CONFIDENCE_LABELS: Record<VerifyResult['confidence'], string> = {
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null
-  const d = new Date(iso)
+  // Date-only strings parse as UTC midnight — anchor to noon so viewers west
+  // of UTC don't see the previous day.
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso)
   if (isNaN(d.getTime())) return iso
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
