@@ -47,6 +47,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
       >
         <div
           style={{
+            display: 'flex',
             color: 'rgba(255,255,255,0.55)',
             fontSize: 18,
             letterSpacing: '0.15em',
@@ -83,6 +84,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
 
         <div
           style={{
+            display: 'flex',
             color: '#ffffff',
             fontSize: 40,
             fontStyle: 'italic',
