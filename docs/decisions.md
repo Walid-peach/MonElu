@@ -498,6 +498,38 @@ Mitigations: no user identity is stored with a claim, UUIDs are unguessable so s
 
 ---
 
+## ADR-023 - Verifier UI merges into the chat; verify chain and share pages unchanged
+**Date:** 2026-07-15
+**Status:** Final
+
+**Decision:** The claim-verification UI moves into the chat page as a "Vérifier" input mode plus a `verdict` chat-message type rendering the existing `VerdictCard`.
+The standalone `/verifier` form page becomes a redirect to `/chat?mode=verify` (preserving the `?claim=` prefill used by "re-vérifier").
+The backend split is untouched: `POST /search` and `POST /verify/` stay separate endpoints with separate rate limits, and `/verifier/v/<id>` share pages remain standalone immutable snapshots per ADR-022.
+
+**Reason:** A chat question and a claim verification are the same user gesture - type French text, get a sourced answer - differing only in which chain runs (`ask()` vs `verify_claim()`) and how the result renders.
+Two separate pages force the user to know the taxonomy before typing; one entry point with a mode toggle does not.
+Verdicts as chat messages also join the conversation history, so a verification lives next to the exploration that led to it.
+
+The rejected alternative was full auto-routing: the chat silently detects claim-shaped input and runs the verify chain.
+It fails on three counts:
+
+- **Misclassification cost is asymmetric.** A question wrongly routed to `/verify` burns the stricter 10 req/min verify budget, adds seconds of latency, and confuses the user; a claim wrongly routed to `/search` just gets a normal answer. Silent routing pays the expensive failure mode.
+- **Every `/verify` call writes an immutable row.** Per ADR-022, verification creates a stored snapshot. A classifier should never decide when to create persistent records from user text.
+- **Explicit verification is the trust signal.** The product's positioning is that a verdict is a deliberate, citable act against official scrutins - not a chat answer with a badge.
+
+Auto-detection is kept but demoted to a nudge: a `verify_claim` intent added to the `llm_router` classifier makes the chat answer normally and offer a one-click "Vérifier cette affirmation" chip that runs `/verify` only on click.
+
+**Impact:**
+- The chat gains a mode toggle (Question | Vérifier), a persisted `verdict` message role, and reuses `VerdictCard` inside assistant bubbles with the `share_url` intact.
+- `/verifier` (form page) redirects to `/chat?mode=verify`; its `?claim=` param must keep working.
+- Do NOT auto-run `POST /verify/` from intent detection - detection may only render a nudge chip; the LLM call and the stored snapshot happen only on explicit user action.
+- Do NOT touch `/verifier/v/[id]` pages or their OG cards - they stay standalone, LLM-free reads of stored verdicts (ADR-022); only their "re-vérifier" link retargets to the chat.
+- Do NOT merge the endpoints or their rate limits; the frontend picks the endpoint from the active mode.
+
+**Trigger to revisit:** if nudge click-through shows users overwhelmingly accept the detected intent (say >80% over a meaningful sample), revisit auto-running verification with an undo affordance; if verify traffic through the chat makes the 10 req/min limit a real bottleneck, revisit limits, not the routing.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -506,4 +538,5 @@ Mitigations: no user identity is stored with a claim, UUIDs are unguessable so s
 4. Airflow is local only (ADR-006) — do not write Railway/cloud Airflow config
 5. Terraform IaC is archived, not live (ADR-004, ADR-021) — do not add terraform apply steps or resurrect infra/
 6. Phase 5 alerts are deferred (ADR-002) — do not build email dispatch
-7. When in doubt: check what's actually deployed before writing new code
+7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
+8. When in doubt: check what's actually deployed before writing new code
