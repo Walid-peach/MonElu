@@ -603,12 +603,12 @@ function ChatInner() {
                       </button>
                     ))}
                   </div>
-                  <Link
-                    href="/verifier"
-                    style={{ marginTop: 28, fontSize: 13, color: txt2, textDecoration: 'underline' }}
+                  <button
+                    onClick={() => setMode('verify')}
+                    style={{ marginTop: 28, fontSize: 13, color: txt2, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
                   >
                     Vous voulez vérifier une affirmation précise ? Essayez « Vérifier une affirmation » →
-                  </Link>
+                  </button>
                 </>
               )}
             </div>
@@ -763,7 +763,10 @@ function ChatInner() {
                 return (
                   <button
                     key={m}
-                    onClick={() => setMode(m)}
+                    onClick={() => {
+                      setMode(m)
+                      if (m === 'verify') setInputVal(v => v.slice(0, VERIFY_MAX_LENGTH))
+                    }}
                     style={{
                       fontSize: 12.5, fontWeight: 600, padding: '6px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
                       background: active ? (dk ? '#1E3360' : '#1B2B50') : 'transparent',
