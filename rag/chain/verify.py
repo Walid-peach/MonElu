@@ -274,7 +274,7 @@ def verify_claim(claim: str) -> dict:
             {"role": "user", "content": user_message},
         ],
         # 0 rather than 0.2: verification is a deterministic judgment, not
-        # open-ended generation — sampling diversity only adds verdict
+        # open-ended generation; sampling diversity only adds verdict
         # variance on boundary cases (MON-129).
         temperature=0.0,
         max_tokens=1024,

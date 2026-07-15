@@ -25,7 +25,8 @@ Run-level metrics:
 Usage:
     venv/bin/python -m rag.experiments.verify_eval
 Requires DATABASE_URL, OPENAI_API_KEY, GROQ_API_KEY. Costs a few cents at most
-(one embedding + one Groq call per claim).
+(one embedding + one Groq call per claim, plus STABILITY_RUNS extra
+verifications of the mixed-record claim).
 """
 
 import ast
@@ -99,10 +100,10 @@ def _mixed_record_claim() -> dict | None:
 
     Finds a sitting deputy who voted pour on some well-attended scrutins of a
     dossier and contre on others. A blanket "a voté pour" claim over that
-    dossier is true for some scrutins only — under the prompt's mixed-record
+    dossier is true for some scrutins only; under the prompt's mixed-record
     decision rule the verdict must be "trompeur", deterministically.
 
-    Returns None when the DB window holds no such pair (small local windows) —
+    Returns None when the DB window holds no such pair (small local windows);
     the eval then skips the stability metric instead of failing.
     """
     with psycopg2.connect(os.getenv("DATABASE_URL")) as conn:
@@ -158,7 +159,7 @@ def main() -> None:
     if mixed:
         golden.append(mixed)
     else:
-        print("WARN: no mixed-record pair in the DB window — stability metric skipped")
+        print("WARN: no mixed-record pair in the DB window - stability metric skipped")
     mlflow.set_experiment("monelu_verify_eval")
 
     with mlflow.start_run(run_name="verify_golden_claims"):

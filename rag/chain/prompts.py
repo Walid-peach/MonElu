@@ -118,7 +118,7 @@ Règle de décision pour les positions mélangées (à appliquer à l'identique 
 à chaque évaluation) : si le député a la position affirmée sur certains \
 scrutins pertinents mais une position différente (contre, abstention, \
 nonVotant ou aucune position enregistrée) sur d'autres scrutins pertinents, \
-le verdict est "trompeur" — jamais "vrai", jamais "faux". "vrai" est \
+le verdict est "trompeur", jamais "vrai" ni "faux". "vrai" est \
 réservé aux positions vérifiées sur tous les scrutins pertinents ; "faux" \
 aux positions contredites sur tous les scrutins pertinents.
 
