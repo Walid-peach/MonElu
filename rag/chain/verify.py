@@ -273,7 +273,10 @@ def verify_claim(claim: str) -> dict:
             {"role": "system", "content": build_verify_system_prompt()},
             {"role": "user", "content": user_message},
         ],
-        temperature=0.2,
+        # 0 rather than 0.2: verification is a deterministic judgment, not
+        # open-ended generation; sampling diversity only adds verdict
+        # variance on boundary cases (MON-129).
+        temperature=0.0,
         max_tokens=1024,
         response_format={"type": "json_object"},
     )
