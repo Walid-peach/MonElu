@@ -6,18 +6,22 @@ import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import type { SearchResult } from '@/lib/api'
+import type { SearchResult, VerifyResult } from '@/lib/api'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { VerdictCard } from '@/components/VerdictCard'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type UserMsg   = { role: 'user'; text: string }
-type AsstMsg   = { role: 'assistant'; result: SearchResult }
-type TypingMsg = { role: 'typing' }
-type ErrMsg    = { role: 'error'; text: string }
-type Message   = UserMsg | AsstMsg | TypingMsg | ErrMsg
+type ChatMode  = 'question' | 'verify'
 
-type StoredMsg = UserMsg | AsstMsg | ErrMsg  // no typing — never persisted
+type UserMsg    = { role: 'user'; text: string }
+type AsstMsg    = { role: 'assistant'; result: SearchResult }
+type VerdictMsg = { role: 'verdict'; result: VerifyResult }
+type TypingMsg  = { role: 'typing'; verifying?: boolean }
+type ErrMsg     = { role: 'error'; text: string }
+type Message    = UserMsg | AsstMsg | VerdictMsg | TypingMsg | ErrMsg
+
+type StoredMsg = UserMsg | AsstMsg | VerdictMsg | ErrMsg  // no typing — never persisted
 
 type StoredConv = {
   id: string
@@ -156,14 +160,36 @@ const CONFIDENCE_EXPLANATION =
   'Confiance moyenne : sources partiellement pertinentes. ' +
   'Basse confiance : peu de sources vraiment pertinentes — vérifiez la réponse à la source.'
 
+// ── Verify mode helpers ─────────────────────────────────────────────────────
+
+const VERIFY_MIN_LENGTH = 10
+const VERIFY_MAX_LENGTH = 500
+const VERIFY_EXAMPLE_CLAIM = '« Le député X a voté contre l’augmentation du SMIC »'
+const VERIFY_LOADING_TEXT =
+  'Recherche des scrutins correspondants et de la position enregistrée du député…'
+
+function verifyErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : ''
+  if (msg.includes('429')) {
+    return 'Trop de vérifications en peu de temps. Patientez une minute et réessayez.'
+  }
+  if (msg.includes('503')) {
+    return "La vérification IA n'est pas disponible pour le moment."
+  }
+  return 'La vérification a échoué. Réessayez dans quelques secondes.'
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 function ChatInner() {
   const searchParams = useSearchParams()
   const initialQ = searchParams.get('q') || ''
+  const initialClaim = searchParams.get('claim') || ''
+  const initialMode: ChatMode = searchParams.get('mode') === 'verify' ? 'verify' : 'question'
 
+  const [mode, setMode]           = useState<ChatMode>(initialMode)
   const [messages, setMessages]   = useState<Message[]>([])
-  const [inputVal, setInputVal]   = useState(initialQ)
+  const [inputVal, setInputVal]   = useState(mode === 'verify' ? initialClaim : initialQ)
   const [loading, setLoading]     = useState(false)
   const [darkMode, setDarkMode]   = useState<boolean>(() => {
     try { return localStorage.getItem('monelu-dark') === '1' } catch { return false }
@@ -196,9 +222,12 @@ function ChatInner() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages])
 
-  // Auto-send on ?q=
+  // Auto-send on ?q= (question mode only) — verify mode pre-fills ?claim= but
+  // never auto-submits: a verification writes an immutable row (ADR-022/023).
   useEffect(() => {
-    if (initialQ && !sentRef.current) {
+    if (mode === 'verify') {
+      textareaRef.current?.focus()
+    } else if (initialQ && !sentRef.current) {
       sentRef.current = true
       // eslint-disable-next-line react-hooks/immutability
       send(initialQ)
@@ -274,6 +303,69 @@ function ChatInner() {
     }
   }, [loading])
 
+  const submitClaim = useCallback(async (claimRaw: string) => {
+    const claim = claimRaw.trim()
+    if (claim.length < VERIFY_MIN_LENGTH || loading) return
+    setInputVal('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+
+    let convId = activeConvRef.current
+    if (!convId) {
+      convId = Date.now().toString()
+      isNewConvRef.current = true
+      setActiveConvId(convId)
+      activeConvRef.current = convId
+    } else {
+      isNewConvRef.current = false
+    }
+
+    setMessages(prev => [...prev, { role: 'user', text: claim }, { role: 'typing', verifying: true }])
+    setLoading(true)
+
+    try {
+      const result = await api.verify(claim)
+      const id = activeConvRef.current!
+      const isNew = isNewConvRef.current
+      const existingConvs = loadConversations()
+      const existing = existingConvs.find(c => c.id === id)
+      setMessages(prev => {
+        const next = [...prev.filter(m => m.role !== 'typing'), { role: 'verdict' as const, result }]
+        const conv: StoredConv = {
+          id,
+          title: isNew ? claim.slice(0, 60) : (existing?.title ?? claim.slice(0, 60)),
+          createdAt: isNew ? Date.now() : (existing?.createdAt ?? Date.now()),
+          messages: next as StoredMsg[],
+        }
+        const updated = upsertConv(existingConvs, conv)
+        saveConversations(updated)
+        setConversations(updated)
+        return next
+      })
+    } catch (err) {
+      const errMsg: ErrMsg = { role: 'error', text: verifyErrorMessage(err) }
+      const id = activeConvRef.current!
+      const isNew = isNewConvRef.current
+      const existingConvs = isNew ? loadConversations() : null
+      setMessages(prev => {
+        const next = [...prev.filter(m => m.role !== 'typing'), errMsg]
+        if (isNew && existingConvs) {
+          const conv: StoredConv = { id, title: claim.slice(0, 60), createdAt: Date.now(), messages: next as StoredMsg[] }
+          const updated = upsertConv(existingConvs, conv)
+          saveConversations(updated)
+          setConversations(updated)
+        }
+        return next
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [loading])
+
+  const submit = useCallback(() => {
+    if (mode === 'verify') submitClaim(inputVal)
+    else send(inputVal)
+  }, [mode, inputVal, submitClaim, send])
+
   const newChat = useCallback(() => {
     setMessages([])
     setFeedbackByMsg({})
@@ -290,7 +382,8 @@ function ChatInner() {
   }, [])
 
   const handleTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputVal(e.target.value)
+    const value = mode === 'verify' ? e.target.value.slice(0, VERIFY_MAX_LENGTH) : e.target.value
+    setInputVal(value)
     e.target.style.height = 'auto'
     e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px'
   }
@@ -298,7 +391,7 @@ function ChatInner() {
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      send(inputVal)
+      submit()
     }
   }
 
@@ -319,7 +412,8 @@ function ChatInner() {
   }, [])
 
   const hasMessages = messages.length > 0
-  const canSend = inputVal.trim().length > 0 && !loading
+  const tooShortForVerify = mode === 'verify' && inputVal.trim().length < VERIFY_MIN_LENGTH
+  const canSend = inputVal.trim().length > 0 && !loading && !tooShortForVerify
   const dk = darkMode
   const bg0  = dk ? '#0B1525' : '#fff'
   const bg1  = dk ? '#111C35' : '#F7F8FA'
@@ -469,34 +563,54 @@ function ChatInner() {
                 <path d="M10 19 A5 5 0 0 1 20 19" stroke="#D93025" strokeWidth="2.2" strokeLinecap="round"/>
                 <circle cx="15" cy="19" r="2.3" fill={dk ? 'rgba(255,255,255,0.85)' : '#1B2B50'}/>
               </svg>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 24, fontWeight: 800, color: txt1, margin: '0 0 10px', textAlign: 'center', letterSpacing: '-0.02em' }}>
-                Explorez les données de vos élus
-              </h2>
-              <p style={{ fontSize: 15, color: txt2, textAlign: 'center', maxWidth: 400, margin: '0 0 36px', lineHeight: 1.65 }}>
-                Posez une question sur les votes, l&apos;absentéisme ou le bilan de n&apos;importe quel député de la XVII<sup>e</sup> législature.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%', maxWidth: 620 }}>
-                {SUGGESTIONS.map((s, i) => (
+              {mode === 'verify' ? (
+                <>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 24, fontWeight: 800, color: txt1, margin: '0 0 10px', textAlign: 'center', letterSpacing: '-0.02em' }}>
+                    Vérifiez une affirmation
+                  </h2>
+                  <p style={{ fontSize: 15, color: txt2, textAlign: 'center', maxWidth: 440, margin: '0 0 8px', lineHeight: 1.65 }}>
+                    Collez une affirmation lue sur les réseaux sociaux — par exemple {VERIFY_EXAMPLE_CLAIM} —
+                    et confrontez-la aux votes réellement enregistrés à l&apos;Assemblée Nationale.
+                  </p>
                   <button
-                    key={i}
-                    onClick={() => send(s.q)}
-                    style={{ background: dk ? '#0F1929' : '#FAFAFA', border: `1.5px solid ${dk ? 'rgba(255,255,255,0.07)' : '#E8EAED'}`, borderRadius: 12, padding: '15px 16px', cursor: 'pointer', transition: 'border-color 150ms, box-shadow 150ms', textAlign: 'left' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = dk ? 'rgba(255,255,255,0.18)' : '#1B2B50'; e.currentTarget.style.boxShadow = dk ? '0 2px 10px rgba(0,0,0,0.30)' : '0 2px 10px rgba(27,43,80,0.09)' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = dk ? 'rgba(255,255,255,0.07)' : '#E8EAED'; e.currentTarget.style.boxShadow = 'none' }}
+                    onClick={() => setMode('question')}
+                    style={{ marginTop: 20, fontSize: 13, color: txt2, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 8, background: s.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.icon}</div>
-                      <span style={{ fontSize: 13, color: dk ? 'rgba(255,255,255,0.78)' : '#1B2B50', lineHeight: 1.55, fontWeight: 500 }}>{s.q}</span>
-                    </div>
+                    ← Revenir au mode question
                   </button>
-                ))}
-              </div>
-              <Link
-                href="/verifier"
-                style={{ marginTop: 28, fontSize: 13, color: txt2, textDecoration: 'underline' }}
-              >
-                Vous voulez vérifier une affirmation précise ? Essayez « Vérifier une affirmation » →
-              </Link>
+                </>
+              ) : (
+                <>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 24, fontWeight: 800, color: txt1, margin: '0 0 10px', textAlign: 'center', letterSpacing: '-0.02em' }}>
+                    Explorez les données de vos élus
+                  </h2>
+                  <p style={{ fontSize: 15, color: txt2, textAlign: 'center', maxWidth: 400, margin: '0 0 36px', lineHeight: 1.65 }}>
+                    Posez une question sur les votes, l&apos;absentéisme ou le bilan de n&apos;importe quel député de la XVII<sup>e</sup> législature.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%', maxWidth: 620 }}>
+                    {SUGGESTIONS.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => send(s.q)}
+                        style={{ background: dk ? '#0F1929' : '#FAFAFA', border: `1.5px solid ${dk ? 'rgba(255,255,255,0.07)' : '#E8EAED'}`, borderRadius: 12, padding: '15px 16px', cursor: 'pointer', transition: 'border-color 150ms, box-shadow 150ms', textAlign: 'left' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = dk ? 'rgba(255,255,255,0.18)' : '#1B2B50'; e.currentTarget.style.boxShadow = dk ? '0 2px 10px rgba(0,0,0,0.30)' : '0 2px 10px rgba(27,43,80,0.09)' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = dk ? 'rgba(255,255,255,0.07)' : '#E8EAED'; e.currentTarget.style.boxShadow = 'none' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+                          <div style={{ width: 30, height: 30, borderRadius: 8, background: s.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.icon}</div>
+                          <span style={{ fontSize: 13, color: dk ? 'rgba(255,255,255,0.78)' : '#1B2B50', lineHeight: 1.55, fontWeight: 500 }}>{s.q}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <Link
+                    href="/verifier"
+                    style={{ marginTop: 28, fontSize: 13, color: txt2, textDecoration: 'underline' }}
+                  >
+                    Vous voulez vérifier une affirmation précise ? Essayez « Vérifier une affirmation » →
+                  </Link>
+                </>
+              )}
             </div>
           )}
 
@@ -515,10 +629,25 @@ function ChatInner() {
                 if (msg.role === 'typing') return (
                   <div key={i} style={{ display: 'flex', gap: 13, marginBottom: 28, alignItems: 'flex-start' }}>
                     <AiAvatar />
-                    <div style={{ background: bg1, border: `1px solid ${dk ? 'rgba(255,255,255,0.07)' : '#EDEEF0'}`, borderRadius: '5px 18px 18px 18px', padding: '15px 20px', display: 'flex', gap: 5, alignItems: 'center', marginTop: 2 }}>
-                      <Dot delay="0ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
-                      <Dot delay="180ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
-                      <Dot delay="360ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
+                    {msg.verifying ? (
+                      <div style={{ background: bg1, border: `1px solid ${dk ? 'rgba(255,255,255,0.07)' : '#EDEEF0'}`, borderRadius: '5px 18px 18px 18px', padding: '15px 20px', marginTop: 2, fontSize: 13.5, color: txt2 }} role="status">
+                        {VERIFY_LOADING_TEXT}
+                      </div>
+                    ) : (
+                      <div style={{ background: bg1, border: `1px solid ${dk ? 'rgba(255,255,255,0.07)' : '#EDEEF0'}`, borderRadius: '5px 18px 18px 18px', padding: '15px 20px', display: 'flex', gap: 5, alignItems: 'center', marginTop: 2 }}>
+                        <Dot delay="0ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
+                        <Dot delay="180ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
+                        <Dot delay="360ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
+                      </div>
+                    )}
+                  </div>
+                )
+
+                if (msg.role === 'verdict') return (
+                  <div key={i} style={{ display: 'flex', gap: 13, marginBottom: 28, alignItems: 'flex-start' }}>
+                    <AiAvatar />
+                    <div style={{ flex: 1, minWidth: 0, marginTop: 4 }}>
+                      <VerdictCard result={msg.result} />
                     </div>
                   </div>
                 )
@@ -628,29 +757,54 @@ function ChatInner() {
         {/* Input bar */}
         <div style={{ flexShrink: 0, padding: '12px 28px 20px', background: bg0 }}>
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <div style={{ display: 'inline-flex', padding: 3, borderRadius: 999, background: dk ? 'rgba(255,255,255,0.06)' : '#F0F1F4', marginBottom: 9 }}>
+              {(['question', 'verify'] as const).map(m => {
+                const active = mode === m
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    style={{
+                      fontSize: 12.5, fontWeight: 600, padding: '6px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                      background: active ? (dk ? '#1E3360' : '#1B2B50') : 'transparent',
+                      color: active ? '#fff' : txt2,
+                      transition: 'background 140ms, color 140ms',
+                    }}
+                  >
+                    {m === 'question' ? 'Question' : 'Vérifier'}
+                  </button>
+                )
+              })}
+            </div>
             <div style={{ background: bg1, border: `1.5px solid ${dk ? 'rgba(255,255,255,0.10)' : '#E2E4E8'}`, borderRadius: 14, padding: '13px 14px 10px' }}>
               <textarea
                 ref={textareaRef}
                 value={inputVal}
                 onChange={handleTextarea}
                 onKeyDown={handleKey}
-                placeholder="Posez une question sur vos élus…"
+                placeholder={mode === 'verify' ? "Le député X a voté contre l'augmentation du SMIC…" : 'Posez une question sur vos élus…'}
                 rows={1}
                 style={{ resize: 'none', outline: 'none', border: 'none', background: 'transparent', fontFamily: 'var(--font-sans)', fontSize: 15, color: dk ? 'rgba(255,255,255,0.88)' : '#1B2B50', width: '100%', display: 'block', lineHeight: 1.6, maxHeight: 140, overflowY: 'auto' }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: txt3 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m9 12 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
-                    Données officielles
+                {mode === 'verify' ? (
+                  <span style={{ fontSize: 11.5, color: tooShortForVerify && inputVal.length > 0 ? '#DC2626' : txt3 }}>
+                    {inputVal.length}/{VERIFY_MAX_LENGTH}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: txt3 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    XVII<sup style={{ fontSize: 9 }}>e</sup> législature
-                  </span>
-                </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: txt3 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m9 12 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                      Données officielles
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: txt3 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      XVII<sup style={{ fontSize: 9 }}>e</sup> législature
+                    </span>
+                  </div>
+                )}
                 <button
-                  onClick={() => send(inputVal)}
+                  onClick={submit}
                   disabled={!canSend}
                   style={{ width: 34, height: 34, borderRadius: 9, background: canSend ? '#1B2B50' : (dk ? '#1E2D4A' : '#D1D5DB'), display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'default', transition: 'background 150ms', flexShrink: 0, border: 'none' }}
                 >
