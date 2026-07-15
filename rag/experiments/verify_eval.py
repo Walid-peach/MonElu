@@ -8,9 +8,19 @@ mlflow_eval.py): a real deputy/vote/position pair yields one true claim and
 its negated false claim; two fixed claims cover the unverifiable cases
 (period outside the data window, unknown person).
 
+A mixed-record claim (deputy voted pour on some scrutins of a dossier and
+contre on others) covers the vrai/trompeur boundary (MON-129): under the
+prompt's mixed-record decision rule it must come back "trompeur", and it is
+repeated STABILITY_RUNS times to measure verdict stability across runs.
+
 Scores per claim:
   - verdict_ok:        the verdict matches the expected set
   - citations_valid:   every cited vote_id exists in the votes table
+
+Run-level metrics:
+  - verdict_accuracy, citation_validity: means over the golden claims
+  - mixed_verdict_stability: 1.0 iff all STABILITY_RUNS repetitions of the
+    mixed-record claim return the same verdict
 
 Usage:
     venv/bin/python -m rag.experiments.verify_eval
@@ -18,12 +28,16 @@ Requires DATABASE_URL, OPENAI_API_KEY, GROQ_API_KEY. Costs a few cents at most
 (one embedding + one Groq call per claim).
 """
 
+import ast
 import os
 
 import mlflow
 import psycopg2
 
 from rag.chain.verify import verify_claim
+
+# Repetitions of the mixed-record claim used to measure verdict stability.
+STABILITY_RUNS = 5
 
 
 def _live_golden_claims() -> list[dict]:
@@ -80,6 +94,54 @@ def _live_golden_claims() -> list[dict]:
     ]
 
 
+def _mixed_record_claim() -> dict | None:
+    """Build a mixed-record golden claim from the live DB (MON-129).
+
+    Finds a sitting deputy who voted pour on some well-attended scrutins of a
+    dossier and contre on others. A blanket "a voté pour" claim over that
+    dossier is true for some scrutins only — under the prompt's mixed-record
+    decision rule the verdict must be "trompeur", deterministically.
+
+    Returns None when the DB window holds no such pair (small local windows) —
+    the eval then skips the stability metric instead of failing.
+    """
+    with psycopg2.connect(os.getenv("DATABASE_URL")) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT d.full_name, v.dossier_id
+                FROM vote_positions vp
+                JOIN deputies d ON d.deputy_id = vp.deputy_id
+                JOIN votes v ON v.vote_id = vp.vote_id
+                WHERE v.dossier_id IS NOT NULL
+                  AND v.total_voters >= 300
+                  AND d.mandate_end IS NULL
+                GROUP BY d.full_name, v.dossier_id
+                HAVING COUNT(*) FILTER (WHERE vp.position = 'pour') >= 1
+                   AND COUNT(*) FILTER (WHERE vp.position = 'contre') >= 1
+                ORDER BY COUNT(*) DESC, d.full_name
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+    if not row:
+        return None
+    full_name, dossier_id = row
+    # dossier_id is stored as the repr of the AN dict, e.g. "{'libelle': ...}".
+    try:
+        libelle = ast.literal_eval(dossier_id).get("libelle")
+    except (ValueError, SyntaxError):
+        libelle = None
+    if not libelle:
+        return None
+    return {
+        "label": "mixed record (pour on some scrutins, contre on others)",
+        "claim": f"{full_name} a voté pour : {libelle}",
+        "expected": {"trompeur"},
+        "expect_citation": None,
+    }
+
+
 def _citation_ids_exist(citations: list[dict]) -> bool:
     if not citations:
         return True
@@ -92,6 +154,11 @@ def _citation_ids_exist(citations: list[dict]) -> bool:
 
 def main() -> None:
     golden = _live_golden_claims()
+    mixed = _mixed_record_claim()
+    if mixed:
+        golden.append(mixed)
+    else:
+        print("WARN: no mixed-record pair in the DB window — stability metric skipped")
     mlflow.set_experiment("monelu_verify_eval")
 
     with mlflow.start_run(run_name="verify_golden_claims"):
@@ -117,6 +184,16 @@ def main() -> None:
             f"\nverdict_accuracy={sum(verdict_scores) / len(verdict_scores):.2f} "
             f"citation_validity={sum(citation_scores) / len(citation_scores):.2f}"
         )
+
+        if mixed:
+            # Same claim, repeated: a fact-check tool must give the same
+            # answer to the same question (MON-129).
+            verdicts = [verify_claim(mixed["claim"])["verdict"] for _ in range(STABILITY_RUNS)]
+            stability = 1.0 if len(set(verdicts)) == 1 else 0.0
+            mlflow.log_metric("mixed_verdict_stability", stability)
+            mlflow.log_param("stability_runs", STABILITY_RUNS)
+            print(f"\nstability over {STABILITY_RUNS} runs: {verdicts}")
+            print(f"mixed_verdict_stability={stability:.2f}")
 
 
 if __name__ == "__main__":
