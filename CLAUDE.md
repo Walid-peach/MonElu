@@ -155,6 +155,7 @@ Assemblée Nationale Open Data (ZIPs)
 | `api_keys` | Manually-issued public API keys (sha256 hash, label, rate_limit_multiplier) |
 | `api_key_usage` | Per-key, per-endpoint, per-day request counters for usage accounting |
 | `verifications` | Stored fact-check verdicts (ADR-022): immutable snapshots behind `/verifier/v/<id>` share URLs |
+| `feedback` | Generic user-feedback sink (MON-70, MON-101): `type`-discriminated rows (`chat` thumbs / `report` data-page error reports) with a JSONB `payload`; weekly manual triage query in `docs/monitoring.md` |
 
 Important data quirks:
 - `nonVotant` ≠ `abstention`: present in chamber but did not vote vs. formally abstained

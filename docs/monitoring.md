@@ -68,3 +68,34 @@ Set the alert contact to email for both monitors.
 Both UptimeRobot and Better Stack offer a free public status page backed by
 these same monitors — worth turning on for customer-facing trust once the
 above two monitors are live and stable.
+
+## 4. User feedback triage (MON-101)
+
+Every user signal lands in one generic `feedback` table (see
+`data/migrations/005_feedback.sql`), discriminated by a `type` column:
+
+- `type = 'chat'` — thumbs up/down on a RAG chat answer (MON-70). Payload:
+  `{vote, question, answer, sources}`.
+- `type = 'report'` — a "Signaler une erreur" report from a data page (MON-101).
+  Payload: `{entity_type, entity_id, entity_label, page_url, message, email}`.
+
+There is no dashboard yet — review is a weekly manual query. Run this against
+prod Supabase to list the last week's feedback, newest first:
+
+```sql
+SELECT
+  created_at,
+  type,
+  payload ->> 'entity_type' AS entity_type,
+  payload ->> 'entity_label' AS entity_label,
+  payload ->> 'vote'         AS chat_vote,
+  left(coalesce(payload ->> 'message', payload ->> 'question'), 200) AS text,
+  payload ->> 'email'        AS reply_to
+FROM feedback
+WHERE created_at >= now() - interval '7 days'
+ORDER BY created_at DESC;
+```
+
+Error reports (`type = 'report'`) that carry a `reply_to` e-mail are the ones a
+user expects a response to. Build a dashboard only once weekly volume makes the
+manual query impractical.

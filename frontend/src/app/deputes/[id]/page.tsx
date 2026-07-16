@@ -8,6 +8,7 @@ import { departmentCode, departmentLabel } from '@/lib/departments'
 import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
+import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { FollowDeputyButton } from '@/components/FollowDeputyButton'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
@@ -232,6 +233,12 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   CSV
                 </a>
+                <ReportErrorButton
+                  entityType="deputy"
+                  entityId={id}
+                  entityLabel={deputy.full_name}
+                  pageUrl={`/deputes/${id}`}
+                />
               </div>
             </div>
           </div>

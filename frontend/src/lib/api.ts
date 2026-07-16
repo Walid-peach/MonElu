@@ -306,6 +306,14 @@ export const api = {
   feedback: {
     chat: (vote: 'up' | 'down', question: string, answer: string, sources: SearchResult['sources']) =>
       apiPost<{ status: string }>('/feedback/chat', { vote, question, answer, sources }),
+    report: (report: {
+      entity_type: 'deputy' | 'vote' | 'page'
+      entity_id?: string | null
+      entity_label?: string | null
+      page_url?: string | null
+      message: string
+      email?: string | null
+    }) => apiPost<{ status: string }>('/feedback/report', report),
   },
   health: () => apiFetch<Record<string, unknown>>('/health/', { revalidate: 300 }),
 }
