@@ -6,7 +6,7 @@ import { Deputy } from '@/lib/api'
 import { getInitials, partyHex, partyShort } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { resolvePostalCode } from '@/lib/postal'
-import { departmentLabel } from '@/lib/departments'
+import { departmentCode, departmentLabel } from '@/lib/departments'
 
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 type SortKey = 'nom' | 'region' | 'parti'
@@ -44,6 +44,9 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const postalMatch = postalResult?.code === debouncedSearch ? postalResult : null
   const resolvedDepartment = postalMatch?.department ?? ''
   const postalNotFound = postalMatch !== null && postalMatch.department === null
+  // Department page cross-link (MON-107) — shown when the search resolves to
+  // a department, whether via a postal code or a typed name/code.
+  const matchedDeptCode = departmentCode(resolvedDepartment || debouncedSearch)
 
   const skipFirstSync = useRef(true)
   useEffect(() => {
@@ -241,6 +244,24 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
       {/* Table section */}
       <div className="px-5 sm:px-14 pt-8 pb-14 sm:pb-[72px]">
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+
+          {/* Department page cross-link */}
+          {matchedDeptCode && (
+            <div style={{ padding: '0 4px 14px' }}>
+              <Link
+                href={`/departements/${matchedDeptCode}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: '#fff', border: '1px solid ' + LINE, borderRadius: 999,
+                  padding: '8px 16px', fontSize: 13.5, fontWeight: 600,
+                  color: NAVY, textDecoration: 'none',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                }}
+              >
+                Voir la page du département {departmentLabel(matchedDeptCode)} →
+              </Link>
+            </div>
+          )}
 
           {/* Count row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>

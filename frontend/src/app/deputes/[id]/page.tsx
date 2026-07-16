@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { DissidentVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
-import { departmentLabel } from '@/lib/departments'
+import { departmentCode, departmentLabel } from '@/lib/departments'
 import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
@@ -74,6 +74,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
   const hex = partyHex(deputy.party)
   const deptLabel = departmentLabel(deputy.department)
+  const deptCode = departmentCode(deputy.department)
 
   // MON-123: "votes exprimés" (present_votes = pour + contre + abstention)
   // duplicated "scrutins votés" whenever the deputy has no non-votant
@@ -151,7 +152,13 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                     <path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/>
                   </svg>
-                  {deptLabel}
+                  {deptCode ? (
+                    <Link href={`/departements/${deptCode}`} style={{ color: '#4B5563', textDecoration: 'underline', textDecorationColor: '#C4C9D2', textUnderlineOffset: 3 }}>
+                      {deptLabel}
+                    </Link>
+                  ) : (
+                    deptLabel
+                  )}
                 </div>
               )}
               {deputy.party && (

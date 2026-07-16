@@ -1,7 +1,8 @@
 'use client'
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { resolvePostalCode } from '@/lib/postal'
+import { resolvePostalCodeToDepartment } from '@/lib/postal'
+import { departmentCode } from '@/lib/departments'
 
 type HeroSearchProps = {
   id?: string
@@ -23,9 +24,18 @@ export function HeroSearch({
     const trimmed = value.trim()
     if (!trimmed) return
     setLoading(true)
-    const resolved = await resolvePostalCode(trimmed)
-    const query = resolved ?? trimmed
-    router.push(`/deputes?search=${encodeURIComponent(query)}`)
+    // Postal codes and department names land on the department page
+    // ("les députés de chez moi", MON-107); everything else falls back to
+    // the deputy directory search.
+    const resolved = await resolvePostalCodeToDepartment(trimmed)
+    const code = resolved
+      ? (departmentCode(resolved.code) ?? departmentCode(resolved.nom))
+      : departmentCode(trimmed)
+    if (code) {
+      router.push(`/departements/${code}`)
+      return
+    }
+    router.push(`/deputes?search=${encodeURIComponent(trimmed)}`)
   }
 
   return (

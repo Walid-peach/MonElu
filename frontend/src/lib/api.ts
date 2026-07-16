@@ -122,6 +122,41 @@ export type DeputyVotesResponse = {
   items: DeputyVoteItem[]
 }
 
+export type DepartmentDeputy = {
+  deputy_id: string
+  full_name: string
+  party: string | null
+  party_short: string | null
+  department: string | null
+  circonscription: string | null
+  photo_url: string | null
+  presence_rate: number | null
+  solennel_participation_rate: number | null
+  party_alignment_rate: number | null
+  dissident_rate: number | null
+}
+
+export type DepartmentSplitVote = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string
+  result: string | null
+  pour: number
+  contre: number
+  abstention: number
+}
+
+export type DepartmentDetail = {
+  code: string
+  name: string
+  deputy_count: number
+  deputies: DepartmentDeputy[]
+  avg_presence_rate: number | null
+  party_distribution: Array<{ party: string | null; count: number }>
+  most_dissident: DepartmentDeputy | null
+  split_votes: DepartmentSplitVote[]
+}
+
 export type SearchResult = {
   answer: string
   question: string
@@ -234,6 +269,10 @@ export const api = {
         `/deputies/${id}/diverging-votes/?other_deputy_id=${encodeURIComponent(otherId)}&limit=${limit}`,
         { revalidate: 86400 }
       ),
+  },
+  departments: {
+    get: (code: string) =>
+      apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, { revalidate: 3600 }),
   },
   votes: {
     list: (params?: { result?: string; theme?: string; search?: string; limit?: number; offset?: number; before?: string }) => {
