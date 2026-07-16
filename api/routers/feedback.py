@@ -19,6 +19,15 @@ class ChatFeedbackRequest(BaseModel):
     sources: list[dict] = Field(default_factory=list, max_length=10)
 
 
+class ErrorReportRequest(BaseModel):
+    entity_type: str = Field(..., pattern="^(deputy|vote|page)$")
+    entity_id: str | None = Field(None, max_length=60)
+    entity_label: str | None = Field(None, max_length=300)
+    page_url: str | None = Field(None, max_length=300)
+    message: str = Field(..., min_length=1, max_length=2000)
+    email: str | None = Field(None, max_length=200)
+
+
 class FeedbackResponse(BaseModel):
     status: str = "ok"
 
@@ -46,6 +55,38 @@ def submit_chat_feedback(request: Request, body: ChatFeedbackRequest):
             conn.commit()
     except Exception:
         logger.exception("Failed to persist chat feedback")
+        raise HTTPException(
+            status_code=500,
+            detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
+        ) from None
+    return FeedbackResponse()
+
+
+@router.post(
+    "/report",
+    response_model=FeedbackResponse,
+    summary="Signaler une erreur sur une page de données (MON-101)",
+)
+@limiter.limit(tiered_limit(10))
+def submit_error_report(request: Request, body: ErrorReportRequest):
+    payload = {
+        "entity_type": body.entity_type,
+        "entity_id": body.entity_id,
+        "entity_label": body.entity_label,
+        "page_url": body.page_url,
+        "message": body.message,
+        "email": body.email,
+    }
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO feedback (type, payload) VALUES (%s, %s)",
+                    ("report", Json(payload)),
+                )
+            conn.commit()
+    except Exception:
+        logger.exception("Failed to persist error report")
         raise HTTPException(
             status_code=500,
             detail="Service temporairement indisponible. Réessayez dans quelques secondes.",

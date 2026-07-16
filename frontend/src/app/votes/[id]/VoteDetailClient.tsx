@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { ShareButton } from '@/components/ShareButton'
+import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { getInitials, partyHex } from '@/lib/utils'
 import { resolvePostalCode } from '@/lib/postal'
@@ -284,6 +285,14 @@ export function VoteDetailClient(props: Props) {
                   title={`${adopted ? 'Adopté' : 'Rejeté'} - ${headline}`}
                   text="Suivez ce scrutin sur MonÉlu"
                   ariaLabel="Partager ce vote"
+                />
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+                <ReportErrorButton
+                  entityType="vote"
+                  entityId={voteId}
+                  entityLabel={voteTitle}
+                  pageUrl={`/votes/${voteId}`}
                 />
               </div>
             </div>

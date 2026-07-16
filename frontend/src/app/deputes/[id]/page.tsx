@@ -8,6 +8,7 @@ import { departmentCode, departmentLabel } from '@/lib/departments'
 import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
+import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { FollowDeputyButton } from '@/components/FollowDeputyButton'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
@@ -218,6 +219,12 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 >
                   Comparer
                 </Link>
+                <ReportErrorButton
+                  entityType="deputy"
+                  entityId={id}
+                  entityLabel={deputy.full_name}
+                  pageUrl={`/deputes/${id}`}
+                />
               </div>
             </div>
           </div>
