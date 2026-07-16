@@ -719,9 +719,14 @@ function ChatInner() {
                 if (msg.role === 'assistant') {
                   const sources = (msg.result.sources || []).slice(0, 3).map(mapSource)
                   const conf = CONFIDENCE_META[msg.result.confidence]
+                  // Length-gated so the chip never offers a submission /verify/
+                  // would reject (min 10, max 500) - the claim is sent verbatim,
+                  // never truncated.
+                  const nudgeClaimLen = (msg.result.question || '').trim().length
                   const showNudge =
                     msg.result.suggested_action === 'verify' &&
-                    (msg.result.question || '').trim().length >= VERIFY_MIN_LENGTH
+                    nudgeClaimLen >= VERIFY_MIN_LENGTH &&
+                    nudgeClaimLen <= VERIFY_MAX_LENGTH
                   const showVerifyAction = hasDeputySource(msg.result)
                   return (
                     <div key={i} style={{ display: 'flex', gap: 13, marginBottom: 28, alignItems: 'flex-start' }}>
