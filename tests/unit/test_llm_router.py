@@ -128,6 +128,15 @@ def test_detect_claim_flags_assertion():
         mock_groq.chat.completions.create.assert_called_once()
 
 
+def test_detect_claim_flags_plural_abstention():
+    # "se sont abstenus" (non-elided pronoun) must pass the prefilter -
+    # group claims are in scope (PR #208 review).
+    with patch("rag.chain.llm_router._groq_client") as mock_groq:
+        mock_groq.chat.completions.create.return_value = _claim_response("claim")
+        assert detect_claim("Les députés RN se sont abstenus sur la motion") is True
+        mock_groq.chat.completions.create.assert_called_once()
+
+
 def test_detect_claim_rejects_interrogative_with_vote_verb():
     # "Comment X a-t-elle voté ?" passes the prefilter; the classifier
     # decides it is a question, not a claim.

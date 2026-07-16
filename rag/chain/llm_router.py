@@ -139,13 +139,14 @@ def classify_intent(question: str) -> str | None:
 # ── Claim detection (ADR-023 nudge - annotates, never verifies) ─────────────
 
 # Deterministic pre-filter: only inputs that assert a voting act are worth a
-# classifier call. Matched against normalize_text() output (lowercased,
+# classifier call. Scope is past voting acts by design ("votera contre" is not
+# yet verifiable). Matched against normalize_text() output (lowercased,
 # accents preserved). Interrogatives also match ("comment a-t-elle voté ?") -
 # the classifier below disambiguates assertion vs question.
 _CLAIM_PREFILTER = re.compile(
     r"\b(?:a|ont|avait|avaient|aurait|auraient)(?:-t-(?:il|elle|ils|elles))?\s+"
     r"(?:pas\s+|jamais\s+|toujours\s+)?vot[eé]\b"
-    r"|\bs'(?:est|sont|etait|était|étaient)\s+abstenu"
+    r"|\b(?:s'|se\s+)(?:est|sont|etait|était|étaient)\s+abstenu"
 )
 
 _CLAIM_TOOL = {
