@@ -762,3 +762,140 @@ def test_get_department_marts_missing(client, mock_cursor):
     assert data["avg_presence_rate"] is None
     assert data["most_dissident"] is None
     assert data["split_votes"][0]["vote_id"] == "VTANR5L17V1"
+
+
+# ---------------------------------------------------------------------------
+# CSV exports (MON-97)
+# ---------------------------------------------------------------------------
+
+_SCORECARD_ROW = {
+    "deputy_id": "PA1",
+    "full_name": "Jean Martin",
+    "party": "Rassemblement National",
+    "party_short": "RN",
+    "department": "Paris",
+    "total_votes": 100,
+    "present_votes": 90,
+    "presence_rate": 0.9,
+    "votes_for": 60,
+    "votes_against": 20,
+    "abstentions": 10,
+    "votes_for_pct": 0.667,
+    "abstention_pct": 0.111,
+    "eligible_solennels": 35,
+    "solennels_cast": 32,
+    "solennel_participation_rate": 0.914,
+    "eligible_voting_days": 126,
+    "voting_days_present": 77,
+    "voting_days_rate": 0.611,
+}
+
+
+def test_export_scorecards_csv(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [_SCORECARD_ROW]
+    resp = client.get("/deputies/scorecard.csv")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert 'filename="monelu_scorecard_deputes.csv"' in resp.headers["content-disposition"]
+    # UTF-8 BOM so Excel detects the encoding
+    assert resp.content.startswith(b"\xef\xbb\xbf")
+    lines = resp.text.lstrip("\ufeff").splitlines()
+    assert lines[0].startswith("deputy_id,full_name,party,")
+    assert lines[1].startswith("PA1,Jean Martin,Rassemblement National,RN,Paris,100,90,0.9,")
+
+
+def test_list_scorecards_json(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [_SCORECARD_ROW]
+    resp = client.get("/deputies/scorecards")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["items"][0]["deputy_id"] == "PA1"
+    assert data["items"][0]["party_short"] == "RN"
+    assert data["items"][0]["presence_rate"] == 0.9
+
+
+def test_export_deputy_votes_csv(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"full_name": "Jean Martin"}
+    mock_cursor.fetchall.return_value = [
+        {
+            "deputy_id": "PA1",
+            "vote_id": "VTANR5L17V1",
+            "voted_at": "2024-07-16T15:00:00",
+            "vote_title": "Vote sur le projet de loi de finances",
+            "theme": "budget",
+            "result": "adopté",
+            "position": "pour",
+        }
+    ]
+    resp = client.get("/deputies/PA1/votes.csv")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert 'filename="monelu_depute_PA1_votes.csv"' in resp.headers["content-disposition"]
+    assert resp.content.startswith(b"\xef\xbb\xbf")
+    lines = resp.text.lstrip("\ufeff").splitlines()
+    assert lines[0] == "deputy_id,vote_id,voted_at,vote_title,theme,result,position"
+    assert lines[1].endswith(",adopté,pour")
+
+
+def test_export_deputy_votes_csv_not_found(client, mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    resp = client.get("/deputies/NONEXISTENT/votes.csv")
+    assert resp.status_code == 404
+
+
+def test_export_vote_positions_csv(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"vote_id": "VTANR5L17V1"}
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": "VTANR5L17V1",
+            "deputy_id": "PA1",
+            "full_name": "Jean Martin",
+            "party": "Rassemblement National",
+            "party_short": "RN",
+            "department": "Paris",
+            "position": "pour",
+        }
+    ]
+    resp = client.get("/votes/VTANR5L17V1/positions.csv")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert (
+        'filename="monelu_scrutin_VTANR5L17V1_positions.csv"'
+        in (resp.headers["content-disposition"])
+    )
+    assert resp.content.startswith(b"\xef\xbb\xbf")
+    lines = resp.text.lstrip("\ufeff").splitlines()
+    assert lines[0] == "vote_id,deputy_id,full_name,party,party_short,department,position"
+    assert lines[1] == "VTANR5L17V1,PA1,Jean Martin,Rassemblement National,RN,Paris,pour"
+
+
+def test_export_vote_positions_csv_not_found(client, mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    resp = client.get("/votes/NOPE/positions.csv")
+    assert resp.status_code == 404
+
+
+def test_list_scorecards_marts_missing(client, mock_cursor):
+    import psycopg2.errors
+
+    mock_cursor.fetchall.side_effect = psycopg2.errors.UndefinedTable("mart missing")
+    resp = client.get("/deputies/scorecards")
+    assert resp.status_code == 503
+
+
+def test_export_scorecards_csv_marts_missing(client, mock_cursor):
+    import psycopg2.errors
+
+    mock_cursor.fetchall.side_effect = psycopg2.errors.UndefinedTable("mart missing")
+    resp = client.get("/deputies/scorecard.csv")
+    assert resp.status_code == 503
+
+
+def test_export_deputy_votes_csv_marts_missing(client, mock_cursor):
+    import psycopg2.errors
+
+    mock_cursor.fetchone.return_value = {"full_name": "Jean Martin"}
+    mock_cursor.fetchall.side_effect = psycopg2.errors.UndefinedTable("mart missing")
+    resp = client.get("/deputies/PA1/votes.csv")
+    assert resp.status_code == 503

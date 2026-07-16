@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, csvUrl } from '@/lib/api'
 import type { DissidentVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { departmentCode, departmentLabel } from '@/lib/departments'
@@ -219,6 +219,20 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 >
                   Comparer
                 </Link>
+                <a
+                  href={csvUrl.deputyVotes(id)}
+                  download
+                  title="Télécharger l'historique de vote complet (CSV)"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    background: '#fff', border: `1px solid ${LINE}`, color: NAVY,
+                    padding: '12px 22px', borderRadius: 9, fontWeight: 600,
+                    fontSize: 15, textDecoration: 'none',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  CSV
+                </a>
                 <ReportErrorButton
                   entityType="deputy"
                   entityId={id}

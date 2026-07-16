@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 from psycopg2 import sql
 from starlette.requests import Request
 
+from api.csv_export import csv_response
 from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter, tiered_limit
 from api.schemas import VoteDetail, VoteListResponse, VotePosition, VoteSummary
@@ -168,6 +169,38 @@ def latest_votes(request: Request):
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
     return [VoteSummary(**r) for r in rows]
+
+
+@router.get(
+    "/{vote_id}/positions.csv",
+    summary="CSV export of every deputy's position on one vote (MON-97)",
+)
+@limiter.limit(tiered_limit(10))
+def export_vote_positions_csv(request: Request, vote_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT vote_id FROM votes WHERE vote_id = %s", (vote_id,))
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=404, detail="Vote not found")
+
+            cur.execute(
+                """
+                SELECT vp.vote_id, vp.deputy_id, d.full_name, d.party, d.party_short,
+                       d.department, vp.position
+                FROM vote_positions vp
+                JOIN deputies d ON d.deputy_id = vp.deputy_id
+                WHERE vp.vote_id = %s
+                ORDER BY vp.position, d.last_name, d.first_name
+                """,
+                (vote_id,),
+            )
+            rows = cur.fetchall()
+
+    return csv_response(
+        ["vote_id", "deputy_id", "full_name", "party", "party_short", "department", "position"],
+        rows,
+        f"monelu_scrutin_{vote_id}_positions.csv",
+    )
 
 
 @router.get("/{vote_id}", response_model=VoteDetail)

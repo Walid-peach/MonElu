@@ -6,6 +6,7 @@ import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { getInitials, partyHex } from '@/lib/utils'
 import { resolvePostalCode } from '@/lib/postal'
+import { csvUrl } from '@/lib/api'
 
 interface DeputyLookupEntry {
   deputy_id: string
@@ -279,6 +280,15 @@ export function VoteDetailClient(props: Props) {
                   target="_blank" rel="noopener noreferrer"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E4E6EA', color: '#4B5563', padding: '11px 16px', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </a>
+                <a
+                  href={csvUrl.votePositions(voteId)}
+                  download
+                  title="Télécharger les positions de tous les députés (CSV)"
+                  aria-label="Télécharger les positions en CSV"
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, border: '1px solid #E4E6EA', color: '#4B5563', padding: '11px 16px', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  CSV
                 </a>
                 <ShareButton
                   url={`/votes/${voteId}`}

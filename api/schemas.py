@@ -77,6 +77,19 @@ class DeputyScorecard(_Base):
     )
 
 
+class DeputyScorecardRow(DeputyScorecard):
+    """Scorecard plus party/department context — one row of the dense table (MON-97)."""
+
+    party: Optional[str] = None
+    party_short: Optional[str] = None
+    department: Optional[str] = None
+
+
+class DeputyScorecardListResponse(_Base):
+    total: int
+    items: list[DeputyScorecardRow]
+
+
 class DeputyAlignment(_Base):
     """Party alignment / dissident rate for a single deputy (mart_party_alignment)."""
 

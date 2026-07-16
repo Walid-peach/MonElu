@@ -237,6 +237,21 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
               <option value="region">Région</option>
               <option value="parti">Groupe</option>
             </select>
+            {/* Dense table view for power users (MON-97) */}
+            <Link
+              href="/deputes/tableau"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                background: '#fff', border: '1px solid ' + LINE, borderRadius: 999,
+                padding: '8px 16px', fontSize: 13.5, fontWeight: 600,
+                color: NAVY, textDecoration: 'none', whiteSpace: 'nowrap',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M3 6h18M3 12h18M3 18h18"/>
+              </svg>
+              Vue tableau
+            </Link>
           </div>
         </div>
       </div>

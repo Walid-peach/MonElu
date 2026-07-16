@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from psycopg2 import sql
 from starlette.requests import Request
 
+from api.csv_export import csv_response
 from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter, tiered_limit
 from api.schemas import (
@@ -15,6 +16,8 @@ from api.schemas import (
     DeputyDivergingVotesResponse,
     DeputyListResponse,
     DeputyScorecard,
+    DeputyScorecardListResponse,
+    DeputyScorecardRow,
     DeputyStats,
     DeputySummary,
     DeputyVoteItem,
@@ -24,6 +27,66 @@ from api.schemas import (
 )
 
 router = APIRouter()
+
+# One scorecard row per deputy with party/department context — shared by the
+# JSON table endpoint and the CSV export so both always agree (MON-97).
+_SCORECARD_ROWS_SQL = """
+    SELECT
+        s.deputy_id,
+        s.full_name,
+        d.party,
+        d.party_short,
+        d.department,
+        s.total_votes_cast                          AS total_votes,
+        (s.total_votes_cast - s.total_nonvotant)    AS present_votes,
+        s.presence_rate,
+        s.total_pour                                AS votes_for,
+        s.total_contre                              AS votes_against,
+        s.total_abstention                          AS abstentions,
+        s.votes_for_pct,
+        s.abstention_pct,
+        s.eligible_solennels,
+        s.total_solennels_cast                      AS solennels_cast,
+        s.solennel_participation_rate,
+        s.eligible_voting_days,
+        s.total_voting_days_present                 AS voting_days_present,
+        s.voting_days_rate
+    FROM analytics_marts.mart_deputy_scorecard s
+    JOIN deputies d ON d.deputy_id = s.deputy_id
+    ORDER BY d.last_name, d.first_name
+"""
+
+_SCORECARD_CSV_COLUMNS = [
+    "deputy_id",
+    "full_name",
+    "party",
+    "party_short",
+    "department",
+    "total_votes",
+    "present_votes",
+    "presence_rate",
+    "votes_for",
+    "votes_against",
+    "abstentions",
+    "votes_for_pct",
+    "abstention_pct",
+    "eligible_solennels",
+    "solennels_cast",
+    "solennel_participation_rate",
+    "eligible_voting_days",
+    "voting_days_present",
+    "voting_days_rate",
+]
+
+
+def _fetch_scorecard_rows() -> list[dict]:
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(_SCORECARD_ROWS_SQL)
+                return cur.fetchall()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
 
 
 @router.get("/", response_model=DeputyListResponse)
@@ -122,6 +185,30 @@ def get_deputy_stats(
     )
 
 
+@router.get(
+    "/scorecards",
+    response_model=DeputyScorecardListResponse,
+    summary="All deputies' scorecards in one response — feeds the dense table view (MON-97)",
+)
+@limiter.limit(tiered_limit(10))
+def list_scorecards(request: Request):
+    rows = _fetch_scorecard_rows()
+    return DeputyScorecardListResponse(
+        total=len(rows),
+        items=[DeputyScorecardRow(**r) for r in rows],
+    )
+
+
+@router.get(
+    "/scorecard.csv",
+    summary="CSV export of every deputy's scorecard (MON-97)",
+)
+@limiter.limit(tiered_limit(10))
+def export_scorecards_csv(request: Request):
+    rows = _fetch_scorecard_rows()
+    return csv_response(_SCORECARD_CSV_COLUMNS, rows, "monelu_scorecard_deputes.csv")
+
+
 @router.get("/{deputy_id}", response_model=DeputyDetail)
 @limiter.limit(tiered_limit(30))
 def get_deputy(request: Request, deputy_id: str):
@@ -181,6 +268,45 @@ def get_deputy_votes(
         deputy_id=deputy_id,
         total=total,
         items=[DeputyVoteItem(**r) for r in rows],
+    )
+
+
+@router.get(
+    "/{deputy_id}/votes.csv",
+    summary="CSV export of a deputy's full voting record (MON-97)",
+)
+@limiter.limit(tiered_limit(10))
+def export_deputy_votes_csv(request: Request, deputy_id: str):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT full_name FROM deputies WHERE deputy_id = %s",
+                    (deputy_id,),
+                )
+                deputy = cur.fetchone()
+                if deputy is None:
+                    raise HTTPException(status_code=404, detail="Deputy not found")
+
+                cur.execute(
+                    """
+                    SELECT vp.deputy_id, vp.vote_id, v.voted_at, v.vote_title,
+                           v.theme, v.result, vp.position
+                    FROM vote_positions vp
+                    JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
+                    WHERE vp.deputy_id = %s
+                    ORDER BY v.voted_at DESC NULLS LAST, vp.vote_id DESC
+                    """,
+                    (deputy_id,),
+                )
+                rows = cur.fetchall()
+    except psycopg2.errors.UndefinedTable:
+        raise MART_UNAVAILABLE from None
+
+    return csv_response(
+        ["deputy_id", "vote_id", "voted_at", "vote_title", "theme", "result", "position"],
+        rows,
+        f"monelu_depute_{deputy_id}_votes.csv",
     )
 
 

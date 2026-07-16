@@ -32,6 +32,12 @@ export type Scorecard = {
   voting_days_rate: number
 }
 
+export type ScorecardRow = Scorecard & {
+  party: string | null
+  party_short: string | null
+  department: string | null
+}
+
 export type Vote = {
   vote_id: string
   vote_title: string
@@ -249,6 +255,8 @@ export const api = {
     },
     get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`, { revalidate: 86400 }),
     scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`, { revalidate: 86400 }),
+    scorecards: () =>
+      apiFetch<{ total: number; items: ScorecardRow[] }>('/deputies/scorecards', { revalidate: 3600 }),
     stats: (party?: string) => {
       const q = new URLSearchParams()
       if (party) q.set('party', party)
@@ -308,4 +316,12 @@ export const api = {
     }) => apiPost<{ status: string }>('/feedback/report', report),
   },
   health: () => apiFetch<Record<string, unknown>>('/health/', { revalidate: 300 }),
+}
+
+// CSV export download URLs (MON-97) — plain hrefs, the browser downloads
+// straight from the API (Content-Disposition: attachment).
+export const csvUrl = {
+  scorecard: () => `${API_BASE}/deputies/scorecard.csv`,
+  deputyVotes: (id: string) => `${API_BASE}/deputies/${encodeURIComponent(id)}/votes.csv`,
+  votePositions: (id: string) => `${API_BASE}/votes/${encodeURIComponent(id)}/positions.csv`,
 }

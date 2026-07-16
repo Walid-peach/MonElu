@@ -48,6 +48,7 @@ export function Footer() {
       <div style={{ display: 'flex', gap: '28px', fontSize: '13.5px', flexWrap: 'wrap' }}>
         <Link href="/deputes" style={{ color: '#6B7280', textDecoration: 'none' }}>Députés</Link>
         <Link href="/votes" style={{ color: '#6B7280', textDecoration: 'none' }}>Votes</Link>
+        <Link href="/donnees" style={{ color: '#6B7280', textDecoration: 'none' }}>Données</Link>
         <Link href="/developpeurs" style={{ color: '#6B7280', textDecoration: 'none' }}>Développeurs</Link>
         <Link href="/methodologie" style={{ color: '#6B7280', textDecoration: 'none' }}>Méthodologie</Link>
         <a href="https://github.com/Walid-peach" target="_blank" rel="noopener noreferrer" style={{ color: '#6B7280', textDecoration: 'none' }}>GitHub</a>
