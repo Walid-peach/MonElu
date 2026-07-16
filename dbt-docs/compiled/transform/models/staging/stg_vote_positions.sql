@@ -4,7 +4,6 @@ with source as (
 
 renamed as (
     select
-        position_id,
         vote_id,
         deputy_id,
         lower(trim(position))                    as position,
@@ -20,8 +19,7 @@ renamed as (
         end                                      as position_code
 
     from source
-    where position_id is not null
-      and vote_id is not null
+    where vote_id is not null
       and deputy_id is not null
 )
 
