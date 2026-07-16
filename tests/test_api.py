@@ -474,6 +474,23 @@ def test_search_empty_chunks(client):
     data = resp.json()
     assert data["chunks_retrieved"] == 0
     assert data["sources"] == []
+    # Additive field (ADR-023): absent from ask() results → null, never an error.
+    assert data["suggested_action"] is None
+
+
+def test_search_propagates_suggested_action(client):
+    """suggested_action='verify' from ask() reaches the response body (ADR-023 nudge)."""
+    flagged = {
+        "answer": "Réponse.",
+        "question": "Le député X a voté contre le SMIC",
+        "chunks_retrieved": 1,
+        "sources": [{"content": "c", "metadata": {}, "similarity": 0.9}],
+        "suggested_action": "verify",
+    }
+    with patch("api.routers.search.ask", return_value=flagged):
+        resp = client.post("/search/", json={"question": "Le député X a voté contre le SMIC"})
+    assert resp.status_code == 200
+    assert resp.json()["suggested_action"] == "verify"
 
 
 def test_list_deputies_offset_exceeds_max(client):

@@ -41,6 +41,9 @@ class SearchResponse(BaseModel):
     confidence: str = "medium"
     data_source: str = "RAG"
     caveat: str | None = None
+    # ADR-023: "verify" when the input looks like a claim to fact-check -
+    # a UI nudge only; the API never runs verification from this path.
+    suggested_action: Literal["verify"] | None = None
 
 
 @router.post(
@@ -67,6 +70,7 @@ def search(request: Request, body: SearchRequest):
             confidence=result.get("confidence", "medium"),
             data_source=result.get("data_source", "RAG"),
             caveat=result.get("caveat"),
+            suggested_action=result.get("suggested_action"),
         )
     except groq.APITimeoutError as e:
         raise HTTPException(
