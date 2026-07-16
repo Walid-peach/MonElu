@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
 import { GlobalSearch } from './GlobalSearch'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
@@ -12,12 +12,14 @@ const navLinks = [
   { href: '/deputes', label: 'Députés' },
   { href: '/votes', label: 'Votes' },
   { href: '/chat', label: 'Chat IA' },
-  { href: '/verifier', label: 'Vérifier' },
+  { href: '/chat?mode=verify', label: 'Vérifier' },
   { href: '/a-propos', label: 'À propos' },
 ]
 
 export function Nav() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const verifyMode = searchParams.get('mode') === 'verify'
 
   return (
     <nav
@@ -29,7 +31,12 @@ export function Nav() {
       </Link>
       <div className="flex items-center gap-8 text-sm font-medium text-gray-mid">
         {navLinks.map(({ href, label }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
+          const active =
+            href === '/chat'
+              ? pathname === '/chat' && !verifyMode
+              : href === '/chat?mode=verify'
+                ? pathname === '/chat' && verifyMode
+                : pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={href}

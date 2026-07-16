@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
 import { DM_Serif_Display, DM_Sans, Newsreader } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -66,11 +67,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`}>
       <body className="bg-gray-off min-h-screen">
         <JsonLd data={buildWebsiteJsonLd()} />
-        <Nav />
+        <Suspense fallback={null}>
+          <Nav />
+        </Suspense>
         <FreshnessBadge />
         <main className="pb-20 md:pb-0"><PageTransition>{children}</PageTransition></main>
         <Footer />
-        <BottomNav />
+        <Suspense fallback={null}>
+          <BottomNav />
+        </Suspense>
         <Analytics />
         <SpeedInsights />
       </body>

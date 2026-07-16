@@ -190,6 +190,11 @@ function ChatInner() {
   const [mode, setMode]           = useState<ChatMode>(initialMode)
   const [messages, setMessages]   = useState<Message[]>([])
   const [inputVal, setInputVal]   = useState(mode === 'verify' ? initialClaim : initialQ)
+  // Tracks the URL's mode so we can detect *changes* to it during render — Nav/
+  // BottomNav link into /chat?mode=verify, a same-pathname query-only navigation
+  // that Next.js does not remount the page for, so `mode` would otherwise stay
+  // frozen at whatever it was on first mount.
+  const [syncedUrlMode, setSyncedUrlMode] = useState<ChatMode>(initialMode)
   const [loading, setLoading]     = useState(false)
   const [darkMode, setDarkMode]   = useState<boolean>(() => {
     try { return localStorage.getItem('monelu-dark') === '1' } catch { return false }
@@ -209,6 +214,19 @@ function ChatInner() {
 
   // Keep ref in sync with state
   useEffect(() => { activeConvRef.current = activeConvId }, [activeConvId])
+
+  // Adjust mode during render when the URL's mode changes (see syncedUrlMode above).
+  // This is React's documented "adjusting state when a prop changes" pattern, not a
+  // side effect — it must stay outside useEffect to avoid an extra render pass.
+  const urlMode: ChatMode = searchParams.get('mode') === 'verify' ? 'verify' : 'question'
+  if (urlMode !== syncedUrlMode) {
+    setSyncedUrlMode(urlMode)
+    setMode(urlMode)
+    if (urlMode === 'verify') {
+      const claim = searchParams.get('claim')
+      if (claim) setInputVal(claim.slice(0, VERIFY_MAX_LENGTH))
+    }
+  }
 
   const toggleDark = useCallback(() => {
     setDarkMode(d => {
@@ -235,6 +253,18 @@ function ChatInner() {
       textareaRef.current?.focus()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Focus the textarea whenever mode changes post-mount (covers both the manual
+  // toggle buttons and the render-time URL sync above; the mount-time case is
+  // handled by the auto-send effect).
+  const isFirstModeRender = useRef(true)
+  useEffect(() => {
+    if (isFirstModeRender.current) {
+      isFirstModeRender.current = false
+      return
+    }
+    textareaRef.current?.focus()
+  }, [mode])
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const send = useCallback(async (question: string) => {
