@@ -1,16 +1,22 @@
 import logging
+import os
+import uuid
 from typing import Literal
 
 import groq
 from fastapi import APIRouter, HTTPException, Request
+from psycopg2.extras import Json
 from pydantic import BaseModel, Field
 
+from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from rag.chain.rag_chain import ask
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "https://mon-elu.vercel.app").rstrip("/")
 
 
 class SearchRequest(BaseModel):
@@ -86,3 +92,101 @@ def search(request: Request, body: SearchRequest):
             status_code=500,
             detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
         ) from None
+
+
+class ShareRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=500)
+    answer: str = Field(..., min_length=1, max_length=8000)
+    sources: list[dict] = Field(default_factory=list, max_length=20)
+    confidence: str | None = Field(None, max_length=50)
+    data_source: str | None = Field(None, max_length=50)
+    caveat: str | None = Field(None, max_length=500)
+
+
+class ShareResponse(BaseModel):
+    id: str
+    question: str
+    answer: str
+    sources: list[dict]
+    confidence: str | None = None
+    data_source: str | None = None
+    caveat: str | None = None
+    shared_at: str
+    share_url: str
+
+
+def _to_share_response(row: dict) -> ShareResponse:
+    share_id = str(row["id"])
+    return ShareResponse(
+        id=share_id,
+        question=row["question"],
+        answer=row["answer"],
+        sources=row["sources"],
+        confidence=row["confidence"],
+        data_source=row["data_source"],
+        caveat=row["caveat"],
+        shared_at=row["created_at"].isoformat(),
+        share_url=f"{FRONTEND_BASE_URL}/chat/s/{share_id}",
+    )
+
+
+@router.post(
+    "/share",
+    response_model=ShareResponse,
+    summary="Partagez une réponse du chat (aucun appel IA - snapshot de la réponse déjà obtenue)",
+)
+@limiter.limit(tiered_limit(30))
+def share_answer(request: Request, body: ShareRequest):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO chat_shares
+                        (question, answer, sources, confidence, data_source, caveat)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id, question, answer, sources, confidence, data_source,
+                              caveat, created_at
+                    """,
+                    (
+                        body.question,
+                        body.answer,
+                        Json(body.sources),
+                        body.confidence,
+                        body.data_source,
+                        body.caveat,
+                    ),
+                )
+                row = cur.fetchone()
+            conn.commit()
+    except Exception:
+        logger.exception("Failed to persist chat share")
+        raise HTTPException(
+            status_code=500,
+            detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
+        ) from None
+    return _to_share_response(row)
+
+
+@router.get(
+    "/share/{share_id}",
+    response_model=ShareResponse,
+    summary="Relisez une réponse partagée (aucun appel IA)",
+)
+@limiter.limit(tiered_limit(30))
+def get_share(request: Request, share_id: uuid.UUID):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, question, answer, sources, confidence, data_source,
+                       caveat, created_at
+                FROM chat_shares
+                WHERE id = %s
+                """,
+                (str(share_id),),
+            )
+            row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Réponse partagée introuvable.")
+    return _to_share_response(row)

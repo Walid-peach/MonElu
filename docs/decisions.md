@@ -530,6 +530,29 @@ Auto-detection is kept but demoted to a nudge: a `verify_claim` intent added to 
 
 ---
 
+## ADR-024 - Chat answers are shareable via a stored snapshot, mirroring ADR-022 (MON-66)
+
+**Date:** 2026-07-17
+**Status:** Final
+
+**Decision:** A chat assistant message gets a "Partager" action that persists the answer the user already saw - question, answer text, sources, confidence, data source, and caveat - into a new `chat_shares` table via `POST /search/share`, and returns a share URL `/chat/s/<id>`. `GET /search/share/<id>` serves the stored snapshot with no LLM call. The share page is a standalone read-only view (`ChatAnswerCard`), not a re-render of the interactive chat bubble.
+
+**Reason:** This is the same shape of decision as ADR-022, applied to `/search` instead of `/verify`: the share moment is unauthenticated, potentially high-traffic, and must not trigger a Groq call. Two design points specific to chat answers:
+
+- **Store the client-submitted answer, don't recompute it.** Unlike `/verify`, which computes its own verdict server-side from the claim, a chat share persists the *exact* answer text the user already received from an earlier `/search` call - the user is sharing what they saw, and the LLM is non-deterministic at temperature 0.2, so recomputing at share time could silently produce a different answer than what was shared. This mirrors the existing `POST /feedback/chat` endpoint (MON-70), which already accepts client-submitted `question`/`answer`/`sources` without recomputation - `chat_shares` uses the same trust boundary, not a new one.
+- **A dedicated table, not the generic `feedback` sink.** `feedback` is write-only (moderation triage, never served back to users per row). A share is read back publicly at a stable URL and needs OG metadata, so it gets its own table with the immutable-snapshot shape from `verifications` (UUID PK, no user identity, `created_at`), not a `type`-discriminated `payload` row.
+
+**Impact:**
+- MON-66 adds the `chat_shares` table (additive migration `007_chat_shares.sql`) and `POST /search/share` / `GET /search/share/<id>`.
+- The chat page's assistant message gains a "Partager" action next to "Copier", reusing the `ShareButton` component's native-share-or-clipboard behavior.
+- `mdToHtml`, `mapSource`, and the confidence badge metadata moved from `chat/page.tsx` into `frontend/src/lib/chatFormat.ts` so the share page renders an answer identically to the chat bubble.
+- Do NOT recompute the answer on `POST /search/share` or on `GET /search/share/<id>` - both are LLM-free by construction (share stores what was already computed; get is a plain SELECT).
+- Do NOT add listing/browsing of stored shares without a moderation decision first (same constraint as ADR-022's verifications).
+
+**Trigger to revisit:** if shared answers become a moderation or impersonation problem (fabricated MonÉlu-branded content circulating), add server-side validation against a real `/search` call or a moderation queue before serving new shares; if storage nears the Supabase free tier limit, `chat_shares` is a TTL candidate alongside `verifications`.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
