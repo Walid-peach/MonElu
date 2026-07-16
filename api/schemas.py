@@ -173,6 +173,60 @@ class DeputyListResponse(_Base):
 
 
 # ---------------------------------------------------------------------------
+# Departments (MON-107)
+# ---------------------------------------------------------------------------
+
+
+class DepartmentDeputy(DeputySummary):
+    """Deputy row on a department page — summary plus scorecard highlights.
+
+    Mart-derived rates are None when the dbt marts are absent (the page
+    degrades gracefully instead of failing).
+    """
+
+    presence_rate: Optional[float] = None
+    solennel_participation_rate: Optional[float] = None
+    party_alignment_rate: Optional[float] = None
+    dissident_rate: Optional[float] = None
+
+
+class DepartmentPartyCount(_Base):
+    party: Optional[str] = None
+    count: int
+
+
+class DepartmentSplitVote(_Base):
+    """A recent vote where the department's deputies expressed opposing positions."""
+
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: str
+    result: Optional[str] = None
+    pour: int
+    contre: int
+    abstention: int
+
+
+class DepartmentDetail(_Base):
+    code: str
+    name: str
+    deputy_count: int
+    deputies: list[DepartmentDeputy]
+    avg_presence_rate: Optional[float] = Field(
+        default=None,
+        description="Mean presence_rate across the department's deputies; "
+        "None when the scorecard mart is unavailable.",
+    )
+    party_distribution: list[DepartmentPartyCount]
+    most_dissident: Optional[DepartmentDeputy] = Field(
+        default=None,
+        description="Deputy with the highest dissident_rate; None when the "
+        "alignment mart is unavailable or the department is empty.",
+    )
+    split_votes: list[DepartmentSplitVote]
+
+
+# ---------------------------------------------------------------------------
 # Votes (scrutins)
 # ---------------------------------------------------------------------------
 

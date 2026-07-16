@@ -653,3 +653,113 @@ def test_verify_get_not_found(client, mock_cursor):
 def test_verify_get_invalid_uuid_rejected(client):
     resp = client.get("/verify/not-a-uuid")
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Departments (MON-107)
+# ---------------------------------------------------------------------------
+
+_DEPT_DEPUTY_ROWS = [
+    {
+        "deputy_id": "PA1",
+        "full_name": "Jean Martin",
+        "party": "Rassemblement National",
+        "party_short": "RN",
+        "department": "Gironde",
+        "circonscription": "1ère circonscription",
+        "photo_url": None,
+    },
+    {
+        "deputy_id": "PA2",
+        "full_name": "Anne Durand",
+        "party": "La France insoumise",
+        "party_short": "LFI",
+        "department": "Gironde",
+        "circonscription": "2ème circonscription",
+        "photo_url": None,
+    },
+]
+
+_DEPT_SPLIT_ROWS = [
+    {
+        "vote_id": "VTANR5L17V1",
+        "voted_at": datetime(2025, 7, 16, 15, 0),
+        "vote_title": "Vote sur le projet de loi de finances",
+        "result": "adopté",
+        "pour": 1,
+        "contre": 1,
+        "abstention": 0,
+    },
+]
+
+_DEPT_RATE_ROWS = [
+    {
+        "deputy_id": "PA1",
+        "presence_rate": 0.8,
+        "solennel_participation_rate": 0.9,
+        "party_alignment_rate": 0.95,
+        "dissident_rate": 0.05,
+    },
+    {
+        "deputy_id": "PA2",
+        "presence_rate": 0.6,
+        "solennel_participation_rate": 0.7,
+        "party_alignment_rate": 0.85,
+        "dissident_rate": 0.15,
+    },
+]
+
+
+def test_get_department(client, mock_cursor):
+    mock_cursor.fetchall.side_effect = [_DEPT_DEPUTY_ROWS, _DEPT_SPLIT_ROWS, _DEPT_RATE_ROWS]
+    resp = client.get("/departments/33")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["code"] == "33"
+    assert data["name"] == "Gironde"
+    assert data["deputy_count"] == 2
+    assert data["deputies"][0]["presence_rate"] == 0.8
+    assert data["avg_presence_rate"] == 0.7
+    assert {p["party"]: p["count"] for p in data["party_distribution"]} == {
+        "Rassemblement National": 1,
+        "La France insoumise": 1,
+    }
+    assert data["most_dissident"]["deputy_id"] == "PA2"
+    assert data["split_votes"][0]["vote_id"] == "VTANR5L17V1"
+
+
+def test_get_department_zero_padded_code(client, mock_cursor):
+    mock_cursor.fetchall.side_effect = [_DEPT_DEPUTY_ROWS, _DEPT_SPLIT_ROWS, _DEPT_RATE_ROWS]
+    resp = client.get("/departments/099")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["code"] == "99"
+    assert data["name"] == "Français établis hors de France"
+
+
+def test_get_department_unknown_code(client, mock_cursor):
+    resp = client.get("/departments/xx")
+    assert resp.status_code == 404
+
+
+def test_get_department_no_active_deputies(client, mock_cursor):
+    mock_cursor.fetchall.side_effect = [[]]
+    resp = client.get("/departments/2A")
+    assert resp.status_code == 404
+
+
+def test_get_department_marts_missing(client, mock_cursor):
+    import psycopg2.errors
+
+    mock_cursor.fetchall.side_effect = [
+        _DEPT_DEPUTY_ROWS,
+        _DEPT_SPLIT_ROWS,
+        psycopg2.errors.UndefinedTable("mart missing"),
+    ]
+    resp = client.get("/departments/33")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["deputies"][0]["presence_rate"] is None
+    assert data["avg_presence_rate"] is None
+    assert data["most_dissident"] is None
+    assert data["split_votes"][0]["vote_id"] == "VTANR5L17V1"

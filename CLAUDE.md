@@ -109,7 +109,7 @@ Assemblée Nationale Open Data (ZIPs)
 
 **`api/`** — FastAPI application
 - `main.py`: App factory, CORS (GET + POST — POST is needed for `/search`; an empty `CORS_ORIGINS` blocks all cross-origin requests and logs a startup warning), slowapi rate limiting (30 req/min global, 10 req/min on scorecard and search), global exception handler. `/health` returns DB status, record counts, last ingestion timestamp, and dbt mart row counts. The landing page is now the Next.js frontend (`frontend/`), not a FastAPI-served HTML page.
-- `routers/deputies.py`, `routers/votes.py`, `routers/search.py`, `routers/verify.py`: All DB queries — direct SQL, no ORM. `verify.py` is the fact-check surface (MON-126, ADR-022): `POST /verify/` runs the verification chain and stores an immutable verdict snapshot; `GET /verify/{id}` serves stored verdicts with no LLM call.
+- `routers/deputies.py`, `routers/votes.py`, `routers/search.py`, `routers/verify.py`, `routers/departments.py`: All DB queries — direct SQL, no ORM. `verify.py` is the fact-check surface (MON-126, ADR-022): `POST /verify/` runs the verification chain and stores an immutable verdict snapshot; `GET /verify/{id}` serves stored verdicts with no LLM call. `departments.py` (MON-107) serves `GET /departments/{code}` — current deputies of a department with scorecard highlights, aggregates, and recent split votes; the code↔name map lives in `api/departments_data.py` (mirrors `scripts/update_party.py` DEPT_NAMES plus overseas collectivities; frontend copy in `frontend/src/lib/departments.ts`).
 - `schemas.py`: Pydantic response models; all fields `Optional` to match DB NULLs
 - `limiter.py`: Shared slowapi `Limiter` instance imported by routers
 

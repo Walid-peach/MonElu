@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { api, type Deputy, type Vote } from '@/lib/api'
+import { departmentCode } from '@/lib/departments'
 
 const SITE_URL = 'https://mon-elu.vercel.app'
 const PAGE_SIZE = 200
@@ -25,7 +26,7 @@ function toVoteUrl(v: Vote): MetadataRoute.Sitemap[number] {
   }
 }
 
-async function deputyUrls(): Promise<MetadataRoute.Sitemap> {
+async function deputyAndDepartmentUrls(): Promise<MetadataRoute.Sitemap> {
   const first = await api.deputies.list({ limit: PAGE_SIZE, offset: 0 })
   const offsets: number[] = []
   for (let offset = PAGE_SIZE; offset < first.total; offset += PAGE_SIZE) offsets.push(offset)
@@ -33,8 +34,22 @@ async function deputyUrls(): Promise<MetadataRoute.Sitemap> {
   const rest = await Promise.all(
     offsets.map(offset => api.deputies.list({ limit: PAGE_SIZE, offset }))
   )
+  const deputies = [first, ...rest].flatMap(page => page.items)
 
-  return [first, ...rest].flatMap(page => page.items.map(toDeputyUrl))
+  // Department pages (MON-107), derived from the same fetch so only
+  // departments that actually have deputies get a sitemap entry.
+  const codes = new Set<string>()
+  for (const d of deputies) {
+    const code = departmentCode(d.department)
+    if (code) codes.add(code)
+  }
+  const departmentUrls: MetadataRoute.Sitemap = [...codes].sort().map(code => ({
+    url: `${SITE_URL}/departements/${code}`,
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }))
+
+  return [...deputies.map(toDeputyUrl), ...departmentUrls]
 }
 
 async function voteUrls(): Promise<MetadataRoute.Sitemap> {
@@ -70,7 +85,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/methodologie`, changeFrequency: 'monthly', priority: 0.5 },
   ]
 
-  const [deputies, votes] = await Promise.all([deputyUrls(), voteUrls()])
+  const [deputiesAndDepartments, votes] = await Promise.all([
+    deputyAndDepartmentUrls(),
+    voteUrls(),
+  ])
 
-  return [...staticUrls, ...deputies, ...votes]
+  return [...staticUrls, ...deputiesAndDepartments, ...votes]
 }

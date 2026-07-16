@@ -1,4 +1,4 @@
-import { departmentLabel } from '@/lib/departments'
+import { departmentCode, departmentLabel, departmentName } from '@/lib/departments'
 
 describe('departmentLabel', () => {
   it('returns null for null, undefined, and empty input', () => {
@@ -43,5 +43,42 @@ describe('departmentLabel', () => {
     )
     expect(departmentLabel('998')).toBe('998')
     expect(departmentLabel('Atlantide')).toBe('Atlantide')
+  })
+})
+
+describe('departmentCode', () => {
+  it('returns null for null, undefined, and empty input', () => {
+    expect(departmentCode(null)).toBeNull()
+    expect(departmentCode(undefined)).toBeNull()
+    expect(departmentCode('')).toBeNull()
+  })
+
+  it('canonicalizes raw codes', () => {
+    expect(departmentCode('69')).toBe('69')
+    expect(departmentCode('2a')).toBe('2A')
+    expect(departmentCode('099')).toBe('99')
+    expect(departmentCode('971')).toBe('971')
+  })
+
+  it('maps full names to their code', () => {
+    expect(departmentCode('Gironde')).toBe('33')
+    expect(departmentCode('La Réunion')).toBe('974')
+    expect(departmentCode('Français établis hors de France')).toBe('99')
+  })
+
+  it('returns null for unknown values', () => {
+    expect(departmentCode('998')).toBeNull()
+    expect(departmentCode('Atlantide')).toBeNull()
+  })
+})
+
+describe('departmentName', () => {
+  it('maps a canonical code to its full name', () => {
+    expect(departmentName('33')).toBe('Gironde')
+    expect(departmentName('2A')).toBe('Corse-du-Sud')
+  })
+
+  it('returns null for unknown codes', () => {
+    expect(departmentName('998')).toBeNull()
   })
 })

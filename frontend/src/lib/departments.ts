@@ -153,3 +153,23 @@ export function departmentLabel(raw: string | null | undefined): string | null {
     ? `${value} (${codeForName})`
     : value
 }
+
+/**
+ * Canonical department code for a raw code ("33", "099", "2a") or a full
+ * name ("Gironde") — the slug used by /departements/[code]. Returns null
+ * for unknown values.
+ */
+export function departmentCode(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const value = raw.trim()
+  if (!value) return null
+
+  const code = normalizeCode(value)
+  if (code) return code in DEPARTMENT_NAMES ? code : null
+  return NAME_TO_CODE.get(value) ?? null
+}
+
+/** Full department name for a canonical code, or null if unknown. */
+export function departmentName(code: string): string | null {
+  return DEPARTMENT_NAMES[code] ?? null
+}
