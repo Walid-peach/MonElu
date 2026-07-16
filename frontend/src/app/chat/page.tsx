@@ -168,6 +168,18 @@ const VERIFY_EXAMPLE_CLAIM = '« Le député X a voté contre l’augmentation d
 const VERIFY_LOADING_TEXT =
   'Recherche des scrutins correspondants et de la position enregistrée du député…'
 
+const VERIFY_NUDGE_TEXT =
+  'Cela ressemble à une affirmation - la vérifier contre les scrutins officiels ?'
+
+// Cross-link condition: the answer cites at least one deputy chunk, so
+// "vérifier cette affirmation" has a deputy record to check against.
+function hasDeputySource(result: SearchResult): boolean {
+  return (result.sources || []).some(src => {
+    const type = src.metadata?.chunk_type
+    return type === 'deputy' || type === 'notable_deputy'
+  })
+}
+
 function verifyErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : ''
   if (msg.includes('429')) {
@@ -395,6 +407,21 @@ function ChatInner() {
     if (mode === 'verify') submitClaim(inputVal)
     else send(inputVal)
   }, [mode, inputVal, submitClaim, send])
+
+  // Nudge chip (ADR-023): explicit click switches to verify mode and submits
+  // the user's original text through POST /verify/. This is the only path
+  // from a nudge to a verification - never automatic.
+  const verifyNow = useCallback((claim: string) => {
+    setMode('verify')
+    submitClaim(claim)
+  }, [submitClaim])
+
+  // Cross-link action: pre-fill only, no auto-submit (ADR-022/023 - a
+  // verification writes an immutable row, so submission stays a user action).
+  const prefillVerify = useCallback((claim: string) => {
+    setMode('verify')
+    setInputVal(claim.slice(0, VERIFY_MAX_LENGTH))
+  }, [])
 
   const newChat = useCallback(() => {
     setMessages([])
@@ -692,6 +719,15 @@ function ChatInner() {
                 if (msg.role === 'assistant') {
                   const sources = (msg.result.sources || []).slice(0, 3).map(mapSource)
                   const conf = CONFIDENCE_META[msg.result.confidence]
+                  // Length-gated so the chip never offers a submission /verify/
+                  // would reject (min 10, max 500) - the claim is sent verbatim,
+                  // never truncated.
+                  const nudgeClaimLen = (msg.result.question || '').trim().length
+                  const showNudge =
+                    msg.result.suggested_action === 'verify' &&
+                    nudgeClaimLen >= VERIFY_MIN_LENGTH &&
+                    nudgeClaimLen <= VERIFY_MAX_LENGTH
+                  const showVerifyAction = hasDeputySource(msg.result)
                   return (
                     <div key={i} style={{ display: 'flex', gap: 13, marginBottom: 28, alignItems: 'flex-start' }}>
                       <AiAvatar />
@@ -740,13 +776,45 @@ function ChatInner() {
                             </div>
                           </div>
                         )}
-                        <div style={{ display: 'flex', gap: 4, marginTop: 14 }}>
+                        {showNudge && (
+                          <button
+                            onClick={() => verifyNow(msg.result.question)}
+                            disabled={loading}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14,
+                              padding: '8px 14px', borderRadius: 999, cursor: loading ? 'default' : 'pointer',
+                              fontSize: 12.5, fontWeight: 600, textAlign: 'left', lineHeight: 1.45,
+                              background: dk ? 'rgba(21,128,61,0.14)' : '#F0FDF4',
+                              border: `1.5px solid ${dk ? 'rgba(74,222,128,0.30)' : '#BBF7D0'}`,
+                              color: dk ? '#4ADE80' : '#15803D',
+                              transition: 'background 140ms',
+                            }}
+                            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = dk ? 'rgba(21,128,61,0.24)' : '#DCFCE7' }}
+                            onMouseLeave={e => (e.currentTarget.style.background = dk ? 'rgba(21,128,61,0.14)' : '#F0FDF4')}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                              <path d="m9 12 2 2 4-4"/>
+                            </svg>
+                            {VERIFY_NUDGE_TEXT}
+                          </button>
+                        )}
+                        <div style={{ display: 'flex', gap: 4, marginTop: 14, flexWrap: 'wrap' }}>
                           <ActionBtn onClick={copyLastAnswer} dark={dk}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                               <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                             </svg>
                             {copied ? 'Copié !' : 'Copier'}
                           </ActionBtn>
+                          {showVerifyAction && (
+                            <ActionBtn onClick={() => prefillVerify(msg.result.question)} dark={dk}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                <path d="m9 12 2 2 4-4"/>
+                              </svg>
+                              Vérifier cette affirmation
+                            </ActionBtn>
+                          )}
                           {feedbackByMsg[i] === 'pending' && (
                             <span style={{ fontSize: 12, color: txt3, padding: '5px 9px' }}>Envoi…</span>
                           )}
