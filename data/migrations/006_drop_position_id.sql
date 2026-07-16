@@ -18,7 +18,8 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'vote_positions'
+        WHERE table_schema = 'public'
+          AND table_name = 'vote_positions'
           AND column_name = 'position_id'
     ) THEN
         -- dbt staging views select position_id and block the column drop.
@@ -27,11 +28,11 @@ BEGIN
         -- The API is unaffected: it only queries raw tables and the marts,
         -- which are materialized as tables.
         DROP VIEW IF EXISTS analytics_staging.stg_vote_positions CASCADE;
-        ALTER TABLE vote_positions DROP CONSTRAINT vote_positions_pkey;
-        ALTER TABLE vote_positions DROP COLUMN position_id;
-        ALTER TABLE vote_positions
+        ALTER TABLE public.vote_positions DROP CONSTRAINT vote_positions_pkey;
+        ALTER TABLE public.vote_positions DROP COLUMN position_id;
+        ALTER TABLE public.vote_positions
             ADD CONSTRAINT vote_positions_pkey PRIMARY KEY (vote_id, deputy_id);
-        ALTER TABLE vote_positions
+        ALTER TABLE public.vote_positions
             DROP CONSTRAINT vote_positions_vote_id_deputy_id_key;
     END IF;
 END $$;
