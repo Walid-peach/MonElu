@@ -120,7 +120,15 @@ export function HemicycleChart({ deputies }: Props) {
   )
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
+    <div
+      ref={containerRef}
+      // Dismiss the pinned tooltip only when focus leaves the whole chart.
+      // Clearing on the SVG's own blur would unmount the tooltip between
+      // mousedown and mouseup on its profile link, swallowing the click.
+      onBlur={e => {
+        if (pinned && !containerRef.current?.contains(e.relatedTarget as Node)) clearActive()
+      }}
+    >
 
       {/* View toggle */}
       <div role="group" aria-label="Mode d'affichage de l'hémicycle" style={{ display: 'inline-flex', background: '#F2F3F5', borderRadius: 999, padding: 3, marginBottom: 18 }}>
@@ -143,6 +151,10 @@ export function HemicycleChart({ deputies }: Props) {
         ))}
       </div>
 
+      {/* The SVG and the seat tooltip share this wrapper so the tooltip's
+          percentage coordinates map 1:1 onto the viewBox, unskewed by the
+          toggle above or the legend below. */}
+      <div style={{ position: 'relative' }}>
       <svg
         viewBox={`0 0 ${vb.width} ${vb.height}`}
         style={{ width: '100%', height: 'auto', display: 'block', outline: 'none' }}
@@ -150,7 +162,6 @@ export function HemicycleChart({ deputies }: Props) {
         role="application"
         aria-label={`Hémicycle du scrutin : ${counts.pour} pour, ${counts.contre} contre, ${counts.abstention} abstentions, ${counts.nonVotant} non votants. Utilisez les flèches pour parcourir les députés, Entrée pour ouvrir le profil.`}
         onKeyDown={handleKeyDown}
-        onBlur={() => { if (pinned) clearActive() }}
       >
         {view === 'seats' ? (
           <g>
@@ -193,8 +204,18 @@ export function HemicycleChart({ deputies }: Props) {
                   opacity={activeArc === null || isActive ? 1 : 0.35}
                   stroke="#F7F4ED"
                   strokeWidth={3}
-                  style={{ cursor: 'pointer', transition: 'opacity 0.15s ease' }}
+                  style={{ cursor: 'pointer', transition: 'opacity 0.15s ease', outline: 'none' }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${a.group} : ${a.seatCount} députés, ${a.counts.pour} pour, ${a.counts.contre} contre, ${a.counts.abstention} abstentions, ${a.counts.nonVotant} non votants`}
                   onClick={() => setActiveArc(isActive ? null : i)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setActiveArc(isActive ? null : i)
+                    }
+                  }}
+                  onFocus={() => setActiveArc(i)}
                   onMouseEnter={() => setActiveArc(i)}
                   onMouseLeave={() => setActiveArc(null)}
                 />
@@ -210,7 +231,7 @@ export function HemicycleChart({ deputies }: Props) {
           style={{
             position: 'absolute',
             left: `${(activeSeat.x / vb.width) * 100}%`,
-            top: `calc(${(activeSeat.y / vb.height) * 100}% + 44px)`,
+            top: `${(activeSeat.y / vb.height) * 100}%`,
             transform: `translate(${activeSeat.x > vb.width * 0.62 ? '-100%' : activeSeat.x < vb.width * 0.38 ? '0' : '-50%'}, 12px)`,
             background: '#fff', border: '1px solid #E4E6EA', borderRadius: 10,
             padding: '12px 16px', boxShadow: '0 8px 24px rgba(27,43,80,0.14)',
@@ -238,6 +259,7 @@ export function HemicycleChart({ deputies }: Props) {
           </a>
         </div>
       )}
+      </div>
 
       {/* Group arc detail */}
       {view === 'groups' && activeArc !== null && arcs[activeArc] && (

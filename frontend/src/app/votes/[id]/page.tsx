@@ -101,7 +101,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
 
   // One seat per recorded position (pour/contre/abstention/nonVotant) for the
   // hemicycle chart (MON-104). Absent deputies have no vote_positions row and
-  // are deliberately not seated — the /deputies roster has no active-mandate
+  // are deliberately not seated - the /deputies roster has no active-mandate
   // filter, so padding with roster entries would seat ex-deputies.
   const hemicycleDeputies = (vote.positions ?? []).map(p => ({
     deputy_id: p.deputy_id,

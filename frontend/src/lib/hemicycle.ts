@@ -95,7 +95,7 @@ export function ringDistribution(total: number, rings: number): number[] {
  *
  * Deputies are sorted by group (left → right political ordering, then by name
  * for stability) and assigned to seats sorted by angle, so each group occupies
- * a contiguous angular wedge across all rings — the classic parliament chart.
+ * a contiguous angular wedge across all rings - the classic parliament chart.
  */
 export function layoutSeats(deputies: HemicycleDeputy[]): Seat[] {
   const total = deputies.length
