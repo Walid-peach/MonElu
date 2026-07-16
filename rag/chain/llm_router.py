@@ -15,6 +15,7 @@ returns None and the caller falls back to standard RAG retrieval.
 import json
 import logging
 import os
+import re
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -61,23 +62,33 @@ INTENT_DESCRIPTIONS = {
     "votes_by_period": "vote counts for a specific month/year or this week/month",
 }
 
+# Not a SQL intent: an assertion that a deputy voted a certain way (a claim
+# to fact-check, not a question to answer). classify_intent maps it to None
+# (→ RAG) via the SQL_QUERIES whitelist; it exists in the enum so the model
+# does not shoehorn claims into an aggregate intent. Per ADR-023 it must
+# NEVER trigger the verify chain from the search path.
+VERIFY_CLAIM_INTENT = "verify_claim"
+
 _TOOL = {
     "type": "function",
     "function": {
         "name": "route_question",
         "description": (
             "Classify a French question about the Assemblée Nationale into one "
-            "of the predefined aggregate intents, or 'rag' if it is about a "
-            "specific deputy, a specific vote/law, opinions, or anything not "
-            "listed."
+            "of the predefined aggregate intents, 'verify_claim' if it is an "
+            "assertion that a specific deputy voted a certain way, or 'rag' if "
+            "it is about a specific deputy, a specific vote/law, opinions, or "
+            "anything not listed."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "intent": {
                     "type": "string",
-                    "enum": [*INTENT_DESCRIPTIONS.keys(), "rag"],
-                    "description": "\n".join(f"- {k}: {v}" for k, v in INTENT_DESCRIPTIONS.items()),
+                    "enum": [*INTENT_DESCRIPTIONS.keys(), VERIFY_CLAIM_INTENT, "rag"],
+                    "description": "\n".join(f"- {k}: {v}" for k, v in INTENT_DESCRIPTIONS.items())
+                    + f"\n- {VERIFY_CLAIM_INTENT}: an assertion (not a question) that a "
+                    "specific deputy voted for/against something",
                 },
             },
             "required": ["intent"],
@@ -118,9 +129,91 @@ def classify_intent(question: str) -> str | None:
         return None
 
     # Whitelist enforcement — anything the model invents falls to RAG.
+    # verify_claim is deliberately not whitelisted: claims fall to RAG and
+    # detect_claim() flags them for the UI nudge (ADR-023).
     if intent not in SQL_QUERIES:
         return None
     return intent
+
+
+# ── Claim detection (ADR-023 nudge - annotates, never verifies) ─────────────
+
+# Deterministic pre-filter: only inputs that assert a voting act are worth a
+# classifier call. Matched against normalize_text() output (lowercased,
+# accents preserved). Interrogatives also match ("comment a-t-elle voté ?") -
+# the classifier below disambiguates assertion vs question.
+_CLAIM_PREFILTER = re.compile(
+    r"\b(?:a|ont|avait|avaient|aurait|auraient)(?:-t-(?:il|elle|ils|elles))?\s+"
+    r"(?:pas\s+|jamais\s+|toujours\s+)?vot[eé]\b"
+    r"|\bs'(?:est|sont|etait|était|étaient)\s+abstenu"
+)
+
+_CLAIM_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "classify_claim",
+        "description": (
+            "Decide whether a French input about the Assemblée Nationale is an "
+            "assertion (claim) that a specific deputy or group voted a certain "
+            "way, or a question asking how someone voted."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "classification": {
+                    "type": "string",
+                    "enum": ["claim", "question"],
+                    "description": (
+                        "- claim: a statement presented as fact, e.g. « Le député X "
+                        "a voté contre l'augmentation du SMIC »\n"
+                        "- question: an interrogative, e.g. « Comment X a-t-elle "
+                        "voté sur le SMIC ? »"
+                    ),
+                },
+            },
+            "required": ["classification"],
+        },
+    },
+}
+
+_CLAIM_SYSTEM = (
+    "You classify French inputs about the Assemblée Nationale. Decide whether "
+    "the input asserts as fact that a specific deputy or group voted a certain "
+    "way (claim), or asks how someone voted (question). Interrogative form, "
+    "question marks, or asking words (comment, est-ce que, qui, quel) mean "
+    "'question'. Always call the tool."
+)
+
+
+def detect_claim(question: str) -> bool:
+    """
+    True when the input is an assertion about a deputy's voting behavior -
+    the UI offers verification for these (ADR-023). Detection only annotates:
+    it never calls the verify chain and never stores anything. Any failure
+    returns False (no nudge, never an error).
+    """
+    if not _CLAIM_PREFILTER.search(normalize_text(question)):
+        return False
+    try:
+        response = _groq_client.chat.completions.create(
+            model=CLASSIFIER_MODEL,
+            messages=[
+                {"role": "system", "content": _CLAIM_SYSTEM},
+                {"role": "user", "content": question},
+            ],
+            tools=[_CLAIM_TOOL],
+            tool_choice={"type": "function", "function": {"name": "classify_claim"}},
+            temperature=0.0,
+            max_tokens=32,
+        )
+        calls = response.choices[0].message.tool_calls
+        if not calls:
+            return False
+        classification = json.loads(calls[0].function.arguments).get("classification")
+    except Exception as exc:
+        log.warning("claim detection failed: %s", exc)
+        return False
+    return classification == "claim"
 
 
 def _mentions_notable_deputy(question: str) -> bool:

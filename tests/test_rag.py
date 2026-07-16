@@ -83,6 +83,38 @@ def test_ask_stage_ordering():
         m_retrieve.assert_not_called()
 
 
+def test_ask_flags_claim_shaped_input():
+    """RAG-path answers carry suggested_action='verify' when detect_claim fires (ADR-023)."""
+    with (
+        patch("rag.chain.rag_chain.sql_route", return_value=None),
+        patch("rag.chain.rag_chain.llm_route", return_value=None),
+        patch("rag.chain.rag_chain.detect_claim", return_value=True),
+        patch("rag.chain.rag_chain.retrieve", return_value=_FAKE_CHUNKS),
+        patch("rag.chain.rag_chain._groq_client") as mock_groq,
+    ):
+        mock_groq.chat.completions.create.return_value = _fake_groq_response("Réponse test.")
+        result = ask("Marine Le Pen a voté pour la censure du gouvernement Bayrou")
+
+    assert result["suggested_action"] == "verify"
+    # The flag annotates a normal RAG answer - nothing else changes.
+    assert result["answer"] == "Réponse test."
+    assert result["data_source"] == "RAG"
+
+
+def test_ask_suggested_action_defaults_to_none():
+    with (
+        patch("rag.chain.rag_chain.sql_route", return_value=None),
+        patch("rag.chain.rag_chain.llm_route", return_value=None),
+        patch("rag.chain.rag_chain.detect_claim", return_value=False),
+        patch("rag.chain.rag_chain.retrieve", return_value=_FAKE_CHUNKS),
+        patch("rag.chain.rag_chain._groq_client") as mock_groq,
+    ):
+        mock_groq.chat.completions.create.return_value = _fake_groq_response("Réponse test.")
+        result = ask("Qui a le plus d'absences ?")
+
+    assert result["suggested_action"] is None
+
+
 # ---------------------------------------------------------------------------
 # retrieve()
 # ---------------------------------------------------------------------------

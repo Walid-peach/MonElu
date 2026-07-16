@@ -13,7 +13,7 @@ from groq import Groq
 
 load_dotenv()
 
-from rag.chain.llm_router import llm_route  # noqa: E402
+from rag.chain.llm_router import detect_claim, llm_route  # noqa: E402
 from rag.chain.prompts import RAG_TEMPLATE, build_system_prompt  # noqa: E402
 from rag.chain.retriever import retrieve  # noqa: E402
 from rag.chain.sql_router import route as sql_route  # noqa: E402
@@ -68,6 +68,11 @@ def ask(
     if llm_result is not None:
         return llm_result
 
+    # ADR-023 nudge: claim-shaped input still gets a normal RAG answer, but
+    # the response is flagged so the UI can offer verification. Detection
+    # never calls the verify chain and never creates a verification.
+    suggested_action = "verify" if detect_claim(question) else None
+
     # B1 hybrid retrieval available in rag/chain/hybrid_retriever.py
     # Reverted to cosine-only: after SQL routing fixes, hybrid scored 0.644
     # vs 0.911 for cosine on the 15-question eval. Gaps were data-coverage
@@ -101,6 +106,7 @@ def ask(
         "confidence": computed_confidence,
         "data_source": "RAG",
         "caveat": None,
+        "suggested_action": suggested_action,
     }
 
 
