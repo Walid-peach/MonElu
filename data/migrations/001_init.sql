@@ -30,14 +30,17 @@ CREATE TABLE IF NOT EXISTS votes (
     ingested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Natural primary key (vote_id, deputy_id): one position per deputy per
+-- vote, and the ON CONFLICT target of the ingestion upsert. A BIGSERIAL
+-- surrogate this file used to create was dropped in migration 006 (MON-77) —
+-- it was never referenced and wasted ~8 bytes/row plus a redundant index.
 CREATE TABLE IF NOT EXISTS vote_positions (
-    position_id     BIGSERIAL PRIMARY KEY,
     vote_id         TEXT NOT NULL REFERENCES votes(vote_id) ON DELETE CASCADE,
     deputy_id       TEXT NOT NULL REFERENCES deputies(deputy_id) ON DELETE CASCADE,
     position        VARCHAR(15) NOT NULL,       -- "pour" | "contre" | "abstention" | "nonVotant"
     ingested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    UNIQUE (vote_id, deputy_id)                 -- one position per deputy per vote
+    PRIMARY KEY (vote_id, deputy_id)
 );
 
 -- Indexes for common query patterns.

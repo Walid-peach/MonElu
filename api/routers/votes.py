@@ -186,7 +186,7 @@ def get_vote(request: Request, vote_id: str):
 
                 cur.execute(
                     """
-                    SELECT vp.position_id, vp.deputy_id, d.full_name,
+                    SELECT vp.deputy_id, d.full_name,
                            d.party_short, vp.position
                     FROM vote_positions vp
                     JOIN deputies d ON d.deputy_id = vp.deputy_id

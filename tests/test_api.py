@@ -48,7 +48,6 @@ _VOTE_DETAIL = {
 }
 
 _POSITION = {
-    "position_id": 1,
     "deputy_id": "PA1",
     "full_name": "Jean Martin",
     "party_short": "RN",

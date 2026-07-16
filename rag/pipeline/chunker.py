@@ -139,17 +139,17 @@ def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
     chunks = []
     _DEPUTY_SELECT = """
                 SELECT d.deputy_id, d.full_name, d.party, d.department,
-                       COUNT(vp.position_id) AS total_votes,
-                       COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour') AS pour_count,
-                       COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre') AS contre_count,
-                       COUNT(vp.position_id) FILTER (
+                       COUNT(vp.vote_id) AS total_votes,
+                       COUNT(vp.vote_id) FILTER (WHERE vp.position = 'pour') AS pour_count,
+                       COUNT(vp.vote_id) FILTER (WHERE vp.position = 'contre') AS contre_count,
+                       COUNT(vp.vote_id) FILTER (
                            WHERE vp.position = 'abstention'
                        ) AS abstention_count,
                        -- canonical presence: all recorded positions (incl.
                        -- nonVotant) over votes during the mandate window —
                        -- see docs/decisions.md
                        ROUND(LEAST(
-                           COUNT(vp.position_id)::numeric
+                           COUNT(vp.vote_id)::numeric
                            / NULLIF((
                                SELECT COUNT(*) FROM votes v
                                WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
@@ -225,7 +225,7 @@ def chunk_party_summaries() -> list[dict]:
                     -- averages describe the current Assemblée
                     SELECT d.deputy_id, d.party,
                            LEAST(
-                               COUNT(vp.position_id)::numeric / NULLIF((
+                               COUNT(vp.vote_id)::numeric / NULLIF((
                                    SELECT COUNT(*) FROM votes v
                                    WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
                                      AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
@@ -241,9 +241,9 @@ def chunk_party_summaries() -> list[dict]:
                 party_positions AS (
                     SELECT
                         d.party,
-                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'pour') AS total_pour,
-                        COUNT(vp.position_id) FILTER (WHERE vp.position = 'contre') AS total_contre,
-                        COUNT(vp.position_id) FILTER (
+                        COUNT(vp.vote_id) FILTER (WHERE vp.position = 'pour') AS total_pour,
+                        COUNT(vp.vote_id) FILTER (WHERE vp.position = 'contre') AS total_contre,
+                        COUNT(vp.vote_id) FILTER (
                             WHERE vp.position = 'abstention'
                         ) AS total_abstention
                     FROM deputies d
@@ -331,10 +331,10 @@ def chunk_global_stats() -> list[dict]:
             cur.execute(
                 """
                 SELECT d.full_name, d.party, d.department,
-                       COUNT(vp.position_id) AS total_votes,
+                       COUNT(vp.vote_id) AS total_votes,
                        -- canonical presence — see docs/decisions.md
                        ROUND(LEAST(
-                           COUNT(vp.position_id)::numeric
+                           COUNT(vp.vote_id)::numeric
                            / NULLIF((
                                SELECT COUNT(*) FROM votes v
                                WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)

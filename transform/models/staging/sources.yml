@@ -58,11 +58,12 @@ sources:
           # Same recess caveat as votes — see above.
           warn_after: { count: 4, period: day }
           error_after: { count: 30, period: day }
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              combination_of_columns:
+                - vote_id
+                - deputy_id
         columns:
-          - name: position_id
-            tests:
-              - not_null
-              - unique
           - name: vote_id
             tests:
               - not_null

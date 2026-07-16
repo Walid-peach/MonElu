@@ -207,7 +207,7 @@ _MIN_WINDOW_VOTES = 100
 _DEPUTY_PRESENCE_RANKING = f"""
     SELECT d.full_name, d.party,
            ROUND(LEAST(
-               COUNT(vp.position_id)::numeric / NULLIF(wv.window_votes, 0), 1
+               COUNT(vp.vote_id)::numeric / NULLIF(wv.window_votes, 0), 1
            ) * 100, 1) AS presence_pct
     FROM deputies d
     LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
@@ -386,7 +386,7 @@ SQL_QUERIES = {
                 d.deputy_id,
                 d.party,
                 LEAST(
-                    COUNT(vp.position_id)::numeric / NULLIF((
+                    COUNT(vp.vote_id)::numeric / NULLIF((
                         SELECT COUNT(*) FROM votes v
                         WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
                           AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)

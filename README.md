@@ -256,9 +256,8 @@ design.
 ### `vote_positions`
 | Column | Type | Notes |
 |---|---|---|
-| `position_id` | BIGSERIAL PK | |
-| `vote_id` | TEXT FK → votes | |
-| `deputy_id` | TEXT FK → deputies | |
+| `vote_id` | TEXT FK → votes | Composite PK with `deputy_id` |
+| `deputy_id` | TEXT FK → deputies | Composite PK with `vote_id` |
 | `position` | VARCHAR(15) | `pour` / `contre` / `abstention` / `nonVotant` |
 
 ### `document_chunks` *(Phase 2)*
