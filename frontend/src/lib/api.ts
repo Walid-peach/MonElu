@@ -130,6 +130,9 @@ export type SearchResult = {
   data_source: string
   caveat?: string | null
   sources: Array<{ content: string; metadata: Record<string, string>; similarity: number }>
+  // ADR-023 nudge (MON-133): "verify" when the input looked like a claim.
+  // Optional so stored conversations from before the field render unchanged.
+  suggested_action?: 'verify' | null
 }
 
 export type VerifyCitation = {
