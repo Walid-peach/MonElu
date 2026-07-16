@@ -49,12 +49,12 @@ export default async function VerificationPage({ params }: { params: Promise<{ i
       <VerdictCard result={result} />
       <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
         <Link
-          href={`/verifier?claim=${encodeURIComponent(result.claim)}`}
+          href={`/chat?mode=verify&claim=${encodeURIComponent(result.claim)}`}
           className="border border-navy text-navy px-4 py-2 rounded-lg hover:bg-navy hover:text-white transition-colors"
         >
           Re-vérifier avec les données du jour
         </Link>
-        <Link href="/verifier" className="text-gray-mid underline hover:text-navy">
+        <Link href="/chat?mode=verify" className="text-gray-mid underline hover:text-navy">
           Vérifier une autre affirmation
         </Link>
       </div>
