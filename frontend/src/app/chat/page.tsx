@@ -144,7 +144,7 @@ function ChatInner() {
   const [activeConvId, setActiveConvId]   = useState<string | null>(null)
   const [copied, setCopied]       = useState(false)
   const [feedbackByMsg, setFeedbackByMsg] = useState<Record<number, 'pending' | 'up' | 'down' | 'error'>>({})
-  const [shareByMsg, setShareByMsg] = useState<Record<number, 'pending' | 'shared' | 'error'>>({})
+  const [shareByMsg, setShareByMsg] = useState<Record<number, 'pending' | 'shared' | 'copied' | 'error'>>({})
 
   const scrollRef     = useRef<HTMLDivElement>(null)
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
@@ -404,6 +404,7 @@ function ChatInner() {
         try {
           await navigator.share({ url: share.share_url, title: 'Réponse MonÉlu', text: result.question })
           setShareByMsg(prev => ({ ...prev, [i]: 'shared' }))
+          setTimeout(() => setShareByMsg(prev => { const next = { ...prev }; delete next[i]; return next }), 2000)
           return
         } catch (err) {
           if (err instanceof Error && err.name === 'AbortError') {
@@ -413,7 +414,7 @@ function ChatInner() {
         }
       }
       await navigator.clipboard.writeText(share.share_url)
-      setShareByMsg(prev => ({ ...prev, [i]: 'shared' }))
+      setShareByMsg(prev => ({ ...prev, [i]: 'copied' }))
       setTimeout(() => setShareByMsg(prev => { const next = { ...prev }; delete next[i]; return next }), 2000)
     } catch {
       setShareByMsg(prev => ({ ...prev, [i]: 'error' }))
@@ -765,6 +766,8 @@ function ChatInner() {
                             {shareByMsg[i] === 'pending' ? (
                               'Partage…'
                             ) : shareByMsg[i] === 'shared' ? (
+                              'Partagé !'
+                            ) : shareByMsg[i] === 'copied' ? (
                               'Copié !'
                             ) : shareByMsg[i] === 'error' ? (
                               'Erreur, réessayez'
