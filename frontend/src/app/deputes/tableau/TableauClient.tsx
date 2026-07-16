@@ -38,13 +38,6 @@ const COLUMNS: Array<{ key: ColumnKey; label: string; numeric: boolean; title?: 
   { key: 'voting_days_rate', label: 'Jours de vote', numeric: true, title: 'Jours de scrutin avec au moins un vote' },
 ]
 
-const PCT_KEYS = new Set<ColumnKey>([
-  'presence_rate',
-  'votes_for_pct',
-  'solennel_participation_rate',
-  'voting_days_rate',
-])
-
 function formatPct(value: number | null | undefined): string {
   if (value === null || value === undefined) return '—'
   return `${(value * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`

@@ -874,3 +874,28 @@ def test_export_vote_positions_csv_not_found(client, mock_cursor):
     mock_cursor.fetchone.return_value = None
     resp = client.get("/votes/NOPE/positions.csv")
     assert resp.status_code == 404
+
+
+def test_list_scorecards_marts_missing(client, mock_cursor):
+    import psycopg2.errors
+
+    mock_cursor.fetchall.side_effect = psycopg2.errors.UndefinedTable("mart missing")
+    resp = client.get("/deputies/scorecards")
+    assert resp.status_code == 503
+
+
+def test_export_scorecards_csv_marts_missing(client, mock_cursor):
+    import psycopg2.errors
+
+    mock_cursor.fetchall.side_effect = psycopg2.errors.UndefinedTable("mart missing")
+    resp = client.get("/deputies/scorecard.csv")
+    assert resp.status_code == 503
+
+
+def test_export_deputy_votes_csv_marts_missing(client, mock_cursor):
+    import psycopg2.errors
+
+    mock_cursor.fetchone.return_value = {"full_name": "Jean Martin"}
+    mock_cursor.fetchall.side_effect = psycopg2.errors.UndefinedTable("mart missing")
+    resp = client.get("/deputies/PA1/votes.csv")
+    assert resp.status_code == 503
