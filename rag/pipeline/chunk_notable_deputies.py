@@ -38,21 +38,21 @@ def get_top_deputies(n: int = 100) -> list[dict]:
                     d.full_name,
                     d.party,
                     d.department,
-                    COUNT(vp.position_id) as total_votes,
-                    COUNT(vp.position_id) FILTER (
+                    COUNT(vp.vote_id) as total_votes,
+                    COUNT(vp.vote_id) FILTER (
                         WHERE vp.position = 'pour'
                     ) as pour,
-                    COUNT(vp.position_id) FILTER (
+                    COUNT(vp.vote_id) FILTER (
                         WHERE vp.position = 'contre'
                     ) as contre,
-                    COUNT(vp.position_id) FILTER (
+                    COUNT(vp.vote_id) FILTER (
                         WHERE vp.position = 'abstention'
                     ) as abstention,
                     -- canonical presence: all recorded positions (incl.
                     -- nonVotant) over votes during the mandate window —
                     -- see docs/decisions.md
                     ROUND(LEAST(
-                        COUNT(vp.position_id)::numeric / NULLIF((
+                        COUNT(vp.vote_id)::numeric / NULLIF((
                             SELECT COUNT(*) FROM votes v
                             WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
                               AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
@@ -207,15 +207,15 @@ def build_notable_deputy_index(n: int = 100) -> dict:
                     cur.execute(
                         """
                         SELECT d.deputy_id, d.full_name, d.party, d.department,
-                               COUNT(vp.position_id) as total_votes,
-                               COUNT(vp.position_id) FILTER (WHERE vp.position='pour') as pour,
-                               COUNT(vp.position_id) FILTER (WHERE vp.position='contre') as contre,
-                               COUNT(vp.position_id) FILTER (
+                               COUNT(vp.vote_id) as total_votes,
+                               COUNT(vp.vote_id) FILTER (WHERE vp.position='pour') as pour,
+                               COUNT(vp.vote_id) FILTER (WHERE vp.position='contre') as contre,
+                               COUNT(vp.vote_id) FILTER (
                                    WHERE vp.position='abstention'
                                ) as abstention,
                                -- canonical presence — see docs/decisions.md
                                ROUND(LEAST(
-                                   COUNT(vp.position_id)::numeric / NULLIF((
+                                   COUNT(vp.vote_id)::numeric / NULLIF((
                                        SELECT COUNT(*) FROM votes v
                                        WHERE (d.mandate_start IS NULL
                                               OR v.voted_at >= d.mandate_start)

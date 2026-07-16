@@ -249,7 +249,6 @@ class VoteSummary(_Base):
 class VotePosition(_Base):
     """A single deputy's position on a vote."""
 
-    position_id: int
     deputy_id: str
     full_name: str
     party_short: Optional[str] = None

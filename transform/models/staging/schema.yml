@@ -52,9 +52,12 @@ models:
 
   - name: stg_vote_positions
     description: "Cleaned individual vote positions"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - vote_id
+            - deputy_id
     columns:
-      - name: position_id
-        tests: [not_null, unique]
       - name: position
         tests:
           - not_null
