@@ -69,6 +69,36 @@ describe('api.feedback.chat', () => {
   })
 })
 
+describe('api.feedback.report', () => {
+  it('posts the error report and returns the response', async () => {
+    mockFetch(200, { status: 'ok' })
+    const report = {
+      entity_type: 'deputy' as const,
+      entity_id: 'PA722990',
+      entity_label: 'Jean Dupont',
+      page_url: '/deputes/PA722990',
+      message: 'Le taux de présence semble erroné.',
+      email: null,
+    }
+    const result = await api.feedback.report(report)
+    expect(result.status).toBe('ok')
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${API_BASE}/feedback/report`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(report),
+      })
+    )
+  })
+
+  it('throws on a non-ok HTTP response', async () => {
+    mockFetch(500, { detail: 'Internal Server Error' })
+    await expect(
+      api.feedback.report({ entity_type: 'page', message: 'Erreur.' })
+    ).rejects.toThrow('API error: 500')
+  })
+})
+
 describe('api.deputies.votes', () => {
   it('omits since from the query string when not provided', async () => {
     mockFetch(200, { deputy_id: 'PA1', total: 0, items: [] })

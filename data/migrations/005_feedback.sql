@@ -1,9 +1,10 @@
 -- MonÉlu — user feedback loop (MON-70)
 -- Idempotent: CREATE TABLE IF NOT EXISTS — safe to re-run.
 
--- Generic feedback sink: `type` distinguishes sources (e.g. 'chat'), `payload`
--- carries the type-specific context as JSONB so new feedback sources (e.g. the
--- data-page report channel in MON-101) don't need a schema migration.
+-- Generic feedback sink: `type` distinguishes sources ('chat' for MON-70 chat
+-- thumbs, 'report' for MON-101 data-page error reports), `payload` carries the
+-- type-specific context as JSONB so new feedback sources don't need a schema
+-- migration.
 CREATE TABLE IF NOT EXISTS feedback (
     id SERIAL PRIMARY KEY,
     type TEXT NOT NULL,
