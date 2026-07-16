@@ -20,6 +20,7 @@ export function Nav() {
 
   return (
     <nav
+      data-print-hide
       className="hidden md:flex items-center justify-between px-8 bg-white border-b border-gray-border sticky top-0 z-50"
       style={{ height: NAV_HEIGHT_PX }}
     >
