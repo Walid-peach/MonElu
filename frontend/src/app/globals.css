@@ -22,3 +22,11 @@
   .badge-rejete { @apply bg-red-50 text-red-civic border border-red-200 text-xs font-medium px-2 py-0.5 rounded; }
   .badge-party { @apply bg-navy-muted text-navy text-xs font-medium px-2 py-0.5 rounded; }
 }
+
+/* MON-114: printable deputy dossier — hide app chrome and force a clean
+   single page when the dossier route is sent to the browser's print dialog. */
+@media print {
+  [data-print-hide] { display: none !important; }
+  body { background: #fff !important; }
+  @page { size: A4; margin: 14mm; }
+}

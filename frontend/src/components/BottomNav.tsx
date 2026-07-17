@@ -12,7 +12,7 @@ const items = [
 export function BottomNav() {
   const path = usePathname()
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-border z-50">
+    <nav data-print-hide className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-border z-50">
       <div className="grid grid-cols-4">
         {items.map(item => {
           const active =

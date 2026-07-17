@@ -18,6 +18,7 @@ export function Footer() {
 
   return (
     <footer
+      data-print-hide
       className="pb-20 md:pb-8"
       style={{
         paddingTop: '32px',
