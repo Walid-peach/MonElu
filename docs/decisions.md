@@ -553,6 +553,34 @@ Auto-detection is kept but demoted to a nudge: a `verify_claim` intent added to 
 
 ---
 
+## ADR-025 - Quiz matching is server-side, shares are stored snapshots, questions live in the repo (MON-135)
+
+**Date:** 2026-07-17
+**Status:** Final
+
+**Decision:** The vote-matching quiz (MON-109) is built on three choices:
+
+1. **Agreement computation is server-side** - one `POST /quiz/match` call in a new `api/routers/quiz.py` computes agreement against all deputies and groups from `vote_positions`. Nothing about the request is persisted or logged: answers in, results out (RGPD-clean by construction).
+2. **Shared results are stored immutable snapshots** - a `quiz_shares` table with the exact shape and semantics of `chat_shares` (ADR-024) / `verifications` (ADR-022): UUID PK, no user identity, never updated, served by a plain SELECT at `/quiz/s/<id>` with a per-route OG image.
+3. **The curated question set is a versioned repo file, not a DB table** - ~10 entries (vote_id, plain-French question, one-line context) plus a question-set version string (e.g. `2026-Q3`), curated quarterly by PR. The backend serves it via `GET /quiz/questions` so the frontend never hardcodes it.
+
+**Reason:**
+
+- **Server-side over client-side matching.** Client-side needs the full position matrix for the quiz votes (~10 × 577 rows) shipped to every visitor, either as a per-visit fetch or a prebuilt static file that goes stale against the daily ingestion cron. Server-side keeps one source of truth in Postgres, keeps the denominator rules (nonVotant/absent excluded - consistent with ADR-019's presence definition) in one tested place, gets rate limiting for free via the shared limiter, and the share endpoint can trust the result it stores because the server computed it. RGPD is not the differentiator - both variants can avoid storing anything - but server-side makes the "we store nothing" claim auditable in one router.
+- **Stored snapshot over URL-encoded results.** A URL-encoded result card is forgeable: anyone can craft "Je vote à 100% comme X" links with arbitrary numbers, and MonÉlu-branded OG images would render whatever the URL claims - unacceptable for a civic-credibility product. Snapshots created by `POST /quiz/share` only ever contain server-computed results, match the two existing share surfaces (one pattern, one moderation story), and keep share URLs short. This deliberately diverges from ADR-024's trust boundary (chat shares store the client-submitted answer without recomputation): that was justified there because LLM answers are non-deterministic and cannot be recomputed faithfully, whereas quiz results are deterministic functions of the answers and can always be recomputed or validated server-side. The snapshot stores the rendered result (top matches, group alignment, department comparison, question-set version) - not the postal code and not any identity; the raw answers are stored only insofar as they appear in the rendered card.
+- **Repo file over DB table for questions.** Ten entries touched four times a year need PR review of French phrasing and neutrality, git history, and CI validation (an integration test can assert every vote_id exists) - a DB table would need a migration, seeding logic, and editing tooling for no benefit at this size. The version string stored in each share keeps old share cards attributable to the question set that produced them.
+
+**Impact:**
+- MON-137 implements `POST /quiz/match` + `GET /quiz/questions` (no new table); MON-139 adds the `quiz_shares` migration + `POST /quiz/share` / `GET /quiz/share/<id>`.
+- Do NOT persist or log quiz answers, postal codes, or department codes on `/quiz/match` - the request must stay stateless.
+- Do NOT accept client-computed percentages on `POST /quiz/share` - the share payload must be validated against (or recomputed by) the server-side matching, otherwise the forgery problem returns through the back door.
+- Do NOT put the question set in the database or fetch it from the AN portal at runtime - it is a curated editorial artifact, updated by PR (MON-136 documents the curation criteria).
+- Do NOT add listing/browsing of stored quiz shares without a moderation decision first (same constraint as ADR-022/024).
+
+**Trigger to revisit:** if the quiz outgrows ~30 questions or needs non-engineer curation, move the question set to a table with an admin surface; if `/quiz/match` traffic makes per-request SQL a bottleneck, precompute the deputy-position matrix for the active question set into a cache (it changes only on ingestion); storage pressure follows the same TTL path as ADR-022/024.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -562,4 +590,5 @@ Auto-detection is kept but demoted to a nudge: a `verify_claim` intent added to 
 5. Terraform IaC is archived, not live (ADR-004, ADR-021) — do not add terraform apply steps or resurrect infra/
 6. Phase 5 alerts are deferred (ADR-002) — do not build email dispatch
 7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
-8. When in doubt: check what's actually deployed before writing new code
+8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never persist answers or trust client-computed percentages
+9. When in doubt: check what's actually deployed before writing new code
