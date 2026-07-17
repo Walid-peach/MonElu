@@ -99,6 +99,17 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'
 
+  // One seat per recorded position (pour/contre/abstention/nonVotant) for the
+  // hemicycle chart (MON-104). Absent deputies have no vote_positions row and
+  // are deliberately not seated - the /deputies roster has no active-mandate
+  // filter, so padding with roster entries would seat ex-deputies.
+  const hemicycleDeputies = (vote.positions ?? []).map(p => ({
+    deputy_id: p.deputy_id,
+    full_name: p.full_name,
+    party: normalizePartyShort(p.party_short),
+    position: p.position,
+  }))
+
   // Full deputy roster (paginated — /deputies caps limit at 200) so "how did my
   // deputy vote?" can surface an explicit "absent / non enregistré" state for
   // deputies with no recorded position on this vote, not just an empty result.
@@ -155,6 +166,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
           related={related}
           apiUrl={apiUrl}
           deputyLookup={deputyLookup}
+          hemicycleDeputies={hemicycleDeputies}
         />
       </Suspense>
     </>

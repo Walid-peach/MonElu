@@ -7,6 +7,8 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { getInitials, partyHex } from '@/lib/utils'
 import { resolvePostalCode } from '@/lib/postal'
 import { csvUrl } from '@/lib/api'
+import { HemicycleChart } from '@/components/HemicycleChart'
+import type { HemicycleDeputy } from '@/lib/hemicycle'
 
 interface DeputyLookupEntry {
   deputy_id: string
@@ -65,6 +67,7 @@ interface Props {
   related: RelatedVote[]
   apiUrl: string
   deputyLookup: DeputyLookupEntry[]
+  hemicycleDeputies: HemicycleDeputy[]
 }
 
 const POSITION_LABELS: Record<string, string> = {
@@ -83,7 +86,7 @@ export function VoteDetailClient(props: Props) {
     voteId, voteTitle, result, votedAt, summary, dossierId, theme,
     votesFor, votesAgainst, abstentions, totalVoters,
     pourPct, contrePct, abstPct,
-    groups, dissidents, related, apiUrl, deputyLookup,
+    groups, dissidents, related, apiUrl, deputyLookup, hemicycleDeputies,
   } = props
 
   const [showBar, setShowBar] = useState(false)
@@ -316,6 +319,20 @@ export function VoteDetailClient(props: Props) {
 
           {/* Main column */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 52 }}>
+
+            {/* Hémicycle */}
+            {hemicycleDeputies.length > 0 && (
+              <section>
+                <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C9302A' }}>Hémicycle</div>
+                <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: '#1B2B50', margin: '12px 0 4px', letterSpacing: '-0.01em' }}>Le vote, siège par siège</h2>
+                <p style={{ fontSize: 15, color: '#6B7280', margin: '0 0 20px', maxWidth: 560 }}>
+                  Un point par député ayant pris part au scrutin, placé selon son groupe parlementaire. Survolez ou touchez un siège pour voir le détail.
+                </p>
+                <div style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: 12, padding: '24px 28px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <HemicycleChart deputies={hemicycleDeputies} />
+                </div>
+              </section>
+            )}
 
             {/* Comment a voté votre député ? */}
             <section>
