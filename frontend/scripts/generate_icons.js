@@ -9,9 +9,13 @@ const sharp = require('sharp')
 const root = path.join(__dirname, '..')
 const svg = readFileSync(path.join(root, 'src', 'app', 'icon.svg'))
 
+// The source SVG is 100px; density 1024 rasterizes it well above 512px so
+// every output size is a downscale (no upscaling blur).
+const DENSITY = 1024
+
 async function main() {
   for (const size of [192, 512]) {
-    await sharp(svg, { density: 300 })
+    await sharp(svg, { density: DENSITY })
       .resize(size, size)
       .png()
       .toFile(path.join(root, 'public', `icon-${size}.png`))
@@ -19,7 +23,7 @@ async function main() {
   }
   // iOS applies its own corner mask, so flatten onto the navy background for a
   // full-bleed square instead of a rounded shape over transparency.
-  await sharp(svg, { density: 300 })
+  await sharp(svg, { density: DENSITY })
     .resize(180, 180)
     .flatten({ background: '#0D1F3C' })
     .png()
