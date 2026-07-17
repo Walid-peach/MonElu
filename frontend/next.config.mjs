@@ -6,6 +6,15 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
+  // Cache pages reached through client-side navigation too, so the last-viewed
+  // deputy/vote pages stay readable offline (MON-115).
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  fallbacks: {
+    // Served on navigation cache-miss while offline.
+    document: '/~offline',
+  },
 })
 
 /** @type {import('next').NextConfig} */

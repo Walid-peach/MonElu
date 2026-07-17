@@ -38,4 +38,10 @@ next-env.d.ts
 # PWA generated service workers (regenerate with new hash on every build)
 /public/sw.js
 /public/sw *.js
+/public/sw.js.map
 /public/workbox-*.js
+/public/workbox-*.js.map
+/public/fallback-*.js
+/public/fallback-*.js.map
+/public/swe-worker-*.js
+/public/swe-worker-*.js.map

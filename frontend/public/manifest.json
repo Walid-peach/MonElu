@@ -1,8 +1,11 @@
 {
+  "id": "/",
+  "lang": "fr",
   "name": "MonÉlu — Suivez vos députés",
   "short_name": "MonÉlu",
   "description": "Suivez chaque vote de chaque député français",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#0D1F3C",
@@ -10,5 +13,14 @@
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+  ],
+  "share_target": {
+    "action": "/partager",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }
