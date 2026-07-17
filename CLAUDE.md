@@ -109,7 +109,7 @@ Assemblée Nationale Open Data (ZIPs)
 
 **`api/`** — FastAPI application
 - `main.py`: App factory, CORS (GET + POST — POST is needed for `/search`; an empty `CORS_ORIGINS` blocks all cross-origin requests and logs a startup warning), slowapi rate limiting (30 req/min global, 10 req/min on scorecard and search), global exception handler. `/health` returns DB status, record counts, last ingestion timestamp, and dbt mart row counts. The landing page is now the Next.js frontend (`frontend/`), not a FastAPI-served HTML page.
-- `routers/deputies.py`, `routers/votes.py`, `routers/search.py`, `routers/verify.py`, `routers/departments.py`: All DB queries — direct SQL, no ORM. `verify.py` is the fact-check surface (MON-126, ADR-022): `POST /verify/` runs the verification chain and stores an immutable verdict snapshot; `GET /verify/{id}` serves stored verdicts with no LLM call. `departments.py` (MON-107) serves `GET /departments/{code}` — current deputies of a department with scorecard highlights, aggregates, and recent split votes; the code↔name map lives in `api/departments_data.py` (mirrors `scripts/update_party.py` DEPT_NAMES plus overseas collectivities; frontend copy in `frontend/src/lib/departments.ts`).
+- `routers/deputies.py`, `routers/votes.py`, `routers/search.py`, `routers/verify.py`, `routers/departments.py`: All DB queries — direct SQL, no ORM. `verify.py` is the fact-check surface (MON-126, ADR-022): `POST /verify/` runs the verification chain and stores an immutable verdict snapshot; `GET /verify/{id}` serves stored verdicts with no LLM call. `search.py` also carries the chat share surface (MON-66, ADR-024): `POST /search/share` persists a chat answer already returned by `POST /search/` (question, answer, sources, confidence) as an immutable snapshot; `GET /search/share/{id}` serves it with no LLM call, at share URL `/chat/s/<id>`. `departments.py` (MON-107) serves `GET /departments/{code}` — current deputies of a department with scorecard highlights, aggregates, and recent split votes; the code↔name map lives in `api/departments_data.py` (mirrors `scripts/update_party.py` DEPT_NAMES plus overseas collectivities; frontend copy in `frontend/src/lib/departments.ts`).
 - `schemas.py`: Pydantic response models; all fields `Optional` to match DB NULLs
 - `limiter.py`: Shared slowapi `Limiter` instance imported by routers
 
@@ -155,6 +155,7 @@ Assemblée Nationale Open Data (ZIPs)
 | `api_keys` | Manually-issued public API keys (sha256 hash, label, rate_limit_multiplier) |
 | `api_key_usage` | Per-key, per-endpoint, per-day request counters for usage accounting |
 | `verifications` | Stored fact-check verdicts (ADR-022): immutable snapshots behind `/verifier/v/<id>` share URLs |
+| `chat_shares` | Stored chat/RAG answer snapshots (MON-66, ADR-024): immutable snapshots behind `/chat/s/<id>` share URLs |
 | `feedback` | Generic user-feedback sink (MON-70, MON-101): `type`-discriminated rows (`chat` thumbs / `report` data-page error reports) with a JSONB `payload`; weekly manual triage query in `docs/monitoring.md` |
 
 Important data quirks:

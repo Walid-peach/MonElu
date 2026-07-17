@@ -197,6 +197,18 @@ export type VerifyResult = {
   share_url: string
 }
 
+export type ChatShareResult = {
+  id: string
+  question: string
+  answer: string
+  sources: SearchResult['sources']
+  confidence: string | null
+  data_source: string | null
+  caveat: string | null
+  shared_at: string
+  share_url: string
+}
+
 // 5xx: transient upstream hiccups, short retries.
 // 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
 // where prerendering ~117 pages from one IP exceeds the budget and fails the
@@ -303,6 +315,17 @@ export const api = {
   verify: (claim: string) => apiPost<VerifyResult>('/verify/', { claim }),
   // Verdicts are immutable snapshots (ADR-022) — cache aggressively.
   verification: (id: string) => apiFetch<VerifyResult>(`/verify/${id}`, { revalidate: 86400 }),
+  // Chat shares are immutable snapshots too (ADR-024) — same caching approach.
+  shareAnswer: (result: SearchResult) =>
+    apiPost<ChatShareResult>('/search/share', {
+      question: result.question,
+      answer: result.answer,
+      sources: result.sources,
+      confidence: result.confidence,
+      data_source: result.data_source,
+      caveat: result.caveat,
+    }),
+  chatShare: (id: string) => apiFetch<ChatShareResult>(`/search/share/${id}`, { revalidate: 86400 }),
   feedback: {
     chat: (vote: 'up' | 'down', question: string, answer: string, sources: SearchResult['sources']) =>
       apiPost<{ status: string }>('/feedback/chat', { vote, question, answer, sources }),
