@@ -252,10 +252,10 @@ def match(request: Request, body: QuizMatchRequest) -> QuizMatchResponse:
                 FROM vote_positions vp
                 JOIN deputies d ON d.deputy_id = vp.deputy_id
                 WHERE vp.vote_id = ANY(%s)
-                  AND vp.position IN ('pour', 'contre', 'abstention')
+                  AND vp.position = ANY(%s)
                   AND d.mandate_end IS NULL
                 """,
-                (list(answers),),
+                (list(answers), list(EXPRESSED_POSITIONS)),
             )
             rows = cur.fetchall()
 
