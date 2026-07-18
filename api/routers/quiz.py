@@ -1,14 +1,21 @@
 """
 api/routers/quiz.py
 
-"Quel député vote comme vous ?" — vote-matching quiz (MON-109, MON-137, ADR-025).
+"Quel député vote comme vous ?" — vote-matching quiz (MON-109, MON-137, MON-139, ADR-025).
 
-Two endpoints:
-- GET  /quiz/questions : the curated question set (repo file, api/quiz_data.py).
-- POST /quiz/match     : stateless agreement computation over vote_positions.
+Four endpoints:
+- GET  /quiz/questions  : the curated question set (repo file, api/quiz_data.py).
+- POST /quiz/match      : stateless agreement computation over vote_positions.
+- POST /quiz/share      : store an immutable snapshot of a match result.
+- GET  /quiz/share/{id} : serve a stored snapshot (plain SELECT, no recompute).
 
 ADR-025 constraints: /match persists and logs nothing about the request —
 answers in, results out. The question set is never read from the DB.
+/share re-runs the same server-side computation from the submitted answers
+before storing — client-computed percentages are never trusted, which is what
+keeps MonÉlu-branded share cards non-forgeable. The stored snapshot is the
+rendered result only: no user identity, no postal code, no raw answers beyond
+what the card shows.
 
 Denominator rules (consistent with ADR-019's presence framing):
 - Only expressed positions compare: pour / contre / abstention. `nonVotant`
@@ -18,11 +25,15 @@ Denominator rules (consistent with ADR-019's presence framing):
   comparable, floor 2 — one shared scrutin is not a political profile.
 """
 
+import logging
+import os
+import uuid
 from collections import Counter, defaultdict
 from math import ceil
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException
+from psycopg2.extras import Json
 from pydantic import BaseModel, Field, field_validator
 from starlette.requests import Request
 
@@ -31,7 +42,11 @@ from api.departments_data import DEPT_NAMES, db_department_values, normalize_cod
 from api.limiter import limiter, tiered_limit
 from api.quiz_data import QUIZ_QUESTIONS, QUIZ_VERSION, QUIZ_VOTE_IDS
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "https://mon-elu.vercel.app").rstrip("/")
 
 EXPRESSED_POSITIONS = ("pour", "contre", "abstention")
 MIN_ANSWERS = 3
@@ -227,19 +242,18 @@ def get_questions(request: Request) -> QuizQuestionsResponse:
     )
 
 
-@router.post(
-    "/match",
-    response_model=QuizMatchResponse,
-    summary="Calcule votre accord avec chaque député et chaque groupe",
-)
-@limiter.limit(tiered_limit(10))
-def match(request: Request, body: QuizMatchRequest) -> QuizMatchResponse:
-    dept_code: Optional[str] = None
-    if body.department is not None:
-        dept_code = normalize_code(body.department)
-        if dept_code is None:
-            raise HTTPException(status_code=422, detail="Code de département inconnu")
+def _normalized_department(body: QuizMatchRequest) -> Optional[str]:
+    if body.department is None:
+        return None
+    dept_code = normalize_code(body.department)
+    if dept_code is None:
+        raise HTTPException(status_code=422, detail="Code de département inconnu")
+    return dept_code
 
+
+def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
+    """Full agreement computation — shared by /match and /share (ADR-025)."""
+    dept_code = _normalized_department(body)
     answers = {a.vote_id: a.position for a in body.answers}
     threshold = eligibility_threshold(len(answers))
 
@@ -308,3 +322,85 @@ def match(request: Request, body: QuizMatchRequest) -> QuizMatchResponse:
         groups=compute_group_alignment(rows, answers, threshold),
         my_department=my_department,
     )
+
+
+@router.post(
+    "/match",
+    response_model=QuizMatchResponse,
+    summary="Calcule votre accord avec chaque député et chaque groupe",
+)
+@limiter.limit(tiered_limit(10))
+def match(request: Request, body: QuizMatchRequest) -> QuizMatchResponse:
+    return _compute_match(body)
+
+
+# ---------------------------------------------------------------------------
+# Shares — immutable snapshots (MON-139, ADR-025)
+# ---------------------------------------------------------------------------
+class QuizShareResponse(BaseModel):
+    id: str
+    result: QuizMatchResponse
+    shared_at: str
+    share_url: str
+
+
+def _to_share_response(row: dict) -> QuizShareResponse:
+    share_id = str(row["id"])
+    return QuizShareResponse(
+        id=share_id,
+        result=QuizMatchResponse(**row["result"]),
+        shared_at=row["created_at"].isoformat(),
+        share_url=f"{FRONTEND_BASE_URL}/quiz/s/{share_id}",
+    )
+
+
+@router.post(
+    "/share",
+    response_model=QuizShareResponse,
+    summary="Partagez votre résultat (recalculé côté serveur, snapshot immuable)",
+)
+@limiter.limit(tiered_limit(10))
+def share_result(request: Request, body: QuizMatchRequest) -> QuizShareResponse:
+    # Same input shape as /match: the result is recomputed here, never taken
+    # from the client (ADR-025) — a share can only contain server-computed
+    # numbers. Nothing else about the request is persisted.
+    result = _compute_match(body)
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO quiz_shares (version, result)
+                    VALUES (%s, %s)
+                    RETURNING id, result, created_at
+                    """,
+                    (result.version, Json(result.model_dump())),
+                )
+                row = cur.fetchone()
+            conn.commit()
+    except Exception:
+        logger.exception("Failed to persist quiz share")
+        raise HTTPException(
+            status_code=500,
+            detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
+        ) from None
+    return _to_share_response(row)
+
+
+@router.get(
+    "/share/{share_id}",
+    response_model=QuizShareResponse,
+    summary="Relisez un résultat partagé (aucun recalcul)",
+)
+@limiter.limit(tiered_limit(30))
+def get_share(request: Request, share_id: uuid.UUID) -> QuizShareResponse:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, result, created_at FROM quiz_shares WHERE id = %s",
+                (str(share_id),),
+            )
+            row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Résultat partagé introuvable.")
+    return _to_share_response(row)

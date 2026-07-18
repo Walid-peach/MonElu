@@ -209,3 +209,112 @@ def test_group_alignment_skips_tied_votes():
 def test_group_alignment_ignores_deputies_without_party():
     rows = [_row("A", V1, "pour", party=None), _row("A", V2, "pour", party=None)]
     assert compute_group_alignment(rows, {V1: "pour", V2: "pour"}, threshold=2) == []
+
+
+# ---------------------------------------------------------------------------
+# Shares (MON-139, ADR-025)
+# ---------------------------------------------------------------------------
+SHARE_ID = "11111111-1111-1111-1111-111111111111"
+
+
+def _stored_result():
+    return {
+        "version": QUIZ_VERSION,
+        "answered": 3,
+        "eligible_deputies": 1,
+        "top_matches": [
+            {
+                "deputy_id": "A",
+                "full_name": "Député A",
+                "party": "Groupe X",
+                "party_short": "X",
+                "department": "Gironde",
+                "photo_url": None,
+                "agreement_pct": 100.0,
+                "matches": 3,
+                "compared": 3,
+            }
+        ],
+        "opposite": None,
+        "groups": [],
+        "my_department": None,
+    }
+
+
+def test_share_recomputes_server_side_and_stores_snapshot(client, mock_cursor):
+    import datetime
+
+    # Positions drive the recomputation: A agrees 3/3, B 1/3.
+    mock_cursor.fetchall.return_value = [
+        _row("A", V1, "pour"),
+        _row("A", V2, "contre"),
+        _row("A", V3, "abstention"),
+        _row("B", V1, "pour"),
+        _row("B", V2, "pour"),
+        _row("B", V3, "pour"),
+    ]
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": _stored_result(),
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+
+    resp = client.post("/quiz/share", json={"answers": ANSWERS_3})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == SHARE_ID
+    assert body["share_url"].endswith(f"/quiz/s/{SHARE_ID}")
+    assert body["result"]["top_matches"][0]["deputy_id"] == "A"
+
+    # The INSERT carries the server-computed result, not anything client-sent:
+    # A at 100% (3/3) ranked first, B at 33.3% (1/3) second.
+    insert_call = mock_cursor.execute.call_args_list[-1]
+    sql, params = insert_call.args
+    assert "INSERT INTO quiz_shares" in sql
+    stored = params[1].adapted  # psycopg2 Json wrapper
+    assert stored["version"] == QUIZ_VERSION
+    assert [m["deputy_id"] for m in stored["top_matches"]] == ["A", "B"]
+    assert stored["top_matches"][0]["agreement_pct"] == 100.0
+    assert stored["top_matches"][1]["agreement_pct"] == 33.3
+
+
+def test_share_rejects_unknown_vote_id(client):
+    resp = client.post(
+        "/quiz/share",
+        json={"answers": [{"vote_id": "VTFORGED", "position": "pour"}] * 3},
+    )
+    assert resp.status_code == 422
+
+
+def test_share_insert_failure_returns_500(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    # First execute (positions SELECT) succeeds, the INSERT blows up.
+    mock_cursor.execute.side_effect = [None, RuntimeError("db down")]
+    resp = client.post("/quiz/share", json={"answers": ANSWERS_3})
+    assert resp.status_code == 500
+
+
+def test_get_share_returns_stored_snapshot(client, mock_cursor):
+    import datetime
+
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": _stored_result(),
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+    resp = client.get(f"/quiz/share/{SHARE_ID}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["result"]["top_matches"][0]["full_name"] == "Député A"
+    assert body["share_url"].endswith(f"/quiz/s/{SHARE_ID}")
+
+
+def test_get_share_unknown_id_returns_404(client, mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    resp = client.get("/quiz/share/99999999-9999-9999-9999-999999999999")
+    assert resp.status_code == 404
+
+
+def test_get_share_malformed_id_returns_422(client):
+    resp = client.get("/quiz/share/not-a-uuid")
+    assert resp.status_code == 422

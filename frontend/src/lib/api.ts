@@ -262,6 +262,15 @@ export type QuizMatchResponse = {
   my_department: QuizDepartmentResult | null
 }
 
+// Quiz shares are immutable snapshots of server-recomputed results
+// (MON-139, ADR-025) — same semantics as chat shares / verifications.
+export type QuizShareResult = {
+  id: string
+  result: QuizMatchResponse
+  shared_at: string
+  share_url: string
+}
+
 // 5xx: transient upstream hiccups, short retries.
 // 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
 // where prerendering ~117 pages from one IP exceeds the budget and fails the
@@ -373,6 +382,15 @@ export const api = {
         answers,
         ...(department ? { department } : {}),
       }),
+    // Sends the answers, not the result: the server recomputes before storing
+    // (ADR-025) so a share can never carry client-forged percentages.
+    share: (answers: Array<{ vote_id: string; position: QuizAnswerPosition }>, department?: string) =>
+      apiPost<QuizShareResult>('/quiz/share', {
+        answers,
+        ...(department ? { department } : {}),
+      }),
+    // Immutable snapshots — cache like chat shares / verifications.
+    getShare: (id: string) => apiFetch<QuizShareResult>(`/quiz/share/${id}`, { revalidate: 86400 }),
   },
   search: (question: string) => apiPost<SearchResult>('/search/', { question }),
   verify: (claim: string) => apiPost<VerifyResult>('/verify/', { claim }),
