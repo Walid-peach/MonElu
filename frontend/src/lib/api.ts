@@ -209,6 +209,59 @@ export type ChatShareResult = {
   share_url: string
 }
 
+export type QuizQuestion = {
+  vote_id: string
+  theme: string
+  question: string
+  context: string
+}
+
+export type QuizQuestionsResponse = {
+  version: string
+  count: number
+  questions: QuizQuestion[]
+}
+
+export type QuizAnswerPosition = 'pour' | 'contre' | 'abstention'
+
+export type QuizDeputyMatch = {
+  deputy_id: string
+  full_name: string | null
+  party: string | null
+  party_short: string | null
+  department: string | null
+  photo_url: string | null
+  // null when the deputy has no comparable expressed position at all.
+  agreement_pct: number | null
+  matches: number
+  compared: number
+}
+
+export type QuizGroupAlignment = {
+  party: string
+  party_short: string | null
+  agreement_pct: number
+  matches: number
+  compared: number
+  deputy_count: number
+}
+
+export type QuizDepartmentResult = {
+  code: string
+  name: string
+  deputies: QuizDeputyMatch[]
+}
+
+export type QuizMatchResponse = {
+  version: string
+  answered: number
+  eligible_deputies: number
+  top_matches: QuizDeputyMatch[]
+  opposite: QuizDeputyMatch | null
+  groups: QuizGroupAlignment[]
+  my_department: QuizDepartmentResult | null
+}
+
 // 5xx: transient upstream hiccups, short retries.
 // 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
 // where prerendering ~117 pages from one IP exceeds the budget and fails the
@@ -310,6 +363,16 @@ export const api = {
     },
     latest: () => apiFetch<Vote[]>('/votes/latest/', { revalidate: 300 }),
     get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`, { revalidate: 86400 }),
+  },
+  quiz: {
+    // The question set is a versioned repo file server-side (ADR-025) — it only
+    // changes by deploy, so cache it as aggressively as immutable snapshots.
+    questions: () => apiFetch<QuizQuestionsResponse>('/quiz/questions', { revalidate: 86400 }),
+    match: (answers: Array<{ vote_id: string; position: QuizAnswerPosition }>, department?: string) =>
+      apiPost<QuizMatchResponse>('/quiz/match', {
+        answers,
+        ...(department ? { department } : {}),
+      }),
   },
   search: (question: string) => apiPost<SearchResult>('/search/', { question }),
   verify: (claim: string) => apiPost<VerifyResult>('/verify/', { claim }),
