@@ -89,7 +89,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
     <div style={{ background: '#F7F4ED', minHeight: '100vh' }}>
 
       {/* ── Hero ── */}
-      <div style={{ padding: '50px 56px 40px', background: 'linear-gradient(180deg,#fff 0%,#F7F4ED 100%)', borderBottom: '1px solid #ECE7DC' }}>
+      <div className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8 sm:pb-10" style={{ background: 'linear-gradient(180deg,#fff 0%,#F7F4ED 100%)', borderBottom: '1px solid #ECE7DC' }}>
         <div className="xl:grid xl:grid-cols-[1fr_340px] xl:gap-16 xl:items-start" style={{ maxWidth: 1180, margin: '0 auto' }}>
 
           <div className="xl:col-start-1 xl:row-start-1" style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C9302A' }}>
@@ -105,9 +105,9 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
           </p>
 
           {/* Stats strip (below xl) */}
-          <div className="xl:hidden" style={{ display: 'flex', gap: 0, marginTop: 32, border: '1px solid #ECE7DC', borderRadius: 12, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: 700 }}>
+          <div className="xl:hidden grid grid-cols-2 sm:flex gap-3" style={{ marginTop: 32, maxWidth: 700 }}>
             {heroStats.map((hs, i) => (
-              <div key={i} style={{ flex: 1, padding: '18px 22px', borderRight: i < heroStats.length - 1 ? '1px solid #ECE7DC' : 'none' }}>
+              <div key={i} style={{ padding: '18px 22px', border: '1px solid #ECE7DC', borderRadius: 12, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 <div className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: '#1B2B50', letterSpacing: '-0.01em' }}>{hs.value}</div>
                 <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, lineHeight: 1.35 }}>{hs.label}</div>
               </div>
@@ -125,7 +125,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
           </div>
 
           {/* Search bar */}
-          <div className="xl:col-start-1 xl:row-start-4" style={{ display: 'flex', gap: 12, marginTop: 28, maxWidth: 720 }}>
+          <div className="xl:col-start-1 xl:row-start-4 flex flex-col sm:flex-row gap-3" style={{ marginTop: 28, maxWidth: 720 }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #E4E6EA', borderRadius: 10, padding: '0 18px', height: 54, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
               <input
@@ -139,6 +139,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
             </div>
             <button
               onClick={handleSearch}
+              className="w-full sm:w-auto justify-center"
               style={{ display: 'flex', alignItems: 'center', background: '#E0786E', color: '#fff', height: 54, padding: '0 28px', borderRadius: 10, fontWeight: 600, fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap', border: 'none', boxShadow: '0 2px 8px rgba(224,120,110,0.4)' }}>
               Rechercher
             </button>
@@ -170,7 +171,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
       </div>
 
       {/* ── Table ── */}
-      <div style={{ padding: '32px 56px 72px' }}>
+      <div className="px-5 sm:px-14 pt-8 pb-14 sm:pb-[72px]">
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>
@@ -189,7 +190,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
 
           <div style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
             {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 180px 260px 36px', gap: 16, padding: '13px 26px', borderBottom: '1px solid #E4E6EA', background: '#FBFAF6', font: '600 11.5px/1 var(--font-sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+            <div className="hidden sm:grid" style={{ gridTemplateColumns: '100px 1fr 180px 260px 36px', gap: 16, padding: '13px 26px', borderBottom: '1px solid #E4E6EA', background: '#FBFAF6', font: '600 11.5px/1 var(--font-sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
               <span>Date</span><span>Scrutin</span><span>Thème</span><span>Résultat</span><span></span>
             </div>
 
@@ -206,17 +207,18 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                 const adopted = vote.result === 'adopté'
                 return (
                   <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
-                    style={{ display: 'grid', gridTemplateColumns: '100px 1fr 180px 260px 36px', gap: 16, padding: '18px 26px', borderBottom: '1px solid #F0F1F3', alignItems: 'center', textDecoration: 'none', background: '#fff', transition: 'background 0.12s' }}
+                    className="grid grid-cols-1 sm:grid-cols-[100px_1fr_180px_260px_36px] gap-1.5 sm:gap-4 px-4 sm:px-[26px] py-4 sm:py-[18px]"
+                    style={{ borderBottom: '1px solid #F0F1F3', alignItems: 'center', textDecoration: 'none', background: '#fff', transition: 'background 0.12s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#FBFAF6')}
                     onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
 
                     {/* Date */}
-                    <div suppressHydrationWarning className="font-mono" style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.4 }}>
+                    <div suppressHydrationWarning className="font-mono order-1 sm:order-none" style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.4 }}>
                       {shortDate(vote.voted_at)}
                     </div>
 
                     {/* Title */}
-                    <div style={{ minWidth: 0 }}>
+                    <div className="order-2 sm:order-none" style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 15, color: '#1B2B50', lineHeight: 1.3 }}
                         className="line-clamp-2">
                         {vote.summary_plain || vote.vote_title}
@@ -229,7 +231,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     </div>
 
                     {/* Theme */}
-                    <div>
+                    <div className="order-3 sm:order-none">
                       {vote.theme ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 999, background: tc.bg, color: tc.c }}>
                           {vote.theme.split(' & ')[0]}
@@ -240,8 +242,8 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     </div>
 
                     {/* Result */}
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                    <div className="order-4 sm:order-none">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', padding: '3px 10px', borderRadius: 999, background: adopted ? '#EAF5EF' : '#FBE9E7', color: adopted ? '#1F8A5B' : '#C9302A' }}>
                           {adopted ? 'Adopté' : 'Rejeté'}
                         </span>
@@ -257,7 +259,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     </div>
 
                     {/* Chevron */}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4C9D2" strokeWidth="2.2" strokeLinecap="round"><path d="m9 6 6 6-6 6"/></svg>
+                    <svg className="hidden sm:block" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4C9D2" strokeWidth="2.2" strokeLinecap="round"><path d="m9 6 6 6-6 6"/></svg>
                   </Link>
                 )
               })
