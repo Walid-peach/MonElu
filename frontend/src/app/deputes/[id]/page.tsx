@@ -105,8 +105,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
       ])} />
 
       {/* Hero band */}
-      <div style={{
-        padding: '38px 56px 44px',
+      <div className="px-5 sm:px-14 pt-6 sm:pt-[38px] pb-8 sm:pb-11" style={{
         background: `linear-gradient(180deg,#ffffff 0%,${CREAM} 100%)`,
         borderBottom: `1px solid #ECE7DC`,
       }}>
@@ -128,17 +127,17 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Photo + identity */}
-          <div style={{ display: 'flex', gap: 44, alignItems: 'flex-start' }}>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-11">
 
             {/* Left: photo */}
-            <div style={{ width: 210, flexShrink: 0 }}>
+            <div className="sm:shrink-0" style={{ width: 210 }}>
               <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid #ECE7DC`, boxShadow: '0 6px 20px rgba(27,43,80,0.12)' }}>
                 <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="2xl" priority />
               </div>
             </div>
 
             {/* Right: identity */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="w-full text-center sm:text-left" style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
                 Député·e · XVII<sup>e</sup> législature
               </div>
@@ -149,7 +148,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 {deputy.full_name}
               </h1>
               {deptLabel && (
-                <div style={{ fontSize: 20, color: '#4B5563', marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="justify-center sm:justify-start" style={{ fontSize: 20, color: '#4B5563', marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                     <path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/>
                   </svg>
@@ -175,7 +174,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               )}
 
               {/* CTA buttons */}
-              <div style={{ display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
+              <div className="justify-center sm:justify-start" style={{ display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
                 <Link
                   href={`/chat?q=${encodeURIComponent(`Quel est le bilan de ${deputy.full_name} ?`)}`}
                   style={{
@@ -259,25 +258,37 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
           {/* Stats strip */}
           {stats.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stats.length},1fr)`, marginTop: 38, borderTop: `1px solid #ECE7DC` }}>
-              {stats.map((s, i) => (
-                <div key={i} style={{ padding: '22px 14px 18px', borderRight: i < stats.length - 1 ? `1px solid #ECE7DC` : undefined }}>
-                  <div className="font-newsreader text-[34px]" style={{ fontWeight: 600, color: NAVY, letterSpacing: '-0.01em', lineHeight: 1 }}>
-                    {s.value}
+            <div
+              className="grid grid-cols-3 sm:grid-cols-6 mt-8 sm:mt-[38px] border-t"
+              style={{ borderColor: '#ECE7DC' }}
+            >
+              {stats.map((s, i) => {
+                const classes = [
+                  'px-3 sm:px-3.5 pt-5 sm:pt-[22px] pb-4 sm:pb-[18px] border-[#ECE7DC]',
+                  i % 3 === 2 ? '' : 'border-r',
+                  i >= stats.length - 3 ? '' : 'border-b',
+                  i === stats.length - 1 ? 'sm:border-r-0' : 'sm:border-r',
+                  'sm:border-b-0',
+                ].filter(Boolean).join(' ')
+                return (
+                  <div key={i} className={classes}>
+                    <div className="font-newsreader text-[26px] sm:text-[34px]" style={{ fontWeight: 600, color: NAVY, letterSpacing: '-0.01em', lineHeight: 1 }}>
+                      {s.value}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {s.label}
+                      {s.tooltip && <InfoTooltip text={s.tooltip} href="/methodologie" />}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {s.label}
-                    {s.tooltip && <InfoTooltip text={s.tooltip} href="/methodologie" />}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
       </div>
 
       {/* Body */}
-      <div style={{ padding: '52px 56px 80px' }}>
+      <div className="px-5 sm:px-14 pt-8 sm:pt-[52px] pb-14 sm:pb-20">
         <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 52 }}>
 
           {/* Vote breakdown */}
