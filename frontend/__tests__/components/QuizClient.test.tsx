@@ -9,6 +9,7 @@ jest.mock('@/lib/api', () => ({
     quiz: {
       questions: jest.fn(),
       match: jest.fn(),
+      share: jest.fn(),
     },
   },
 }))
@@ -22,6 +23,7 @@ import { resolvePostalCodeToDepartment } from '@/lib/postal'
 
 const mockQuestions = api.quiz.questions as jest.Mock
 const mockMatch = api.quiz.match as jest.Mock
+const mockShare = api.quiz.share as jest.Mock
 const mockResolve = resolvePostalCodeToDepartment as jest.Mock
 
 const QUESTIONS: QuizQuestionsResponse = {
@@ -241,6 +243,59 @@ describe('QuizClient', () => {
       'href',
       '/mon-depute'
     )
+  })
+
+  it('shares results by creating a snapshot and copying the URL', async () => {
+    const user = userEvent.setup()
+    mockResolve.mockResolvedValue({ code: '33', nom: 'Gironde' })
+    mockMatch.mockResolvedValue(MATCH_WITH_DEPT)
+    mockShare.mockResolvedValue({
+      id: 'abc',
+      result: MATCH_WITH_DEPT,
+      shared_at: '2026-07-18T00:00:00Z',
+      share_url: 'https://mon-elu.vercel.app/quiz/s/abc',
+    })
+    const writeText = jest.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await user.type(screen.getByLabelText('Code postal'), '33000')
+    await user.click(screen.getByRole('button', { name: 'Voir mes résultats' }))
+    await screen.findByText('Les députés de votre département')
+
+    await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
+    await screen.findByText('Lien copié !')
+    // The share payload is the answers + department — never the result:
+    // the server recomputes before storing (ADR-025).
+    expect(mockShare).toHaveBeenCalledWith(
+      [
+        { vote_id: 'V1', position: 'pour' },
+        { vote_id: 'V2', position: 'pour' },
+        { vote_id: 'V3', position: 'pour' },
+      ],
+      '33'
+    )
+    expect(writeText).toHaveBeenCalledWith('https://mon-elu.vercel.app/quiz/s/abc')
+  })
+
+  it('surfaces a share-creation failure with a retry state', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    mockShare.mockRejectedValue(new Error('API error: 500'))
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+
+    await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
+    await screen.findByText('Échec — réessayer')
   })
 
   it('surfaces a match-call failure with a retry path', async () => {

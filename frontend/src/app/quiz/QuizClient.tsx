@@ -2,18 +2,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import type {
-  QuizAnswerPosition,
-  QuizDeputyMatch,
-  QuizMatchResponse,
-  QuizQuestion,
-} from '@/lib/api'
-import { partyHex } from '@/lib/utils'
-import { departmentLabel } from '@/lib/departments'
+import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion } from '@/lib/api'
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
 import type { ResolvedDepartment } from '@/lib/postal'
-import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { POS } from '@/lib/vote-position'
+import { card, QuizResultSections } from './QuizResultSections'
 
 const NAVY = '#1B2B50'
 const CREAM = '#F7F4ED'
@@ -35,13 +28,6 @@ const kicker: React.CSSProperties = {
   color: RED,
 }
 
-const card: React.CSSProperties = {
-  background: '#fff',
-  border: `1px solid ${LINE}`,
-  borderRadius: 12,
-  padding: '22px 24px',
-}
-
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ background: CREAM, minHeight: '100vh' }}>
@@ -50,68 +36,73 @@ function Shell({ children }: { children: React.ReactNode }) {
   )
 }
 
-function AgreementBar({ pct, color }: { pct: number; color: string }) {
+// Lazily creates the share snapshot on first click (POST /quiz/share sends the
+// answers; the server recomputes the result before storing, ADR-025), then
+// hands the URL to the native share sheet or the clipboard.
+function ShareResultButton({
+  answers,
+  department,
+}: {
+  answers: Array<{ vote_id: string; position: QuizAnswerPosition }>
+  department?: string
+}) {
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [state, setState] = useState<'idle' | 'creating' | 'copied' | 'error'>('idle')
+
+  async function handleShare() {
+    let url = shareUrl
+    if (!url) {
+      setState('creating')
+      try {
+        const share = await api.quiz.share(answers, department)
+        url = share.share_url
+        setShareUrl(url)
+      } catch {
+        setState('error')
+        return
+      }
+    }
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ url, title: 'Quel député vote comme vous ? — MonÉlu' })
+        setState('idle')
+        return
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          setState('idle')
+          return
+        }
+        // Share API genuinely unavailable — fall through to clipboard.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      setState('copied')
+      setTimeout(() => setState('idle'), 2000)
+    } catch {
+      setState('idle')
+    }
+  }
+
   return (
-    <div
+    <button
+      onClick={handleShare}
+      disabled={state === 'creating'}
       style={{
-        position: 'relative',
-        height: 8,
-        background: '#EEF0F2',
-        borderRadius: 999,
-        overflow: 'hidden',
+        background: ACCENT, color: '#fff', padding: '11px 22px', borderRadius: 9,
+        fontWeight: 600, fontSize: 14.5, border: 'none',
+        cursor: state === 'creating' ? 'wait' : 'pointer',
+        boxShadow: '0 2px 8px rgba(224,120,110,0.35)',
       }}
     >
-      <div style={{ height: '100%', background: color, borderRadius: 999, width: `${pct}%` }} />
-    </div>
-  )
-}
-
-function pctLabel(match: QuizDeputyMatch): string {
-  return match.agreement_pct !== null ? `${match.agreement_pct}%` : '—'
-}
-
-function comparedLabel(match: QuizDeputyMatch): string {
-  if (match.compared === 0) return 'aucun vote comparable'
-  return `${match.matches}/${match.compared} vote${match.compared > 1 ? 's' : ''} en accord`
-}
-
-function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number }) {
-  const hex = partyHex(match.party)
-  return (
-    <Link
-      href={`/deputes/${match.deputy_id}`}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        padding: '12px 14px',
-        borderRadius: 10,
-        textDecoration: 'none',
-        background: '#fff',
-        border: `1px solid ${LINE}`,
-      }}
-    >
-      {rank !== undefined && (
-        <span className="font-mono" style={{ fontSize: 13, color: '#9CA3AF', width: 20 }}>
-          {rank}
-        </span>
-      )}
-      <DeputyAvatar name={match.full_name ?? '?'} photoUrl={match.photo_url} size="sm" />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 15, color: NAVY }}>{match.full_name}</div>
-        <div style={{ fontSize: 12.5, color: GRAY, marginTop: 2 }}>
-          {[match.party_short ?? match.party, departmentLabel(match.department)]
-            .filter(Boolean)
-            .join(' · ')}
-        </div>
-      </div>
-      <div style={{ textAlign: 'right' }}>
-        <div className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: hex }}>
-          {pctLabel(match)}
-        </div>
-        <div style={{ fontSize: 11.5, color: '#9CA3AF' }}>{comparedLabel(match)}</div>
-      </div>
-    </Link>
+      {state === 'creating'
+        ? 'Création du lien…'
+        : state === 'copied'
+          ? 'Lien copié !'
+          : state === 'error'
+            ? 'Échec — réessayer'
+            : 'Partager mes résultats'}
+    </button>
   )
 }
 
@@ -458,142 +449,28 @@ export function QuizClient() {
 
   // ---------------------------------------------------------------- results
   if (phase === 'results' && result) {
-    const best = result.top_matches[0] ?? null
-    const others = result.top_matches.slice(1)
-    const bestHex = best ? partyHex(best.party) : NAVY
+    const answerPayload = Object.entries(answers).map(([vote_id, position]) => ({
+      vote_id,
+      position,
+    }))
     return (
       <Shell>
         <div style={{ ...kicker, marginBottom: 16 }}>Vos résultats</div>
-
-        {best ? (
-          <>
-            <h1
-              className="font-newsreader text-[clamp(26px,4vw,38px)]"
-              style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.015em' }}
-            >
-              Vous votez à {pctLabel(best)} comme {best.full_name}
-            </h1>
-            <p style={{ margin: '10px 0 26px', fontSize: 14, color: GRAY }}>
-              Sur {result.answered} scrutin{result.answered > 1 ? 's' : ''} répondu
-              {result.answered > 1 ? 's' : ''}, comparé aux positions exprimées de{' '}
-              {result.eligible_deputies} députés.
-            </p>
-
-            <Link
-              href={`/deputes/${best.deputy_id}`}
-              style={{ ...card, display: 'flex', alignItems: 'center', gap: 20, textDecoration: 'none', borderLeft: `4px solid ${bestHex}` }}
-            >
-              <DeputyAvatar name={best.full_name ?? '?'} photoUrl={best.photo_url} size="xl" priority />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 20, color: NAVY }}>{best.full_name}</div>
-                <div style={{ fontSize: 14, color: GRAY, marginTop: 4 }}>
-                  {[best.party, departmentLabel(best.department)].filter(Boolean).join(' · ')}
-                </div>
-                <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>{comparedLabel(best)}</div>
-              </div>
-              <div className="font-mono" style={{ fontWeight: 700, fontSize: 34, color: bestHex }}>
-                {pctLabel(best)}
-              </div>
-            </Link>
-          </>
-        ) : (
-          <>
-            <h1
-              className="font-newsreader text-[clamp(26px,4vw,38px)]"
-              style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.015em' }}
-            >
-              Pas assez de votes comparables
-            </h1>
-            <p style={{ margin: '14px 0 0', fontSize: 15.5, lineHeight: 1.6, color: '#4B5563' }}>
-              Aucun député n’a exprimé de position sur assez de scrutins de votre sélection pour
-              établir une comparaison fiable. Réessayez en répondant à davantage de questions.
-            </p>
-          </>
-        )}
-
-        {others.length > 0 && (
-          <section style={{ marginTop: 40 }}>
-            <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 22, color: NAVY, margin: '0 0 16px' }}>
-              Vos autres meilleurs matchs
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {others.map((m, i) => (
-                <DeputyMatchRow key={m.deputy_id} match={m} rank={i + 2} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {result.opposite && (
-          <section style={{ marginTop: 40 }}>
-            <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 22, color: NAVY, margin: '0 0 6px' }}>
-              À l’opposé de vos votes
-            </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13.5, color: GRAY }}>
-              Le député qui vote le moins souvent comme vous.
-            </p>
-            <DeputyMatchRow match={result.opposite} />
-          </section>
-        )}
-
-        {result.groups.length > 0 && (
-          <section style={{ marginTop: 40 }}>
-            <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 22, color: NAVY, margin: '0 0 6px' }}>
-              Votre alignement par groupe
-            </h2>
-            <p style={{ margin: '0 0 18px', fontSize: 13.5, color: GRAY }}>
-              Accord entre vos réponses et la position majoritaire de chaque groupe parlementaire,
-              scrutin par scrutin.
-            </p>
-            <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {result.groups.map(g => {
-                const hex = partyHex(g.party)
-                return (
-                  <div key={g.party}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 12 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: NAVY, minWidth: 0 }}>
-                        {g.party}
-                      </span>
-                      <span className="font-mono" style={{ fontWeight: 700, fontSize: 15, color: hex }}>
-                        {g.agreement_pct}%
-                      </span>
-                    </div>
-                    <AgreementBar pct={g.agreement_pct} color={hex} />
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        )}
-
-        {result.my_department && (
-          <section style={{ marginTop: 40 }}>
-            <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 22, color: NAVY, margin: '0 0 6px' }}>
-              Les députés de votre département
-            </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13.5, color: GRAY }}>
-              {result.my_department.name}
-              {resolved && resolved.nom !== result.my_department.name ? ` (${resolved.nom})` : ''} —
-              votre accord avec chacun de ses députés.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {result.my_department.deputies.map(m => (
-                <DeputyMatchRow key={m.deputy_id} match={m} />
-              ))}
-            </div>
-          </section>
-        )}
+        <QuizResultSections result={result} resolvedNom={resolved?.nom} />
 
         <section style={{ marginTop: 48, ...card, textAlign: 'center' }}>
           <p style={{ margin: '0 0 16px', fontSize: 15, lineHeight: 1.6, color: '#4B5563' }}>
-            Envie de suivre un de ces députés vote après vote ?
+            Partagez votre résultat, ou suivez un de ces députés vote après vote.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {result.top_matches.length > 0 && (
+              <ShareResultButton answers={answerPayload} department={resolved?.code} />
+            )}
             <Link
               href="/mon-depute"
               style={{
-                background: ACCENT, color: '#fff', padding: '11px 22px', borderRadius: 9,
-                fontWeight: 600, fontSize: 14.5, textDecoration: 'none',
+                fontSize: 14.5, color: NAVY, background: '#fff', border: `1px solid ${LINE}`,
+                padding: '11px 22px', borderRadius: 9, fontWeight: 600, textDecoration: 'none',
               }}
             >
               Ouvrir Mon député
