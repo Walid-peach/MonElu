@@ -456,7 +456,7 @@ function ChatInner() {
     <div style={{ display: 'flex', height: 'calc(100dvh - 4rem)', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: bg0 }}>
 
       {/* ══════════ SIDEBAR ══════════ */}
-      <div style={{ width: 260, flexShrink: 0, background: '#111C35', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="hidden md:flex">
+      <div style={{ width: 260, flexShrink: 0, background: '#111C35', flexDirection: 'column', overflow: 'hidden' }} className="hidden md:flex">
 
         {/* New chat button */}
         <div style={{ padding: '16px 16px 12px', flexShrink: 0 }}>
