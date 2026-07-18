@@ -156,18 +156,18 @@ export function VoteDetailClient(props: Props) {
         transition: 'opacity 0.3s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1)',
       }}>
         <div style={{ background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(14px)', borderBottom: '1px solid #E4E6EA', boxShadow: '0 8px 24px rgba(27,43,80,0.08)' }}>
-          <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16, padding: '10px 56px' }}>
-            <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9CA3AF', flexShrink: 0 }}>
+          <div className="px-5 sm:px-14" style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16, padding: '10px 0' }}>
+            <span className="hidden sm:inline" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9CA3AF', flexShrink: 0 }}>
               Scrutin n°{voteId}
             </span>
-            <span style={{ fontSize: 12, color: '#D1D5DB' }}>·</span>
+            <span className="hidden sm:inline" style={{ fontSize: 12, color: '#D1D5DB' }}>·</span>
             <span style={{ fontWeight: 600, fontSize: 15, color: '#1B2B50', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {headline}
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 999, background: adopted ? '#EAF5EF' : '#FBE9E7', color: adopted ? '#1F8A5B' : '#C9302A', flexShrink: 0 }}>
               {adopted ? 'Adopté' : 'Rejeté'}
             </span>
-            <span className="font-mono" style={{ fontSize: 12.5, color: '#6B7280', flexShrink: 0 }}>
+            <span className="font-mono hidden sm:inline" style={{ fontSize: 12.5, color: '#6B7280', flexShrink: 0 }}>
               {votesFor} pour · {votesAgainst} contre
             </span>
           </div>
@@ -188,7 +188,7 @@ export function VoteDetailClient(props: Props) {
             <span>Scrutin n°{voteId}</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 64, alignItems: 'start', marginTop: 30 }}>
+          <div className="xl:grid xl:grid-cols-[1fr_380px] xl:gap-16 xl:items-start" style={{ marginTop: 30 }}>
 
             {/* Left: identity */}
             <div>
@@ -233,7 +233,7 @@ export function VoteDetailClient(props: Props) {
             </div>
 
             {/* Right: result card */}
-            <div style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: 14, padding: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+            <div className="mt-8 xl:mt-0" style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: 14, padding: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
               <div style={{ font: '700 11px/1 var(--font-sans)', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 18 }}>
                 Résultat du scrutin
               </div>
@@ -271,7 +271,7 @@ export function VoteDetailClient(props: Props) {
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div className="flex-wrap" style={{ display: 'flex', gap: 10 }}>
                 <a
                   href={`https://www.assemblee-nationale.fr/dyn/scrutins/${voteId}`}
                   target="_blank" rel="noopener noreferrer"
