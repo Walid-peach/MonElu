@@ -431,13 +431,23 @@ export function QuizClient() {
                 Le calcul a échoué. Réessayez dans un instant.
               </p>
             )}
-            <div style={{ marginTop: 22 }}>
+            <div style={{ marginTop: 22, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
               <button
                 onClick={() => submit(null)}
                 disabled={matching}
                 style={{ fontSize: 14.5, color: NAVY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
               >
                 {matching ? 'Calcul…' : 'Passer cette étape et voir mes résultats'}
+              </button>
+              <button
+                onClick={() => {
+                  if (questions) setIndex(questions.length - 1)
+                  setPhase('questions')
+                }}
+                disabled={matching}
+                style={{ fontSize: 14.5, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
+              >
+                ← Revenir aux questions
               </button>
             </div>
           </>

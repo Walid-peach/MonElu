@@ -199,6 +199,21 @@ describe('QuizClient', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('allows going back from the postal step to revise answers', async () => {
+    const user = userEvent.setup()
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    expect(screen.getByText('Et votre député à vous ?')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '← Revenir aux questions' }))
+    // Lands on the last question with the previous selection still highlighted.
+    expect(screen.getByText('Question 3 / 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pour' })).toHaveStyle({
+      border: '2px solid #1F8A5B',
+    })
+  })
+
   it('links results to the matched deputy profiles', async () => {
     const user = userEvent.setup()
     mockMatch.mockResolvedValue(MATCH)
