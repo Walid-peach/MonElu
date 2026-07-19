@@ -8,17 +8,12 @@ editorial artifact updated quarterly by PR — never a DB table, never fetched f
 the AN portal at runtime. The frontend reads it through GET /quiz/questions.
 
 Every vote_id must exist in the production votes table (prod holds scrutins from
-2025-07-01 onward). Selection criteria (MON-136): whole-text scrutins
-("l'ensemble ..."), high participation (>= 400 voters out of 577), and divisive
-(the losing side of pour/contre holds >= 35% of the expressed pour+contre).
-
-VERSION note: "-draft" marks this as the provisional MON-137 set, picked from
-live prod data by the above criteria but pending the MON-136 editorial pass
-(phrasing review, final selection). MON-136 replaces the content of this list
-and drops the suffix; no code changes.
+2025-07-01 onward). Full selection criteria, phrasing rules, and the quarterly
+refresh process are documented in docs/quiz-curation.md (MON-136) — read that
+before touching this list.
 """
 
-QUIZ_VERSION = "2026-Q3-draft"
+QUIZ_VERSION = "2026-Q3"
 
 # Each entry: the scrutin, a neutral plain-French question, a one-line context
 # sentence, and a short theme tag for the UI. Question phrasing must stay
