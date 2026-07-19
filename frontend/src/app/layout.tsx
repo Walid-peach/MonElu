@@ -60,6 +60,7 @@ export const viewport: Viewport = {
   themeColor: '#0D1F3C',
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -71,7 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Nav />
         </Suspense>
         <FreshnessBadge />
-        <main className="pb-20 md:pb-0"><PageTransition>{children}</PageTransition></main>
+        <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0"><PageTransition>{children}</PageTransition></main>
         <Footer />
         <Suspense fallback={null}>
           <BottomNav />
