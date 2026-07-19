@@ -82,6 +82,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/donnees`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/votes`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/chat`, changeFrequency: 'monthly', priority: 0.5 },
+    // /quiz only — /quiz/s/* share snapshots stay out of the sitemap, like
+    // the /chat/s/* and /verifier/v/* snapshot URLs.
+    { url: `${SITE_URL}/quiz`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/a-propos`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/developpeurs`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/methodologie`, changeFrequency: 'monthly', priority: 0.5 },

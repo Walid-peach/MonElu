@@ -11,6 +11,7 @@ export const NAV_HEIGHT_PX = 64
 const navLinks = [
   { href: '/deputes', label: 'Députés' },
   { href: '/votes', label: 'Votes' },
+  { href: '/quiz', label: 'Quiz' },
   { href: '/chat', label: 'Chat IA' },
   { href: '/a-propos', label: 'À propos' },
 ]
