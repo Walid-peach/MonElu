@@ -123,6 +123,12 @@ export default function MonDeputePage() {
           >
             Trouver mon député
           </Link>
+          <p style={{ margin: '20px 0 0', fontSize: 14, color: '#6B7280' }}>
+            Vous ne savez pas qui suivre ?{' '}
+            <Link href="/quiz" style={{ color: NAVY, fontWeight: 600 }}>
+              Découvrez quel député vote comme vous →
+            </Link>
+          </p>
         </div>
       </div>
     )
@@ -242,6 +248,33 @@ export default function MonDeputePage() {
                 </div>
               </div>
             )}
+          </section>
+
+          {/* Quiz cross-link (MON-140) */}
+          <section style={{
+            background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12,
+            padding: '20px 24px', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+          }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 15, color: NAVY }}>
+                Votez-vous comme {deputy.full_name} ?
+              </div>
+              <div style={{ fontSize: 13.5, color: '#6B7280', marginTop: 4 }}>
+                Répondez à une dizaine de vrais scrutins et comparez vos positions aux siennes.
+              </div>
+            </div>
+            <Link
+              href="/quiz"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: ACCENT, color: '#fff', padding: '10px 20px',
+                borderRadius: 9, fontWeight: 600, fontSize: 14, textDecoration: 'none',
+                boxShadow: '0 2px 8px rgba(224,120,110,0.35)', whiteSpace: 'nowrap',
+              }}
+            >
+              Faire le test →
+            </Link>
           </section>
 
           {/* Recent votes */}

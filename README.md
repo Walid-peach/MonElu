@@ -56,6 +56,10 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 | POST | `/search` | Natural language query over the legislative corpus *(Phase 2)* |
 | POST | `/verify` | Fact-check a claim about a deputy's votes — structured verdict + citations |
 | GET | `/verify/{id}` | Stored verdict snapshot (no LLM call) — backs the share URL |
+| GET | `/quiz/questions` | Curated quiz question set (versioned repo file, ADR-025) |
+| POST | `/quiz/match` | Stateless vote-matching quiz computation — nothing persisted or logged |
+| POST | `/quiz/share` | Store an immutable quiz result snapshot (recomputed server-side) |
+| GET | `/quiz/share/{id}` | Stored quiz result snapshot — backs the `/quiz/s/<id>` share URL |
 
 ---
 
@@ -69,6 +73,7 @@ Implemented with [slowapi](https://github.com/laurentS/slowapi), keyed by remote
 | `GET /deputies/{id}/scorecard` | 10 req / min |
 | `POST /search` | 10 req / min |
 | `POST /verify` | 10 req / min |
+| `POST /quiz/match`, `POST /quiz/share` | 10 req / min |
 
 On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}` · `Retry-After` + `X-RateLimit-*` headers.
 
@@ -282,6 +287,8 @@ design.
 | `routers/votes.py` | Vote list, latest, and detail endpoints |
 | `routers/search.py` | `POST /search` — RAG query endpoint |
 | `routers/verify.py` | `POST /verify` + `GET /verify/{id}` — fact-check verdicts (ADR-022) |
+| `routers/quiz.py` | `/quiz/*` — vote-matching quiz: questions, stateless matching, share snapshots (ADR-025) |
+| `quiz_data.py` | Curated, versioned quiz question set — updated quarterly by PR (ADR-025) |
 | `schemas.py` | Pydantic response models (all fields `Optional` to match DB NULLs) |
 
 ### Frontend (`frontend/`)

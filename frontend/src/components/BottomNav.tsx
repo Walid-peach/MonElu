@@ -6,6 +6,7 @@ const items = [
   { href: '/', label: 'Accueil', icon: '⌂' },
   { href: '/deputes', label: 'Députés', icon: '◉' },
   { href: '/votes', label: 'Votes', icon: '◈' },
+  { href: '/quiz', label: 'Quiz', icon: '✦' },
   { href: '/chat', label: 'Chat IA', icon: '◎' },
 ]
 
@@ -13,7 +14,7 @@ export function BottomNav() {
   const path = usePathname()
   return (
     <nav data-print-hide className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-border z-50 pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-5">
         {items.map(item => {
           const active =
             path === item.href || (item.href !== '/' && path.startsWith(item.href))
