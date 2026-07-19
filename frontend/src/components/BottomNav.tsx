@@ -13,7 +13,7 @@ const items = [
 export function BottomNav() {
   const path = usePathname()
   return (
-    <nav data-print-hide className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-border z-50">
+    <nav data-print-hide className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-border z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="grid grid-cols-5">
         {items.map(item => {
           const active =
