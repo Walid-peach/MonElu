@@ -19,7 +19,7 @@ export function Footer() {
   return (
     <footer
       data-print-hide
-      className="pb-20 md:pb-8"
+      className="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8"
       style={{
         paddingTop: '32px',
         paddingLeft: '56px',
