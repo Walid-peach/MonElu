@@ -97,6 +97,60 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
+      <LegalSection id="quiz" title="Le quiz « Quel député vote comme vous ? »">
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          Le quiz compare vos réponses aux positions <strong>réellement enregistrées</strong> de chaque
+          député sur les mêmes scrutins. Votre pourcentage d&apos;accord avec un député est simplement&nbsp;:
+          nombre de scrutins où vous avez voté pareil, divisé par le nombre de scrutins comparables.
+          Seules les positions <strong>exprimées</strong> comptent (pour, contre, abstention)&nbsp;: un député
+          non-votant ou absent sur un scrutin n&apos;est ni d&apos;accord ni en désaccord avec vous - ce
+          scrutin est simplement retiré du dénominateur pour ce député.
+        </p>
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          <strong>Seuil de comparabilité&nbsp;:</strong> un député (ou un groupe) n&apos;apparaît dans le
+          classement que s&apos;il a une position exprimée sur au moins la moitié de vos réponses, avec un
+          minimum de deux scrutins - un seul scrutin partagé ne fait pas un profil politique. Même règle
+          pour le &laquo;&nbsp;député le plus éloigné&nbsp;&raquo;&nbsp;: un 0&nbsp;% calculé sur deux votes
+          ne peut pas faire la une du résultat.
+        </p>
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          L&apos;accord avec un <strong>groupe parlementaire</strong> se calcule contre sa ligne majoritaire,
+          scrutin par scrutin&nbsp;: la position exprimée la plus fréquente parmi ses membres. Si deux
+          positions sont à égalité stricte au sein du groupe, le groupe n&apos;a pas de ligne sur ce scrutin
+          et il est ignoré pour ce calcul.
+        </p>
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          <strong>Le questionnaire</strong> est un ensemble d&apos;une dizaine de scrutins réels, choisi selon
+          trois critères&nbsp;: des votes sur l&apos;ensemble d&apos;un texte (pas des amendements), une forte
+          participation (au moins 400 votants sur 577), et un vrai clivage (le camp minoritaire pèse au moins
+          35&nbsp;% des pour+contre exprimés). La sélection est versionnée (par exemple
+          &laquo;&nbsp;2026-Q3&nbsp;&raquo;), revue trimestriellement, et chaque résultat partagé garde la
+          version du questionnaire qui l&apos;a produit. La formulation des questions reste descriptive du
+          texte voté, jamais orientée.
+        </p>
+        <p style={textStyle}>
+          <strong>Vie privée&nbsp;:</strong> le calcul se fait côté serveur mais rien n&apos;est
+          enregistré - ni vos réponses, ni votre code postal. Seul un résultat que vous choisissez
+          explicitement de partager est stocké, et il est alors <strong>recalculé par le serveur</strong> à
+          partir de vos réponses&nbsp;: une carte de résultat MonÉlu ne peut pas contenir de pourcentages
+          fabriqués.
+        </p>
+        <p style={sourceLineStyle}>
+          Source :{' '}
+          <a href={`${REPO_BASE}/api/routers/quiz.py`} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+            quiz.py
+          </a>{' '}
+          ·{' '}
+          <a href={`${REPO_BASE}/api/quiz_data.py`} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+            quiz_data.py (questionnaire versionné)
+          </a>{' '}
+          ·{' '}
+          <a href={`${REPO_BASE}/docs/decisions.md`} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+            ADR-025, décision architecturale
+          </a>
+        </p>
+      </LegalSection>
+
       <LegalSection id="adopte-rejete" title="Vote adopté ou rejeté">
         <p style={textStyle}>
           Le résultat d&apos;un scrutin (adopté ou rejeté) n&apos;est jamais recalculé par MonÉlu : il est repris

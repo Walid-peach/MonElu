@@ -52,6 +52,12 @@ function StaticExperience({ stats, leadVote }: Props) {
                 buttonLabel="Comprendre mon député"
               />
             </div>
+            <Link
+              href="/quiz"
+              className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-red-light underline underline-offset-4"
+            >
+              Quel député vote comme vous ? Faites le test →
+            </Link>
             <div className="mt-8 hidden md:block">
               <TrustRow lastUpdated={stats.lastUpdated} />
             </div>
@@ -121,6 +127,21 @@ function MobileExperience({ stats, leadVote }: Props) {
               Chaque scrutin: {stats.deputies} positions individuelles.
             </h2>
           </div>
+        </article>
+        <article className="border border-navy/10 bg-white p-5 shadow-xl shadow-navy/6">
+          <p className="text-xs font-semibold uppercase text-red-civic">Le quiz</p>
+          <h2 className="mt-3 font-serif text-2xl leading-tight text-navy">
+            Quel député vote comme vous&nbsp;?
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-gray-mid">
+            Une dizaine de vrais scrutins, comparés aux votes réels des députés.
+          </p>
+          <Link
+            href="/quiz"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-civic px-5 py-2.5 text-sm font-semibold text-white"
+          >
+            Faire le test →
+          </Link>
         </article>
       </div>
     </section>
@@ -903,13 +924,20 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
                   ))}
                 </div>
 
-                <div data-s6item style={{ marginTop: 28, opacity: 0, pointerEvents: 'auto' }}>
+                <div data-s6item style={{ marginTop: 28, opacity: 0, pointerEvents: 'auto', display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
                   <Link
                     href="/chat"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(160deg,rgba(39,224,173,0.18),rgba(39,224,173,0.08))', border: '1px solid rgba(39,224,173,0.45)', padding: '14px 32px', borderRadius: 12, fontSize: 16, fontWeight: 600, color: '#27e0ad', textDecoration: 'none', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', pointerEvents: 'auto' }}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 L13.7 9.6 L21 11 L13.7 12.4 L12 19.5 L10.3 12.4 L3 11 L10.3 9.6 Z" fill="#27e0ad" /></svg>
                     Poser une question à MonÉlu →
+                  </Link>
+                  <Link
+                    href="/quiz"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(160deg,rgba(240,88,76,0.2),rgba(240,88,76,0.08))', border: '1px solid rgba(240,88,76,0.5)', padding: '14px 32px', borderRadius: 12, fontSize: 16, fontWeight: 600, color: '#f3b6b1', textDecoration: 'none', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', pointerEvents: 'auto' }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f3b6b1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M8 12.2l2.6 2.6L16 9" /></svg>
+                    Quel député vote comme vous ? →
                   </Link>
                 </div>
 
