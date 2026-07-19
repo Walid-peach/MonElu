@@ -454,6 +454,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
       const depIn = easeIO(seg(p, 0.82, 0.95))
       deputy.style.opacity = depIn.toFixed(3)
       deputy.style.transform = `translateX(${lerp(70, 0, depIn)}px)`
+      deputy.style.pointerEvents = depIn > 0.4 ? 'auto' : 'none'
 
       // connective link line
       const linkP = easeOut(seg(p, 0.72, 0.86))
@@ -494,6 +495,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
         }
         fxLayer.style.opacity = (1 - easeIO(seg(dp, 0.76, 0.86))).toFixed(3)
         deputy.style.opacity = ((Number(deputy.style.opacity) || 1) * (1 - easeIO(seg(dp, 0.76, 0.86)))).toFixed(3)
+        deputy.style.pointerEvents = Number(deputy.style.opacity) > 0.4 ? 'auto' : 'none'
         const t1curr = Number(titles[1]?.style.opacity) || 0
         if (titles[1]) titles[1].style.opacity = (t1curr * (1 - easeIO(seg(dp, 0.76, 0.86)))).toFixed(3)
         chrome.style.opacity = (easeIO(seg(p, 0.06, 0.20)) - s6env * 0.85).toFixed(3)
@@ -507,6 +509,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
         const a = easeOut(seg(dp, d0, d0 + 0.11))
         el.style.opacity = a.toFixed(3)
         el.style.transform = `translateY(${lerp(24, 0, a).toFixed(1)}px)`
+        el.style.pointerEvents = a > 0.4 ? 'auto' : 'none'
       })
     }
 
@@ -531,10 +534,10 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
         dotsLayer.style.opacity = '1'; fxLayer.style.opacity = '1'
         heroRing.style.opacity = '0'; heroGlow.style.opacity = '0'
         for (let i = 0; i < N; i++) { const e = seats[i]._el; e.style.opacity = '0'; e.style.boxShadow = 'none'; e.style.transform = 'scale(0.2)' }
-        voteCard.style.opacity = '0'; deputy.style.opacity = '0'; beat.style.opacity = '0'
+        voteCard.style.opacity = '0'; deputy.style.opacity = '0'; deputy.style.pointerEvents = 'none'; beat.style.opacity = '0'
         if (linkSvg) linkSvg.style.opacity = '0'
         titles.forEach(t => { if (t) t.style.opacity = '0' })
-        scene6.style.opacity = '0'; s6items.forEach(e => { e.style.opacity = '0' })
+        scene6.style.opacity = '0'; s6items.forEach(e => { e.style.opacity = '0'; e.style.pointerEvents = 'none' })
         chrome.style.opacity = '0'
         entryFrame(ep)
       } else {
@@ -779,7 +782,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
           </div>
 
           {/* deputy card — real deputy data from API */}
-          <div data-deputy style={{ position: 'absolute', top: 'clamp(24px,6vh,60px)', right: 'clamp(16px,3vw,54px)', width: 'min(400px,92vw)', padding: 'clamp(20px,2.4vw,28px) clamp(20px,2.6vw,30px) clamp(20px,2.6vw,28px)', borderRadius: 18, background: 'linear-gradient(180deg,rgba(16,24,48,0.93),rgba(10,16,34,0.93))', border: '1px solid rgba(120,150,210,0.28)', boxShadow: '0 30px 80px rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', opacity: 0, transform: 'translateX(70px)', boxSizing: 'border-box', pointerEvents: 'auto' }}>
+          <div data-deputy style={{ position: 'absolute', top: 'clamp(24px,6vh,60px)', right: 'clamp(16px,3vw,54px)', width: 'min(400px,92vw)', padding: 'clamp(20px,2.4vw,28px) clamp(20px,2.6vw,30px) clamp(20px,2.6vw,28px)', borderRadius: 18, background: 'linear-gradient(180deg,rgba(16,24,48,0.93),rgba(10,16,34,0.93))', border: '1px solid rgba(120,150,210,0.28)', boxShadow: '0 30px 80px rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', opacity: 0, transform: 'translateX(70px)', boxSizing: 'border-box', pointerEvents: 'none' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
               <span style={{ fontSize: 11, letterSpacing: '0.26em', fontWeight: 600, color: '#f3b6b1', background: 'rgba(217,48,37,0.22)', border: '1px solid rgba(240,88,76,0.4)', padding: '6px 18px', borderRadius: 999 }}>VOTRE DÉPUTÉ</span>
             </div>
@@ -850,7 +853,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
                 <form
                   data-s6item
                   onSubmit={e => { e.preventDefault(); submitQuery(query) }}
-                  style={{ marginTop: 30, width: 'min(880px,94%)', display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, background: 'rgba(9,15,32,0.72)', border: '1px solid rgba(120,150,210,0.34)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', boxSizing: 'border-box', opacity: 0, pointerEvents: 'auto' }}
+                  style={{ marginTop: 30, width: 'min(880px,94%)', display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, background: 'rgba(9,15,32,0.72)', border: '1px solid rgba(120,150,210,0.34)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', boxSizing: 'border-box', opacity: 0, pointerEvents: 'none' }}
                 >
                   <span style={{ width: 40, height: 40, flex: 'none', borderRadius: 11, background: 'linear-gradient(160deg,#13213f,#0b1730)', border: '1px solid rgba(39,224,173,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 L13.7 9.6 L21 11 L13.7 12.4 L12 19.5 L10.3 12.4 L3 11 L10.3 9.6 Z" fill="#27e0ad" /></svg>
@@ -906,7 +909,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
                       key={i}
                       data-s6item
                       onClick={() => submitQuery(card.q)}
-                      style={{ background: card.colorBg, border: `1px solid ${card.colorBorder}`, borderRadius: 16, padding: '18px 20px', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', opacity: 0, cursor: 'pointer', textAlign: 'left', pointerEvents: 'auto', transition: 'border-color 0.2s, background 0.2s' }}
+                      style={{ background: card.colorBg, border: `1px solid ${card.colorBorder}`, borderRadius: 16, padding: '18px 20px', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', opacity: 0, cursor: 'pointer', textAlign: 'left', pointerEvents: 'none', transition: 'border-color 0.2s, background 0.2s' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = card.color }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = card.colorBorder }}
                     >
@@ -924,7 +927,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
                   ))}
                 </div>
 
-                <div data-s6item style={{ marginTop: 28, opacity: 0, pointerEvents: 'auto', display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <div data-s6item style={{ marginTop: 28, opacity: 0, pointerEvents: 'none', display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
                   <Link
                     href="/chat"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(160deg,rgba(39,224,173,0.18),rgba(39,224,173,0.08))', border: '1px solid rgba(39,224,173,0.45)', padding: '14px 32px', borderRadius: 12, fontSize: 16, fontWeight: 600, color: '#27e0ad', textDecoration: 'none', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', pointerEvents: 'auto' }}
