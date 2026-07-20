@@ -40,6 +40,25 @@ const nextConfig = {
   async rewrites() {
     return []
   },
+  // /embed/* pages (MON-96) are meant to be iframed on external sites; every
+  // other route stays framing-denied by default.
+  async headers() {
+    return [
+      {
+        source: '/((?!embed).*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+        ],
+      },
+      {
+        source: '/embed/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
+        ],
+      },
+    ]
+  },
 }
 
 export default withSentryConfig(withPWA(nextConfig), {
