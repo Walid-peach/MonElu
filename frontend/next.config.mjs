@@ -45,7 +45,10 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/((?!embed).*)',
+        // Segment-anchored (`embed/`, not `embed`) so a future route that merely
+        // starts with the string "embed" (e.g. /embeddings) still falls under
+        // this deny-by-default rule instead of matching neither rule below.
+        source: '/((?!embed/).*)',
         headers: [
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
@@ -54,6 +57,9 @@ const nextConfig = {
       {
         source: '/embed/:path*',
         headers: [
+          // Deliberately permissive: /embed/* is the iframe surface external
+          // sites paste MonÉlu cards into (MON-96) — do not tighten this back
+          // to 'self' without breaking that feature.
           { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
         ],
       },
