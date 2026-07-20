@@ -11,6 +11,10 @@ const withPWA = withPWAInit({
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
+  // Hero JPEGs (~1.2 MB) are only loaded raw by the desktop cinematic and are
+  // otherwise served as optimized /_next/image variants - runtime-cache them
+  // on demand instead of eagerly precaching on every install (MON-146).
+  publicExcludes: ['!*.jpg'],
   fallbacks: {
     // Served on navigation cache-miss while offline.
     document: '/~offline',
