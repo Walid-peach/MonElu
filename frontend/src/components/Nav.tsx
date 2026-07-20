@@ -19,6 +19,9 @@ const navLinks = [
 export function Nav() {
   const pathname = usePathname()
 
+  // /embed/* pages are iframed into third-party sites — no site chrome there.
+  if (pathname.startsWith('/embed')) return null
+
   return (
     <nav
       data-print-hide

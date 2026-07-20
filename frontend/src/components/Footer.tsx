@@ -14,7 +14,8 @@ export function Footer() {
 
   // /chat is a fixed-viewport app shell (height: calc(100dvh - 4rem), internal
   // scrolling only) — appending footer content below it would break that layout.
-  if (pathname.startsWith('/chat')) return null
+  // /embed/* pages are iframed into third-party sites — no site chrome there.
+  if (pathname.startsWith('/chat') || pathname.startsWith('/embed')) return null
 
   return (
     <footer

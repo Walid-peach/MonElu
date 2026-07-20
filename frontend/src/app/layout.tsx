@@ -9,6 +9,8 @@ import { BottomNav } from '@/components/BottomNav'
 import { PageTransition } from '@/components/PageTransition'
 import { FreshnessBadge } from '@/components/FreshnessBadge'
 import { Footer } from '@/components/Footer'
+import { HideOnEmbed } from '@/components/HideOnEmbed'
+import { MainFrame } from '@/components/MainFrame'
 import { JsonLd } from '@/components/JsonLd'
 import { buildWebsiteJsonLd } from '@/lib/seo'
 
@@ -71,8 +73,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={null}>
           <Nav />
         </Suspense>
-        <FreshnessBadge />
-        <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0"><PageTransition>{children}</PageTransition></main>
+        <HideOnEmbed><FreshnessBadge /></HideOnEmbed>
+        <MainFrame><PageTransition>{children}</PageTransition></MainFrame>
         <Footer />
         <Suspense fallback={null}>
           <BottomNav />
