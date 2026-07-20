@@ -66,7 +66,7 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
@@ -91,6 +91,20 @@ jobs:
 
       - name: Run tests
         run: npm test -- --ci
+
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: next-build-cache-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**') }}
+          restore-keys: |
+            next-build-cache-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-
+
+      - name: Build
+        # Prerenders all SSG pages against the production API; src/lib/api.ts
+        # already retries through the rate limiter, so this can take a few
+        # minutes on a cold cache.
+        run: npm run build
 
   dbt-data-health:
     runs-on: ubuntu-latest
