@@ -613,7 +613,7 @@ Auto-detection is kept but demoted to a nudge: a `verify_claim` intent added to 
 - Gauche Démocrate et Républicaine -> `gauche-democrate-republicaine`
 - Non inscrit -> `non-inscrits`
 
-The three multi-word groups with unwieldy mechanical slugs (LFI-NFP, LIOT) use their real-world common abbreviations instead of a literal transliteration - this is a hardcoded map, not a slugify function run on the fly, so exceptions cost nothing.
+These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` codes (`scripts/backfill_party_labels.py`, e.g. `LFI`, `LIOT`, `RN` - already the source `partyShort()` reads on the frontend): the epic's own rationale is citable, SEO-legible URLs ("les frondeurs de X"), which two- or three-letter codes don't serve. `liot` happens to coincide with its existing short code; `lfi-nfp` is a deliberate one-off exception (not a mechanical derivation of `LFI`) chosen for search relevance, since "Nouveau Front Populaire" is the more current, more-searched coalition name for that group. Do not "simplify" `lfi-nfp` to `lfi` to match the short-label table - the two naming schemes serve different purposes and are allowed to diverge.
 
 **Impact:**
 - MON-150 (`api/routers/groups.py`, `api/groups_data.py`) implements `GET /groups/{slug}` per this decision - no dbt migration, no new mart.
