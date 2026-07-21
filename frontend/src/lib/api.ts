@@ -163,6 +163,41 @@ export type DepartmentDetail = {
   split_votes: DepartmentSplitVote[]
 }
 
+export type GroupMember = {
+  deputy_id: string
+  full_name: string
+  party: string | null
+  party_short: string | null
+  department: string | null
+  circonscription: string | null
+  photo_url: string | null
+  presence_rate: number | null
+  dissident_rate: number | null
+}
+
+export type GroupVoteBreakdown = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string
+  result: string | null
+  pour: number
+  contre: number
+  abstention: number
+  majority_position: string
+}
+
+export type GroupDetail = {
+  slug: string
+  name: string
+  member_count: number
+  members: GroupMember[]
+  avg_presence_rate: number | null
+  avg_dissident_rate: number | null
+  most_dissident_members: GroupMember[]
+  divided_votes: GroupVoteBreakdown[]
+  recent_scrutins: GroupVoteBreakdown[]
+}
+
 export type ThemeVoteItem = {
   vote_id: string
   voted_at: string | null
@@ -392,6 +427,10 @@ export const api = {
   departments: {
     get: (code: string) =>
       apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, { revalidate: 3600 }),
+  },
+  groups: {
+    get: (slug: string) =>
+      apiFetch<GroupDetail>(`/groups/${encodeURIComponent(slug)}`, { revalidate: 3600 }),
   },
   themes: {
     get: (slug: string, params?: { limit?: number; offset?: number }) => {
