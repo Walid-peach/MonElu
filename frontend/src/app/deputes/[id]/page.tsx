@@ -179,7 +179,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   href={`/chat?q=${encodeURIComponent(`Quel est le bilan de ${deputy.full_name} ?`)}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: ACCENT, color: '#fff', padding: '12px 24px',
+                    background: 'var(--dp-cta-bg)', color: '#fff', padding: '12px 24px',
                     borderRadius: 9, fontWeight: 600, fontSize: 15,
                     boxShadow: '0 2px 8px var(--dp-cta-shadow)', textDecoration: 'none',
                   }}

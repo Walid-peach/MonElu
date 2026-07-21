@@ -12,9 +12,9 @@ export function PrintButton({ label = 'Imprimer / Enregistrer en PDF' }: Props) 
       data-print-hide
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 8,
-        background: '#E0786E', color: '#fff', padding: '12px 24px',
+        background: 'var(--dp-cta-bg)', color: '#fff', padding: '12px 24px',
         borderRadius: 9, fontWeight: 600, fontSize: 15, border: 'none',
-        cursor: 'pointer', boxShadow: '0 2px 8px rgba(224,120,110,0.35)',
+        cursor: 'pointer', boxShadow: '0 2px 8px var(--dp-cta-shadow)',
       }}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
