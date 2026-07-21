@@ -362,7 +362,7 @@ count is low.
 - `frontend/src/components/MonEluLogo.tsx` must be replaced with the hemicycle design
 - Do NOT use the PNG file (`docs/assets/MonElu_LOGO-SVG.png`) directly in JSX — it exists as reference only
 - PWA icons (`public/icon-192.png`, `public/icon-512.png`) were 1×1 placeholders until MON-115 — they are now generated from `src/app/icon.svg` via `frontend/scripts/generate_icons.js` (which also emits `src/app/apple-icon.png`); re-run that script if the icon changes
-- Dark mode infrastructure (next-themes, dark: Tailwind classes) is **deferred** — build only when there is real user demand — **superseded by ADR-026**
+- Dark mode infrastructure (next-themes, dark: Tailwind classes) is **deferred** — build only when there is real user demand — **superseded by ADR-027**
 
 **Trigger to revisit:** Dark mode request from users, or if the brand asset changes.
 
@@ -581,7 +581,52 @@ Auto-detection is kept but demoted to a nudge: a `verify_claim` intent added to 
 
 ---
 
-## ADR-026 — Dark mode deferral reversed (MON-103)
+## ADR-026 - Group profile pages: no new mart, slugs from a canonical label enum (MON-108/MON-149)
+
+**Date:** 2026-07-21
+**Status:** Final
+
+**Decision:** Parliamentary group profile pages (`/groupes/[slug]`) are built on three choices:
+
+1. **Live SQL aggregation over existing marts, not a new dbt mart.** `GET /groups/{slug}` (MON-150) computes group-level participation and cohesion by aggregating `mart_deputy_scorecard` and `mart_party_alignment` `GROUP BY party` at request time, plus a raw `vote_positions`/`votes` query for the most-divided votes - the same shape as the `/departements/[code]` endpoint (MON-107), which needed no new mart either.
+2. **Slugs are derived from the canonical `deputies.party` enum, not a new dimension table.** `scripts/backfill_party_labels.py` already enforces exactly 12 canonical `party` string values (`CANONICAL_LABELS`), including the literal group `"Non inscrit"`. `api/groups_data.py` hardcodes a `{slug: canonical_label}` map for these 12 values (mirroring `DEPT_NAMES` in `api/departments_data.py`) rather than introducing a `groups` table or a slug column.
+3. **"Non inscrit" gets its own group page; NULL-party deputies get none.** `"Non inscrit"` is a real, enforced canonical label (deputies formally unattached to any group) and is treated as the 12th group with a normal roster page. The 2/577 deputies whose `party` is still `NULL` (ADR-009's documented edge case - ingested but never backfilled) are excluded from every group roster and render with no group link on their own profile, rather than 404s or a 13th synthetic group.
+
+**Reason:**
+
+- **No new mart.** At current scale (577 deputies, 12 groups) a `GROUP BY` over two existing marts plus one raw-table query costs nothing extra and ships in one PR. A new `mart_group_stats` model would need its own dbt test suite, and - per ADR-020 - any new mart column the API reads risks the Railway/dbt deploy race (API deployed before dbt has run against it). Skipping the new mart sidesteps that risk entirely; the existing marts are already live and stable.
+- **Enum-based slugs over a dimension table.** Group membership has been a free-text column since ADR-009 (organeRef IDs backfilled to plain names via `scripts/update_party.py`, later tightened to an enforced canonical set by `scripts/backfill_party_labels.py`). Introducing a `groups` table now would need a migration, a foreign key backfill, and a join added to every existing query that reads `deputies.party` - all to serve twelve fixed strings that already have exactly one enforced spelling each. A hardcoded slug map costs one file and mirrors a pattern (`departments_data.py`) already proven in production.
+- **Participation/cohesion reuses ADR-019.** The group's presence/participation aggregate is the mean of `mart_deputy_scorecard.presence_rate` over the group's current members - the same canonical formula, not a new definition, per ADR-019's rule.
+- **"Non inscrit" as a real group vs. NULL as no group.** Conflating them would either hide "Non inscrit" deputies from the navigation graph (they are real, current deputies who chose no group) or dress up 2 malformed rows as a fake 13th group with no real cohesion signal. Treating them differently keeps the page honest: every deputy with a real group value gets a working link, and the 2 NULL rows are a data-quality artifact, not a group.
+
+**Slug scheme:** lowercase, strip French diacritics, replace `&`/`,`/spaces with `-`, collapse repeats. Canonical label -> slug map (`api/groups_data.py`), e.g.:
+- Rassemblement National -> `rassemblement-national`
+- Ensemble pour la République -> `ensemble-pour-la-republique`
+- La France insoumise - Nouveau Front Populaire -> `lfi-nfp`
+- Socialistes et apparentés -> `socialistes-et-apparentes`
+- Droite Républicaine -> `droite-republicaine`
+- Écologiste et Social -> `ecologiste-et-social`
+- Les Démocrates -> `les-democrates`
+- Horizons & Indépendants -> `horizons-independants`
+- Libertés, Indépendants, Outre-mer et Territoires -> `liot`
+- Union des droites pour la République -> `union-des-droites`
+- Gauche Démocrate et Républicaine -> `gauche-democrate-republicaine`
+- Non inscrit -> `non-inscrits`
+
+These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` codes (`scripts/backfill_party_labels.py`, e.g. `LFI`, `LIOT`, `RN` - already the source `partyShort()` reads on the frontend): the epic's own rationale is citable, SEO-legible URLs ("les frondeurs de X"), which two- or three-letter codes don't serve. `liot` happens to coincide with its existing short code; `lfi-nfp` is a deliberate one-off exception (not a mechanical derivation of `LFI`) chosen for search relevance, since "Nouveau Front Populaire" is the more current, more-searched coalition name for that group. Do not "simplify" `lfi-nfp` to `lfi` to match the short-label table - the two naming schemes serve different purposes and are allowed to diverge.
+
+**Impact:**
+- MON-150 (`api/routers/groups.py`, `api/groups_data.py`) implements `GET /groups/{slug}` per this decision - no dbt migration, no new mart.
+- MON-151 (`/groupes/[slug]` page) and MON-152 (cross-links) rely on the slug map above; the frontend must use the same twelve slugs (mirrored into `frontend/src/lib/groups.ts`, following the `departments.ts` precedent) rather than re-deriving them.
+- Do NOT create a `groups`/`parties` table or a slug column on `deputies` for this feature.
+- Do NOT link to a group page for a deputy whose `party` is `NULL` - render the party cell as plain text instead.
+- Do NOT slugify `party` strings at request time - the map is a fixed enum matching `CANONICAL_LABELS`, so an unrecognized value is a data bug (flag it), not a new group to render.
+
+**Trigger to revisit:** if `CANONICAL_LABELS` changes (a group renames, splits, or merges - it has happened before with French legislature groups), update the slug map in the same PR that updates `backfill_party_labels.py`. If group-level aggregation ever needs cross-vote joins expensive enough to matter (materialized view or dedicated mart), revisit choice 1 - nothing here blocks adding a mart later.
+
+---
+
+## ADR-027 — Dark mode deferral reversed (MON-103)
 
 **Date:** 2026-07-21
 **Status:** Current
@@ -611,5 +656,6 @@ Auto-detection is kept but demoted to a nudge: a `verify_claim` intent added to 
 6. Phase 5 alerts are deferred (ADR-002) — do not build email dispatch
 7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
 8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never persist answers or trust client-computed percentages
-9. Dark mode is approved and being built (ADR-026, MON-103) — landing page stays light-only by design
-10. When in doubt: check what's actually deployed before writing new code
+9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
+10. Dark mode is approved and being built (ADR-027, MON-103) — landing page stays light-only by design
+11. When in doubt: check what's actually deployed before writing new code
