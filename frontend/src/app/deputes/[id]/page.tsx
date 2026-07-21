@@ -5,6 +5,7 @@ import { api, csvUrl } from '@/lib/api'
 import type { DissidentVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { departmentCode, departmentLabel } from '@/lib/departments'
+import { groupSlug } from '@/lib/groups'
 import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
@@ -76,6 +77,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
   const hex = partyHex(deputy.party)
   const deptLabel = departmentLabel(deputy.department)
   const deptCode = departmentCode(deputy.department)
+  const groupHref = groupSlug(deputy.party)
 
   // MON-123: "votes exprimés" (present_votes = pour + contre + abstention)
   // duplicated "scrutins votés" whenever the deputy has no non-votant
@@ -162,15 +164,30 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 </div>
               )}
               {deputy.party && (
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 9,
-                  marginTop: 18, padding: '8px 16px', borderRadius: 999,
-                  background: `${hex}14`, border: `1px solid ${hex}40`,
-                  color: hex, fontWeight: 600, fontSize: 14,
-                }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 999, background: hex }} />
-                  {deputy.party}
-                </div>
+                groupHref ? (
+                  <Link
+                    href={`/groupes/${groupHref}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 9,
+                      marginTop: 18, padding: '8px 16px', borderRadius: 999,
+                      background: `${hex}14`, border: `1px solid ${hex}40`,
+                      color: hex, fontWeight: 600, fontSize: 14, textDecoration: 'none',
+                    }}
+                  >
+                    <span style={{ width: 9, height: 9, borderRadius: 999, background: hex }} />
+                    {deputy.party}
+                  </Link>
+                ) : (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 9,
+                    marginTop: 18, padding: '8px 16px', borderRadius: 999,
+                    background: `${hex}14`, border: `1px solid ${hex}40`,
+                    color: hex, fontWeight: 600, fontSize: 14,
+                  }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 999, background: hex }} />
+                    {deputy.party}
+                  </div>
+                )
               )}
 
               {/* CTA buttons */}

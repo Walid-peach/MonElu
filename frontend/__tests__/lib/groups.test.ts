@@ -30,4 +30,10 @@ describe('groupSlug', () => {
     expect(groupSlug(undefined)).toBeNull()
     expect(groupSlug('Not A Real Group')).toBeNull()
   })
+
+  it('accepts the short code used by vote breakdowns (party_short)', () => {
+    expect(groupSlug('RN')).toBe('rassemblement-national')
+    expect(groupSlug('LFI')).toBe('lfi-nfp')
+    expect(groupSlug('LIOT')).toBe('liot')
+  })
 })

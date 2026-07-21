@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import type { DepartmentDeputy } from '@/lib/api'
 import { partyHex, partyShort, formatDate } from '@/lib/utils'
 import { departmentCode } from '@/lib/departments'
+import { groupSlug } from '@/lib/groups'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
@@ -156,12 +157,21 @@ export default async function DepartmentPage(
               <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 12 }}>
                 Répartition par groupe
               </div>
-              {data.party_distribution.map(g => (
+              {data.party_distribution.map(g => {
+                const href = groupSlug(g.party)
+                const label = partyShort(g.party) || 'Non inscrit'
+                return (
                 <div key={g.party ?? 'Non inscrit'} style={{ marginBottom: 9 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 999, flexShrink: 0, background: partyHex(g.party) }} />
-                      <span style={{ color: '#374151', fontWeight: 600 }}>{partyShort(g.party) || 'Non inscrit'}</span>
+                      {href ? (
+                        <Link href={`/groupes/${href}`} style={{ color: '#374151', fontWeight: 600, textDecoration: 'none' }}>
+                          {label}
+                        </Link>
+                      ) : (
+                        <span style={{ color: '#374151', fontWeight: 600 }}>{label}</span>
+                      )}
                     </span>
                     <span className="font-mono" style={{ color: '#9CA3AF' }}>{g.count}</span>
                   </div>
@@ -169,7 +179,8 @@ export default async function DepartmentPage(
                     <div style={{ height: '100%', width: `${(g.count / maxPartyCount) * 100}%`, background: partyHex(g.party), borderRadius: 999 }} />
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>

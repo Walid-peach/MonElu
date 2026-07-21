@@ -1,3 +1,5 @@
+import { SHORT_TO_FULL_PARTY } from '@/lib/utils'
+
 // Slug <-> canonical party label map for /groupes/[slug], mirroring
 // api/groups_data.py (ADR-026, MON-150). The 12 labels are the same set
 // partyShort() in lib/utils.ts already keys off — this file only adds the
@@ -21,10 +23,17 @@ const NAME_TO_SLUG = new Map(
   Object.entries(GROUP_SLUGS).map(([slug, name]) => [name, slug])
 )
 
-/** Canonical slug for a group name, or null when the party isn't one of the 12 groups (e.g. NULL). */
+/**
+ * Canonical slug for a group, or null when it isn't one of the 12 groups
+ * (e.g. NULL party). Accepts either the full label ("Rassemblement
+ * National") or the short code ("RN") — vote breakdowns key by party_short,
+ * deputy profiles key by the full party name.
+ */
 export function groupSlug(party: string | null | undefined): string | null {
   if (!party) return null
-  return NAME_TO_SLUG.get(party.trim()) ?? null
+  const trimmed = party.trim()
+  const fullName = SHORT_TO_FULL_PARTY[trimmed] ?? trimmed
+  return NAME_TO_SLUG.get(fullName) ?? null
 }
 
 /** Canonical party label for a slug (any casing/whitespace), or null if unknown. */

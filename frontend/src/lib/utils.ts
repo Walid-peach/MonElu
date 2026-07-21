@@ -71,7 +71,7 @@ const PARTY_HEX: Record<string, string> = {
 // party_short values (e.g. "EPR") resolve through this table before the
 // PARTY_HEX lookup, so partyHex() works whether it's given a full party
 // name (deputy profile pages) or a short code (vote group breakdown).
-const SHORT_TO_FULL_PARTY: Record<string, string> = {
+export const SHORT_TO_FULL_PARTY: Record<string, string> = {
   RN: 'Rassemblement National',
   EPR: 'Ensemble pour la République',
   LFI: 'La France insoumise - Nouveau Front Populaire',

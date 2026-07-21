@@ -6,6 +6,7 @@ import { EmbedButton } from '@/components/EmbedButton'
 import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { getInitials, partyHex } from '@/lib/utils'
+import { groupSlug } from '@/lib/groups'
 import { resolvePostalCode } from '@/lib/postal'
 import { csvUrl } from '@/lib/api'
 import { HemicycleChart } from '@/components/HemicycleChart'
@@ -426,11 +427,18 @@ export function VoteDetailClient(props: Props) {
                   {groups.map((g) => {
                     const posColor = g.position === 'Pour' ? '#1F8A5B' : g.position === 'Contre' ? '#C9302A' : '#B45309'
                     const posBg   = g.position === 'Pour' ? '#EAF5EF' : g.position === 'Contre' ? '#FBE9E7' : '#FEF3C7'
+                    const href = groupSlug(g.name)
                     return (
                       <div key={g.name} style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px 90px', gap: 14, padding: '16px 24px', borderBottom: '1px solid #F0F1F3', alignItems: 'center', background: '#fff' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                           <span style={{ width: 9, height: 9, borderRadius: 999, flexShrink: 0, background: g.color, display: 'inline-block' }} />
-                          <span style={{ fontSize: 13.5, color: '#374151', fontWeight: 500 }}>{g.name}</span>
+                          {href ? (
+                            <Link href={`/groupes/${href}`} style={{ fontSize: 13.5, color: '#374151', fontWeight: 500, textDecoration: 'none' }}>
+                              {g.name}
+                            </Link>
+                          ) : (
+                            <span style={{ fontSize: 13.5, color: '#374151', fontWeight: 500 }}>{g.name}</span>
+                          )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ flex: 1, height: 7, borderRadius: 999, background: '#F0F1F3', overflow: 'hidden', display: 'flex' }}>
