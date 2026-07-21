@@ -8,6 +8,7 @@ import type { Config } from 'tailwindcss'
  *   font-mono       (system monospace)  — numbers, dates, metadata, code blocks
  */
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
