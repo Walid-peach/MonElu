@@ -25,7 +25,7 @@ export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false }: 
   if (photoUrl && !imgError) {
     return (
       <div
-        className={`${className} ${rounded} overflow-hidden flex-shrink-0 bg-navy-muted`}
+        className={`${className} ${rounded} overflow-hidden flex-shrink-0 bg-navy-muted dark:bg-white/10`}
         style={style}
       >
         <Image
@@ -43,7 +43,7 @@ export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false }: 
 
   return (
     <div
-      className={`${className} ${rounded} bg-navy-muted flex items-center justify-center text-navy font-medium flex-shrink-0`}
+      className={`${className} ${rounded} bg-navy-muted dark:bg-white/10 flex items-center justify-center text-navy dark:text-gray-100 font-medium flex-shrink-0`}
       style={style}
     >
       {getInitials(name)}
