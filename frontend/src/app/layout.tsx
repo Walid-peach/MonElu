@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
+import Script from 'next/script'
 import { DM_Serif_Display, DM_Sans, Newsreader } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -12,7 +13,9 @@ import { Footer } from '@/components/Footer'
 import { HideOnEmbed } from '@/components/HideOnEmbed'
 import { MainFrame } from '@/components/MainFrame'
 import { JsonLd } from '@/components/JsonLd'
+import { ThemeProvider } from '@/components/ThemeProvider'
 import { buildWebsiteJsonLd } from '@/lib/seo'
+import { THEME_STORAGE_KEY } from '@/lib/theme'
 
 const serif = DM_Serif_Display({
   subsets: ['latin'],
@@ -68,17 +71,22 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`}>
-      <body className="bg-gray-off min-h-screen">
-        <JsonLd data={buildWebsiteJsonLd()} />
-        <Suspense fallback={null}>
-          <Nav />
-        </Suspense>
-        <HideOnEmbed><FreshnessBadge /></HideOnEmbed>
-        <MainFrame><PageTransition>{children}</PageTransition></MainFrame>
-        <Footer />
-        <Suspense fallback={null}>
-          <BottomNav />
-        </Suspense>
+      <body className="min-h-screen">
+        <Script id="theme-no-flash" strategy="beforeInteractive">
+          {`(function(){try{if(window.location.pathname==='/')return;var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`}
+        </Script>
+        <ThemeProvider>
+          <JsonLd data={buildWebsiteJsonLd()} />
+          <Suspense fallback={null}>
+            <Nav />
+          </Suspense>
+          <HideOnEmbed><FreshnessBadge /></HideOnEmbed>
+          <MainFrame><PageTransition>{children}</PageTransition></MainFrame>
+          <Footer />
+          <Suspense fallback={null}>
+            <BottomNav />
+          </Suspense>
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>

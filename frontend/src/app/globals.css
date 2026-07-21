@@ -12,8 +12,22 @@
 @keyframes nudge { 0%,100% { transform: translate(-50%,0); } 50% { transform: translate(-50%,5px); } }
 [data-hint] { animation: nudge 2s ease-in-out infinite; }
 
+:root {
+  --color-bg: theme('colors.gray.off');
+  --color-fg: theme('colors.navy.DEFAULT');
+}
+
+/* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
+   ThemeProvider and never applied on the landing page (ADR-027). Page- and
+   component-level dark: variants land in follow-up MON-103 sub-issues — this
+   only wires the mechanism through the shared body background/foreground. */
+.dark {
+  --color-bg: #0B1424;
+  --color-fg: #F1F0EC;
+}
+
 @layer base {
-  body { @apply font-sans bg-white text-navy; }
+  body { @apply font-sans; background-color: var(--color-bg); color: var(--color-fg); }
   h1, h2, h3 { @apply font-newsreader; }
 }
 
