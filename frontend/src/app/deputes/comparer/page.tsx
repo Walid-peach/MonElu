@@ -4,7 +4,7 @@ import { ComparerClient } from './ComparerClient'
 
 export default function ComparerPage() {
   return (
-    <Suspense fallback={<div style={{ padding: 32, color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
+    <Suspense fallback={<div style={{ padding: 32, color: 'var(--dp-text-muted)', fontSize: 14 }}>Chargement…</div>}>
       <ComparerClient />
     </Suspense>
   )
