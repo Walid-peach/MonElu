@@ -289,6 +289,68 @@ class ThemeDetail(_Base):
 
 
 # ---------------------------------------------------------------------------
+# Groups (parliamentary groups — MON-150)
+# ---------------------------------------------------------------------------
+
+
+class GroupMember(DeputySummary):
+    """A group's current deputy — summary plus scorecard highlights.
+
+    Mart-derived rates are None when the dbt marts are absent (the page
+    degrades gracefully instead of failing), mirroring DepartmentDeputy.
+    """
+
+    presence_rate: Optional[float] = None
+    dissident_rate: Optional[float] = None
+
+
+class GroupVoteBreakdown(_Base):
+    """A vote's outcome among a group's current members: how the group split."""
+
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: str
+    result: Optional[str] = None
+    pour: int
+    contre: int
+    abstention: int
+    majority_position: str = Field(
+        description="pour/contre/abstention — whichever the group cast most of on this vote"
+    )
+
+
+class GroupDetail(_Base):
+    slug: str
+    name: str
+    member_count: int
+    members: list[GroupMember]
+    avg_presence_rate: Optional[float] = Field(
+        default=None,
+        description="Mean presence_rate across the group's current members; "
+        "None when the scorecard mart is unavailable.",
+    )
+    avg_dissident_rate: Optional[float] = Field(
+        default=None,
+        description="Mean dissident_rate across the group's current members — the "
+        "group's cohesion score, inverted (higher = less cohesive); None when the "
+        "alignment mart is unavailable.",
+    )
+    most_dissident_members: list[GroupMember] = Field(
+        default_factory=list,
+        description="Current members with the highest dissident_rate, descending.",
+    )
+    divided_votes: list[GroupVoteBreakdown] = Field(
+        default_factory=list,
+        description="Recent votes where the group's members split furthest "
+        "(smallest of pour/contre is largest), most divided first.",
+    )
+    recent_scrutins: list[GroupVoteBreakdown] = Field(
+        default_factory=list,
+        description="The group's most recent scrutins with its aggregate position, newest first.",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Votes (scrutins)
 # ---------------------------------------------------------------------------
 

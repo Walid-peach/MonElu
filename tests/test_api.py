@@ -765,6 +765,116 @@ def test_get_department_marts_missing(client, mock_cursor):
 
 
 # ---------------------------------------------------------------------------
+# Groups (MON-150)
+# ---------------------------------------------------------------------------
+
+_GROUP_MEMBER_ROWS = [
+    {
+        "deputy_id": "PA1",
+        "full_name": "Jean Martin",
+        "party": "Rassemblement National",
+        "party_short": "RN",
+        "department": "Gironde",
+        "circonscription": "1ère circonscription",
+        "photo_url": None,
+    },
+    {
+        "deputy_id": "PA2",
+        "full_name": "Anne Durand",
+        "party": "Rassemblement National",
+        "party_short": "RN",
+        "department": "Paris",
+        "circonscription": "2ème circonscription",
+        "photo_url": None,
+    },
+]
+
+_GROUP_VOTE_ROWS = [
+    {
+        "vote_id": "VTANR5L17V2",
+        "voted_at": datetime(2025, 8, 1, 10, 0),
+        "vote_title": "Vote sur le budget 2026",
+        "result": "adopté",
+        "pour": 2,
+        "contre": 0,
+        "abstention": 0,
+    },
+    {
+        "vote_id": "VTANR5L17V1",
+        "voted_at": datetime(2025, 7, 16, 15, 0),
+        "vote_title": "Vote sur le projet de loi de finances",
+        "result": "adopté",
+        "pour": 1,
+        "contre": 1,
+        "abstention": 0,
+    },
+]
+
+_GROUP_RATE_ROWS = [
+    {"deputy_id": "PA1", "presence_rate": 0.8, "dissident_rate": 0.05},
+    {"deputy_id": "PA2", "presence_rate": 0.6, "dissident_rate": 0.15},
+]
+
+
+def test_get_group(client, mock_cursor):
+    mock_cursor.fetchall.side_effect = [_GROUP_MEMBER_ROWS, _GROUP_VOTE_ROWS, _GROUP_RATE_ROWS]
+    resp = client.get("/groups/rassemblement-national")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["slug"] == "rassemblement-national"
+    assert data["name"] == "Rassemblement National"
+    assert data["member_count"] == 2
+    assert data["avg_presence_rate"] == 0.7
+    assert data["avg_dissident_rate"] == 0.1
+    assert data["most_dissident_members"][0]["deputy_id"] == "PA2"
+    assert [v["vote_id"] for v in data["divided_votes"]] == ["VTANR5L17V1"]
+    assert data["divided_votes"][0]["majority_position"] == "pour"
+    assert [v["vote_id"] for v in data["recent_scrutins"]] == [
+        "VTANR5L17V2",
+        "VTANR5L17V1",
+    ]
+
+
+def test_get_group_unknown_slug(client, mock_cursor):
+    resp = client.get("/groups/does-not-exist")
+    assert resp.status_code == 404
+
+
+def test_get_group_normalizes_slug_case(client, mock_cursor):
+    mock_cursor.fetchall.side_effect = [_GROUP_MEMBER_ROWS, _GROUP_VOTE_ROWS, _GROUP_RATE_ROWS]
+    resp = client.get("/groups/Rassemblement-National")
+    assert resp.status_code == 200
+    assert resp.json()["slug"] == "rassemblement-national"
+
+
+def test_get_group_no_active_deputies(client, mock_cursor):
+    mock_cursor.fetchall.side_effect = [[]]
+    resp = client.get("/groups/liot")
+    assert resp.status_code == 404
+
+
+def test_get_group_marts_missing(client, mock_cursor):
+    import psycopg2.errors
+
+    mock_cursor.fetchall.side_effect = [
+        _GROUP_MEMBER_ROWS,
+        _GROUP_VOTE_ROWS,
+        psycopg2.errors.UndefinedTable("mart missing"),
+    ]
+    resp = client.get("/groups/rassemblement-national")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["members"][0]["presence_rate"] is None
+    assert data["avg_presence_rate"] is None
+    assert data["avg_dissident_rate"] is None
+    assert data["most_dissident_members"] == []
+    assert [v["vote_id"] for v in data["recent_scrutins"]] == [
+        "VTANR5L17V2",
+        "VTANR5L17V1",
+    ]
+
+
+# ---------------------------------------------------------------------------
 # CSV exports (MON-97)
 # ---------------------------------------------------------------------------
 
