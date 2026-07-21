@@ -840,6 +840,13 @@ def test_get_group_unknown_slug(client, mock_cursor):
     assert resp.status_code == 404
 
 
+def test_get_group_normalizes_slug_case(client, mock_cursor):
+    mock_cursor.fetchall.side_effect = [_GROUP_MEMBER_ROWS, _GROUP_VOTE_ROWS, _GROUP_RATE_ROWS]
+    resp = client.get("/groups/Rassemblement-National")
+    assert resp.status_code == 200
+    assert resp.json()["slug"] == "rassemblement-national"
+
+
 def test_get_group_no_active_deputies(client, mock_cursor):
     mock_cursor.fetchall.side_effect = [[]]
     resp = client.get("/groups/liot")

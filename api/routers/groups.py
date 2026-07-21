@@ -68,7 +68,8 @@ def get_group(
     divided_votes_limit: int = Query(10, ge=1, le=50),
     recent_scrutins_limit: int = Query(10, ge=1, le=50),
 ):
-    party = normalize_slug(slug)
+    canonical_slug = slug.strip().lower()
+    party = normalize_slug(canonical_slug)
     if party is None:
         raise HTTPException(status_code=404, detail="Unknown group")
 
@@ -163,7 +164,7 @@ def get_group(
     recent_scrutins = breakdowns[:recent_scrutins_limit]
 
     return GroupDetail(
-        slug=slug,
+        slug=canonical_slug,
         name=party,
         member_count=len(members),
         members=members,
