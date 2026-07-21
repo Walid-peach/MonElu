@@ -163,6 +163,44 @@ export type DepartmentDetail = {
   split_votes: DepartmentSplitVote[]
 }
 
+export type ThemeVoteItem = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string
+  result: string | null
+  summary_plain: string | null
+}
+
+export type ThemePartyPosition = {
+  party_short: string | null
+  pour: number
+  contre: number
+  abstention: number
+  expressed: number
+  pour_rate: number
+}
+
+export type ThemeMostDividedVote = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string
+  votes_for: number
+  votes_against: number
+}
+
+export type ThemeDetail = {
+  slug: string
+  name: string
+  vote_count: number
+  adoption_rate: number | null
+  most_divided_vote: ThemeMostDividedVote | null
+  party_positions: ThemePartyPosition[]
+  votes_total: number
+  limit: number
+  offset: number
+  votes: ThemeVoteItem[]
+}
+
 export type SearchResult = {
   answer: string
   question: string
@@ -355,6 +393,18 @@ export const api = {
   departments: {
     get: (code: string) =>
       apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, { revalidate: 3600 }),
+  },
+  themes: {
+    get: (slug: string, params?: { limit?: number; offset?: number }) => {
+      const q = new URLSearchParams()
+      if (params?.limit) q.set('limit', String(params.limit))
+      if (params?.offset) q.set('offset', String(params.offset))
+      const qs = q.toString()
+      return apiFetch<ThemeDetail>(
+        `/themes/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`,
+        { revalidate: 3600 }
+      )
+    },
   },
   votes: {
     list: (params?: { result?: string; theme?: string; search?: string; limit?: number; offset?: number; before?: string }) => {

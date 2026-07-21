@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import { api, Vote } from '@/lib/api'
 import { formatDate, themeColors } from '@/lib/utils'
+import { themeSlug } from '@/lib/themes'
 
 type VoteList = { total: number; items: Vote[]; limit: number; offset: number }
 type HeroStat = { value: string; label: string }
@@ -164,6 +165,23 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                   style={{ background: active ? '#1B2B50' : '#fff', color: active ? '#fff' : '#4B5563', border: `1px solid ${active ? '#1B2B50' : '#E4E6EA'}`, padding: '8px 16px', borderRadius: 999, fontSize: 13.5, fontWeight: active ? 600 : 400, cursor: 'pointer' }}>
                   {t.split(' & ')[0]}
                 </button>
+              )
+            })}
+          </div>
+
+          {/* Theme hub pages (MON-106) — aggregate stats per theme, distinct
+              from the in-page filter chips above. */}
+          <div className="xl:col-start-1 xl:row-start-6" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14, alignItems: 'center' }}>
+            <span style={{ fontSize: 12.5, color: '#9CA3AF', marginRight: 4 }}>Voir le bilan par thème :</span>
+            {THEMES.map((t) => {
+              const slug = themeSlug(t)
+              if (!slug) return null
+              const tc = themeColors(t)
+              return (
+                <Link key={t} href={`/themes/${slug}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12.5, fontWeight: 600, padding: '5px 12px', borderRadius: 999, background: tc.bg, color: tc.c, textDecoration: 'none' }}>
+                  {t.split(' & ')[0]}
+                </Link>
               )
             })}
           </div>
