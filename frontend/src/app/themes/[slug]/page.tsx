@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { ThemePartyPosition, ThemeVoteItem } from '@/lib/api'
-import { partyHex, partyShort, formatDate, themeColors } from '@/lib/utils'
+import { partyHex, normalizePartyShort, formatDate, themeColors } from '@/lib/utils'
 import { themeName, themeSlug, THEME_ENTRIES } from '@/lib/themes'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
@@ -57,7 +57,6 @@ export default async function ThemePage(
   const canonicalSlug = themeSlug(data.name) ?? slug
   const adoptionPct = pct(data.adoption_rate)
   const tc = themeColors(data.name)
-  const maxExpressed = Math.max(1, ...data.party_positions.map(p => p.expressed))
 
   const breadcrumb = buildBreadcrumbJsonLd([
     { name: 'Accueil', url: SITE_URL },
@@ -151,21 +150,22 @@ export default async function ThemePage(
                 padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
               }}>
                 {data.party_positions.map((p: ThemePartyPosition) => {
-                  const hex = partyHex(p.party_short)
+                  const label = normalizePartyShort(p.party_short) ?? 'Non inscrit'
+                  const hex = partyHex(label === 'Non inscrit' ? null : label)
                   const pourPct = pct(p.pour_rate)
                   return (
                     <div key={p.party_short ?? 'Non inscrit'} style={{ marginBottom: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, marginBottom: 5 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ width: 8, height: 8, borderRadius: 999, flexShrink: 0, background: hex }} />
-                          <span style={{ color: '#374151', fontWeight: 600 }}>{partyShort(p.party_short) || 'Non inscrit'}</span>
+                          <span style={{ color: '#374151', fontWeight: 600 }}>{label}</span>
                         </span>
                         <span className="font-mono" style={{ color: '#6B7280' }}>
                           {pourPct !== null ? `${pourPct}% pour` : '—'} · {p.expressed} vote{p.expressed !== 1 ? 's' : ''} exprimé{p.expressed !== 1 ? 's' : ''}
                         </span>
                       </div>
                       <div style={{ height: 6, borderRadius: 999, background: '#F0F1F3', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${(p.expressed / maxExpressed) * (pourPct ?? 0)}%`, background: hex, borderRadius: 999 }} />
+                        <div style={{ height: '100%', width: `${pourPct ?? 0}%`, background: hex, borderRadius: 999 }} />
                       </div>
                     </div>
                   )

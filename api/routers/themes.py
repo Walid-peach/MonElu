@@ -18,7 +18,7 @@ from starlette.requests import Request
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from api.schemas import ThemeDetail, ThemeMostDividedVote, ThemePartyPosition, ThemeVoteItem
-from api.themes_data import normalize_slug
+from api.themes_data import SLUGS_BY_NAME, normalize_slug
 
 router = APIRouter()
 
@@ -66,9 +66,14 @@ def get_theme(
             )
             most_divided_row = cur.fetchone()
 
+            # Deputies not yet resolved by scripts/update_party.py carry the
+            # raw AN organe ID ("PO838901") in party_short — fold those into
+            # the same NULL ("Non inscrit") bucket as genuinely unaffiliated
+            # deputies instead of showing them as standalone garbled groups.
             cur.execute(
                 """
-                SELECT d.party_short,
+                SELECT CASE WHEN d.party_short ~ '^PO[0-9]+$' THEN NULL ELSE d.party_short END
+                           AS party_short,
                        COUNT(*) FILTER (WHERE vp.position = 'pour')       AS pour,
                        COUNT(*) FILTER (WHERE vp.position = 'contre')     AS contre,
                        COUNT(*) FILTER (WHERE vp.position = 'abstention') AS abstention
@@ -77,7 +82,7 @@ def get_theme(
                 JOIN deputies d ON d.deputy_id = vp.deputy_id
                 WHERE v.theme = %s
                   AND vp.position IN ('pour', 'contre', 'abstention')
-                GROUP BY d.party_short
+                GROUP BY CASE WHEN d.party_short ~ '^PO[0-9]+$' THEN NULL ELSE d.party_short END
                 ORDER BY COUNT(*) DESC
                 """,
                 (name,),
@@ -111,13 +116,12 @@ def get_theme(
         )
 
     return ThemeDetail(
-        slug=slug,
+        slug=SLUGS_BY_NAME[name],
         name=name,
         vote_count=agg["total"],
         adoption_rate=agg["adopted"] / agg["decided"] if agg["decided"] else None,
         most_divided_vote=ThemeMostDividedVote(**most_divided_row) if most_divided_row else None,
         party_positions=party_positions,
-        votes_total=agg["total"],
         limit=limit,
         offset=offset,
         votes=[ThemeVoteItem(**r) for r in vote_rows],

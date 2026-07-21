@@ -195,7 +195,6 @@ export type ThemeDetail = {
   adoption_rate: number | null
   most_divided_vote: ThemeMostDividedVote | null
   party_positions: ThemePartyPosition[]
-  votes_total: number
   limit: number
   offset: number
   votes: ThemeVoteItem[]

@@ -283,7 +283,6 @@ class ThemeDetail(_Base):
         description="Vote with the smallest absolute pour/contre margin in the theme",
     )
     party_positions: list[ThemePartyPosition]
-    votes_total: int
     limit: int
     offset: int
     votes: list[ThemeVoteItem]
