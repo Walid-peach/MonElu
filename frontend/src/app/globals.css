@@ -37,6 +37,12 @@
   --dp-shadow-sm: rgba(0,0,0,0.05);
   --dp-avatar-shadow: rgba(27,43,80,0.12);
   --dp-cta-shadow: rgba(224,120,110,0.35);
+  --dp-header-bg: #FBFAF6;
+  /* MON-160: a fixed navy "selected/active" surface (pagination current
+     page, etc.) — intentionally NOT overridden in .dark below. It pairs
+     with hardcoded white text, so it must stay dark-enough-for-white-text
+     in both themes rather than inverting like --dp-text does. */
+  --dp-active-bg: #1B2B50;
 }
 
 /* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
@@ -64,6 +70,7 @@
   --dp-shadow-sm: rgba(0,0,0,0.35);
   --dp-avatar-shadow: rgba(0,0,0,0.45);
   --dp-cta-shadow: rgba(232,142,133,0.25);
+  --dp-header-bg: #182338;
 }
 
 @layer base {
