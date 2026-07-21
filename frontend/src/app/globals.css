@@ -50,6 +50,14 @@
      it must NOT be reused for a solid background under white text, since
      its dark-mode value is too light for that contrast to hold. */
   --dp-cta-bg: #E0786E;
+  /* MON-156: the vote list's own adopte/rejete result badge (distinct from
+     vote-position.ts's pour/contre/abstention badges, which stay a deferred
+     gap for MON-159). Text reuses --dp-green/--dp-red; only the pale
+     background tint needs its own token since it must stay legible in
+     dark mode, unlike vote-position.ts's badges which are out of scope
+     here. */
+  --dp-badge-pos-bg: #EAF5EF;
+  --dp-badge-neg-bg: #FBE9E7;
 }
 
 /* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
@@ -78,6 +86,8 @@
   --dp-avatar-shadow: rgba(0,0,0,0.45);
   --dp-cta-shadow: rgba(232,142,133,0.25);
   --dp-header-bg: #182338;
+  --dp-badge-pos-bg: rgba(52,194,131,0.16);
+  --dp-badge-neg-bg: rgba(255,107,96,0.16);
 }
 
 @layer base {
@@ -86,9 +96,9 @@
 }
 
 @layer utilities {
-  .badge-adopte { @apply bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium px-2 py-0.5 rounded; }
-  .badge-rejete { @apply bg-red-50 text-red-civic border border-red-200 text-xs font-medium px-2 py-0.5 rounded; }
-  .badge-party { @apply bg-navy-muted text-navy text-xs font-medium px-2 py-0.5 rounded; }
+  .badge-adopte { @apply bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium px-2 py-0.5 rounded dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800; }
+  .badge-rejete { @apply bg-red-50 text-red-civic border border-red-200 text-xs font-medium px-2 py-0.5 rounded dark:bg-red-950/40 dark:text-red-300 dark:border-red-800; }
+  .badge-party { @apply bg-navy-muted text-navy text-xs font-medium px-2 py-0.5 rounded dark:bg-white/10 dark:text-gray-100; }
 }
 
 /* MON-114: printable deputy dossier — hide app chrome and force a clean
@@ -127,5 +137,7 @@
     --dp-header-bg: #FBFAF6;
     --dp-active-bg: #1B2B50;
     --dp-cta-bg: #E0786E;
+    --dp-badge-pos-bg: #EAF5EF;
+    --dp-badge-neg-bg: #FBE9E7;
   }
 }
