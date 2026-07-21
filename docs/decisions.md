@@ -362,7 +362,7 @@ count is low.
 - `frontend/src/components/MonEluLogo.tsx` must be replaced with the hemicycle design
 - Do NOT use the PNG file (`docs/assets/MonElu_LOGO-SVG.png`) directly in JSX — it exists as reference only
 - PWA icons (`public/icon-192.png`, `public/icon-512.png`) were 1×1 placeholders until MON-115 — they are now generated from `src/app/icon.svg` via `frontend/scripts/generate_icons.js` (which also emits `src/app/apple-icon.png`); re-run that script if the icon changes
-- Dark mode infrastructure (next-themes, dark: Tailwind classes) is **deferred** — build only when there is real user demand
+- Dark mode infrastructure (next-themes, dark: Tailwind classes) is **deferred** — build only when there is real user demand — **superseded by ADR-027**
 
 **Trigger to revisit:** Dark mode request from users, or if the brand asset changes.
 
@@ -626,6 +626,26 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 
 ---
 
+## ADR-027 — Dark mode deferral reversed (MON-103)
+
+**Date:** 2026-07-21
+**Status:** Current
+**Supersedes:** the dark-mode deferral clause in ADR-018
+
+**Decision:** Build dark mode across the app. The cinematic landing page (`frontend/src/app/page.tsx` and its section components) is explicitly excluded — it keeps its fixed navy/red visual treatment with no dark variant. Every other page gets dark theme tokens, a light/dark toggle, and persistence (localStorage, falling back to `prefers-color-scheme`).
+
+**Reason:** ADR-018 deferred dark mode infrastructure "until there is real user demand," with the trigger to revisit being "dark mode request from users." MON-103 is a direct product decision to build it now — the trigger has been pulled. Since ADR-018's deferral was a single clause inside a decision primarily about the logo rebuild (which remains valid and already ships a `variant="dark"` prop on `MonEluLogo` in anticipation of this), this is recorded as its own ADR rather than rewriting ADR-018.
+
+**Impact:**
+- `MON-103` is decomposed into solve-mon-sized sub-issues (theme infra + toggle, per-surface page/component passes, chart/badge contrast audit) — see the epic's sub-issues in Linear.
+- Do NOT add a dark variant to the landing page (`frontend/src/app/page.tsx`) or its section components — out of scope by design, not an oversight.
+- `MonEluLogo`'s existing `variant="dark"` prop (ADR-018) is the intended way to render the logo on dark surfaces — reuse it, don't fork the logo again.
+- Tailwind `darkMode` strategy (class-based, driven by the toggle) and the toggle's persistence mechanism are decided in the first sub-issue (theme infra), not re-litigated per page.
+
+**Trigger to revisit:** N/A — this is the terminal state for the deferral question. Future revisits would only concern the toggle's UX or token values, not whether dark mode gets built.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -637,4 +657,5 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
 8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never persist answers or trust client-computed percentages
 9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
-10. When in doubt: check what's actually deployed before writing new code
+10. Dark mode is approved and being built (ADR-027, MON-103) — landing page stays light-only by design
+11. When in doubt: check what's actually deployed before writing new code
