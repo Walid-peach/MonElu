@@ -206,7 +206,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
               onClick={() => setDebouncedSearch(search)}
               className="w-full sm:w-auto justify-center"
               style={{
-                display: 'flex', alignItems: 'center', background: ACCENT, color: '#fff',
+                display: 'flex', alignItems: 'center', background: 'var(--dp-cta-bg)', color: '#fff',
                 height: 54, padding: '0 30px', borderRadius: 10, fontWeight: 600,
                 fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap',
                 boxShadow: '0 2px 8px var(--dp-cta-shadow)', border: 'none',

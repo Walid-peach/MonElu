@@ -39,10 +39,17 @@
   --dp-cta-shadow: rgba(224,120,110,0.35);
   --dp-header-bg: #FBFAF6;
   /* MON-160: a fixed navy "selected/active" surface (pagination current
-     page, etc.) — intentionally NOT overridden in .dark below. It pairs
+     page, etc.) - intentionally NOT overridden in .dark below. It pairs
      with hardcoded white text, so it must stay dark-enough-for-white-text
      in both themes rather than inverting like --dp-text does. */
   --dp-active-bg: #1B2B50;
+  /* MON-163: same reasoning as --dp-active-bg, for solid accent-colored CTA
+     buttons paired with hardcoded white text (e.g. "Poser une question",
+     "Rechercher", the print button). --dp-accent itself is allowed to
+     invert/lighten for decorative or text use (party-color dots, etc.) -
+     it must NOT be reused for a solid background under white text, since
+     its dark-mode value is too light for that contrast to hold. */
+  --dp-cta-bg: #E0786E;
 }
 
 /* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
@@ -85,9 +92,40 @@
 }
 
 /* MON-114: printable deputy dossier — hide app chrome and force a clean
-   single page when the dossier route is sent to the browser's print dialog. */
+   single page when the dossier route is sent to the browser's print dialog.
+   MON-163: printed output must always be light, even if the page was
+   viewed in dark mode - reset every dp-/color- token back to its
+   light value here. This rule targets :root (same specificity as .dark,
+   which also targets :root/<html>) and is placed after .dark in the file,
+   so it wins the cascade tie whenever printing, regardless of which class
+   is present on <html>. */
 @media print {
   [data-print-hide] { display: none !important; }
   body { background: #fff !important; }
   @page { size: A4; margin: 14mm; }
+
+  :root {
+    --color-bg: theme('colors.gray.off');
+    --color-fg: theme('colors.navy.DEFAULT');
+    --dp-page-bg: #F7F4ED;
+    --dp-card-bg: #FFFFFF;
+    --dp-border: #E4E6EA;
+    --dp-border-subtle: #ECE7DC;
+    --dp-text: theme('colors.navy.DEFAULT');
+    --dp-text-secondary: #6B7280;
+    --dp-text-muted: #9CA3AF;
+    --dp-green: #1F8A5B;
+    --dp-red: #C9302A;
+    --dp-accent: #E0786E;
+    --dp-abstention: #D1D5DB;
+    --dp-track-bg: #EEF0F2;
+    --dp-underline: #C4C9D2;
+    --dp-avg-marker: rgba(0,0,0,0.25);
+    --dp-shadow-sm: rgba(0,0,0,0.05);
+    --dp-avatar-shadow: rgba(27,43,80,0.12);
+    --dp-cta-shadow: rgba(224,120,110,0.35);
+    --dp-header-bg: #FBFAF6;
+    --dp-active-bg: #1B2B50;
+    --dp-cta-bg: #E0786E;
+  }
 }
