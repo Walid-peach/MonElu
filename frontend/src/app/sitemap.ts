@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { api, type Deputy, type Vote } from '@/lib/api'
 import { departmentCode } from '@/lib/departments'
+import { THEME_ENTRIES } from '@/lib/themes'
 
 const SITE_URL = 'https://mon-elu.vercel.app'
 const PAGE_SIZE = 200
@@ -81,6 +82,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/deputes/tableau`, changeFrequency: 'daily', priority: 0.6 },
     { url: `${SITE_URL}/donnees`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/votes`, changeFrequency: 'daily', priority: 0.9 },
+    ...THEME_ENTRIES.map(({ slug }) => ({
+      url: `${SITE_URL}/themes/${slug}`,
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    })),
     { url: `${SITE_URL}/chat`, changeFrequency: 'monthly', priority: 0.5 },
     // /quiz only — /quiz/s/* share snapshots stay out of the sitemap, like
     // the /chat/s/* and /verifier/v/* snapshot URLs.

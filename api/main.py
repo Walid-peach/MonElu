@@ -184,12 +184,13 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
-from api.routers import departments, deputies, feedback, keys, quiz, votes  # noqa: E402
+from api.routers import departments, deputies, feedback, keys, quiz, themes, votes  # noqa: E402
 from api.routers.search import router as search_router  # noqa: E402
 from api.routers.verify import router as verify_router  # noqa: E402
 
 app.include_router(deputies.router, prefix="/deputies", tags=["Deputies"])
 app.include_router(departments.router, prefix="/departments", tags=["Departments"])
+app.include_router(themes.router, prefix="/themes", tags=["Themes"])
 app.include_router(quiz.router, prefix="/quiz", tags=["Quiz"])
 app.include_router(votes.router, prefix="/votes", tags=["Votes"])
 app.include_router(search_router, prefix="/search", tags=["Search"])

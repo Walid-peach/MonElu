@@ -240,6 +240,55 @@ class DepartmentDetail(_Base):
 
 
 # ---------------------------------------------------------------------------
+# Themes (MON-106)
+# ---------------------------------------------------------------------------
+
+
+class ThemeVoteItem(_Base):
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: str
+    result: Optional[str] = None
+    summary_plain: Optional[str] = None
+
+
+class ThemePartyPosition(_Base):
+    party_short: Optional[str] = None
+    pour: int
+    contre: int
+    abstention: int
+    expressed: int = Field(description="pour + contre + abstention")
+    pour_rate: float = Field(description="pour / expressed, 0-1")
+
+
+class ThemeMostDividedVote(_Base):
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: str
+    votes_for: int
+    votes_against: int
+
+
+class ThemeDetail(_Base):
+    slug: str
+    name: str
+    vote_count: int
+    adoption_rate: Optional[float] = Field(
+        default=None,
+        description="Share of votes with result='adopté' among votes with a "
+        "known result, 0-1; None when no vote in the theme has a result yet",
+    )
+    most_divided_vote: Optional[ThemeMostDividedVote] = Field(
+        default=None,
+        description="Vote with the smallest absolute pour/contre margin in the theme",
+    )
+    party_positions: list[ThemePartyPosition]
+    limit: int
+    offset: int
+    votes: list[ThemeVoteItem]
+
+
+# ---------------------------------------------------------------------------
 # Votes (scrutins)
 # ---------------------------------------------------------------------------
 
