@@ -58,6 +58,16 @@
      here. */
   --dp-badge-pos-bg: #EAF5EF;
   --dp-badge-neg-bg: #FBE9E7;
+  /* MON-166: two more badge states the vote detail page needs beyond
+     pos/neg - a neutral/amber "Partage" state (group split evenly) and an
+     info/blue theme tag. Same reasoning as --dp-badge-pos-bg/-neg-bg. */
+  --dp-badge-neutral-bg: #FEF3C7;
+  --dp-badge-neutral-text: #B45309;
+  --dp-badge-info-bg: #E8EFFE;
+  --dp-badge-info-text: #2A5DB0;
+  /* MON-166: translucent sticky-header backdrop (backdrop-filter: blur).
+     Needs its own token since it is not opaque like --dp-card-bg. */
+  --dp-sticky-bg: rgba(255,255,255,0.94);
 }
 
 /* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
@@ -88,6 +98,11 @@
   --dp-header-bg: #182338;
   --dp-badge-pos-bg: rgba(52,194,131,0.16);
   --dp-badge-neg-bg: rgba(255,107,96,0.16);
+  --dp-badge-neutral-bg: rgba(217,164,6,0.18);
+  --dp-badge-neutral-text: #E0B84D;
+  --dp-badge-info-bg: rgba(74,144,226,0.18);
+  --dp-badge-info-text: #7EB0F0;
+  --dp-sticky-bg: rgba(18,29,48,0.92);
 }
 
 @layer base {
@@ -139,5 +154,10 @@
     --dp-cta-bg: #E0786E;
     --dp-badge-pos-bg: #EAF5EF;
     --dp-badge-neg-bg: #FBE9E7;
+    --dp-badge-neutral-bg: #FEF3C7;
+    --dp-badge-neutral-text: #B45309;
+    --dp-badge-info-bg: #E8EFFE;
+    --dp-badge-info-text: #2A5DB0;
+    --dp-sticky-bg: rgba(255,255,255,0.94);
   }
 }
