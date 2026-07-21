@@ -3,7 +3,7 @@ import type { DeputyVoteItem } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { positionStyle } from '@/lib/vote-position'
 
-const NAVY = '#1B2B50'
+const NAVY = 'var(--dp-text)'
 
 type Props = {
   vote: DeputyVoteItem
@@ -25,7 +25,7 @@ export function VoteTimelineItem({ vote: v, dotBorderColor }: Props) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         {v.voted_at && (
-          <span className="font-mono" style={{ fontSize: 12.5, color: '#9CA3AF', letterSpacing: '0.02em' }}>
+          <span className="font-mono" style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', letterSpacing: '0.02em' }}>
             {formatDate(v.voted_at)}
           </span>
         )}
@@ -37,7 +37,7 @@ export function VoteTimelineItem({ vote: v, dotBorderColor }: Props) {
           {pos.label}
         </span>
         {v.result && (
-          <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+          <span style={{ fontSize: 12, color: 'var(--dp-text-muted)' }}>
             Scrutin : {v.result}
           </span>
         )}
@@ -50,7 +50,7 @@ export function VoteTimelineItem({ vote: v, dotBorderColor }: Props) {
       </Link>
 
       {v.summary_plain && (
-        <div style={{ fontSize: 14.5, color: '#4B5563', lineHeight: 1.55, marginTop: 5, maxWidth: 680, fontStyle: 'italic' }}>
+        <div style={{ fontSize: 14.5, color: 'var(--dp-text-secondary)', lineHeight: 1.55, marginTop: 5, maxWidth: 680, fontStyle: 'italic' }}>
           {v.vote_title}
         </div>
       )}

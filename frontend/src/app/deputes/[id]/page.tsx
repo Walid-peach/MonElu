@@ -18,11 +18,11 @@ import { SITE_URL, buildPersonJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
 export const dynamicParams = true
 export const revalidate = 86400
 
-const NAVY   = '#1B2B50'
-const CREAM  = '#F7F4ED'
-const LINE   = '#E4E6EA'
-const ACCENT = '#E0786E'
-const RED    = '#C9302A'
+const NAVY   = 'var(--dp-text)'
+const CREAM  = 'var(--dp-page-bg)'
+const LINE   = 'var(--dp-border)'
+const ACCENT = 'var(--dp-accent)'
+const RED    = 'var(--dp-red)'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -106,13 +106,13 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
       {/* Hero band */}
       <div className="px-5 sm:px-14 pt-6 sm:pt-[38px] pb-8 sm:pb-11" style={{
-        background: `linear-gradient(180deg,#ffffff 0%,${CREAM} 100%)`,
-        borderBottom: `1px solid #ECE7DC`,
+        background: `linear-gradient(180deg,var(--dp-card-bg) 0%,${CREAM} 100%)`,
+        borderBottom: `1px solid var(--dp-border-subtle)`,
       }}>
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
 
           {/* Breadcrumb */}
-          <div style={{ fontSize: 13.5, color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 26 }}>
+          <div style={{ fontSize: 13.5, color: 'var(--dp-text-muted)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 26 }}>
             <Link
               href="/deputes"
               style={{ color: RED, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none', fontWeight: 500 }}
@@ -123,7 +123,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               Retour aux députés
             </Link>
             <span>/</span>
-            <span style={{ color: '#6B7280' }}>{deputy.full_name}</span>
+            <span style={{ color: 'var(--dp-text-secondary)' }}>{deputy.full_name}</span>
           </div>
 
           {/* Photo + identity */}
@@ -131,7 +131,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
             {/* Left: photo */}
             <div className="sm:shrink-0" style={{ width: 210 }}>
-              <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid #ECE7DC`, boxShadow: '0 6px 20px rgba(27,43,80,0.12)' }}>
+              <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid var(--dp-border-subtle)`, boxShadow: '0 6px 20px var(--dp-avatar-shadow)' }}>
                 <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="2xl" priority />
               </div>
             </div>
@@ -148,12 +148,12 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 {deputy.full_name}
               </h1>
               {deptLabel && (
-                <div className="justify-center sm:justify-start" style={{ fontSize: 20, color: '#4B5563', marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <div className="justify-center sm:justify-start" style={{ fontSize: 20, color: 'var(--dp-text-secondary)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dp-text-muted)" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                     <path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/>
                   </svg>
                   {deptCode ? (
-                    <Link href={`/departements/${deptCode}`} style={{ color: '#4B5563', textDecoration: 'underline', textDecorationColor: '#C4C9D2', textUnderlineOffset: 3 }}>
+                    <Link href={`/departements/${deptCode}`} style={{ color: 'var(--dp-text-secondary)', textDecoration: 'underline', textDecorationColor: 'var(--dp-underline)', textUnderlineOffset: 3 }}>
                       {deptLabel}
                     </Link>
                   ) : (
@@ -181,7 +181,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                     display: 'inline-flex', alignItems: 'center', gap: 8,
                     background: ACCENT, color: '#fff', padding: '12px 24px',
                     borderRadius: 9, fontWeight: 600, fontSize: 15,
-                    boxShadow: '0 2px 8px rgba(224,120,110,0.35)', textDecoration: 'none',
+                    boxShadow: '0 2px 8px var(--dp-cta-shadow)', textDecoration: 'none',
                   }}
                 >
                   Poser une question sur ce député
@@ -193,7 +193,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   href="#votes"
                   style={{
                     display: 'inline-flex', alignItems: 'center',
-                    background: '#fff', border: `1px solid ${LINE}`, color: NAVY,
+                    background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, color: NAVY,
                     padding: '12px 22px', borderRadius: 9, fontWeight: 600,
                     fontSize: 15, textDecoration: 'none',
                   }}
@@ -211,7 +211,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   href={`/deputes/comparer?a=${id}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: '#fff', border: `1px solid ${LINE}`, color: NAVY,
+                    background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, color: NAVY,
                     padding: '12px 22px', borderRadius: 9, fontWeight: 600,
                     fontSize: 15, textDecoration: 'none',
                   }}
@@ -224,7 +224,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   title="Télécharger l'historique de vote complet (CSV)"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: '#fff', border: `1px solid ${LINE}`, color: NAVY,
+                    background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, color: NAVY,
                     padding: '12px 22px', borderRadius: 9, fontWeight: 600,
                     fontSize: 15, textDecoration: 'none',
                   }}
@@ -238,7 +238,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   title="Ouvrir le dossier imprimable (photo, bilan, votes marquants)"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: '#fff', border: `1px solid ${LINE}`, color: NAVY,
+                    background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, color: NAVY,
                     padding: '12px 22px', borderRadius: 9, fontWeight: 600,
                     fontSize: 15, textDecoration: 'none',
                   }}
@@ -260,11 +260,11 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
           {stats.length > 0 && (
             <div
               className="grid grid-cols-3 sm:grid-cols-6 mt-8 sm:mt-[38px] border-t"
-              style={{ borderColor: '#ECE7DC' }}
+              style={{ borderColor: 'var(--dp-border-subtle)' }}
             >
               {stats.map((s, i) => {
                 const classes = [
-                  'px-3 sm:px-3.5 pt-5 sm:pt-[22px] pb-4 sm:pb-[18px] border-[#ECE7DC]',
+                  'px-3 sm:px-3.5 pt-5 sm:pt-[22px] pb-4 sm:pb-[18px] border-[color:var(--dp-border-subtle)]',
                   i % 3 === 2 ? '' : 'border-r',
                   i >= stats.length - 3 ? '' : 'border-b',
                   i === stats.length - 1 ? 'sm:border-r-0' : 'sm:border-r',
@@ -275,7 +275,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                     <div className="font-newsreader text-[26px] sm:text-[34px]" style={{ fontWeight: 600, color: NAVY, letterSpacing: '-0.01em', lineHeight: 1 }}>
                       {s.value}
                     </div>
-                    <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--dp-text-secondary)', marginTop: 4, lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: 6 }}>
                       {s.label}
                       {s.tooltip && <InfoTooltip text={s.tooltip} href="/methodologie" />}
                     </div>
@@ -300,24 +300,24 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
                 Répartition des votes
               </h2>
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '26px 30px' }}>
+              <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)', padding: '26px 30px' }}>
 
                 {/* Stacked bar */}
                 <div style={{ height: 12, borderRadius: 999, overflow: 'hidden', display: 'flex', marginBottom: 14 }}>
-                  <div style={{ width: `${pourPct}%`,   background: '#1F8A5B', height: '100%', transition: 'width 0.4s' }} />
+                  <div style={{ width: `${pourPct}%`,   background: 'var(--dp-green)', height: '100%', transition: 'width 0.4s' }} />
                   <div style={{ width: `${contrePct}%`, background: RED,       height: '100%', transition: 'width 0.4s' }} />
-                  <div style={{ width: `${abstPct}%`,   background: '#D1D5DB', height: '100%', transition: 'width 0.4s' }} />
-                  <div style={{ flex: 1,                background: '#EEF0F2', height: '100%' }} />
+                  <div style={{ width: `${abstPct}%`,   background: 'var(--dp-abstention)', height: '100%', transition: 'width 0.4s' }} />
+                  <div style={{ flex: 1,                background: 'var(--dp-track-bg)', height: '100%' }} />
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: 14, color: '#374151' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: 14, color: 'var(--dp-text-secondary)' }}>
                   {[
-                    { color: '#1F8A5B', label: 'Pour',       pct: pourPct   },
+                    { color: 'var(--dp-green)', label: 'Pour',       pct: pourPct   },
                     { color: RED,       label: 'Contre',     pct: contrePct },
-                    { color: '#9CA3AF', label: 'Abstention', pct: abstPct   },
+                    { color: 'var(--dp-text-muted)', label: 'Abstention', pct: abstPct   },
                   ].map(({ color, label, pct }) => (
                     <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 10, height: 10, borderRadius: 999, background: color, flexShrink: 0 }} />
-                      {label} <span className="font-mono" style={{ color: '#6B7280' }}>{pct}%</span>
+                      {label} <span className="font-mono" style={{ color: 'var(--dp-text-secondary)' }}>{pct}%</span>
                     </span>
                   ))}
                 </div>
@@ -326,7 +326,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 {solennelPct !== null && (
                   <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                      <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
                         Participation aux scrutins solennels
                         <InfoTooltip
                           text="Les scrutins solennels sont des votes programmés sur l'ensemble d'un texte, où la présence de tous les groupes est attendue — contrairement aux scrutins d'amendements, votés en petit comité. C'est la mesure la plus proche de « présence aux votes qui comptent »."
@@ -335,28 +335,28 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {avgSolennelPct !== null && (
-                          <span style={{ fontSize: 13, color: solennelPct >= avgSolennelPct ? '#1F8A5B' : RED }}>
+                          <span style={{ fontSize: 13, color: solennelPct >= avgSolennelPct ? 'var(--dp-green)' : RED }}>
                             {solennelPct >= avgSolennelPct ? '↑' : '↓'} moy. {avgSolennelPct}%
                           </span>
                         )}
                         <span className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: NAVY }}>
                           {solennelPct}%
-                          <span style={{ fontWeight: 400, fontSize: 13, color: '#9CA3AF', marginLeft: 6 }}>
+                          <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--dp-text-muted)', marginLeft: 6 }}>
                             ({scorecard?.solennels_cast}/{scorecard?.eligible_solennels})
                           </span>
                         </span>
                       </div>
                     </div>
-                    <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ position: 'relative', height: 9, background: 'var(--dp-track-bg)', borderRadius: 999, overflow: 'hidden' }}>
                       <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${solennelPct}%`, transition: 'width 0.4s' }} />
                     </div>
                     {avgSolennelPct !== null && (
                       <div style={{ position: 'relative', height: 0 }}>
-                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'rgba(0,0,0,0.25)', left: `${avgSolennelPct}%` }} aria-hidden="true" />
+                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'var(--dp-avg-marker)', left: `${avgSolennelPct}%` }} aria-hidden="true" />
                       </div>
                     )}
                     {avgSolennelPct !== null && (
-                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                      <p style={{ fontSize: 11, color: 'var(--dp-text-muted)', marginTop: 8 }}>
                         Trait vertical = moyenne nationale ({avgSolennelPct}%)
                       </p>
                     )}
@@ -367,7 +367,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 {votingDaysPct !== null && (
                   <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                      <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
                         Présence par jour de vote
                         <InfoTooltip
                           text="Une journée de séance peut contenir plusieurs dizaines de scrutins sur un même texte. Ce taux compte les journées où le·la député·e a voté au moins une fois, plutôt que chaque scrutin séparément — un meilleur indicateur de présence physique."
@@ -376,28 +376,28 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {avgVotingDaysPct !== null && (
-                          <span style={{ fontSize: 13, color: votingDaysPct >= avgVotingDaysPct ? '#1F8A5B' : RED }}>
+                          <span style={{ fontSize: 13, color: votingDaysPct >= avgVotingDaysPct ? 'var(--dp-green)' : RED }}>
                             {votingDaysPct >= avgVotingDaysPct ? '↑' : '↓'} moy. {avgVotingDaysPct}%
                           </span>
                         )}
                         <span className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: NAVY }}>
                           {votingDaysPct}%
-                          <span style={{ fontWeight: 400, fontSize: 13, color: '#9CA3AF', marginLeft: 6 }}>
+                          <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--dp-text-muted)', marginLeft: 6 }}>
                             ({scorecard?.voting_days_present}/{scorecard?.eligible_voting_days} jours)
                           </span>
                         </span>
                       </div>
                     </div>
-                    <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ position: 'relative', height: 9, background: 'var(--dp-track-bg)', borderRadius: 999, overflow: 'hidden' }}>
                       <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${votingDaysPct}%`, transition: 'width 0.4s' }} />
                     </div>
                     {avgVotingDaysPct !== null && (
                       <div style={{ position: 'relative', height: 0 }}>
-                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'rgba(0,0,0,0.25)', left: `${avgVotingDaysPct}%` }} aria-hidden="true" />
+                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'var(--dp-avg-marker)', left: `${avgVotingDaysPct}%` }} aria-hidden="true" />
                       </div>
                     )}
                     {avgVotingDaysPct !== null && (
-                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                      <p style={{ fontSize: 11, color: 'var(--dp-text-muted)', marginTop: 8 }}>
                         Trait vertical = moyenne nationale ({avgVotingDaysPct}%)
                       </p>
                     )}
@@ -408,7 +408,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 {presencePct !== null && (
                   <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                      <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
                         Taux de présence aux votes
                         <InfoTooltip
                           text="Un·e député·e est compté·e présent·e dès qu'une position est enregistrée, y compris non-votant (présent en séance sans prise de position). Le dénominateur ne compte que les scrutins tenus pendant son mandat."
@@ -417,23 +417,23 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {avgPresencePct !== null && (
-                          <span style={{ fontSize: 13, color: presencePct >= avgPresencePct ? '#1F8A5B' : RED }}>
+                          <span style={{ fontSize: 13, color: presencePct >= avgPresencePct ? 'var(--dp-green)' : RED }}>
                             {presencePct >= avgPresencePct ? '↑' : '↓'} moy. {avgPresencePct}%
                           </span>
                         )}
                         <span className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: NAVY }}>{presencePct}%</span>
                       </div>
                     </div>
-                    <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ position: 'relative', height: 9, background: 'var(--dp-track-bg)', borderRadius: 999, overflow: 'hidden' }}>
                       <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${presencePct}%`, transition: 'width 0.4s' }} />
                     </div>
                     {avgPresencePct !== null && (
                       <div style={{ position: 'relative', height: 0 }}>
-                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'rgba(0,0,0,0.25)', left: `${avgPresencePct}%` }} aria-hidden="true" />
+                        <div style={{ position: 'absolute', top: -9, height: 9, width: 2, background: 'var(--dp-avg-marker)', left: `${avgPresencePct}%` }} aria-hidden="true" />
                       </div>
                     )}
                     {avgPresencePct !== null && (
-                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                      <p style={{ fontSize: 11, color: 'var(--dp-text-muted)', marginTop: 8 }}>
                         Trait vertical = moyenne nationale ({avgPresencePct}%)
                       </p>
                     )}
@@ -452,18 +452,18 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: NAVY, margin: '12px 0 22px', letterSpacing: '-0.01em' }}>
                 Vote-t-il·elle avec son groupe politique ?
               </h2>
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '26px 30px' }}>
+              <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)', padding: '26px 30px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
                     Vote avec son groupe
                     <InfoTooltip text="Alignement calculé en comparant, vote par vote, la position du député à la position majoritaire de son groupe parlementaire actuel. Les votes non-votants sont exclus. Limite : l'historique est comparé au groupe actuel du député, même s'il en a changé en cours de mandat." />
                   </span>
                   <span className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: NAVY }}>{alignmentPct}%</span>
                 </div>
-                <div style={{ position: 'relative', height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+                <div style={{ position: 'relative', height: 9, background: 'var(--dp-track-bg)', borderRadius: 999, overflow: 'hidden' }}>
                   <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${alignmentPct}%`, transition: 'width 0.4s' }} />
                 </div>
-                <p style={{ fontSize: 13, color: '#6B7280', marginTop: 16 }}>
+                <p style={{ fontSize: 13, color: 'var(--dp-text-secondary)', marginTop: 16 }}>
                   <span style={{ fontWeight: 700, color: NAVY }}>{alignment.dissident_votes}</span> vote{alignment.dissident_votes !== 1 ? 's' : ''} dissident{alignment.dissident_votes !== 1 ? 's' : ''} sur {alignment.total_votes} vote{alignment.total_votes !== 1 ? 's' : ''} comptabilisé{alignment.total_votes !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -479,13 +479,13 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                         key={v.vote_id}
                         href={`/votes/${v.vote_id}`}
                         style={{
-                          display: 'block', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10,
+                          display: 'block', background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 10,
                           padding: '14px 18px', textDecoration: 'none',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
                           {v.voted_at && (
-                            <span className="font-mono" style={{ fontSize: 12, color: '#9CA3AF' }}>
+                            <span className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-muted)' }}>
                               {formatDate(v.voted_at)}
                             </span>
                           )}
@@ -496,7 +496,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                           }}>
                             A voté {positionStyle(v.position).label}
                           </span>
-                          <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+                          <span style={{ fontSize: 12, color: 'var(--dp-text-muted)' }}>
                             groupe : {positionStyle(v.majority_position).label}
                           </span>
                         </div>
@@ -522,7 +522,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               </h2>
               <div style={{ position: 'relative', paddingLeft: 32 }}>
                 {/* Timeline line */}
-                <div style={{ position: 'absolute', left: 6, top: 8, bottom: 8, width: 2, background: '#E7E2D6', borderRadius: 2 }} />
+                <div style={{ position: 'absolute', left: 6, top: 8, bottom: 8, width: 2, background: 'var(--dp-border-subtle)', borderRadius: 2 }} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
                   {recentVotes.items.map(v => (
@@ -532,7 +532,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
               </div>
 
               {recentVotes.total > 10 && (
-                <p style={{ fontSize: 13, color: '#9CA3AF', marginTop: 28, paddingTop: 20, borderTop: `1px solid ${LINE}` }}>
+                <p style={{ fontSize: 13, color: 'var(--dp-text-muted)', marginTop: 28, paddingTop: 20, borderTop: `1px solid ${LINE}` }}>
                   {recentVotes.total.toLocaleString('fr-FR')} votes au total sur ce mandat
                 </p>
               )}

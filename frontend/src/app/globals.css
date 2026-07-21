@@ -15,6 +15,28 @@
 :root {
   --color-bg: theme('colors.gray.off');
   --color-fg: theme('colors.navy.DEFAULT');
+
+  /* MON-155: shared surface tokens for pages built with inline hex styles
+     (deputy profile, timeline items, etc.) rather than Tailwind color
+     classes. Reused by the other MON-103 sub-issues as they convert their
+     own pages, so the palette stays consistent app-wide. */
+  --dp-page-bg: #F7F4ED;
+  --dp-card-bg: #FFFFFF;
+  --dp-border: #E4E6EA;
+  --dp-border-subtle: #ECE7DC;
+  --dp-text: theme('colors.navy.DEFAULT');
+  --dp-text-secondary: #6B7280;
+  --dp-text-muted: #9CA3AF;
+  --dp-green: #1F8A5B;
+  --dp-red: #C9302A;
+  --dp-accent: #E0786E;
+  --dp-abstention: #D1D5DB;
+  --dp-track-bg: #EEF0F2;
+  --dp-underline: #C4C9D2;
+  --dp-avg-marker: rgba(0,0,0,0.25);
+  --dp-shadow-sm: rgba(0,0,0,0.05);
+  --dp-avatar-shadow: rgba(27,43,80,0.12);
+  --dp-cta-shadow: rgba(224,120,110,0.35);
 }
 
 /* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
@@ -24,6 +46,24 @@
 .dark {
   --color-bg: #0B1424;
   --color-fg: #F1F0EC;
+
+  --dp-page-bg: #0B1424;
+  --dp-card-bg: #121D30;
+  --dp-border: #24304A;
+  --dp-border-subtle: #1B2740;
+  --dp-text: #F1F0EC;
+  --dp-text-secondary: #B8C0CE;
+  --dp-text-muted: #7C879C;
+  --dp-green: #34C283;
+  --dp-red: #FF6B60;
+  --dp-accent: #E88E85;
+  --dp-abstention: #48546A;
+  --dp-track-bg: #1B2740;
+  --dp-underline: #3A4863;
+  --dp-avg-marker: rgba(255,255,255,0.35);
+  --dp-shadow-sm: rgba(0,0,0,0.35);
+  --dp-avatar-shadow: rgba(0,0,0,0.45);
+  --dp-cta-shadow: rgba(232,142,133,0.25);
 }
 
 @layer base {
