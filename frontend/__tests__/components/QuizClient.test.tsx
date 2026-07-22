@@ -151,7 +151,7 @@ describe('QuizClient', () => {
     expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
     // The previously selected answer stays highlighted (selected state kept).
     expect(screen.getByRole('button', { name: 'Contre' })).toHaveStyle({
-      border: '2px solid #C9302A',
+      border: '2px solid var(--dp-red)',
     })
   })
 
@@ -212,7 +212,7 @@ describe('QuizClient', () => {
     // Lands on the last question with the previous selection still highlighted.
     expect(screen.getByText('Question 3 / 3')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pour' })).toHaveStyle({
-      border: '2px solid #1F8A5B',
+      border: '2px solid var(--dp-green)',
     })
   })
 

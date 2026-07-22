@@ -88,7 +88,12 @@
   --dp-green: #34C283;
   --dp-red: #FF6B60;
   --dp-accent: #E88E85;
-  --dp-abstention: #48546A;
+  /* MON-159: brightened from an earlier #48546A. That value scored 2.21:1
+     against --dp-card-bg, short of the WCAG 1.4.11 3:1 minimum for a
+     non-text UI element (the abstention segment of stacked vote bars
+     conveys its meaning through fill color alone). This value clears 3:1
+     against both --dp-card-bg (3.20:1) and --dp-page-bg (3.49:1). */
+  --dp-abstention: #5E6C88;
   --dp-track-bg: #1B2740;
   --dp-underline: #3A4863;
   --dp-avg-marker: rgba(255,255,255,0.35);
