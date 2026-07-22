@@ -8,12 +8,12 @@ import type { ResolvedDepartment } from '@/lib/postal'
 import { POS } from '@/lib/vote-position'
 import { card, QuizResultSections } from './QuizResultSections'
 
-const NAVY = '#1B2B50'
-const CREAM = '#F7F4ED'
-const LINE = '#E4E6EA'
-const ACCENT = '#E0786E'
-const RED = '#C9302A'
-const GRAY = '#6B7280'
+const NAVY = 'var(--dp-text)'
+const CREAM = 'var(--dp-page-bg)'
+const LINE = 'var(--dp-border)'
+const ACCENT = 'var(--dp-cta-bg)'
+const RED = 'var(--dp-red)'
+const GRAY = 'var(--dp-text-secondary)'
 
 // Mirrors MIN_ANSWERS in api/routers/quiz.py — the backend rejects fewer.
 const MIN_ANSWERS = 3
@@ -92,7 +92,7 @@ function ShareResultButton({
         background: ACCENT, color: '#fff', padding: '11px 22px', borderRadius: 9,
         fontWeight: 600, fontSize: 14.5, border: 'none',
         cursor: state === 'creating' ? 'wait' : 'pointer',
-        boxShadow: '0 2px 8px rgba(224,120,110,0.35)',
+        boxShadow: '0 2px 8px var(--dp-cta-shadow)',
       }}
     >
       {state === 'creating'
@@ -217,7 +217,7 @@ export function QuizClient() {
           >
             Quel député vote comme vous ?
           </h1>
-          <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: '#4B5563' }}>
+          <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: 'var(--dp-text-secondary)' }}>
             Une dizaine de vrais scrutins de l’Assemblée nationale, posés en français courant.
             Répondez pour, contre ou abstention — à la fin, on compare vos réponses aux votes
             réels des 577 députés.
@@ -247,7 +247,7 @@ export function QuizClient() {
                 border: 'none',
                 cursor: questions ? 'pointer' : 'wait',
                 opacity: questions ? 1 : 0.6,
-                boxShadow: '0 2px 8px rgba(224,120,110,0.35)',
+                boxShadow: '0 2px 8px var(--dp-cta-shadow)',
               }}
             >
               {questions ? 'Commencer le quiz' : 'Chargement…'}
@@ -275,7 +275,7 @@ export function QuizClient() {
           aria-valuenow={index + 1}
           aria-valuemin={1}
           aria-valuemax={questions.length}
-          style={{ height: 6, background: '#E7E2D6', borderRadius: 999, overflow: 'hidden', marginBottom: 30 }}
+          style={{ height: 6, background: 'var(--dp-border-subtle)', borderRadius: 999, overflow: 'hidden', marginBottom: 30 }}
         >
           <div
             style={{
@@ -354,7 +354,7 @@ export function QuizClient() {
             >
               Encore quelques réponses
             </h2>
-            <p style={{ margin: '16px 0 28px', fontSize: 15.5, lineHeight: 1.6, color: '#4B5563' }}>
+            <p style={{ margin: '16px 0 28px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
               Il faut au moins {MIN_ANSWERS} réponses exprimées pour un résultat significatif —
               vous en avez donné {answeredCount}.
             </p>
@@ -379,7 +379,7 @@ export function QuizClient() {
             >
               Et votre député à vous ?
             </h2>
-            <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: '#4B5563' }}>
+            <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
               Donnez votre code postal pour comparer aussi vos réponses aux votes des députés de
               votre département. Facultatif — il n’est ni envoyé à nos serveurs tel quel, ni conservé.
             </p>
@@ -400,7 +400,7 @@ export function QuizClient() {
                 aria-label="Code postal"
                 style={{
                   flex: '1 1 200px', padding: '12px 16px', borderRadius: 9,
-                  border: `1px solid ${LINE}`, fontSize: 15.5, color: NAVY, background: '#fff',
+                  border: `1px solid ${LINE}`, fontSize: 15.5, color: NAVY, background: 'var(--dp-card-bg)',
                 }}
               />
               <button
@@ -459,7 +459,7 @@ export function QuizClient() {
         <QuizResultSections result={result} resolvedNom={resolved?.nom} />
 
         <section style={{ marginTop: 48, ...card, textAlign: 'center' }}>
-          <p style={{ margin: '0 0 16px', fontSize: 15, lineHeight: 1.6, color: '#4B5563' }}>
+          <p style={{ margin: '0 0 16px', fontSize: 15, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
             Partagez votre résultat, ou suivez un de ces députés vote après vote.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -469,7 +469,7 @@ export function QuizClient() {
             <Link
               href="/mon-depute"
               style={{
-                fontSize: 14.5, color: NAVY, background: '#fff', border: `1px solid ${LINE}`,
+                fontSize: 14.5, color: NAVY, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`,
                 padding: '11px 22px', borderRadius: 9, fontWeight: 600, textDecoration: 'none',
               }}
             >
@@ -478,7 +478,7 @@ export function QuizClient() {
             <button
               onClick={restart}
               style={{
-                fontSize: 14.5, color: NAVY, background: '#fff', border: `1px solid ${LINE}`,
+                fontSize: 14.5, color: NAVY, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`,
                 padding: '11px 22px', borderRadius: 9, fontWeight: 600, cursor: 'pointer',
               }}
             >
