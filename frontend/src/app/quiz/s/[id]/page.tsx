@@ -10,8 +10,8 @@ import { QuizResultSections } from '../../QuizResultSections'
 export const dynamicParams = true
 export const revalidate = 86400
 
-const CREAM = '#F7F4ED'
-const RED = '#C9302A'
+const CREAM = 'var(--dp-page-bg)'
+const RED = 'var(--dp-red)'
 
 function hookTitle(share: Awaited<ReturnType<typeof api.quiz.getShare>>): string {
   const best = share.result.top_matches[0]
@@ -68,14 +68,14 @@ export default async function QuizSharePage({ params }: { params: Promise<{ id: 
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              background: '#E0786E',
+              background: 'var(--dp-cta-bg)',
               color: '#fff',
               padding: '13px 30px',
               borderRadius: 9,
               fontWeight: 600,
               fontSize: 15.5,
               textDecoration: 'none',
-              boxShadow: '0 2px 8px rgba(224,120,110,0.35)',
+              boxShadow: '0 2px 8px var(--dp-cta-shadow)',
             }}
           >
             Faites le test — quel député vote comme vous ?

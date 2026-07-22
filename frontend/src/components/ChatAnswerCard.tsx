@@ -8,7 +8,7 @@ export function ChatAnswerCard({ result }: { result: ChatShareResult }) {
   const sources = (result.sources || []).slice(0, 3).map(mapSource)
 
   return (
-    <div className="bg-white border border-gray-border rounded-xl p-6 shadow-sm">
+    <div className="bg-white border border-gray-border dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)] rounded-xl p-6 shadow-sm">
       <div className="flex items-start justify-between gap-3 mb-4">
         {conf ? (
           <span
@@ -28,32 +28,32 @@ export function ChatAnswerCard({ result }: { result: ChatShareResult }) {
         />
       </div>
 
-      <blockquote className="border-l-4 border-gray-border pl-4 text-navy font-medium italic mb-4">
+      <blockquote className="border-l-4 border-gray-border dark:border-[color:var(--dp-border)] pl-4 text-navy dark:text-[color:var(--dp-text)] font-medium italic mb-4">
         « {result.question} »
       </blockquote>
 
       <div
-        className="text-[15px] leading-relaxed text-navy mb-2"
+        className="text-[15px] leading-relaxed text-navy dark:text-[color:var(--dp-text)] mb-2"
         dangerouslySetInnerHTML={{ __html: mdToHtml(result.answer) }}
       />
 
       {result.caveat && (
-        <div className="mt-3 mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-          <span className="text-xs leading-relaxed text-amber-800">{result.caveat}</span>
+        <div className="mt-3 mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 px-3 py-2">
+          <span className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">{result.caveat}</span>
         </div>
       )}
 
       {sources.length > 0 && (
         <div className="mt-5 mb-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-mid mb-2">Sources</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-mid dark:text-[color:var(--dp-text-muted)] mb-2">Sources</h3>
           <div className="flex flex-wrap gap-2">
             {sources.map((src, si) => {
               const inner = (
                 <>
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: src.dot }} />
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-navy truncate">{src.label}</div>
-                    {src.sub && <div className="text-[11px] text-gray-mid truncate">{src.sub}</div>}
+                    <div className="text-xs font-semibold text-navy dark:text-[color:var(--dp-text)] truncate">{src.label}</div>
+                    {src.sub && <div className="text-[11px] text-gray-mid dark:text-[color:var(--dp-text-muted)] truncate">{src.sub}</div>}
                   </div>
                   {src.badge && (
                     <div
@@ -65,7 +65,7 @@ export function ChatAnswerCard({ result }: { result: ChatShareResult }) {
                   )}
                 </>
               )
-              const className = 'flex items-center gap-2.5 bg-white border border-gray-border rounded-lg px-3 py-2 max-w-[280px]'
+              const className = 'flex items-center gap-2.5 bg-white border border-gray-border dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)] rounded-lg px-3 py-2 max-w-[280px]'
               return src.href ? (
                 <Link key={si} href={src.href} className={className}>{inner}</Link>
               ) : (
@@ -76,7 +76,7 @@ export function ChatAnswerCard({ result }: { result: ChatShareResult }) {
         </div>
       )}
 
-      <p className="text-xs text-gray-mid border-t border-gray-border pt-3 mt-4">
+      <p className="text-xs text-gray-mid dark:text-[color:var(--dp-text-muted)] border-t border-gray-border dark:border-[color:var(--dp-border)] pt-3 mt-4">
         Réponse générée le{' '}
         {new Date(result.shared_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
         {' · '}Source : données ouvertes de l&apos;Assemblée Nationale.

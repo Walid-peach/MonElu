@@ -35,18 +35,18 @@ export default async function ChatSharePage({ params }: { params: Promise<{ id: 
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-10 md:py-14">
-      <p className="text-xs uppercase tracking-wide text-gray-mid mb-4">
+      <p className="text-xs uppercase tracking-wide text-gray-mid dark:text-[color:var(--dp-text-muted)] mb-4">
         MonÉlu — réponse partagée
       </p>
       <ChatAnswerCard result={result} />
       <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
         <Link
           href={`/chat?q=${encodeURIComponent(result.question)}`}
-          className="border border-navy text-navy px-4 py-2 rounded-lg hover:bg-navy hover:text-white transition-colors"
+          className="border border-navy text-navy dark:border-[color:var(--dp-text)] dark:text-[color:var(--dp-text)] px-4 py-2 rounded-lg hover:bg-navy hover:text-white transition-colors"
         >
           Reposer cette question avec les données du jour
         </Link>
-        <Link href="/chat" className="text-gray-mid underline hover:text-navy">
+        <Link href="/chat" className="text-gray-mid dark:text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)]">
           Poser une autre question
         </Link>
       </div>
