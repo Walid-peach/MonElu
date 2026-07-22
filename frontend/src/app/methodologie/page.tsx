@@ -10,9 +10,9 @@ export const metadata: Metadata = {
     "Comment MonÉlu calcule chaque chiffre affiché : présence, alignement de parti, majorité, et limites connues.",
 }
 
-const textStyle = { fontSize: '15px', lineHeight: 1.75, color: '#4B5563', margin: 0 }
-const linkStyle = { color: '#1B2B50', fontWeight: 600 }
-const sourceLineStyle = { fontSize: '13.5px', color: '#6B7280', margin: '10px 0 0' }
+const textStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }
+const linkStyle = { color: 'var(--dp-text)', fontWeight: 600 }
+const sourceLineStyle = { fontSize: '13.5px', color: 'var(--dp-text-secondary)', margin: '10px 0 0' }
 
 export default function MethodologiePage() {
   return (
@@ -180,7 +180,7 @@ export default function MethodologiePage() {
       </LegalSection>
 
       <LegalSection id="limites" title="Limites connues">
-        <ul style={{ fontSize: '15px', lineHeight: 1.85, color: '#4B5563', margin: 0, paddingLeft: '20px' }}>
+        <ul style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--dp-text-secondary)', margin: 0, paddingLeft: '20px' }}>
           <li>
             <strong>Non-votant ≠ abstention</strong> : un non-votant était présent sans exprimer d&apos;opinion ;
             une abstention est une position exprimée. Les pourcentages pour/contre/abstention affichés se
@@ -223,7 +223,7 @@ export default function MethodologiePage() {
       <LegalSection id="contact" title="Une erreur ou une incohérence à signaler ?">
         <p style={textStyle}>
           Écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: '#1B2B50' }}>walidelkhoukh99@gmail.com</a> en
+          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a> en
           précisant le député, le scrutin ou la page concernée. Toute correction de méthode fait l&apos;objet
           d&apos;une mise à jour de cette page.
         </p>
