@@ -5,12 +5,12 @@ import { partyHex } from '@/lib/utils'
 import { departmentLabel } from '@/lib/departments'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 
-const NAVY = '#1B2B50'
-const LINE = '#E4E6EA'
-const GRAY = '#6B7280'
+const NAVY = 'var(--dp-text)'
+const LINE = 'var(--dp-border)'
+const GRAY = 'var(--dp-text-secondary)'
 
 export const card: React.CSSProperties = {
-  background: '#fff',
+  background: 'var(--dp-card-bg)',
   border: `1px solid ${LINE}`,
   borderRadius: 12,
   padding: '22px 24px',
@@ -22,7 +22,7 @@ function AgreementBar({ pct, color }: { pct: number; color: string }) {
       style={{
         position: 'relative',
         height: 8,
-        background: '#EEF0F2',
+        background: 'var(--dp-track-bg)',
         borderRadius: 999,
         overflow: 'hidden',
       }}
@@ -53,12 +53,12 @@ function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number
         padding: '12px 14px',
         borderRadius: 10,
         textDecoration: 'none',
-        background: '#fff',
+        background: 'var(--dp-card-bg)',
         border: `1px solid ${LINE}`,
       }}
     >
       {rank !== undefined && (
-        <span className="font-mono" style={{ fontSize: 13, color: '#9CA3AF', width: 20 }}>
+        <span className="font-mono" style={{ fontSize: 13, color: 'var(--dp-text-muted)', width: 20 }}>
           {rank}
         </span>
       )}
@@ -75,7 +75,7 @@ function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number
         <div className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: hex }}>
           {pctLabel(match)}
         </div>
-        <div style={{ fontSize: 11.5, color: '#9CA3AF' }}>{comparedLabel(match)}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--dp-text-muted)' }}>{comparedLabel(match)}</div>
       </div>
     </Link>
   )
@@ -122,7 +122,7 @@ export function QuizResultSections({
               <div style={{ fontSize: 14, color: GRAY, marginTop: 4 }}>
                 {[best.party, departmentLabel(best.department)].filter(Boolean).join(' · ')}
               </div>
-              <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>{comparedLabel(best)}</div>
+              <div style={{ fontSize: 13, color: 'var(--dp-text-muted)', marginTop: 4 }}>{comparedLabel(best)}</div>
             </div>
             <div className="font-mono" style={{ fontWeight: 700, fontSize: 34, color: bestHex }}>
               {pctLabel(best)}
@@ -137,7 +137,7 @@ export function QuizResultSections({
           >
             Pas assez de votes comparables
           </h1>
-          <p style={{ margin: '14px 0 0', fontSize: 15.5, lineHeight: 1.6, color: '#4B5563' }}>
+          <p style={{ margin: '14px 0 0', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
             Aucun député n’a exprimé de position sur assez de scrutins de votre sélection pour
             établir une comparaison fiable. Réessayez en répondant à davantage de questions.
           </p>
