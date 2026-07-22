@@ -21,7 +21,14 @@ export function mdToHtml(text: string): string {
   }).join('')
 }
 
-export type SourceCard = { dot: string; label: string; sub: string; badge: string; badgeBg: string; badgeColor: string; href?: string }
+// MON-159: `kind` lets dark-mode-aware callers (ChatAnswerCard) pick a
+// themed badge/dot color without breaking chat/page.tsx, which still reads
+// dot/badgeBg/badgeColor directly (its own pre-existing light/dark toggle
+// predates the shared --dp-* system - see ADR discussion on MON-168).
+// `deputy` is excluded from the "always same" kinds because its dot is a
+// real per-party brand color (group_color), not a theme token.
+export type SourceKind = 'deputy' | 'positive' | 'negative' | 'default'
+export type SourceCard = { dot: string; label: string; sub: string; badge: string; badgeBg: string; badgeColor: string; kind: SourceKind; href?: string }
 
 export function mapSource(src: SearchResult['sources'][0]): SourceCard {
   const meta = src.metadata || {}
@@ -32,7 +39,7 @@ export function mapSource(src: SearchResult['sources'][0]): SourceCard {
       label: meta.deputy_name || meta.full_name || meta.name || 'Député',
       sub: [meta.department, meta.circonscription, meta.party].filter(Boolean).join(' · ') || '',
       badge: meta.group_short || meta.group || meta.party || '',
-      badgeBg: '#F1F5F9', badgeColor: '#475569',
+      badgeBg: '#F1F5F9', badgeColor: '#475569', kind: 'deputy',
       href: meta.deputy_id ? `/deputes/${meta.deputy_id}` : undefined,
     }
   }
@@ -45,6 +52,7 @@ export function mapSource(src: SearchResult['sources'][0]): SourceCard {
       badge: meta.result || '',
       badgeBg: adopted ? '#DCFCE7' : '#FEE2E2',
       badgeColor: adopted ? '#15803D' : '#DC2626',
+      kind: adopted ? 'positive' : 'negative',
       href: meta.vote_id ? `/votes/${meta.vote_id}` : undefined,
     }
   }
@@ -52,7 +60,7 @@ export function mapSource(src: SearchResult['sources'][0]): SourceCard {
     dot: '#1B2B50',
     label: src.content.slice(0, 55) + (src.content.length > 55 ? '…' : ''),
     sub: `Pertinence ${Math.round(src.similarity * 100)} %`,
-    badge: type, badgeBg: '#EFF3FB', badgeColor: '#1B2B50',
+    badge: type, badgeBg: '#EFF3FB', badgeColor: '#1B2B50', kind: 'default',
   }
 }
 

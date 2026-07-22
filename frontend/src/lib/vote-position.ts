@@ -1,10 +1,12 @@
-const RED = '#C9302A'
-
+// MON-159: these reference the shared --dp-* CSS variables (globals.css) so
+// vote-position badges pick up dark mode automatically on every page that
+// already uses that system, rather than staying pastel-on-dark as flagged
+// throughout MON-103's dark-mode sub-issues (MON-155/162/163/165/166).
 export const POS = {
-  pour:       { label: 'Pour',       color: '#1F8A5B', bg: '#EAF5EF' },
-  contre:     { label: 'Contre',     color: RED,        bg: '#FBE9E7' },
-  abstention: { label: 'Abstention', color: '#6B7280',  bg: '#F0F1F3' },
-  nonVotant:  { label: 'Non votant', color: '#9CA3AF',  bg: '#F5F6F7' },
+  pour:       { label: 'Pour',       color: 'var(--dp-green)',          bg: 'var(--dp-badge-pos-bg)' },
+  contre:     { label: 'Contre',     color: 'var(--dp-red)',            bg: 'var(--dp-badge-neg-bg)' },
+  abstention: { label: 'Abstention', color: 'var(--dp-text-secondary)', bg: 'var(--dp-track-bg)' },
+  nonVotant:  { label: 'Non votant', color: 'var(--dp-text-muted)',     bg: 'var(--dp-track-bg)' },
 } as const
 
 export type VotePositionKey = keyof typeof POS
