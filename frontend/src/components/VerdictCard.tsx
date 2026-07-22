@@ -3,12 +3,12 @@ import { ShareButton } from './ShareButton'
 import type { VerifyResult } from '@/lib/api'
 
 const VERDICT_STYLES: Record<VerifyResult['verdict'], { label: string; badge: string }> = {
-  vrai: { label: 'Vrai', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-  faux: { label: 'Faux', badge: 'bg-red-100 text-red-800 border-red-300' },
-  trompeur: { label: 'Trompeur', badge: 'bg-amber-100 text-amber-800 border-amber-300' },
+  vrai: { label: 'Vrai', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' },
+  faux: { label: 'Faux', badge: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800' },
+  trompeur: { label: 'Trompeur', badge: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800' },
   inverifiable: {
     label: 'Invérifiable avec nos données',
-    badge: 'bg-gray-100 text-gray-700 border-gray-300',
+    badge: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-white/10 dark:text-gray-300 dark:border-gray-600',
   },
 }
 
@@ -33,7 +33,7 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
   const horizon = formatDate(result.data_horizon)
 
   return (
-    <div className="bg-white border border-gray-border rounded-xl p-6 shadow-sm">
+    <div className="bg-white border border-gray-border dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)] rounded-xl p-6 shadow-sm">
       <div className="flex items-start justify-between gap-3 mb-4">
         <span
           className={`inline-block text-sm font-bold uppercase tracking-wide px-3 py-1.5 rounded-md border ${style.badge}`}
@@ -48,16 +48,16 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
         />
       </div>
 
-      <blockquote className="border-l-4 border-gray-border pl-4 text-navy font-medium italic mb-4">
+      <blockquote className="border-l-4 border-gray-border dark:border-[color:var(--dp-border)] pl-4 text-navy dark:text-[color:var(--dp-text)] font-medium italic mb-4">
         « {result.claim} »
       </blockquote>
 
       {result.deputy && (
-        <p className="text-sm text-gray-mid mb-3">
+        <p className="text-sm text-gray-mid dark:text-[color:var(--dp-text-muted)] mb-3">
           Député concerné :{' '}
           <Link
             href={`/deputes/${result.deputy.deputy_id}`}
-            className="text-navy font-medium underline hover:text-red-civic"
+            className="text-navy dark:text-[color:var(--dp-text)] font-medium underline hover:text-red-civic"
           >
             {result.deputy.name}
           </Link>
@@ -65,11 +65,11 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
         </p>
       )}
 
-      <p className="text-[15px] leading-relaxed text-navy mb-5">{result.explanation}</p>
+      <p className="text-[15px] leading-relaxed text-navy dark:text-[color:var(--dp-text)] mb-5">{result.explanation}</p>
 
       {result.citations.length > 0 && (
         <div className="mb-5">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-mid mb-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-mid dark:text-[color:var(--dp-text-muted)] mb-2">
             Scrutins cités
           </h3>
           <ul className="space-y-2">
@@ -77,10 +77,10 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
               <li key={c.vote_id}>
                 <Link
                   href={`/votes/${c.vote_id}`}
-                  className="block border border-gray-border rounded-lg p-3 hover:border-navy transition-colors"
+                  className="block border border-gray-border dark:border-[color:var(--dp-border)] rounded-lg p-3 hover:border-navy transition-colors"
                 >
-                  <span className="block text-sm font-medium text-navy">{c.title}</span>
-                  <span className="block text-xs text-gray-mid mt-1">
+                  <span className="block text-sm font-medium text-navy dark:text-[color:var(--dp-text)]">{c.title}</span>
+                  <span className="block text-xs text-gray-mid dark:text-[color:var(--dp-text-muted)] mt-1">
                     {formatDate(c.voted_at)}
                     {c.result ? ` · ${c.result}` : ''}
                     {c.deputy_position && result.deputy
@@ -94,7 +94,7 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
         </div>
       )}
 
-      <p className="text-xs text-gray-mid border-t border-gray-border pt-3">
+      <p className="text-xs text-gray-mid dark:text-[color:var(--dp-text-muted)] border-t border-gray-border dark:border-[color:var(--dp-border)] pt-3">
         {CONFIDENCE_LABELS[result.confidence]}
         {verifiedAt ? ` · Vérifié le ${verifiedAt}` : ''}
         {horizon ? ` · Sur la base des scrutins de l'Assemblée Nationale depuis le ${horizon}` : ''}
