@@ -11,11 +11,23 @@ jest.mock('@/lib/api', () => ({
       match: jest.fn(),
       share: jest.fn(),
     },
+    deputies: {
+      get: jest.fn(),
+    },
   },
 }))
 
 jest.mock('@/lib/postal', () => ({
   resolvePostalCodeToDepartment: jest.fn(),
+}))
+
+// Overrides jest.setup.ts's blanket next/navigation mock so individual tests
+// can simulate arriving at /quiz?deputy=<id> (MON-183).
+const mockSearchParamsGet = jest.fn<string | null, [string]>(() => null)
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  useSearchParams: () => ({ get: mockSearchParamsGet }),
+  usePathname: () => '/',
 }))
 
 import { api } from '@/lib/api'
@@ -24,6 +36,7 @@ import { resolvePostalCodeToDepartment } from '@/lib/postal'
 const mockQuestions = api.quiz.questions as jest.Mock
 const mockMatch = api.quiz.match as jest.Mock
 const mockShare = api.quiz.share as jest.Mock
+const mockDeputyGet = api.deputies.get as jest.Mock
 const mockResolve = resolvePostalCodeToDepartment as jest.Mock
 
 const QUESTIONS: QuizQuestionsResponse = {
@@ -113,6 +126,7 @@ async function skipGroupStep(user: ReturnType<typeof userEvent.setup>) {
 beforeEach(() => {
   jest.clearAllMocks()
   mockQuestions.mockResolvedValue(QUESTIONS)
+  mockSearchParamsGet.mockReturnValue(null)
 })
 
 describe('QuizClient', () => {
@@ -138,6 +152,7 @@ describe('QuizClient', () => {
         { vote_id: 'V2', position: 'pour' },
         { vote_id: 'V3', position: 'pour' },
       ],
+      undefined,
       undefined
     )
     // Skipping the postal step yields full results minus the department section.
@@ -175,7 +190,7 @@ describe('QuizClient', () => {
 
     await screen.findByText('Les députés de votre département')
     expect(mockResolve).toHaveBeenCalledWith('33000')
-    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), '33')
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), '33', undefined)
     expect(screen.getByText('Marie Bordeaux')).toBeInTheDocument()
     // A department deputy with no comparable vote renders gracefully.
     expect(screen.getByText('aucun vote comparable')).toBeInTheDocument()
@@ -354,7 +369,7 @@ describe('QuizClient', () => {
     // Skipping the prediction renders no gap/confirmation line at all.
     expect(screen.queryByText(/vos réponses vous/)).not.toBeInTheDocument()
     // No network call — match or share — ever carries the predicted group.
-    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined)
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, undefined)
   })
 
   it('confirms the prediction when the actual top group matches the guess', async () => {
@@ -375,7 +390,7 @@ describe('QuizClient', () => {
       'Vous aviez vu juste : vos réponses vous placent bien près de Socialistes et apparentés (75%)'
     )
     // The prediction is never sent to the match endpoint (ADR-025: client-side only).
-    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined)
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, undefined)
   })
 
   it('shows the gap line when the guess and the actual top group differ', async () => {
@@ -394,5 +409,77 @@ describe('QuizClient', () => {
     await screen.findByText(
       'Vous vous sentiez proche de Rassemblement National - vos réponses vous rapprochent de Socialistes et apparentés (75%)'
     )
+  })
+
+  // MON-183: /quiz?deputy=<id> — personalized "Votez-vous comme X ?" entry.
+  describe('personalized deputy-page entry (?deputy=<id>)', () => {
+    beforeEach(() => {
+      mockSearchParamsGet.mockImplementation((key: string) => (key === 'deputy' ? 'PA100' : null))
+    })
+
+    it('personalizes the intro once the deputy name resolves', async () => {
+      mockDeputyGet.mockResolvedValue({ deputy_id: 'PA100', full_name: 'Jeanne Martin' })
+      render(<QuizClient />)
+
+      await screen.findByText('Votez-vous comme Jeanne Martin ?')
+      expect(mockDeputyGet).toHaveBeenCalledWith('PA100')
+      expect(screen.queryByText('Quel député vote comme vous ?')).not.toBeInTheDocument()
+    })
+
+    it('sends focus_deputy_id on submit and renders the focus card', async () => {
+      const user = userEvent.setup()
+      mockDeputyGet.mockResolvedValue({ deputy_id: 'PA100', full_name: 'Jeanne Martin' })
+      mockMatch.mockResolvedValue({ ...MATCH, focus: BEST })
+      render(<QuizClient />)
+
+      await screen.findByText('Votez-vous comme Jeanne Martin ?')
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+
+      await screen.findByText('Vous votez à 83.3% comme Jeanne Martin - c’est votre meilleur match.')
+      expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, 'PA100')
+    })
+
+    it('shows an honest not-enough-votes state when the focus deputy has no comparable position', async () => {
+      const user = userEvent.setup()
+      mockDeputyGet.mockResolvedValue({ deputy_id: 'PA100', full_name: 'Jeanne Martin' })
+      mockMatch.mockResolvedValue({
+        ...MATCH,
+        focus: { ...BEST, agreement_pct: null, matches: 0, compared: 0 },
+      })
+      render(<QuizClient />)
+
+      await screen.findByText('Votez-vous comme Jeanne Martin ?')
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+
+      await screen.findByText('Pas assez de votes comparables avec Jeanne Martin pour l’instant.')
+    })
+
+    it('falls back to the plain quiz when the deputy id is unknown', async () => {
+      const user = userEvent.setup()
+      mockDeputyGet.mockRejectedValue(new Error('API error: 422'))
+      mockMatch.mockResolvedValue(MATCH)
+      render(<QuizClient />)
+
+      await waitFor(() => expect(mockDeputyGet).toHaveBeenCalledWith('PA100'))
+      expect(screen.getByText('Quel député vote comme vous ?')).toBeInTheDocument()
+
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+
+      await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+      // No personalization resolved — focus_deputy_id must not be sent.
+      expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, undefined)
+    })
   })
 })

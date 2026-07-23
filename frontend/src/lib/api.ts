@@ -332,6 +332,9 @@ export type QuizMatchResponse = {
   opposite: QuizDeputyMatch | null
   groups: QuizGroupAlignment[]
   my_department: QuizDepartmentResult | null
+  // Set only when the request carried focus_deputy_id (MON-183) — the
+  // personalized "Votez-vous comme X ?" deputy-page quiz entry.
+  focus: QuizDeputyMatch | null
 }
 
 // Quiz shares are immutable snapshots of server-recomputed results
@@ -465,10 +468,15 @@ export const api = {
     // The question set is a versioned repo file server-side (ADR-025) — it only
     // changes by deploy, so cache it as aggressively as immutable snapshots.
     questions: () => apiFetch<QuizQuestionsResponse>('/quiz/questions', { revalidate: 86400 }),
-    match: (answers: Array<{ vote_id: string; position: QuizAnswerPosition }>, department?: string) =>
+    match: (
+      answers: Array<{ vote_id: string; position: QuizAnswerPosition }>,
+      department?: string,
+      focusDeputyId?: string
+    ) =>
       apiPost<QuizMatchResponse>('/quiz/match', {
         answers,
         ...(department ? { department } : {}),
+        ...(focusDeputyId ? { focus_deputy_id: focusDeputyId } : {}),
       }),
     // Sends the answers, not the result: the server recomputes before storing
     // (ADR-025) so a share can never carry client-forged percentages.

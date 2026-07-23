@@ -176,6 +176,77 @@ def test_match_no_positions_returns_empty_results(client, mock_cursor):
     assert body["opposite"] is None
     assert body["groups"] == []
     assert body["eligible_deputies"] == 0
+    assert body["focus"] is None
+
+
+# ---------------------------------------------------------------------------
+# focus_deputy_id (MON-183 — personalized deputy-page quiz entry)
+# ---------------------------------------------------------------------------
+def test_match_with_focus_deputy_below_threshold_returned_anyway(client, mock_cursor):
+    # C has only one comparable vote — below the ranking threshold of 2, so
+    # it never appears in top_matches, but a focus request still wants it.
+    mock_cursor.fetchall.return_value = [
+        _row("A", V1, "pour"),
+        _row("A", V2, "contre"),
+        _row("A", V3, "abstention"),
+        _row("C", V1, "pour", party="Groupe Y"),
+    ]
+    mock_cursor.fetchone.return_value = {
+        "deputy_id": "C",
+        "full_name": "Député C",
+        "party": "Groupe Y",
+        "party_short": "Y",
+        "department": "Gironde",
+        "photo_url": None,
+    }
+
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3, "focus_deputy_id": "C"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "C" not in [m["deputy_id"] for m in body["top_matches"]]
+    assert body["focus"]["deputy_id"] == "C"
+    assert body["focus"]["compared"] == 1
+    assert body["focus"]["matches"] == 1
+    assert body["focus"]["agreement_pct"] == 100.0
+
+
+def test_match_with_focus_deputy_absent_from_scrutins_returns_zero_counts(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [
+        _row("A", V1, "pour"),
+        _row("A", V2, "contre"),
+        _row("A", V3, "abstention"),
+    ]
+    mock_cursor.fetchone.return_value = {
+        "deputy_id": "Z",
+        "full_name": "Député Z",
+        "party": "Groupe Y",
+        "party_short": "Y",
+        "department": "Gironde",
+        "photo_url": None,
+    }
+
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3, "focus_deputy_id": "Z"})
+    assert resp.status_code == 200
+    focus = resp.json()["focus"]
+    assert focus["deputy_id"] == "Z"
+    assert focus["compared"] == 0
+    assert focus["matches"] == 0
+    assert focus["agreement_pct"] is None
+
+
+def test_match_with_unknown_focus_deputy_returns_422(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = None
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3, "focus_deputy_id": "GHOST"})
+    assert resp.status_code == 422
+
+
+def test_match_without_focus_deputy_id_omits_focus(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3})
+    assert resp.status_code == 200
+    assert resp.json()["focus"] is None
+    mock_cursor.fetchone.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
