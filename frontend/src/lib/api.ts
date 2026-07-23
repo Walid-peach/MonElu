@@ -352,9 +352,12 @@ export type QuizMatchResponse = {
 
 // Quiz shares are immutable snapshots of server-recomputed results
 // (MON-139, ADR-025) — same semantics as chat shares / verifications.
+// `answers` is present only when the sharer opted in (ADR-028, MON-184).
 export type QuizShareResult = {
   id: string
-  result: QuizMatchResponse
+  result: QuizMatchResponse & {
+    answers: Array<{ vote_id: string; position: QuizAnswerPosition }> | null
+  }
   shared_at: string
   share_url: string
 }
@@ -488,10 +491,17 @@ export const api = {
       }),
     // Sends the answers, not the result: the server recomputes before storing
     // (ADR-025) so a share can never carry client-forged percentages.
-    share: (answers: Array<{ vote_id: string; position: QuizAnswerPosition }>, department?: string) =>
+    // `includeAnswers` is opt-in, default off (ADR-028, MON-184) — it stores
+    // the answers themselves so a later visitor can run a friend comparison.
+    share: (
+      answers: Array<{ vote_id: string; position: QuizAnswerPosition }>,
+      department?: string,
+      includeAnswers?: boolean
+    ) =>
       apiPost<QuizShareResult>('/quiz/share', {
         answers,
         ...(department ? { department } : {}),
+        ...(includeAnswers ? { include_answers: true } : {}),
       }),
     // Immutable snapshots — cache like chat shares / verifications.
     getShare: (id: string) => apiFetch<QuizShareResult>(`/quiz/share/${id}`, { revalidate: 86400 }),

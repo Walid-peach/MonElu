@@ -375,6 +375,77 @@ def test_get_share_malformed_id_returns_422(client):
 
 
 # ---------------------------------------------------------------------------
+# Friend comparison — opt-in answer storage (MON-184, ADR-028)
+# ---------------------------------------------------------------------------
+def test_share_without_opt_in_omits_answers_key(client, mock_cursor):
+    import datetime
+
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": _stored_result(),
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+
+    resp = client.post("/quiz/share", json={"answers": ANSWERS_3})
+    assert resp.status_code == 200
+
+    insert_call = mock_cursor.execute.call_args_list[-1]
+    _, params = insert_call.args
+    stored = params[1].adapted
+    assert "answers" not in stored
+
+    body = resp.json()
+    assert body["result"]["answers"] is None
+
+
+def test_share_with_opt_in_stores_submitted_answers(client, mock_cursor):
+    import datetime
+
+    stored_result = _stored_result()
+    stored_result["answers"] = ANSWERS_3
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": stored_result,
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+
+    resp = client.post("/quiz/share", json={"answers": ANSWERS_3, "include_answers": True})
+    assert resp.status_code == 200
+
+    insert_call = mock_cursor.execute.call_args_list[-1]
+    _, params = insert_call.args
+    stored = params[1].adapted
+    assert stored["answers"] == ANSWERS_3
+
+    body = resp.json()
+    assert body["result"]["answers"] == ANSWERS_3
+
+
+def test_share_opt_in_defaults_false_when_field_omitted():
+    from api.routers.quiz import QuizShareRequest
+
+    req = QuizShareRequest(answers=ANSWERS_3)
+    assert req.include_answers is False
+
+
+def test_get_share_returns_answers_when_present(client, mock_cursor):
+    import datetime
+
+    stored_result = _stored_result()
+    stored_result["answers"] = ANSWERS_3
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": stored_result,
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+    resp = client.get(f"/quiz/share/{SHARE_ID}")
+    assert resp.status_code == 200
+    assert resp.json()["result"]["answers"] == ANSWERS_3
+
+
+# ---------------------------------------------------------------------------
 # Per-question detail (MON-181)
 # ---------------------------------------------------------------------------
 def test_strip_detail_removes_key_everywhere():

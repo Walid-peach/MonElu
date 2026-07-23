@@ -10,6 +10,7 @@ jest.mock('@/lib/api', () => ({
       questions: jest.fn(),
       match: jest.fn(),
       share: jest.fn(),
+      getShare: jest.fn(),
     },
   },
 }))
@@ -18,12 +19,20 @@ jest.mock('@/lib/postal', () => ({
   resolvePostalCodeToDepartment: jest.fn(),
 }))
 
+let compareParam: string | null = null
+jest.mock('next/navigation', () => ({
+  useSearchParams: () => ({
+    get: (key: string) => (key === 'compare' ? compareParam : null),
+  }),
+}))
+
 import { api } from '@/lib/api'
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
 
 const mockQuestions = api.quiz.questions as jest.Mock
 const mockMatch = api.quiz.match as jest.Mock
 const mockShare = api.quiz.share as jest.Mock
+const mockGetShare = api.quiz.getShare as jest.Mock
 const mockResolve = resolvePostalCodeToDepartment as jest.Mock
 
 const QUESTIONS: QuizQuestionsResponse = {
@@ -130,6 +139,7 @@ async function skipGroupStep(user: ReturnType<typeof userEvent.setup>) {
 beforeEach(() => {
   jest.clearAllMocks()
   mockQuestions.mockResolvedValue(QUESTIONS)
+  compareParam = null
 })
 
 describe('QuizClient', () => {
@@ -388,9 +398,39 @@ describe('QuizClient', () => {
         { vote_id: 'V2', position: 'pour' },
         { vote_id: 'V3', position: 'pour' },
       ],
-      '33'
+      '33',
+      false
     )
     expect(writeText).toHaveBeenCalledWith('https://mon-elu.vercel.app/quiz/s/abc')
+  })
+
+  it('sends include_answers=true when the opt-in checkbox is checked', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    mockShare.mockResolvedValue({
+      id: 'abc',
+      result: { ...MATCH, answers: null },
+      shared_at: '2026-07-18T00:00:00Z',
+      share_url: 'https://mon-elu.vercel.app/quiz/s/abc',
+    })
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: jest.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    })
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await skipGroupStep(user)
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+    await screen.findByText(/Vous votez à/)
+
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
+    await screen.findByText('Lien copié !')
+
+    expect(mockShare).toHaveBeenCalledWith(expect.any(Array), undefined, true)
   })
 
   it('surfaces a share-creation failure with a retry state', async () => {
@@ -492,5 +532,106 @@ describe('QuizClient', () => {
     await screen.findByText(
       'Vous vous sentiez proche de Rassemblement National - vos réponses vous rapprochent de Socialistes et apparentés (75%)'
     )
+  })
+
+  // -------------------------------------------------------------- friend comparison (MON-184, ADR-028)
+  describe('friend comparison via ?compare=<id>', () => {
+    const SHARED_ANSWERS = [
+      { vote_id: 'V1', position: 'pour' },
+      { vote_id: 'V2', position: 'contre' },
+      { vote_id: 'V3', position: 'pour' },
+    ]
+
+    it('shows the head-to-head agreement above the standard results', async () => {
+      compareParam = 'share-1'
+      mockGetShare.mockResolvedValue({
+        id: 'share-1',
+        result: { ...MATCH, version: QUESTIONS.version, answers: SHARED_ANSWERS },
+        shared_at: '2026-07-18T00:00:00Z',
+        share_url: 'https://mon-elu.vercel.app/quiz/s/share-1',
+      })
+      mockMatch.mockResolvedValue(MATCH)
+      const user = userEvent.setup()
+      render(<QuizClient />)
+
+      await screen.findByText(/faites le test pour voir votre accord/i)
+      await answerAllQuestions(user) // answers pour/pour/pour
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+
+      // Own answers pour/pour/pour vs shared pour/contre/pour — 2/3 agree.
+      await screen.findByText('Vous êtes d’accord avec ce résultat partagé sur 2/3 scrutins.')
+    })
+
+    it('falls back to the plain quiz with a notice on a question-set version mismatch', async () => {
+      compareParam = 'share-old'
+      mockGetShare.mockResolvedValue({
+        id: 'share-old',
+        result: { ...MATCH, version: 'old-version', answers: SHARED_ANSWERS },
+        shared_at: '2026-07-18T00:00:00Z',
+        share_url: 'https://mon-elu.vercel.app/quiz/s/share-old',
+      })
+      mockMatch.mockResolvedValue(MATCH)
+      const user = userEvent.setup()
+      render(<QuizClient />)
+
+      await screen.findByText(/version précédente du quiz/i)
+      expect(screen.queryByText(/faites le test pour voir votre accord/i)).not.toBeInTheDocument()
+
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+      await screen.findByText(/Vous votez à/)
+      expect(screen.queryByText(/Vous êtes d’accord avec ce résultat partagé/)).not.toBeInTheDocument()
+    })
+
+    it('never carries the original sharer answers into the taker’s own share', async () => {
+      compareParam = 'share-1'
+      mockGetShare.mockResolvedValue({
+        id: 'share-1',
+        result: { ...MATCH, version: QUESTIONS.version, answers: SHARED_ANSWERS },
+        shared_at: '2026-07-18T00:00:00Z',
+        share_url: 'https://mon-elu.vercel.app/quiz/s/share-1',
+      })
+      mockMatch.mockResolvedValue(MATCH)
+      mockShare.mockResolvedValue({
+        id: 'own-share',
+        result: { ...MATCH, answers: null },
+        shared_at: '2026-07-18T00:00:00Z',
+        share_url: 'https://mon-elu.vercel.app/quiz/s/own-share',
+      })
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: jest.fn().mockResolvedValue(undefined) },
+        configurable: true,
+      })
+      const user = userEvent.setup()
+      render(<QuizClient />)
+
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+      await screen.findByText(/Vous votez à/)
+
+      await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
+      await screen.findByText('Lien copié !')
+
+      // The taker's own share payload is only their own answers, never the
+      // fetched sharer's SHARED_ANSWERS.
+      expect(mockShare).toHaveBeenCalledWith(
+        [
+          { vote_id: 'V1', position: 'pour' },
+          { vote_id: 'V2', position: 'pour' },
+          { vote_id: 'V3', position: 'pour' },
+        ],
+        undefined,
+        false
+      )
+    })
   })
 })
