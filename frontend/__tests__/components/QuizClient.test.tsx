@@ -35,18 +35,33 @@ const QUESTIONS: QuizQuestionsResponse = {
       theme: 'Fin de vie',
       question: 'Auriez-vous voté pour ou contre la question 1 ?',
       context: 'Contexte 1.',
+      votes_for: 291,
+      votes_against: 241,
+      abstentions: 12,
+      result: 'adopté',
+      vote_date: '2026-07-15',
     },
     {
       vote_id: 'V2',
       theme: 'Budget',
       question: 'Auriez-vous voté pour ou contre la question 2 ?',
       context: 'Contexte 2.',
+      votes_for: 200,
+      votes_against: 300,
+      abstentions: 5,
+      result: 'rejeté',
+      vote_date: '2026-06-01',
     },
     {
       vote_id: 'V3',
       theme: 'Écologie',
       question: 'Auriez-vous voté pour ou contre la question 3 ?',
       context: 'Contexte 3.',
+      votes_for: 310,
+      votes_against: 220,
+      abstentions: 8,
+      result: 'adopté',
+      vote_date: '2026-05-20',
     },
   ],
 }
@@ -102,6 +117,7 @@ async function answerAllQuestions(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
   for (let i = 0; i < QUESTIONS.questions.length; i++) {
     await user.click(screen.getByRole('button', { name: 'Pour' }))
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
   }
 }
 
@@ -146,21 +162,64 @@ describe('QuizClient', () => {
     expect(screen.queryByText('Les députés de votre département')).not.toBeInTheDocument()
   })
 
-  it('shows a progress indicator and supports going back a question', async () => {
+  it('shows a progress indicator, reveals the real outcome, and supports going back', async () => {
     const user = userEvent.setup()
     render(<QuizClient />)
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
 
     expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
+    // The outcome must never appear before an answer is given.
+    expect(screen.queryByText(/291 pour, 241 contre/)).not.toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: 'Contre' }))
+    // Reveal panel appears with the real tallies before advancing. 291
+    // pour vs 241 contre means "pour" is the majority — the "Contre" answer
+    // is with the minority.
+    await screen.findByText(/291 pour, 241 contre, 12 abstentions/)
+    expect(screen.getByText('Vous étiez avec la minorité.')).toBeInTheDocument()
+    expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
     expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '← Retour' }))
     expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
-    // The previously selected answer stays highlighted (selected state kept).
+    // The previously selected answer stays highlighted (selected state kept),
+    // and the reveal panel does not persist across back navigation.
     expect(screen.getByRole('button', { name: 'Contre' })).toHaveStyle({
       border: '2px solid var(--dp-red)',
     })
+    expect(screen.queryByText(/291 pour, 241 contre/)).not.toBeInTheDocument()
+  })
+
+  it('allows going back directly from the reveal panel, landing on the answer screen', async () => {
+    const user = userEvent.setup()
+    render(<QuizClient />)
+    await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
+    await user.click(screen.getByRole('button', { name: 'Pour' }))
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
+
+    // Answer question 2 to trigger its reveal panel, then go back without
+    // advancing past it.
+    await user.click(screen.getByRole('button', { name: 'Contre' }))
+    await screen.findByText(/200 pour, 300 contre/)
+
+    await user.click(screen.getByRole('button', { name: '← Retour' }))
+    expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
+    expect(screen.queryByText(/200 pour, 300 contre/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pour' })).toHaveStyle({
+      border: '2px solid var(--dp-green)',
+    })
+  })
+
+  it('skipping a question shows no reveal and advances directly', async () => {
+    const user = userEvent.setup()
+    render(<QuizClient />)
+    await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
+
+    await user.click(screen.getByRole('button', { name: 'Passer cette question' }))
+    expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
+    expect(screen.queryByText(/L’Assemblée a/)).not.toBeInTheDocument()
   })
 
   it('resolves the postal code to a department and passes it to the match call', async () => {
@@ -202,8 +261,10 @@ describe('QuizClient', () => {
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
 
     await user.click(screen.getByRole('button', { name: 'Pour' }))
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
     await user.click(screen.getByRole('button', { name: 'Passer cette question' }))
     await user.click(screen.getByRole('button', { name: 'Abstention' }))
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
     await skipGroupStep(user)
 
     expect(screen.getByText('Encore quelques réponses')).toBeInTheDocument()
