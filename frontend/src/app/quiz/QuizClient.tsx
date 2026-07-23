@@ -9,7 +9,7 @@ import type { ResolvedDepartment } from '@/lib/postal'
 import { POS } from '@/lib/vote-position'
 import { CANONICAL_GROUP_LABELS } from '@/lib/groups'
 import { partyHex } from '@/lib/utils'
-import { card, QuizResultSections } from './QuizResultSections'
+import { pctLabel, card, QuizResultSections } from './QuizResultSections'
 
 const NAVY = 'var(--dp-text)'
 const CREAM = 'var(--dp-page-bg)'
@@ -161,6 +161,7 @@ function computeComparison(
 
 export function QuizClient() {
   const searchParams = useSearchParams()
+  const focusDeputyId = searchParams.get('deputy') || undefined
   const compareId = searchParams.get('compare')
 
   const [phase, setPhase] = useState<Phase>('intro')
@@ -173,6 +174,7 @@ export function QuizClient() {
   // and on back navigation — the reveal never persists across questions.
   const [revealVoteId, setRevealVoteId] = useState<string | null>(null)
   const [predictedGroup, setPredictedGroup] = useState<string | null>(null)
+  const [focusDeputyName, setFocusDeputyName] = useState<string | null>(null)
 
   const [postalInput, setPostalInput] = useState('')
   const [resolving, setResolving] = useState(false)
@@ -203,6 +205,25 @@ export function QuizClient() {
       cancelled = true
     }
   }, [])
+
+  // MON-183: personalizes the intro when arriving from a deputy's profile
+  // page ("Votez-vous comme X ?"). Only fetches the deputy's name for copy —
+  // focus_deputy_id itself is sent to /quiz/match at submit time.
+  useEffect(() => {
+    if (!focusDeputyId) return
+    let cancelled = false
+    api.deputies
+      .get(focusDeputyId)
+      .then(d => {
+        if (!cancelled) setFocusDeputyName(d.full_name)
+      })
+      .catch(() => {
+        // Unknown/invalid id — fall back to the plain, unpersonalized quiz.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [focusDeputyId])
 
   useEffect(() => {
     if (!compareId) return
@@ -275,7 +296,11 @@ export function QuizClient() {
         vote_id,
         position,
       }))
-      const res = await api.quiz.match(payload, department ?? undefined)
+      const res = await api.quiz.match(
+        payload,
+        department ?? undefined,
+        focusDeputyName ? focusDeputyId : undefined
+      )
       setResult(res)
       setPhase('results')
     } catch {
@@ -320,12 +345,18 @@ export function QuizClient() {
             className="font-newsreader text-[clamp(30px,5vw,46px)]"
             style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.015em' }}
           >
-            Quel député vote comme vous ?
+            {focusDeputyName ? `Votez-vous comme ${focusDeputyName} ?` : 'Quel député vote comme vous ?'}
           </h1>
           <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: 'var(--dp-text-secondary)' }}>
-            Une dizaine de vrais scrutins de l’Assemblée nationale, posés en français courant.
-            Répondez pour, contre ou abstention — à la fin, on compare vos réponses aux votes
-            réels des 577 députés.
+            {focusDeputyName ? (
+              <>Répondez aux 10 scrutins et voyez votre accord avec {focusDeputyName} — et avec les 577 députés.</>
+            ) : (
+              <>
+                Une dizaine de vrais scrutins de l’Assemblée nationale, posés en français courant.
+                Répondez pour, contre ou abstention — à la fin, on compare vos réponses aux votes
+                réels des 577 députés.
+              </>
+            )}
           </p>
           <p style={{ margin: '14px auto 0', maxWidth: 520, fontSize: 13.5, color: GRAY }}>
             Sans compte. Vos réponses restent dans votre navigateur : rien n’est enregistré.
@@ -695,6 +726,27 @@ export function QuizClient() {
     return (
       <Shell>
         <div style={{ ...kicker, marginBottom: 16 }}>Vos résultats</div>
+        {result.focus && (
+          <div
+            style={{
+              ...card,
+              marginBottom: 24,
+              borderLeft: `4px solid ${partyHex(result.focus.party)}`,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
+              {result.focus.agreement_pct === null
+                ? `Pas assez de votes comparables avec ${result.focus.full_name} pour l’instant.`
+                : result.top_matches[0] && result.top_matches[0].deputy_id === result.focus.deputy_id
+                  ? `Vous votez à ${pctLabel(result.focus)} comme ${result.focus.full_name} - c’est votre meilleur match.`
+                  : `Vous votez à ${pctLabel(result.focus)} comme ${result.focus.full_name}${
+                      result.top_matches[0]
+                        ? ` - votre meilleur match est ${result.top_matches[0].full_name} (${pctLabel(result.top_matches[0])})`
+                        : ''
+                    }`}
+            </p>
+          </div>
+        )}
         {predictedGroup && result.groups.length > 0 && (
           <div
             style={{

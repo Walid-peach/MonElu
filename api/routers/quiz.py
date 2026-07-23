@@ -100,6 +100,13 @@ class QuizMatchRequest(BaseModel):
     department: Optional[str] = Field(
         None, description="Code de département pour la comparaison « vos députés » (optionnel)"
     )
+    focus_deputy_id: Optional[str] = Field(
+        None,
+        description=(
+            "Identifiant d'un député à mettre en avant dans la réponse (entrée quiz "
+            "personnalisée depuis sa page profil, MON-183)"
+        ),
+    )
 
     @field_validator("answers")
     @classmethod
@@ -162,6 +169,11 @@ class QuizMatchResponse(BaseModel):
     opposite: Optional[QuizDeputyMatch] = None
     groups: list[QuizGroupAlignment]
     my_department: Optional[QuizDepartmentResult] = None
+    # Set only when the request carries focus_deputy_id (MON-183) — the
+    # requested deputy's match, returned even below the ranking threshold
+    # (a personalized entry answers "how well do I match *this* deputy?",
+    # not "who ranks in my top matches").
+    focus: Optional[QuizDeputyMatch] = None
 
 
 # ---------------------------------------------------------------------------
@@ -342,6 +354,20 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
                 )
                 dept_rows = cur.fetchall()
 
+            focus_row: Optional[dict] = None
+            if body.focus_deputy_id is not None:
+                cur.execute(
+                    """
+                    SELECT deputy_id, full_name, party, party_short, department, photo_url
+                    FROM deputies
+                    WHERE deputy_id = %s
+                    """,
+                    (body.focus_deputy_id,),
+                )
+                focus_row = cur.fetchone()
+                if focus_row is None:
+                    raise HTTPException(status_code=422, detail="Député inconnu")
+
     stats = compute_deputy_stats(rows, answers)
     position_by_deputy_vote = {(r["deputy_id"], r["vote_id"]): r["position"] for r in rows}
 
@@ -381,6 +407,12 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
             ],
         )
 
+    focus = None
+    if focus_row is not None:
+        focus = to_match(
+            stats.get(focus_row["deputy_id"], {**focus_row, "matches": 0, "compared": 0})
+        )
+
     return QuizMatchResponse(
         version=QUIZ_VERSION,
         answered=len(answers),
@@ -389,6 +421,7 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
         opposite=opposite,
         groups=compute_group_alignment(rows, answers, threshold),
         my_department=my_department,
+        focus=focus,
     )
 
 
