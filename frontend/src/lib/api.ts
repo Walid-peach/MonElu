@@ -286,6 +286,12 @@ export type QuizQuestion = {
   theme: string
   question: string
   context: string
+  // Live vote tallies (MON-180) — null if the SELECT joined no matching row.
+  votes_for: number | null
+  votes_against: number | null
+  abstentions: number | null
+  result: string | null
+  vote_date: string | null
 }
 
 export type QuizQuestionsResponse = {

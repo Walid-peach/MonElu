@@ -4,13 +4,15 @@ api/routers/quiz.py
 "Quel député vote comme vous ?" — vote-matching quiz (MON-109, MON-137, MON-139, ADR-025).
 
 Four endpoints:
-- GET  /quiz/questions  : the curated question set (repo file, api/quiz_data.py).
+- GET  /quiz/questions  : the curated question set (repo file, api/quiz_data.py),
+                          enriched with live vote tallies from the votes table (MON-180).
 - POST /quiz/match      : stateless agreement computation over vote_positions.
 - POST /quiz/share      : store an immutable snapshot of a match result.
 - GET  /quiz/share/{id} : serve a stored snapshot (plain SELECT, no recompute).
 
 ADR-025 constraints: /match persists and logs nothing about the request —
-answers in, results out. The question set is never read from the DB.
+answers in, results out. The question *content* is never read from the DB —
+only its per-question tallies are (MON-180), one SELECT joined at request time.
 /share re-runs the same server-side computation from the submitted answers
 before storing — client-computed percentages are never trusted, which is what
 keeps MonÉlu-branded share cards non-forgeable. The stored snapshot is the
@@ -61,6 +63,13 @@ class QuizQuestion(BaseModel):
     theme: str
     question: str
     context: str
+    # Live aggregates joined from the votes table at request time (MON-180) —
+    # the question content stays a repo file (ADR-025), only these are DB-backed.
+    votes_for: Optional[int] = None
+    votes_against: Optional[int] = None
+    abstentions: Optional[int] = None
+    result: Optional[str] = None
+    vote_date: Optional[str] = None
 
 
 class QuizQuestionsResponse(BaseModel):
@@ -235,10 +244,37 @@ def compute_group_alignment(
 )
 @limiter.limit(tiered_limit(30))
 def get_questions(request: Request) -> QuizQuestionsResponse:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT vote_id, votes_for, votes_against, abstentions, result, voted_at
+                FROM votes
+                WHERE vote_id = ANY(%s)
+                """,
+                (list(QUIZ_VOTE_IDS),),
+            )
+            tallies = {row["vote_id"]: row for row in cur.fetchall()}
+
+    questions = []
+    for q in QUIZ_QUESTIONS:
+        row = tallies.get(q["vote_id"], {})
+        voted_at = row.get("voted_at")
+        questions.append(
+            QuizQuestion(
+                **q,
+                votes_for=row.get("votes_for"),
+                votes_against=row.get("votes_against"),
+                abstentions=row.get("abstentions"),
+                result=row.get("result"),
+                vote_date=voted_at.date().isoformat() if voted_at else None,
+            )
+        )
+
     return QuizQuestionsResponse(
         version=QUIZ_VERSION,
         count=len(QUIZ_QUESTIONS),
-        questions=[QuizQuestion(**q) for q in QUIZ_QUESTIONS],
+        questions=questions,
     )
 
 

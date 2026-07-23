@@ -112,6 +112,9 @@ export function QuizClient() {
   const [questionsError, setQuestionsError] = useState(false)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, QuizAnswerPosition>>({})
+  // vote_id currently showing its reveal panel, or null. Cleared on advance
+  // and on back navigation — the reveal never persists across questions.
+  const [revealVoteId, setRevealVoteId] = useState<string | null>(null)
 
   const [postalInput, setPostalInput] = useState('')
   const [resolving, setResolving] = useState(false)
@@ -141,7 +144,7 @@ export function QuizClient() {
 
   function answer(voteId: string, position: QuizAnswerPosition) {
     setAnswers(prev => ({ ...prev, [voteId]: position }))
-    advance()
+    setRevealVoteId(voteId)
   }
 
   function skip(voteId: string) {
@@ -153,12 +156,18 @@ export function QuizClient() {
     advance()
   }
 
+  function goNext() {
+    setRevealVoteId(null)
+    advance()
+  }
+
   function advance() {
     if (questions && index < questions.length - 1) setIndex(index + 1)
     else setPhase('postal')
   }
 
   function back() {
+    setRevealVoteId(null)
     if (index > 0) setIndex(index - 1)
     else setPhase('intro')
   }
@@ -262,6 +271,30 @@ export function QuizClient() {
   if (phase === 'questions' && questions) {
     const q = questions[index]
     const selected = answers[q.vote_id]
+    const revealing = revealVoteId === q.vote_id
+    const tallyKnown = q.votes_for != null && q.votes_against != null
+    const resultLine = tallyKnown
+      ? `L’Assemblée a ${q.result === 'adopté' ? 'adopté' : 'rejeté'} ce texte : ` +
+        `${q.votes_for} pour, ${q.votes_against} contre` +
+        (q.abstentions != null
+          ? `, ${q.abstentions} abstention${q.abstentions > 1 ? 's' : ''}`
+          : '') +
+        '.'
+      : null
+    const majority =
+      tallyKnown && q.votes_for !== q.votes_against
+        ? q.votes_for! > q.votes_against!
+          ? 'pour'
+          : 'contre'
+        : null
+    const outcomeLine =
+      selected === 'abstention'
+        ? 'Vous vous êtes abstenu·e sur ce texte.'
+        : majority
+          ? selected === majority
+            ? 'Vous étiez avec la majorité.'
+            : 'Vous étiez avec la minorité.'
+          : null
     return (
       <Shell>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -296,31 +329,49 @@ export function QuizClient() {
         </h2>
         <p style={{ margin: '14px 0 30px', fontSize: 14.5, lineHeight: 1.6, color: GRAY }}>{q.context}</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {(['pour', 'contre', 'abstention'] as const).map(pos => {
-            const { label, color, bg } = POS[pos]
-            const active = selected === pos
-            return (
-              <button
-                key={pos}
-                onClick={() => answer(q.vote_id, pos)}
-                style={{
-                  padding: '15px 20px',
-                  borderRadius: 10,
-                  fontWeight: 600,
-                  fontSize: 16,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  color,
-                  background: bg,
-                  border: `2px solid ${active ? color : 'transparent'}`,
-                }}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
+        {revealing ? (
+          <div
+            style={{
+              padding: '20px 22px',
+              borderRadius: 10,
+              background: 'var(--dp-card-bg)',
+              border: `1px solid ${LINE}`,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
+              {resultLine ?? 'Résultat du scrutin indisponible pour ce texte.'}
+            </p>
+            {outcomeLine && (
+              <p style={{ margin: '10px 0 0', fontSize: 14, color: GRAY }}>{outcomeLine}</p>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {(['pour', 'contre', 'abstention'] as const).map(pos => {
+              const { label, color, bg } = POS[pos]
+              const active = selected === pos
+              return (
+                <button
+                  key={pos}
+                  onClick={() => answer(q.vote_id, pos)}
+                  style={{
+                    padding: '15px 20px',
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    fontSize: 16,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    color,
+                    background: bg,
+                    border: `2px solid ${active ? color : 'transparent'}`,
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 28 }}>
           <button
@@ -329,12 +380,25 @@ export function QuizClient() {
           >
             ← Retour
           </button>
-          <button
-            onClick={() => skip(q.vote_id)}
-            style={{ fontSize: 14, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
-          >
-            Passer cette question
-          </button>
+          {revealing ? (
+            <button
+              onClick={goNext}
+              style={{
+                background: ACCENT, color: '#fff', padding: '10px 22px', borderRadius: 9,
+                fontWeight: 600, fontSize: 14.5, border: 'none', cursor: 'pointer',
+                boxShadow: '0 2px 8px var(--dp-cta-shadow)',
+              }}
+            >
+              Question suivante
+            </button>
+          ) : (
+            <button
+              onClick={() => skip(q.vote_id)}
+              style={{ fontSize: 14, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
+            >
+              Passer cette question
+            </button>
+          )}
         </div>
       </Shell>
     )

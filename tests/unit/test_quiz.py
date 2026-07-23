@@ -44,13 +44,51 @@ def test_question_set_shape():
         assert q["context"] and q["theme"]
 
 
-def test_get_questions_returns_versioned_set(client):
+def test_get_questions_returns_versioned_set(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": V1,
+            "votes_for": 291,
+            "votes_against": 241,
+            "abstentions": 12,
+            "result": "adopté",
+            "voted_at": None,
+        }
+    ]
     resp = client.get("/quiz/questions")
     assert resp.status_code == 200
     body = resp.json()
     assert body["version"] == QUIZ_VERSION
     assert body["count"] == 10
-    assert body["questions"][0]["vote_id"] == V1
+    first = body["questions"][0]
+    assert first["vote_id"] == V1
+    assert first["votes_for"] == 291
+    assert first["votes_against"] == 241
+    assert first["abstentions"] == 12
+    assert first["result"] == "adopté"
+    # A question whose vote_id has no matching row (defensive: shouldn't
+    # happen per ADR-025, but the SELECT is a plain join, not a guarantee)
+    # degrades gracefully instead of 500ing.
+    second = body["questions"][1]
+    assert second["votes_for"] is None
+    assert second["result"] is None
+
+
+def test_get_questions_formats_vote_date(client, mock_cursor):
+    import datetime
+
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": V1,
+            "votes_for": 291,
+            "votes_against": 241,
+            "abstentions": 12,
+            "result": "adopté",
+            "voted_at": datetime.datetime(2026, 7, 15, 14, 30, tzinfo=datetime.timezone.utc),
+        }
+    ]
+    resp = client.get("/quiz/questions")
+    assert resp.json()["questions"][0]["vote_date"] == "2026-07-15"
 
 
 # ---------------------------------------------------------------------------
