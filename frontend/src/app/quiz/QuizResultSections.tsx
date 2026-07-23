@@ -1,9 +1,15 @@
 'use client'
 import Link from 'next/link'
-import type { QuizDeputyMatch, QuizMatchResponse } from '@/lib/api'
+import type { QuizAnswerPosition, QuizDeputyMatch, QuizMatchResponse, QuizQuestion } from '@/lib/api'
 import { partyHex } from '@/lib/utils'
 import { departmentLabel } from '@/lib/departments'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
+
+const POSITION_LABELS: Record<QuizAnswerPosition, string> = {
+  pour: 'Pour',
+  contre: 'Contre',
+  abstention: 'Abstention',
+}
 
 const NAVY = 'var(--dp-text)'
 const LINE = 'var(--dp-border)'
@@ -81,6 +87,116 @@ function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number
   )
 }
 
+function PositionBadge({ position }: { position: QuizAnswerPosition | null }) {
+  if (position === null) {
+    return (
+      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--dp-text-muted)' }}>
+        Non exprimé
+      </span>
+    )
+  }
+  const color = position === 'pour' ? 'var(--dp-green)' : position === 'contre' ? 'var(--dp-red)' : 'var(--dp-text-secondary)'
+  const bg = position === 'pour' ? 'var(--dp-badge-pos-bg)' : position === 'contre' ? 'var(--dp-badge-neg-bg)' : 'var(--dp-track-bg)'
+  return (
+    <span
+      style={{
+        fontSize: 12.5,
+        fontWeight: 700,
+        padding: '3px 10px',
+        borderRadius: 999,
+        color,
+        background: bg,
+      }}
+    >
+      {POSITION_LABELS[position]}
+    </span>
+  )
+}
+
+// Per-question breakdown (MON-181) — only rendered when the API returned
+// `detail` (the live results screen; never on a stored share, ADR-025) and
+// the questions/answers are available to label each row.
+function VoteBreakdown({
+  best,
+  questions,
+  answers,
+}: {
+  best: QuizDeputyMatch
+  questions: QuizQuestion[]
+  answers: Record<string, QuizAnswerPosition>
+}) {
+  if (!best.detail) return null
+  const byVoteId = new Map(questions.map(q => [q.vote_id, q]))
+
+  return (
+    <details style={{ ...card, marginTop: 20, padding: 0 }}>
+      <summary
+        style={{
+          cursor: 'pointer',
+          padding: '18px 22px',
+          fontWeight: 600,
+          fontSize: 15,
+          color: NAVY,
+        }}
+      >
+        Le détail, scrutin par scrutin
+      </summary>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 22px 22px' }}>
+        {best.detail.map(d => {
+          const question = byVoteId.get(d.vote_id)
+          const yourAnswer = answers[d.vote_id] ?? null
+          const comparable = d.deputy_position !== null
+          const agrees = comparable && d.deputy_position === yourAnswer
+          return (
+            <div
+              key={d.vote_id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 16,
+                padding: '12px 0',
+                borderTop: `1px solid ${LINE}`,
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--dp-red)' }}>
+                  {question?.theme ?? 'Scrutin'}
+                </div>
+                <Link
+                  href={`/votes/${d.vote_id}`}
+                  style={{ fontSize: 14, color: NAVY, textDecoration: 'none', fontWeight: 500 }}
+                >
+                  {question?.question ?? d.vote_id}
+                </Link>
+                <div style={{ fontSize: 12.5, color: GRAY, marginTop: 4 }}>
+                  {comparable
+                    ? agrees
+                      ? 'En accord avec ' + best.full_name
+                      : 'En désaccord avec ' + best.full_name
+                    : `Position non comparable — ${best.full_name} n'a pas voté pour ou contre`}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11.5, color: 'var(--dp-text-muted)' }}>Vous</span>
+                  <PositionBadge position={yourAnswer} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11.5, color: 'var(--dp-text-muted)' }}>
+                    {best.full_name}
+                  </span>
+                  <PositionBadge position={d.deputy_position} />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </details>
+  )
+}
+
 // The full result card: hero best-match, top matches, opposite deputy, group
 // alignment, department comparison. Shared between the live results screen
 // (QuizClient) and the stored share page (/quiz/s/[id]) so both render the
@@ -88,9 +204,15 @@ function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number
 export function QuizResultSections({
   result,
   resolvedNom,
+  questions,
+  answers,
 }: {
   result: QuizMatchResponse
   resolvedNom?: string
+  // Only available on the live results screen — absent on the stored share
+  // page, which is why the breakdown accordion never renders there.
+  questions?: QuizQuestion[]
+  answers?: Record<string, QuizAnswerPosition>
 }) {
   const best = result.top_matches[0] ?? null
   const others = result.top_matches.slice(1)
@@ -128,6 +250,10 @@ export function QuizResultSections({
               {pctLabel(best)}
             </div>
           </Link>
+
+          {questions && answers && (
+            <VoteBreakdown best={best} questions={questions} answers={answers} />
+          )}
         </>
       ) : (
         <>
