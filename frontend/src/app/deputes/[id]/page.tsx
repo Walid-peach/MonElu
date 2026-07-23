@@ -293,7 +293,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
 
           {/* Quiz entry point (MON-183) — personalized "Votez-vous comme X ?" hook */}
           <Link
-            href={`/quiz?deputy=${id}`}
+            href={`/quiz?deputy=${encodeURIComponent(id)}`}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20,
               flexWrap: 'wrap', textDecoration: 'none',
