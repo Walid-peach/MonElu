@@ -685,7 +685,7 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 5. Terraform IaC is archived, not live (ADR-004, ADR-021) — do not add terraform apply steps or resurrect infra/
 6. Phase 5 alerts are deferred (ADR-002) — do not build email dispatch
 7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
-8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never persist answers or trust client-computed percentages
+8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never trust client-computed percentages; answers may be persisted only via the opt-in path in ADR-028 (see rule 11), never by default
 9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
 10. Dark mode is approved and being built (ADR-027, MON-103) — landing page stays light-only by design
 11. Quiz share answers may be stored only when the sharer opts in (`include_answers`, default off) for friend comparison (ADR-028) — never store answers by default, never add a server-side compare endpoint
