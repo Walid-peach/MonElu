@@ -104,6 +104,12 @@ async function answerAllQuestions(user: ReturnType<typeof userEvent.setup>) {
   }
 }
 
+// Passes through the optional self-perception group step without predicting.
+async function skipGroupStep(user: ReturnType<typeof userEvent.setup>) {
+  expect(screen.getByText('De quel groupe vous sentez-vous le plus proche ?')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Je préfère ne pas dire / passer' }))
+}
+
 beforeEach(() => {
   jest.clearAllMocks()
   mockQuestions.mockResolvedValue(QUESTIONS)
@@ -117,6 +123,7 @@ describe('QuizClient', () => {
 
     expect(screen.getByText('Quel député vote comme vous ?')).toBeInTheDocument()
     await answerAllQuestions(user)
+    await skipGroupStep(user)
 
     // Optional postal step reached after the last question.
     expect(screen.getByText('Et votre député à vous ?')).toBeInTheDocument()
@@ -162,6 +169,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.type(screen.getByLabelText('Code postal'), '33000')
     await user.click(screen.getByRole('button', { name: 'Voir mes résultats' }))
 
@@ -179,6 +187,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.type(screen.getByLabelText('Code postal'), '99999')
     await user.click(screen.getByRole('button', { name: 'Voir mes résultats' }))
 
@@ -194,6 +203,7 @@ describe('QuizClient', () => {
     await user.click(screen.getByRole('button', { name: 'Pour' }))
     await user.click(screen.getByRole('button', { name: 'Passer cette question' }))
     await user.click(screen.getByRole('button', { name: 'Abstention' }))
+    await skipGroupStep(user)
 
     expect(screen.getByText('Encore quelques réponses')).toBeInTheDocument()
     expect(
@@ -206,6 +216,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     expect(screen.getByText('Et votre député à vous ?')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '← Revenir aux questions' }))
@@ -222,6 +233,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
@@ -263,6 +275,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.type(screen.getByLabelText('Code postal'), '33000')
     await user.click(screen.getByRole('button', { name: 'Voir mes résultats' }))
     await screen.findByText('Les députés de votre département')
@@ -289,6 +302,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
@@ -304,6 +318,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
@@ -322,5 +337,62 @@ describe('QuizClient', () => {
       expect(screen.getByText(/Impossible de charger le questionnaire/)).toBeInTheDocument()
     )
     expect(screen.queryByRole('button', { name: /Commencer le quiz/ })).not.toBeInTheDocument()
+  })
+
+  it('skips the self-perception step in one tap with no gap line and no group in the payload', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await skipGroupStep(user)
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+
+    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    // Skipping the prediction renders no gap/confirmation line at all.
+    expect(screen.queryByText(/vos réponses vous/)).not.toBeInTheDocument()
+    // No network call — match or share — ever carries the predicted group.
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined)
+  })
+
+  it('confirms the prediction when the actual top group matches the guess', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    expect(screen.getByText('De quel groupe vous sentez-vous le plus proche ?')).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'Socialistes et apparentés' })
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+
+    await screen.findByText(
+      'Vous aviez vu juste : vos réponses vous placent bien près de Socialistes et apparentés (75%)'
+    )
+    // The prediction is never sent to the match endpoint (ADR-025: client-side only).
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined)
+  })
+
+  it('shows the gap line when the guess and the actual top group differ', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await user.click(
+      screen.getByRole('button', { name: 'Rassemblement National' })
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+
+    await screen.findByText(
+      'Vous vous sentiez proche de Rassemblement National - vos réponses vous rapprochent de Socialistes et apparentés (75%)'
+    )
   })
 })
