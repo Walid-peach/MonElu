@@ -646,6 +646,36 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 
 ---
 
+## ADR-028 — Friend comparison: opt-in answer storage in quiz shares, client-side comparison (MON-178/MON-179)
+
+**Date:** 2026-07-23
+**Status:** Final
+**Amends:** ADR-025's "Stored snapshot over URL-encoded results" reason bullet, which stated raw quiz answers are "stored only insofar as they appear in the rendered card" — friend comparison (MON-184) needs the sharer's full answer set available to a later visitor, so that clause is superseded by this ADR. The rest of ADR-025 (server-side match computation, snapshot immutability, repo-file question set, rate limiting) is unchanged.
+
+**Decision:** Three choices, scoped to the friend-comparison feature (MON-178 step 6 / MON-184):
+
+1. **Storage shape: extend `quiz_shares.result` JSONB with an optional `answers` array — no new column, no new table.** `POST /quiz/share` gains a request field `include_answers: bool = False`. When `false` (the default), the insert is byte-identical to today's `(version, result)` row. When `true`, the server adds the already-validated `answers` (the same `list[QuizAnswer]` submitted for the match computation, never a client-supplied separate payload) into the `result` JSONB before insert. `GET /quiz/share/{id}` returns `answers` when present, `null`/absent otherwise — no schema migration needed since `result` is already JSONB.
+2. **Opt-in, default off, surfaced as a checkbox.** The frontend share flow (`QuizClient.tsx` ShareResultButton area) adds a checkbox, unchecked by default, gating `include_answers`. A share created without checking it must be indistinguishable from a pre-MON-184 share.
+3. **Comparison is computed client-side — no `POST /quiz/compare` endpoint.** A visitor arriving at `/quiz?compare=<share_id>` fetches the stored share (which includes the sharer's `answers` because the CTA only appears when they're present) and, on completing their own quiz, diffs the two answer sets in the browser. Nothing is persisted or logged for the comparison itself, matching `/quiz/match`'s statelessness.
+
+**Reason:**
+
+- **JSONB extension over a new column/table.** The two answer sets involved (sharer's `QuizAnswer[]`, already validated by the existing `_answers_known_and_unique` validator) are small (~10 entries), have no independent query pattern (never filtered, joined, or indexed on), and are always read as a unit alongside the rest of the snapshot. A new column would need a migration for a field that's optional and structurally identical to data already inside `result`; a separate table would need its own FK, its own retention/moderation story, and buys nothing since answers are only ever fetched together with the share they belong to.
+- **Opt-in, not opt-out.** ADR-025 built quiz matching to be RGPD-clean by construction ("answers in, results out"); storing raw answers is a real behavior change, not a rendering detail, so it must be an explicit, visible, off-by-default user choice — consistent with the privacy-first posture the quiz intro copy already promises (see MON-175). This is why `include_answers` defaults to `False` at the API layer, not just in the frontend UI: a client that omits the field must get today's behavior, not an implicit opt-in.
+- **Client-side comparison over a new endpoint.** ADR-025's server-side-computation principle exists to make match *results* non-forgeable — a visitor could otherwise claim "je vote à 100% comme X" with fabricated numbers on a MonÉlu-branded card. Friend comparison doesn't have that risk: both answer sets being compared are already server-computed and already in the visitor's possession (their own submitted answers, and the sharer's answers from the fetched snapshot) before any comparison math runs. Counting agreement between two known, trusted sets client-side produces the same output a server endpoint would, without adding persistence, a new rate-limit surface, or a new router — and nothing about the comparison is stored or shareable as its own artifact (the visitor's *own* subsequent share, per MON-184's acceptance criteria, never carries the original sharer's data forward).
+- **Privacy copy contract with MON-175.** MON-175 is fixing the general share-flow disclosure ("le lien créé est public et montre votre département"). The `include_answers` checkbox needs its own line, additive to that base disclosure, not a competing paragraph: base disclosure always shows when sharing; a second line appears only when the checkbox is checked, stating that the sharer's answers will be included and visible to anyone who opens the link (enabling comparison). MON-175 and MON-184 must both reference this same two-tier disclosure rather than each inventing wording — MON-184's implementation should reuse or extend whatever component MON-175 introduces for the base disclosure.
+
+**Impact:**
+- MON-184 implements: `include_answers` field on `POST /quiz/share`; `answers` returned by `GET /quiz/share/{id}` when present; the opt-in checkbox with the two-tier disclosure copy described above; client-side comparison logic in `QuizClient.tsx` for `/quiz?compare=<share_id>`; version-mismatch (`share.result.version !== QUIZ_VERSION`) falls back to the plain quiz flow with a notice, since answers are keyed to a specific question-set version.
+- Do NOT add a `POST /quiz/compare` endpoint or persist/log comparison results — comparison stays exactly as stateless as `/quiz/match`.
+- Do NOT default `include_answers` to `true`, and do NOT let a request that omits the field behave as if it were `true`.
+- Do NOT let the comparison taker's own share (if they choose to share their result) carry the original sharer's `answers` forward — each share's `answers` field reflects only its own creator's opt-in choice.
+- Do NOT invent separate disclosure copy for the opt-in checkbox — it must compose with the base share-link disclosure from MON-175, not contradict it.
+
+**Trigger to revisit:** if comparison needs to extend beyond two parties (e.g. group/leaderboard comparison), the client-side-diff approach may need a server aggregation step — revisit choice 3. If `answers` storage meaningfully changes `quiz_shares` row size or moderation exposure at scale, revisit choice 1 in favor of a separate table with its own retention policy.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -658,4 +688,5 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never persist answers or trust client-computed percentages
 9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
 10. Dark mode is approved and being built (ADR-027, MON-103) — landing page stays light-only by design
-11. When in doubt: check what's actually deployed before writing new code
+11. Quiz share answers may be stored only when the sharer opts in (`include_answers`, default off) for friend comparison (ADR-028) — never store answers by default, never add a server-side compare endpoint
+12. When in doubt: check what's actually deployed before writing new code
