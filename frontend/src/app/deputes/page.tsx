@@ -24,7 +24,7 @@ async function fetchAllDeputies() {
 export default async function DeputiesPage() {
   const initial = await fetchAllDeputies()
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F7F4ED]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[color:var(--dp-page-bg)]" />}>
       <DeputiesClient initial={initial} />
     </Suspense>
   )

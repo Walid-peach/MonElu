@@ -137,28 +137,28 @@ const apiFeatures = [
 
 export default function AProposPage() {
   return (
-    <div style={{ background: '#F7F4ED', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
 
       {/* ====== HERO ====== */}
-      <div style={{ padding: '72px 56px 64px', background: 'linear-gradient(180deg,#ffffff 0%,#F7F4ED 100%)', borderBottom: '1px solid #ECE7DC' }}>
+      <div style={{ padding: '72px 56px 64px', background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 400px', gap: '80px', alignItems: 'center' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-5">Notre mission</div>
-            <h1 className="font-newsreader text-headline" style={{ fontWeight: 600, lineHeight: 1.06, letterSpacing: '-0.02em', color: '#1B2B50', margin: '0 0 22px', maxWidth: '600px' }}>
+            <h1 className="font-newsreader text-headline" style={{ fontWeight: 600, lineHeight: 1.06, letterSpacing: '-0.02em', color: 'var(--dp-text)', margin: '0 0 22px', maxWidth: '600px' }}>
               La démocratie mérite<br />des données <em>en clair</em>.
             </h1>
-            <p style={{ fontSize: '18px', lineHeight: 1.65, color: '#4B5563', maxWidth: '500px', margin: '0 0 32px' }}>
+            <p style={{ fontSize: '18px', lineHeight: 1.65, color: 'var(--dp-text-secondary)', maxWidth: '500px', margin: '0 0 32px' }}>
               MonÉlu ingère, transforme et sert les données de vote de l&apos;Assemblée nationale à tous les citoyens — sans jargon, sans filtre politique, sans abonnement.
             </p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <Link href="/deputes" style={{ background: '#1B2B50', color: '#fff', padding: '13px 26px', borderRadius: '8px', fontWeight: 600, fontSize: '15px', textDecoration: 'none' }}>
+              <Link href="/deputes" style={{ background: 'var(--dp-active-bg)', color: '#fff', padding: '13px 26px', borderRadius: '8px', fontWeight: 600, fontSize: '15px', textDecoration: 'none' }}>
                 Explorer les données
               </Link>
               <a
                 href="https://monelu-production.up.railway.app/docs"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ border: '1.5px solid #E4E6EA', color: '#4B5563', padding: '13px 26px', borderRadius: '8px', fontWeight: 600, fontSize: '15px', background: '#fff', textDecoration: 'none' }}
+                style={{ border: '1.5px solid var(--dp-border)', color: 'var(--dp-text-secondary)', padding: '13px 26px', borderRadius: '8px', fontWeight: 600, fontSize: '15px', background: 'var(--dp-card-bg)', textDecoration: 'none' }}
               >
                 Documentation API
               </a>
@@ -166,17 +166,17 @@ export default function AProposPage() {
           </div>
 
           {/* Stats card */}
-          <div style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: '14px', padding: '32px', boxShadow: '0 4px 16px rgba(27,43,80,0.08)' }}>
-            <div style={{ fontWeight: 700, fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: '14px', padding: '32px', boxShadow: '0 4px 16px var(--dp-avatar-shadow)' }}>
+            <div style={{ fontWeight: 700, fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--dp-text-muted)', marginBottom: '24px' }}>
               Plateforme en chiffres
             </div>
             {heroStats.map((s) => (
-              <div key={s.label} style={{ padding: '16px 0', borderBottom: '1px solid #F0F1F3', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '16px' }}>
-                <span style={{ fontSize: '14px', color: '#6B7280', lineHeight: 1.35 }}>{s.label}</span>
-                <span className="font-newsreader text-[28px]" style={{ fontWeight: 600, color: '#1B2B50', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>{s.value}</span>
+              <div key={s.label} style={{ padding: '16px 0', borderBottom: '1px solid var(--dp-track-bg)', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '16px' }}>
+                <span style={{ fontSize: '14px', color: 'var(--dp-text-secondary)', lineHeight: 1.35 }}>{s.label}</span>
+                <span className="font-newsreader text-[28px]" style={{ fontWeight: 600, color: 'var(--dp-text)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>{s.value}</span>
               </div>
             ))}
-            <div className="font-mono" style={{ paddingTop: '16px', fontSize: '11.5px', color: '#9CA3AF' }}>
+            <div className="font-mono" style={{ paddingTop: '16px', fontSize: '11.5px', color: 'var(--dp-text-muted)' }}>
               Mise à jour continue · flux officiel AN
             </div>
           </div>
@@ -184,20 +184,20 @@ export default function AProposPage() {
       </div>
 
       {/* ====== MANIFESTE ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#F7F4ED' }}>
+      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '80px', alignItems: 'start' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Pourquoi MonÉlu</div>
-            <div style={{ width: '40px', height: '3px', background: '#1B2B50', borderRadius: '2px' }} />
+            <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            <p className="font-newsreader text-[26px]" style={{ fontWeight: 500, lineHeight: 1.5, color: '#1B2B50', margin: 0 }}>
+            <p className="font-newsreader text-[26px]" style={{ fontWeight: 500, lineHeight: 1.5, color: 'var(--dp-text)', margin: 0 }}>
               &laquo;&nbsp;Les données parlementaires existent — elles sont publiques, officielles, riches. Mais elles sont éparpillées, peu structurées, et inaccessibles au plus grand nombre.&nbsp;&raquo;
             </p>
-            <p style={{ fontSize: '16px', lineHeight: 1.7, color: '#4B5563', margin: 0 }}>
+            <p style={{ fontSize: '16px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
               MonÉlu est né de ce constat. Nous agrégeons les flux bruts de l&apos;Assemblée nationale, les transformons via un pipeline de données de production, et les restituons sous une forme lisible — pour les citoyens, les journalistes, les chercheurs et les développeurs.
             </p>
-            <p style={{ fontSize: '16px', lineHeight: 1.7, color: '#4B5563', margin: 0 }}>
+            <p style={{ fontSize: '16px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
               Chaque donnée affichée est traçable jusqu&apos;à sa source officielle. Aucune interprétation, aucune inférence non documentée. Les votes sont des votes. Les absences sont des absences.
             </p>
           </div>
@@ -205,20 +205,20 @@ export default function AProposPage() {
       </div>
 
       {/* ====== VALEURS ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#fff' }}>
+      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
           <div style={{ marginBottom: '48px' }}>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Nos engagements</div>
-            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#1B2B50', margin: 0, letterSpacing: '-0.015em' }}>Ce qui nous guide</h2>
+            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: 0, letterSpacing: '-0.015em' }}>Ce qui nous guide</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px' }}>
             {valeurs.map((v) => (
-              <div key={v.title} style={{ background: '#F7F4ED', border: '1px solid #ECE7DC', borderRadius: '12px', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fff', border: '1px solid #E4E6EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B2B50" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: v.icon }} />
+              <div key={v.title} style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '12px', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--dp-text)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: v.icon }} />
                 </div>
-                <div style={{ fontWeight: 700, fontSize: '15.5px', color: '#1B2B50' }}>{v.title}</div>
-                <div style={{ fontSize: '14px', lineHeight: 1.6, color: '#6B7280' }}>{v.desc}</div>
+                <div style={{ fontWeight: 700, fontSize: '15.5px', color: 'var(--dp-text)' }}>{v.title}</div>
+                <div style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>{v.desc}</div>
               </div>
             ))}
           </div>
@@ -270,26 +270,26 @@ export default function AProposPage() {
       </div>
 
       {/* ====== SOURCES & TRANSPARENCE ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#F7F4ED' }}>
+      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 420px', gap: '72px', alignItems: 'start' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Transparence des données</div>
-            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#1B2B50', margin: '0 0 22px', letterSpacing: '-0.015em' }}>D&apos;où viennent les données&nbsp;?</h2>
-            <p style={{ fontSize: '16px', lineHeight: 1.7, color: '#4B5563', margin: '0 0 36px' }}>
+            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '0 0 22px', letterSpacing: '-0.015em' }}>D&apos;où viennent les données&nbsp;?</h2>
+            <p style={{ fontSize: '16px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: '0 0 36px' }}>
               Toutes les informations affichées sur MonÉlu proviennent de sources publiques officielles. Nous ne produisons pas de données — nous les structurons, les enrichissons et les rendons accessibles. Chaque entrée est horodatée et traçable.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {sources.map((src) => (
-                <div key={src.name} style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: '10px', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                  <div style={{ width: '44px', height: '44px', flexShrink: 0, borderRadius: '10px', background: '#F7F4ED', border: '1px solid #ECE7DC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B2B50" strokeWidth="1.8" strokeLinecap="round" dangerouslySetInnerHTML={{ __html: src.icon }} />
+                <div key={src.name} style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: '10px', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: '18px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
+                  <div style={{ width: '44px', height: '44px', flexShrink: 0, borderRadius: '10px', background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--dp-text)" strokeWidth="1.8" strokeLinecap="round" dangerouslySetInnerHTML={{ __html: src.icon }} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '15px', color: '#1B2B50' }}>{src.name}</div>
-                    <div style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '3px' }}>{src.desc}</div>
+                    <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--dp-text)' }}>{src.name}</div>
+                    <div style={{ fontSize: '13px', color: 'var(--dp-text-muted)', marginTop: '3px' }}>{src.desc}</div>
                   </div>
-                  <div className="font-mono" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1F8A5B', background: '#EAF5EF', padding: '5px 11px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '999px', background: '#1F8A5B', flexShrink: 0, display: 'inline-block' }} />
+                  <div className="font-mono" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--dp-green)', background: 'var(--dp-badge-pos-bg)', padding: '5px 11px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '999px', background: 'var(--dp-green)', flexShrink: 0, display: 'inline-block' }} />
                     {src.status}
                   </div>
                 </div>
@@ -299,20 +299,20 @@ export default function AProposPage() {
 
           {/* Freshness + license card */}
           <div style={{ position: 'sticky', top: '100px' }}>
-            <div style={{ background: '#fff', border: '1px solid #E4E6EA', borderRadius: '14px', padding: '28px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
-              <div style={{ fontWeight: 700, fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '20px' }}>Fraîcheur des données</div>
+            <div style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: '14px', padding: '28px', boxShadow: '0 4px 12px var(--dp-shadow-sm)', marginBottom: '16px' }}>
+              <div style={{ fontWeight: 700, fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--dp-text-muted)', marginBottom: '20px' }}>Fraîcheur des données</div>
               {freshness.map((fr) => (
-                <div key={fr.label} style={{ padding: '14px 0', borderBottom: '1px solid #F0F1F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                  <span style={{ fontSize: '13.5px', color: '#374151' }}>{fr.label}</span>
-                  <span className="font-mono" style={{ fontSize: '12px', color: '#6B7280' }}>{fr.cadence}</span>
+                <div key={fr.label} style={{ padding: '14px 0', borderBottom: '1px solid var(--dp-track-bg)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                  <span style={{ fontSize: '13.5px', color: 'var(--dp-text-secondary)' }}>{fr.label}</span>
+                  <span className="font-mono" style={{ fontSize: '12px', color: 'var(--dp-text-secondary)' }}>{fr.cadence}</span>
                 </div>
               ))}
-              <div style={{ paddingTop: '18px', fontSize: '12.5px', lineHeight: 1.6, color: '#9CA3AF' }}>
+              <div style={{ paddingTop: '18px', fontSize: '12.5px', lineHeight: 1.6, color: 'var(--dp-text-muted)' }}>
                 Pipeline actif tous les jours ouvrés :<br />
-                <span style={{ color: '#1B2B50', fontWeight: 600 }}>06h00 UTC · GitHub Actions cron</span>
+                <span style={{ color: 'var(--dp-text)', fontWeight: 600 }}>06h00 UTC · GitHub Actions cron</span>
               </div>
             </div>
-            <div style={{ background: '#EAF5EF', border: '1px solid #C2E3D2', borderRadius: '10px', padding: '16px 18px', fontSize: '13.5px', lineHeight: 1.6, color: '#1F8A5B' }}>
+            <div style={{ background: 'var(--dp-badge-pos-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '10px', padding: '16px 18px', fontSize: '13.5px', lineHeight: 1.6, color: 'var(--dp-green)' }}>
               <span style={{ fontWeight: 700 }}>Licence ouverte Etalab 2.0</span><br />
               Toutes les données redistribuées sont sous licence ouverte. Réutilisation libre, attribution requise.
             </div>
@@ -321,23 +321,23 @@ export default function AProposPage() {
       </div>
 
       {/* ====== API ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#fff' }}>
+      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 540px', gap: '80px', alignItems: 'center' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Pour les développeurs</div>
-            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#1B2B50', margin: '0 0 20px', letterSpacing: '-0.015em' }}>
+            <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '0 0 20px', letterSpacing: '-0.015em' }}>
               Une API REST pensée pour être utilisée.
             </h2>
-            <p style={{ fontSize: '16px', lineHeight: 1.7, color: '#4B5563', margin: '0 0 32px' }}>
+            <p style={{ fontSize: '16px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: '0 0 32px' }}>
               Accédez à l&apos;intégralité des données MonÉlu par programme. Députés, votes, scrutins — tout est exposé, documenté, versionné.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
               {apiFeatures.map((af) => (
                 <div key={af} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F8A5B" strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--dp-green)" strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: '2px' }}>
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  <span style={{ fontSize: '15px', color: '#374151' }}>{af}</span>
+                  <span style={{ fontSize: '15px', color: 'var(--dp-text-secondary)' }}>{af}</span>
                 </div>
               ))}
             </div>
@@ -396,17 +396,17 @@ export default function AProposPage() {
       </div>
 
       {/* ====== CONTACT ====== */}
-      <div style={{ padding: '64px 56px', borderBottom: '1px solid #ECE7DC', background: '#fff' }}>
+      <div style={{ padding: '64px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '80px', alignItems: 'start' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Contact</div>
-            <div style={{ width: '40px', height: '3px', background: '#1B2B50', borderRadius: '2px', marginBottom: '20px' }} />
-            <p style={{ fontSize: '15px', lineHeight: 1.7, color: '#6B7280', margin: 0 }}>
+            <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px', marginBottom: '20px' }} />
+            <p style={{ fontSize: '15px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
               Une question, un bug, une proposition de partenariat ? Contactez directement la personne responsable de la plateforme.
             </p>
           </div>
 
-          <div style={{ background: '#F7F4ED', border: '1px solid #ECE7DC', borderRadius: '14px', padding: '32px', display: 'flex', alignItems: 'center', gap: '32px' }}>
+          <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '14px', padding: '32px', display: 'flex', alignItems: 'center', gap: '32px' }}>
             <Image
               src="https://github.com/Walid-peach.png"
               alt="Walid Elkhoukh"
@@ -415,12 +415,12 @@ export default function AProposPage() {
               style={{ borderRadius: '999px', flexShrink: 0, objectFit: 'cover' }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: '19px', color: '#1B2B50', marginBottom: '4px' }}>Walid Elkhoukh</div>
-              <div style={{ fontSize: '14px', color: '#9CA3AF', marginBottom: '16px' }}>Data Engineer · responsable de la plateforme</div>
+              <div style={{ fontWeight: 700, fontSize: '19px', color: 'var(--dp-text)', marginBottom: '4px' }}>Walid Elkhoukh</div>
+              <div style={{ fontSize: '14px', color: 'var(--dp-text-muted)', marginBottom: '16px' }}>Data Engineer · responsable de la plateforme</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                 <a
                   href="mailto:walidelkhoukh99@gmail.com"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1px solid #E4E6EA', color: '#1B2B50', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', textDecoration: 'none' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', color: 'var(--dp-text)', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', textDecoration: 'none' }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
@@ -432,7 +432,7 @@ export default function AProposPage() {
                   href="https://github.com/Walid-peach"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1px solid #E4E6EA', color: '#1B2B50', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', textDecoration: 'none' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', color: 'var(--dp-text)', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', textDecoration: 'none' }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
@@ -441,16 +441,16 @@ export default function AProposPage() {
                 </a>
               </div>
             </div>
-            <div style={{ flexShrink: 0, background: '#fff', border: '1px solid #E4E6EA', borderRadius: '10px', padding: '16px 20px', minWidth: '200px' }}>
-              <div className="font-mono" style={{ fontWeight: 700, fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '12px' }}>Temps de réponse</div>
-              <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.6 }}>
+            <div style={{ flexShrink: 0, background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: '10px', padding: '16px 20px', minWidth: '200px' }}>
+              <div className="font-mono" style={{ fontWeight: 700, fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--dp-text-muted)', marginBottom: '12px' }}>Temps de réponse</div>
+              <div style={{ fontSize: '14px', color: 'var(--dp-text-secondary)', lineHeight: 1.6 }}>
                 Bugs &amp; questions techniques<br />
-                <span style={{ fontWeight: 600, color: '#1B2B50' }}>sous 48 h</span>
+                <span style={{ fontWeight: 600, color: 'var(--dp-text)' }}>sous 48 h</span>
               </div>
-              <div style={{ height: '1px', background: '#F0F1F3', margin: '12px 0' }} />
-              <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.6 }}>
+              <div style={{ height: '1px', background: 'var(--dp-track-bg)', margin: '12px 0' }} />
+              <div style={{ fontSize: '14px', color: 'var(--dp-text-secondary)', lineHeight: 1.6 }}>
                 Partenariats<br />
-                <span style={{ fontWeight: 600, color: '#1B2B50' }}>sous une semaine</span>
+                <span style={{ fontWeight: 600, color: 'var(--dp-text)' }}>sous une semaine</span>
               </div>
             </div>
           </div>
@@ -471,7 +471,7 @@ export default function AProposPage() {
           <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
             <Link
               href="/deputes"
-              style={{ background: '#E0786E', color: '#fff', padding: '14px 30px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', textDecoration: 'none', boxShadow: '0 2px 12px rgba(224,120,110,0.4)' }}
+              style={{ background: 'var(--dp-cta-bg)', color: '#fff', padding: '14px 30px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', textDecoration: 'none', boxShadow: '0 2px 12px var(--dp-cta-shadow)' }}
             >
               Commencer →
             </Link>

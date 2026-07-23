@@ -179,7 +179,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                   href={`/chat?q=${encodeURIComponent(`Quel est le bilan de ${deputy.full_name} ?`)}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: ACCENT, color: '#fff', padding: '12px 24px',
+                    background: 'var(--dp-cta-bg)', color: '#fff', padding: '12px 24px',
                     borderRadius: 9, fontWeight: 600, fontSize: 15,
                     boxShadow: '0 2px 8px var(--dp-cta-shadow)', textDecoration: 'none',
                   }}
@@ -290,6 +290,40 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
       {/* Body */}
       <div className="px-5 sm:px-14 pt-8 sm:pt-[52px] pb-14 sm:pb-20">
         <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 52 }}>
+
+          {/* Quiz entry point (MON-183) — personalized "Votez-vous comme X ?" hook */}
+          <Link
+            href={`/quiz?deputy=${encodeURIComponent(id)}`}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20,
+              flexWrap: 'wrap', textDecoration: 'none',
+              background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderLeft: `4px solid ${hex}`,
+              borderRadius: 12, padding: '22px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
+                Le quiz
+              </div>
+              <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 22, color: NAVY, margin: '10px 0 6px', letterSpacing: '-0.01em' }}>
+                Votez-vous comme {deputy.full_name} ?
+              </h2>
+              <p style={{ margin: 0, fontSize: 14.5, color: 'var(--dp-text-secondary)' }}>
+                Répondez à 10 vrais scrutins et découvrez votre taux d’accord avec {deputy.full_name}.
+              </p>
+            </div>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8, flexShrink: 0,
+              background: 'var(--dp-cta-bg)', color: '#fff', padding: '12px 24px',
+              borderRadius: 9, fontWeight: 600, fontSize: 15,
+              boxShadow: '0 2px 8px var(--dp-cta-shadow)',
+            }}>
+              Faites le test
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </span>
+          </Link>
 
           {/* Vote breakdown */}
           {scorecard && (

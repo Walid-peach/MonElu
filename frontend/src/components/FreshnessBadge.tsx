@@ -35,8 +35,8 @@ export async function FreshnessBadge() {
     <div
       className={`flex items-center justify-center gap-2 py-1.5 text-xs font-medium border-b ${
         stale
-          ? 'bg-amber-50 text-amber-700 border-amber-200'
-          : 'bg-gray-off text-gray-mid border-gray-border'
+          ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+          : 'bg-gray-off text-gray-mid border-gray-border dark:bg-[color:var(--dp-page-bg)] dark:text-[color:var(--dp-text-muted)] dark:border-[color:var(--dp-border)]'
       }`}
     >
       <span

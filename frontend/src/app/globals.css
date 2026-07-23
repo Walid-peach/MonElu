@@ -37,6 +37,37 @@
   --dp-shadow-sm: rgba(0,0,0,0.05);
   --dp-avatar-shadow: rgba(27,43,80,0.12);
   --dp-cta-shadow: rgba(224,120,110,0.35);
+  --dp-header-bg: #FBFAF6;
+  /* MON-160: a fixed navy "selected/active" surface (pagination current
+     page, etc.) - intentionally NOT overridden in .dark below. It pairs
+     with hardcoded white text, so it must stay dark-enough-for-white-text
+     in both themes rather than inverting like --dp-text does. */
+  --dp-active-bg: #1B2B50;
+  /* MON-163: same reasoning as --dp-active-bg, for solid accent-colored CTA
+     buttons paired with hardcoded white text (e.g. "Poser une question",
+     "Rechercher", the print button). --dp-accent itself is allowed to
+     invert/lighten for decorative or text use (party-color dots, etc.) -
+     it must NOT be reused for a solid background under white text, since
+     its dark-mode value is too light for that contrast to hold. */
+  --dp-cta-bg: #E0786E;
+  /* MON-156: the vote list's own adopte/rejete result badge (distinct from
+     vote-position.ts's pour/contre/abstention badges, which stay a deferred
+     gap for MON-159). Text reuses --dp-green/--dp-red; only the pale
+     background tint needs its own token since it must stay legible in
+     dark mode, unlike vote-position.ts's badges which are out of scope
+     here. */
+  --dp-badge-pos-bg: #EAF5EF;
+  --dp-badge-neg-bg: #FBE9E7;
+  /* MON-166: two more badge states the vote detail page needs beyond
+     pos/neg - a neutral/amber "Partage" state (group split evenly) and an
+     info/blue theme tag. Same reasoning as --dp-badge-pos-bg/-neg-bg. */
+  --dp-badge-neutral-bg: #FEF3C7;
+  --dp-badge-neutral-text: #B45309;
+  --dp-badge-info-bg: #E8EFFE;
+  --dp-badge-info-text: #2A5DB0;
+  /* MON-166: translucent sticky-header backdrop (backdrop-filter: blur).
+     Needs its own token since it is not opaque like --dp-card-bg. */
+  --dp-sticky-bg: rgba(255,255,255,0.94);
 }
 
 /* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
@@ -57,13 +88,26 @@
   --dp-green: #34C283;
   --dp-red: #FF6B60;
   --dp-accent: #E88E85;
-  --dp-abstention: #48546A;
+  /* MON-159: brightened from an earlier #48546A. That value scored 2.21:1
+     against --dp-card-bg, short of the WCAG 1.4.11 3:1 minimum for a
+     non-text UI element (the abstention segment of stacked vote bars
+     conveys its meaning through fill color alone). This value clears 3:1
+     against both --dp-card-bg (3.20:1) and --dp-page-bg (3.49:1). */
+  --dp-abstention: #5E6C88;
   --dp-track-bg: #1B2740;
   --dp-underline: #3A4863;
   --dp-avg-marker: rgba(255,255,255,0.35);
   --dp-shadow-sm: rgba(0,0,0,0.35);
   --dp-avatar-shadow: rgba(0,0,0,0.45);
   --dp-cta-shadow: rgba(232,142,133,0.25);
+  --dp-header-bg: #182338;
+  --dp-badge-pos-bg: rgba(52,194,131,0.16);
+  --dp-badge-neg-bg: rgba(255,107,96,0.16);
+  --dp-badge-neutral-bg: rgba(217,164,6,0.18);
+  --dp-badge-neutral-text: #E0B84D;
+  --dp-badge-info-bg: rgba(74,144,226,0.18);
+  --dp-badge-info-text: #7EB0F0;
+  --dp-sticky-bg: rgba(18,29,48,0.92);
 }
 
 @layer base {
@@ -72,15 +116,53 @@
 }
 
 @layer utilities {
-  .badge-adopte { @apply bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium px-2 py-0.5 rounded; }
-  .badge-rejete { @apply bg-red-50 text-red-civic border border-red-200 text-xs font-medium px-2 py-0.5 rounded; }
-  .badge-party { @apply bg-navy-muted text-navy text-xs font-medium px-2 py-0.5 rounded; }
+  .badge-adopte { @apply bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium px-2 py-0.5 rounded dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800; }
+  .badge-rejete { @apply bg-red-50 text-red-civic border border-red-200 text-xs font-medium px-2 py-0.5 rounded dark:bg-red-950/40 dark:text-red-300 dark:border-red-800; }
+  .badge-party { @apply bg-navy-muted text-navy text-xs font-medium px-2 py-0.5 rounded dark:bg-white/10 dark:text-gray-100; }
 }
 
 /* MON-114: printable deputy dossier — hide app chrome and force a clean
-   single page when the dossier route is sent to the browser's print dialog. */
+   single page when the dossier route is sent to the browser's print dialog.
+   MON-163: printed output must always be light, even if the page was
+   viewed in dark mode - reset every dp-/color- token back to its
+   light value here. This rule targets :root (same specificity as .dark,
+   which also targets :root/<html>) and is placed after .dark in the file,
+   so it wins the cascade tie whenever printing, regardless of which class
+   is present on <html>. */
 @media print {
   [data-print-hide] { display: none !important; }
   body { background: #fff !important; }
   @page { size: A4; margin: 14mm; }
+
+  :root {
+    --color-bg: theme('colors.gray.off');
+    --color-fg: theme('colors.navy.DEFAULT');
+    --dp-page-bg: #F7F4ED;
+    --dp-card-bg: #FFFFFF;
+    --dp-border: #E4E6EA;
+    --dp-border-subtle: #ECE7DC;
+    --dp-text: theme('colors.navy.DEFAULT');
+    --dp-text-secondary: #6B7280;
+    --dp-text-muted: #9CA3AF;
+    --dp-green: #1F8A5B;
+    --dp-red: #C9302A;
+    --dp-accent: #E0786E;
+    --dp-abstention: #D1D5DB;
+    --dp-track-bg: #EEF0F2;
+    --dp-underline: #C4C9D2;
+    --dp-avg-marker: rgba(0,0,0,0.25);
+    --dp-shadow-sm: rgba(0,0,0,0.05);
+    --dp-avatar-shadow: rgba(27,43,80,0.12);
+    --dp-cta-shadow: rgba(224,120,110,0.35);
+    --dp-header-bg: #FBFAF6;
+    --dp-active-bg: #1B2B50;
+    --dp-cta-bg: #E0786E;
+    --dp-badge-pos-bg: #EAF5EF;
+    --dp-badge-neg-bg: #FBE9E7;
+    --dp-badge-neutral-bg: #FEF3C7;
+    --dp-badge-neutral-text: #B45309;
+    --dp-badge-info-bg: #E8EFFE;
+    --dp-badge-info-text: #2A5DB0;
+    --dp-sticky-bg: rgba(255,255,255,0.94);
+  }
 }

@@ -1,16 +1,22 @@
 'use client'
 import Link from 'next/link'
-import type { QuizDeputyMatch, QuizMatchResponse } from '@/lib/api'
+import type { QuizAnswerPosition, QuizDeputyMatch, QuizMatchResponse, QuizQuestion } from '@/lib/api'
 import { partyHex } from '@/lib/utils'
 import { departmentLabel } from '@/lib/departments'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 
-const NAVY = '#1B2B50'
-const LINE = '#E4E6EA'
-const GRAY = '#6B7280'
+const POSITION_LABELS: Record<QuizAnswerPosition, string> = {
+  pour: 'Pour',
+  contre: 'Contre',
+  abstention: 'Abstention',
+}
+
+const NAVY = 'var(--dp-text)'
+const LINE = 'var(--dp-border)'
+const GRAY = 'var(--dp-text-secondary)'
 
 export const card: React.CSSProperties = {
-  background: '#fff',
+  background: 'var(--dp-card-bg)',
   border: `1px solid ${LINE}`,
   borderRadius: 12,
   padding: '22px 24px',
@@ -22,7 +28,7 @@ function AgreementBar({ pct, color }: { pct: number; color: string }) {
       style={{
         position: 'relative',
         height: 8,
-        background: '#EEF0F2',
+        background: 'var(--dp-track-bg)',
         borderRadius: 999,
         overflow: 'hidden',
       }}
@@ -53,12 +59,12 @@ function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number
         padding: '12px 14px',
         borderRadius: 10,
         textDecoration: 'none',
-        background: '#fff',
+        background: 'var(--dp-card-bg)',
         border: `1px solid ${LINE}`,
       }}
     >
       {rank !== undefined && (
-        <span className="font-mono" style={{ fontSize: 13, color: '#9CA3AF', width: 20 }}>
+        <span className="font-mono" style={{ fontSize: 13, color: 'var(--dp-text-muted)', width: 20 }}>
           {rank}
         </span>
       )}
@@ -75,9 +81,119 @@ function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number
         <div className="font-mono" style={{ fontWeight: 700, fontSize: 18, color: hex }}>
           {pctLabel(match)}
         </div>
-        <div style={{ fontSize: 11.5, color: '#9CA3AF' }}>{comparedLabel(match)}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--dp-text-muted)' }}>{comparedLabel(match)}</div>
       </div>
     </Link>
+  )
+}
+
+function PositionBadge({ position }: { position: QuizAnswerPosition | null }) {
+  if (position === null) {
+    return (
+      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--dp-text-muted)' }}>
+        Non exprimé
+      </span>
+    )
+  }
+  const color = position === 'pour' ? 'var(--dp-green)' : position === 'contre' ? 'var(--dp-red)' : 'var(--dp-text-secondary)'
+  const bg = position === 'pour' ? 'var(--dp-badge-pos-bg)' : position === 'contre' ? 'var(--dp-badge-neg-bg)' : 'var(--dp-track-bg)'
+  return (
+    <span
+      style={{
+        fontSize: 12.5,
+        fontWeight: 700,
+        padding: '3px 10px',
+        borderRadius: 999,
+        color,
+        background: bg,
+      }}
+    >
+      {POSITION_LABELS[position]}
+    </span>
+  )
+}
+
+// Per-question breakdown (MON-181) — only rendered when the API returned
+// `detail` (the live results screen; never on a stored share, ADR-025) and
+// the questions/answers are available to label each row.
+function VoteBreakdown({
+  best,
+  questions,
+  answers,
+}: {
+  best: QuizDeputyMatch
+  questions: QuizQuestion[]
+  answers: Record<string, QuizAnswerPosition>
+}) {
+  if (!best.detail) return null
+  const byVoteId = new Map(questions.map(q => [q.vote_id, q]))
+
+  return (
+    <details style={{ ...card, marginTop: 20, padding: 0 }}>
+      <summary
+        style={{
+          cursor: 'pointer',
+          padding: '18px 22px',
+          fontWeight: 600,
+          fontSize: 15,
+          color: NAVY,
+        }}
+      >
+        Le détail, scrutin par scrutin
+      </summary>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 22px 22px' }}>
+        {best.detail.map(d => {
+          const question = byVoteId.get(d.vote_id)
+          const yourAnswer = answers[d.vote_id] ?? null
+          const comparable = d.deputy_position !== null
+          const agrees = comparable && d.deputy_position === yourAnswer
+          return (
+            <div
+              key={d.vote_id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 16,
+                padding: '12px 0',
+                borderTop: `1px solid ${LINE}`,
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--dp-red)' }}>
+                  {question?.theme ?? 'Scrutin'}
+                </div>
+                <Link
+                  href={`/votes/${d.vote_id}`}
+                  style={{ fontSize: 14, color: NAVY, textDecoration: 'none', fontWeight: 500 }}
+                >
+                  {question?.question ?? d.vote_id}
+                </Link>
+                <div style={{ fontSize: 12.5, color: GRAY, marginTop: 4 }}>
+                  {comparable
+                    ? agrees
+                      ? 'En accord avec ' + best.full_name
+                      : 'En désaccord avec ' + best.full_name
+                    : `Position non comparable — ${best.full_name} n'a pas voté pour ou contre`}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11.5, color: 'var(--dp-text-muted)' }}>Vous</span>
+                  <PositionBadge position={yourAnswer} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11.5, color: 'var(--dp-text-muted)' }}>
+                    {best.full_name}
+                  </span>
+                  <PositionBadge position={d.deputy_position} />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </details>
   )
 }
 
@@ -88,9 +204,15 @@ function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number
 export function QuizResultSections({
   result,
   resolvedNom,
+  questions,
+  answers,
 }: {
   result: QuizMatchResponse
   resolvedNom?: string
+  // Only available on the live results screen — absent on the stored share
+  // page, which is why the breakdown accordion never renders there.
+  questions?: QuizQuestion[]
+  answers?: Record<string, QuizAnswerPosition>
 }) {
   const best = result.top_matches[0] ?? null
   const others = result.top_matches.slice(1)
@@ -122,12 +244,16 @@ export function QuizResultSections({
               <div style={{ fontSize: 14, color: GRAY, marginTop: 4 }}>
                 {[best.party, departmentLabel(best.department)].filter(Boolean).join(' · ')}
               </div>
-              <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>{comparedLabel(best)}</div>
+              <div style={{ fontSize: 13, color: 'var(--dp-text-muted)', marginTop: 4 }}>{comparedLabel(best)}</div>
             </div>
             <div className="font-mono" style={{ fontWeight: 700, fontSize: 34, color: bestHex }}>
               {pctLabel(best)}
             </div>
           </Link>
+
+          {questions && answers && (
+            <VoteBreakdown best={best} questions={questions} answers={answers} />
+          )}
         </>
       ) : (
         <>
@@ -137,7 +263,7 @@ export function QuizResultSections({
           >
             Pas assez de votes comparables
           </h1>
-          <p style={{ margin: '14px 0 0', fontSize: 15.5, lineHeight: 1.6, color: '#4B5563' }}>
+          <p style={{ margin: '14px 0 0', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
             Aucun député n’a exprimé de position sur assez de scrutins de votre sélection pour
             établir une comparaison fiable. Réessayez en répondant à davantage de questions.
           </p>

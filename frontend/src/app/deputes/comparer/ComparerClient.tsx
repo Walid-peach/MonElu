@@ -15,11 +15,11 @@ import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
 
-const NAVY   = '#1B2B50'
-const CREAM  = '#F7F4ED'
-const LINE   = '#E4E6EA'
-const ACCENT = '#E0786E'
-const RED    = '#C9302A'
+const NAVY   = 'var(--dp-text)'
+const CREAM  = 'var(--dp-page-bg)'
+const LINE   = 'var(--dp-border)'
+const ACCENT = 'var(--dp-accent)'
+const RED    = 'var(--dp-red)'
 
 type Mode = 'deputy' | 'party' | 'national'
 
@@ -76,7 +76,7 @@ function DeputyPicker({
   if (selected) {
     return (
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, background: '#fff',
+        display: 'flex', alignItems: 'center', gap: 12, background: 'var(--dp-card-bg)',
         border: `1px solid ${LINE}`, borderRadius: 10, padding: '10px 14px',
       }}>
         <DeputyAvatar name={selected.full_name} photoUrl={selected.photo_url} size="sm" />
@@ -84,12 +84,12 @@ function DeputyPicker({
           <div style={{ fontWeight: 600, fontSize: 15, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {selected.full_name}
           </div>
-          <div style={{ fontSize: 12.5, color: '#9CA3AF' }}>{selected.party ?? '—'}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{selected.party ?? '—'}</div>
         </div>
         <button
           onClick={() => { setQuery(''); setResults([]); onSelect(null) }}
           aria-label="Changer de député"
-          style={{ color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}
+          style={{ color: 'var(--dp-text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}
         >
           Changer
         </button>
@@ -107,14 +107,14 @@ function DeputyPicker({
         onFocus={() => setOpen(true)}
         style={{
           width: '100%', border: `1px solid ${LINE}`, borderRadius: 10,
-          padding: '13px 16px', fontSize: 15, color: '#1F2937', background: '#fff',
+          padding: '13px 16px', fontSize: 15, color: 'var(--dp-text)', background: 'var(--dp-card-bg)',
         }}
       />
       {open && query.trim().length >= 2 && results.length > 0 && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6,
-          background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 20, overflow: 'hidden',
+          background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 10,
+          boxShadow: '0 8px 24px var(--dp-shadow-sm)', zIndex: 20, overflow: 'hidden',
         }}>
           {results.map(d => (
             <button
@@ -131,7 +131,7 @@ function DeputyPicker({
                 <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {d.full_name}
                 </div>
-                <div style={{ fontSize: 12, color: '#9CA3AF' }}>{d.party ?? '—'}</div>
+                <div style={{ fontSize: 12, color: 'var(--dp-text-muted)' }}>{d.party ?? '—'}</div>
               </div>
             </button>
           ))}
@@ -155,10 +155,10 @@ function CompareRow({
   if (aPct === null && bPct === null) return null
   return (
     <div style={{ padding: '14px 0', borderBottom: `1px solid ${LINE}` }}>
-      <div style={{ fontSize: 13.5, color: '#6B7280', fontWeight: 500, marginBottom: 10 }}>{label}</div>
+      <div style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 10 }}>{label}</div>
       {[{ v: aPct, color: aColor }, { v: bPct, color: bColor }].map((row, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i === 0 ? 6 : 0 }}>
-          <div style={{ flex: 1, height: 9, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden' }}>
+          <div style={{ flex: 1, height: 9, background: 'var(--dp-track-bg)', borderRadius: 999, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${row.v ?? 0}%`, background: row.color, borderRadius: 999, transition: 'width 0.4s' }} />
           </div>
           <span className="font-mono" style={{ width: 44, textAlign: 'right', fontSize: 13.5, fontWeight: 700, color: NAVY }}>
@@ -309,7 +309,7 @@ export function ComparerClient() {
           <h1 className="font-newsreader" style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 600, color: NAVY, margin: '12px 0 8px', letterSpacing: '-0.01em' }}>
             Comparer deux bilans
           </h1>
-          <p style={{ fontSize: 15.5, color: '#4B5563', margin: '0 0 28px', maxWidth: 620 }}>
+          <p style={{ fontSize: 15.5, color: 'var(--dp-text-secondary)', margin: '0 0 28px', maxWidth: 620 }}>
             Présence, votes et alignement, côte à côte. Comparez un·e député·e à un·e autre, à son groupe, ou à la moyenne nationale.
           </p>
 
@@ -325,9 +325,9 @@ export function ComparerClient() {
                 onClick={() => syncUrl({ mode: t.key })}
                 style={{
                   padding: '9px 18px', borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-                  border: `1px solid ${mode === t.key ? NAVY : LINE}`,
-                  background: mode === t.key ? NAVY : '#fff',
-                  color: mode === t.key ? '#fff' : '#374151',
+                  border: `1px solid ${mode === t.key ? 'var(--dp-active-bg)' : LINE}`,
+                  background: mode === t.key ? 'var(--dp-active-bg)' : 'var(--dp-card-bg)',
+                  color: mode === t.key ? '#fff' : 'var(--dp-text-secondary)',
                 }}
               >
                 {t.label}
@@ -352,13 +352,13 @@ export function ComparerClient() {
           </div>
 
           {!deputyA && (
-            <div style={{ padding: '48px 0', textAlign: 'center', color: '#9CA3AF', fontSize: 15 }}>
+            <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 15 }}>
               Choisissez au moins un·e député·e pour démarrer la comparaison.
             </div>
           )}
 
           {deputyA && loading && !sideA && (
-            <div style={{ padding: '48px 0', textAlign: 'center', color: '#9CA3AF', fontSize: 15 }}>
+            <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 15 }}>
               Chargement…
             </div>
           )}
@@ -387,11 +387,11 @@ export function ComparerClient() {
 
               {/* Stat rows */}
               {noPartyForComparison ? (
-                <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '24px 26px', color: '#6B7280', fontSize: 14 }}>
+                <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '24px 26px', color: 'var(--dp-text-secondary)', fontSize: 14 }}>
                   {deputyA.full_name} n&apos;est rattaché·e à aucun groupe politique — la comparaison par groupe n&apos;est pas disponible. Essayez la moyenne nationale, ou comparez à un autre député.
                 </div>
               ) : (
-                <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '10px 26px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '10px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
                   {rows.map(r => (
                     <CompareRow key={r.key} label={r.label} aPct={r.a} bPct={r.b} aColor={NAVY} bColor={ACCENT} />
                   ))}
@@ -400,8 +400,8 @@ export function ComparerClient() {
 
               {/* Party alignment (deputy-vs-deputy only) */}
               {mode === 'deputy' && sideA.alignment && sideB?.alignment && (
-                <div style={{ marginTop: 24, background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 26px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                  <div style={{ fontSize: 13.5, color: '#6B7280', fontWeight: 500, marginBottom: 14 }}>
+                <div style={{ marginTop: 24, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 14 }}>
                     Alignement avec son groupe politique
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -409,13 +409,13 @@ export function ComparerClient() {
                       <span className="font-mono" style={{ fontWeight: 700, fontSize: 22, color: NAVY }}>
                         {pct(sideA.alignment.party_alignment_rate)}%
                       </span>
-                      <div style={{ fontSize: 12.5, color: '#9CA3AF' }}>{sideA.alignment.party ?? '—'}</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{sideA.alignment.party ?? '—'}</div>
                     </div>
                     <div>
                       <span className="font-mono" style={{ fontWeight: 700, fontSize: 22, color: NAVY }}>
                         {pct(sideB.alignment.party_alignment_rate)}%
                       </span>
-                      <div style={{ fontSize: 12.5, color: '#9CA3AF' }}>{sideB.alignment.party ?? '—'}</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{sideB.alignment.party ?? '—'}</div>
                     </div>
                   </div>
                 </div>
@@ -428,7 +428,7 @@ export function ComparerClient() {
                     Votes où ils ont divergé
                   </h2>
                   {divergingVotes.length === 0 ? (
-                    <p style={{ fontSize: 14, color: '#9CA3AF' }}>
+                    <p style={{ fontSize: 14, color: 'var(--dp-text-muted)' }}>
                       Aucun vote divergent trouvé entre ces deux député·e·s (sur les scrutins récents).
                     </p>
                   ) : (
@@ -437,11 +437,11 @@ export function ComparerClient() {
                         <Link
                           key={v.vote_id}
                           href={`/votes/${v.vote_id}`}
-                          style={{ display: 'block', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10, padding: '14px 18px', textDecoration: 'none' }}
+                          style={{ display: 'block', background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 10, padding: '14px 18px', textDecoration: 'none' }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
                             {v.voted_at && (
-                              <span className="font-mono" style={{ fontSize: 12, color: '#9CA3AF' }}>{formatDate(v.voted_at)}</span>
+                              <span className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-muted)' }}>{formatDate(v.voted_at)}</span>
                             )}
                             <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, color: positionStyle(v.position_a).color, background: positionStyle(v.position_a).bg }}>
                               {deputyA.full_name.split(' ')[0]} : {positionStyle(v.position_a).label}
@@ -452,7 +452,7 @@ export function ComparerClient() {
                           </div>
                           <div style={{ fontSize: 15, color: NAVY, lineHeight: 1.35 }}>{v.vote_title}</div>
                           {v.summary_plain && (
-                            <div style={{ fontSize: 13, color: '#6B7280', marginTop: 6, lineHeight: 1.4 }}>{v.summary_plain}</div>
+                            <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', marginTop: 6, lineHeight: 1.4 }}>{v.summary_plain}</div>
                           )}
                         </Link>
                       ))}

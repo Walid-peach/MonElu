@@ -286,6 +286,12 @@ export type QuizQuestion = {
   theme: string
   question: string
   context: string
+  // Live vote tallies (MON-180) — null if the SELECT joined no matching row.
+  votes_for: number | null
+  votes_against: number | null
+  abstentions: number | null
+  result: string | null
+  vote_date: string | null
 }
 
 export type QuizQuestionsResponse = {
@@ -295,6 +301,13 @@ export type QuizQuestionsResponse = {
 }
 
 export type QuizAnswerPosition = 'pour' | 'contre' | 'abstention'
+
+export type QuizVoteDetail = {
+  vote_id: string
+  // null when the deputy has no expressed position on this vote (nonVotant
+  // or absent) — render as "non comparable", not disagreement.
+  deputy_position: QuizAnswerPosition | null
+}
 
 export type QuizDeputyMatch = {
   deputy_id: string
@@ -307,6 +320,9 @@ export type QuizDeputyMatch = {
   agreement_pct: number | null
   matches: number
   compared: number
+  // Per-question breakdown (MON-181) — present only on the best match and
+  // the opposite; absent on stored shares (ADR-025).
+  detail: QuizVoteDetail[] | null
 }
 
 export type QuizGroupAlignment = {
@@ -332,13 +348,19 @@ export type QuizMatchResponse = {
   opposite: QuizDeputyMatch | null
   groups: QuizGroupAlignment[]
   my_department: QuizDepartmentResult | null
+  // Set only when the request carried focus_deputy_id (MON-183) — the
+  // personalized "Votez-vous comme X ?" deputy-page quiz entry.
+  focus: QuizDeputyMatch | null
 }
 
 // Quiz shares are immutable snapshots of server-recomputed results
 // (MON-139, ADR-025) — same semantics as chat shares / verifications.
+// `answers` is present only when the sharer opted in (ADR-028, MON-184).
 export type QuizShareResult = {
   id: string
-  result: QuizMatchResponse
+  result: QuizMatchResponse & {
+    answers: Array<{ vote_id: string; position: QuizAnswerPosition }> | null
+  }
   shared_at: string
   share_url: string
 }
@@ -465,17 +487,29 @@ export const api = {
     // The question set is a versioned repo file server-side (ADR-025) — it only
     // changes by deploy, so cache it as aggressively as immutable snapshots.
     questions: () => apiFetch<QuizQuestionsResponse>('/quiz/questions', { revalidate: 86400 }),
-    match: (answers: Array<{ vote_id: string; position: QuizAnswerPosition }>, department?: string) =>
+    match: (
+      answers: Array<{ vote_id: string; position: QuizAnswerPosition }>,
+      department?: string,
+      focusDeputyId?: string
+    ) =>
       apiPost<QuizMatchResponse>('/quiz/match', {
         answers,
         ...(department ? { department } : {}),
+        ...(focusDeputyId ? { focus_deputy_id: focusDeputyId } : {}),
       }),
     // Sends the answers, not the result: the server recomputes before storing
     // (ADR-025) so a share can never carry client-forged percentages.
-    share: (answers: Array<{ vote_id: string; position: QuizAnswerPosition }>, department?: string) =>
+    // `includeAnswers` is opt-in, default off (ADR-028, MON-184) — it stores
+    // the answers themselves so a later visitor can run a friend comparison.
+    share: (
+      answers: Array<{ vote_id: string; position: QuizAnswerPosition }>,
+      department?: string,
+      includeAnswers?: boolean
+    ) =>
       apiPost<QuizShareResult>('/quiz/share', {
         answers,
         ...(department ? { department } : {}),
+        ...(includeAnswers ? { include_answers: true } : {}),
       }),
     // Immutable snapshots — cache like chat shares / verifications.
     getShare: (id: string) => apiFetch<QuizShareResult>(`/quiz/share/${id}`, { revalidate: 86400 }),

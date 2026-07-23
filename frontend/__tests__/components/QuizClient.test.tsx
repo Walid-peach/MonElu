@@ -10,6 +10,10 @@ jest.mock('@/lib/api', () => ({
       questions: jest.fn(),
       match: jest.fn(),
       share: jest.fn(),
+      getShare: jest.fn(),
+    },
+    deputies: {
+      get: jest.fn(),
     },
   },
 }))
@@ -18,12 +22,23 @@ jest.mock('@/lib/postal', () => ({
   resolvePostalCodeToDepartment: jest.fn(),
 }))
 
+// Overrides jest.setup.ts's blanket next/navigation mock so individual tests
+// can simulate arriving at /quiz?deputy=<id> (MON-183) or /quiz?compare=<id> (MON-184).
+const mockSearchParamsGet = jest.fn<string | null, [string]>(() => null)
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  useSearchParams: () => ({ get: mockSearchParamsGet }),
+  usePathname: () => '/',
+}))
+
 import { api } from '@/lib/api'
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
 
 const mockQuestions = api.quiz.questions as jest.Mock
 const mockMatch = api.quiz.match as jest.Mock
 const mockShare = api.quiz.share as jest.Mock
+const mockDeputyGet = api.deputies.get as jest.Mock
+const mockGetShare = api.quiz.getShare as jest.Mock
 const mockResolve = resolvePostalCodeToDepartment as jest.Mock
 
 const QUESTIONS: QuizQuestionsResponse = {
@@ -35,18 +50,33 @@ const QUESTIONS: QuizQuestionsResponse = {
       theme: 'Fin de vie',
       question: 'Auriez-vous voté pour ou contre la question 1 ?',
       context: 'Contexte 1.',
+      votes_for: 291,
+      votes_against: 241,
+      abstentions: 12,
+      result: 'adopté',
+      vote_date: '2026-07-15',
     },
     {
       vote_id: 'V2',
       theme: 'Budget',
       question: 'Auriez-vous voté pour ou contre la question 2 ?',
       context: 'Contexte 2.',
+      votes_for: 200,
+      votes_against: 300,
+      abstentions: 5,
+      result: 'rejeté',
+      vote_date: '2026-06-01',
     },
     {
       vote_id: 'V3',
       theme: 'Écologie',
       question: 'Auriez-vous voté pour ou contre la question 3 ?',
       context: 'Contexte 3.',
+      votes_for: 310,
+      votes_against: 220,
+      abstentions: 8,
+      result: 'adopté',
+      vote_date: '2026-05-20',
     },
   ],
 }
@@ -61,6 +91,7 @@ const BEST = {
   agreement_pct: 83.3,
   matches: 5,
   compared: 6,
+  detail: null,
 }
 
 const MATCH: QuizMatchResponse = {
@@ -83,6 +114,7 @@ const MATCH: QuizMatchResponse = {
     },
   ],
   my_department: null,
+  focus: null,
 }
 
 const MATCH_WITH_DEPT: QuizMatchResponse = {
@@ -101,12 +133,20 @@ async function answerAllQuestions(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
   for (let i = 0; i < QUESTIONS.questions.length; i++) {
     await user.click(screen.getByRole('button', { name: 'Pour' }))
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
   }
+}
+
+// Passes through the optional self-perception group step without predicting.
+async function skipGroupStep(user: ReturnType<typeof userEvent.setup>) {
+  expect(screen.getByText('De quel groupe vous sentez-vous le plus proche ?')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Je préfère ne pas dire / passer' }))
 }
 
 beforeEach(() => {
   jest.clearAllMocks()
   mockQuestions.mockResolvedValue(QUESTIONS)
+  mockSearchParamsGet.mockReturnValue(null)
 })
 
 describe('QuizClient', () => {
@@ -117,6 +157,7 @@ describe('QuizClient', () => {
 
     expect(screen.getByText('Quel député vote comme vous ?')).toBeInTheDocument()
     await answerAllQuestions(user)
+    await skipGroupStep(user)
 
     // Optional postal step reached after the last question.
     expect(screen.getByText('Et votre député à vous ?')).toBeInTheDocument()
@@ -131,6 +172,7 @@ describe('QuizClient', () => {
         { vote_id: 'V2', position: 'pour' },
         { vote_id: 'V3', position: 'pour' },
       ],
+      undefined,
       undefined
     )
     // Skipping the postal step yields full results minus the department section.
@@ -138,21 +180,64 @@ describe('QuizClient', () => {
     expect(screen.queryByText('Les députés de votre département')).not.toBeInTheDocument()
   })
 
-  it('shows a progress indicator and supports going back a question', async () => {
+  it('shows a progress indicator, reveals the real outcome, and supports going back', async () => {
     const user = userEvent.setup()
     render(<QuizClient />)
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
 
     expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
+    // The outcome must never appear before an answer is given.
+    expect(screen.queryByText(/291 pour, 241 contre/)).not.toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: 'Contre' }))
+    // Reveal panel appears with the real tallies before advancing. 291
+    // pour vs 241 contre means "pour" is the majority — the "Contre" answer
+    // is with the minority.
+    await screen.findByText(/291 pour, 241 contre, 12 abstentions/)
+    expect(screen.getByText('Vous étiez avec la minorité.')).toBeInTheDocument()
+    expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
     expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '← Retour' }))
     expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
-    // The previously selected answer stays highlighted (selected state kept).
+    // The previously selected answer stays highlighted (selected state kept),
+    // and the reveal panel does not persist across back navigation.
     expect(screen.getByRole('button', { name: 'Contre' })).toHaveStyle({
-      border: '2px solid #C9302A',
+      border: '2px solid var(--dp-red)',
     })
+    expect(screen.queryByText(/291 pour, 241 contre/)).not.toBeInTheDocument()
+  })
+
+  it('allows going back directly from the reveal panel, landing on the answer screen', async () => {
+    const user = userEvent.setup()
+    render(<QuizClient />)
+    await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
+    await user.click(screen.getByRole('button', { name: 'Pour' }))
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
+
+    // Answer question 2 to trigger its reveal panel, then go back without
+    // advancing past it.
+    await user.click(screen.getByRole('button', { name: 'Contre' }))
+    await screen.findByText(/200 pour, 300 contre/)
+
+    await user.click(screen.getByRole('button', { name: '← Retour' }))
+    expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
+    expect(screen.queryByText(/200 pour, 300 contre/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pour' })).toHaveStyle({
+      border: '2px solid var(--dp-green)',
+    })
+  })
+
+  it('skipping a question shows no reveal and advances directly', async () => {
+    const user = userEvent.setup()
+    render(<QuizClient />)
+    await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
+
+    await user.click(screen.getByRole('button', { name: 'Passer cette question' }))
+    expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
+    expect(screen.queryByText(/L’Assemblée a/)).not.toBeInTheDocument()
   })
 
   it('resolves the postal code to a department and passes it to the match call', async () => {
@@ -162,12 +247,13 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.type(screen.getByLabelText('Code postal'), '33000')
     await user.click(screen.getByRole('button', { name: 'Voir mes résultats' }))
 
     await screen.findByText('Les députés de votre département')
     expect(mockResolve).toHaveBeenCalledWith('33000')
-    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), '33')
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), '33', undefined)
     expect(screen.getByText('Marie Bordeaux')).toBeInTheDocument()
     // A department deputy with no comparable vote renders gracefully.
     expect(screen.getByText('aucun vote comparable')).toBeInTheDocument()
@@ -179,6 +265,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.type(screen.getByLabelText('Code postal'), '99999')
     await user.click(screen.getByRole('button', { name: 'Voir mes résultats' }))
 
@@ -192,8 +279,11 @@ describe('QuizClient', () => {
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
 
     await user.click(screen.getByRole('button', { name: 'Pour' }))
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
     await user.click(screen.getByRole('button', { name: 'Passer cette question' }))
     await user.click(screen.getByRole('button', { name: 'Abstention' }))
+    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
+    await skipGroupStep(user)
 
     expect(screen.getByText('Encore quelques réponses')).toBeInTheDocument()
     expect(
@@ -206,13 +296,14 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     expect(screen.getByText('Et votre député à vous ?')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '← Revenir aux questions' }))
     // Lands on the last question with the previous selection still highlighted.
     expect(screen.getByText('Question 3 / 3')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pour' })).toHaveStyle({
-      border: '2px solid #1F8A5B',
+      border: '2px solid var(--dp-green)',
     })
   })
 
@@ -222,6 +313,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
@@ -245,6 +337,42 @@ describe('QuizClient', () => {
     )
   })
 
+  it('shows the per-question breakdown with the deputy position and votes/[id] links', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue({
+      ...MATCH,
+      top_matches: [
+        {
+          ...BEST,
+          detail: [
+            { vote_id: 'V1', deputy_position: 'pour' },
+            { vote_id: 'V2', deputy_position: 'contre' },
+            { vote_id: 'V3', deputy_position: null },
+          ],
+        },
+        MATCH.top_matches[1],
+      ],
+    })
+    render(<QuizClient />)
+
+    await answerAllQuestions(user) // answers pour/pour/pour
+    await skipGroupStep(user)
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+
+    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    await user.click(screen.getByText('Le détail, scrutin par scrutin'))
+
+    expect(screen.getByRole('link', { name: /Auriez-vous voté pour ou contre la question 1/ })).toHaveAttribute(
+      'href',
+      '/votes/V1'
+    )
+    expect(screen.getByText('En accord avec Jeanne Martin')).toBeInTheDocument()
+    expect(screen.getByText('En désaccord avec Jeanne Martin')).toBeInTheDocument()
+    expect(screen.getByText(/non comparable/)).toBeInTheDocument()
+  })
+
   it('shares results by creating a snapshot and copying the URL', async () => {
     const user = userEvent.setup()
     mockResolve.mockResolvedValue({ code: '33', nom: 'Gironde' })
@@ -263,6 +391,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.type(screen.getByLabelText('Code postal'), '33000')
     await user.click(screen.getByRole('button', { name: 'Voir mes résultats' }))
     await screen.findByText('Les députés de votre département')
@@ -277,9 +406,39 @@ describe('QuizClient', () => {
         { vote_id: 'V2', position: 'pour' },
         { vote_id: 'V3', position: 'pour' },
       ],
-      '33'
+      '33',
+      false
     )
     expect(writeText).toHaveBeenCalledWith('https://mon-elu.vercel.app/quiz/s/abc')
+  })
+
+  it('sends include_answers=true when the opt-in checkbox is checked', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    mockShare.mockResolvedValue({
+      id: 'abc',
+      result: { ...MATCH, answers: null },
+      shared_at: '2026-07-18T00:00:00Z',
+      share_url: 'https://mon-elu.vercel.app/quiz/s/abc',
+    })
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: jest.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    })
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await skipGroupStep(user)
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+    await screen.findByText(/Vous votez à/)
+
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
+    await screen.findByText('Lien copié !')
+
+    expect(mockShare).toHaveBeenCalledWith(expect.any(Array), undefined, true)
   })
 
   it('surfaces a share-creation failure with a retry state', async () => {
@@ -289,6 +448,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
@@ -304,6 +464,7 @@ describe('QuizClient', () => {
     render(<QuizClient />)
 
     await answerAllQuestions(user)
+    await skipGroupStep(user)
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
@@ -322,5 +483,235 @@ describe('QuizClient', () => {
       expect(screen.getByText(/Impossible de charger le questionnaire/)).toBeInTheDocument()
     )
     expect(screen.queryByRole('button', { name: /Commencer le quiz/ })).not.toBeInTheDocument()
+  })
+
+  it('skips the self-perception step in one tap with no gap line and no group in the payload', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await skipGroupStep(user)
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+
+    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    // Skipping the prediction renders no gap/confirmation line at all.
+    expect(screen.queryByText(/vos réponses vous/)).not.toBeInTheDocument()
+    // No network call — match or share — ever carries the predicted group.
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, undefined)
+  })
+
+  it('confirms the prediction when the actual top group matches the guess', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    expect(screen.getByText('De quel groupe vous sentez-vous le plus proche ?')).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'Socialistes et apparentés' })
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+
+    await screen.findByText(
+      'Vous aviez vu juste : vos réponses vous placent bien près de Socialistes et apparentés (75%)'
+    )
+    // The prediction is never sent to the match endpoint (ADR-025: client-side only).
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, undefined)
+  })
+
+  it('shows the gap line when the guess and the actual top group differ', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue(MATCH)
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await user.click(
+      screen.getByRole('button', { name: 'Rassemblement National' })
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+
+    await screen.findByText(
+      'Vous vous sentiez proche de Rassemblement National - vos réponses vous rapprochent de Socialistes et apparentés (75%)'
+    )
+  })
+
+  // MON-183: /quiz?deputy=<id> — personalized "Votez-vous comme X ?" entry.
+  describe('personalized deputy-page entry (?deputy=<id>)', () => {
+    beforeEach(() => {
+      mockSearchParamsGet.mockImplementation((key: string) => (key === 'deputy' ? 'PA100' : null))
+    })
+
+    it('personalizes the intro once the deputy name resolves', async () => {
+      mockDeputyGet.mockResolvedValue({ deputy_id: 'PA100', full_name: 'Jeanne Martin' })
+      render(<QuizClient />)
+
+      await screen.findByText('Votez-vous comme Jeanne Martin ?')
+      expect(mockDeputyGet).toHaveBeenCalledWith('PA100')
+      expect(screen.queryByText('Quel député vote comme vous ?')).not.toBeInTheDocument()
+    })
+
+    it('sends focus_deputy_id on submit and renders the focus card', async () => {
+      const user = userEvent.setup()
+      mockDeputyGet.mockResolvedValue({ deputy_id: 'PA100', full_name: 'Jeanne Martin' })
+      mockMatch.mockResolvedValue({ ...MATCH, focus: BEST })
+      render(<QuizClient />)
+
+      await screen.findByText('Votez-vous comme Jeanne Martin ?')
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+
+      await screen.findByText('Vous votez à 83.3% comme Jeanne Martin - c’est votre meilleur match.')
+      expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, 'PA100')
+    })
+
+    it('shows an honest not-enough-votes state when the focus deputy has no comparable position', async () => {
+      const user = userEvent.setup()
+      mockDeputyGet.mockResolvedValue({ deputy_id: 'PA100', full_name: 'Jeanne Martin' })
+      mockMatch.mockResolvedValue({
+        ...MATCH,
+        focus: { ...BEST, agreement_pct: null, matches: 0, compared: 0 },
+      })
+      render(<QuizClient />)
+
+      await screen.findByText('Votez-vous comme Jeanne Martin ?')
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+
+      await screen.findByText('Pas assez de votes comparables avec Jeanne Martin pour l’instant.')
+    })
+
+    it('falls back to the plain quiz when the deputy id is unknown', async () => {
+      const user = userEvent.setup()
+      mockDeputyGet.mockRejectedValue(new Error('API error: 422'))
+      mockMatch.mockResolvedValue(MATCH)
+      render(<QuizClient />)
+
+      await waitFor(() => expect(mockDeputyGet).toHaveBeenCalledWith('PA100'))
+      expect(screen.getByText('Quel député vote comme vous ?')).toBeInTheDocument()
+
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+
+      await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+      // No personalization resolved — focus_deputy_id must not be sent.
+      expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, undefined)
+    })
+  })
+
+  // -------------------------------------------------------------- friend comparison (MON-184, ADR-028)
+  describe('friend comparison via ?compare=<id>', () => {
+    const SHARED_ANSWERS = [
+      { vote_id: 'V1', position: 'pour' },
+      { vote_id: 'V2', position: 'contre' },
+      { vote_id: 'V3', position: 'pour' },
+    ]
+
+    it('shows the head-to-head agreement above the standard results', async () => {
+      mockSearchParamsGet.mockImplementation((key: string) => (key === 'compare' ? 'share-1' : null))
+      mockGetShare.mockResolvedValue({
+        id: 'share-1',
+        result: { ...MATCH, version: QUESTIONS.version, answers: SHARED_ANSWERS },
+        shared_at: '2026-07-18T00:00:00Z',
+        share_url: 'https://mon-elu.vercel.app/quiz/s/share-1',
+      })
+      mockMatch.mockResolvedValue(MATCH)
+      const user = userEvent.setup()
+      render(<QuizClient />)
+
+      await screen.findByText(/faites le test pour voir votre accord/i)
+      await answerAllQuestions(user) // answers pour/pour/pour
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+
+      // Own answers pour/pour/pour vs shared pour/contre/pour — 2/3 agree.
+      await screen.findByText('Vous êtes d’accord avec ce résultat partagé sur 2/3 scrutins.')
+    })
+
+    it('falls back to the plain quiz with a notice on a question-set version mismatch', async () => {
+      mockSearchParamsGet.mockImplementation((key: string) => (key === 'compare' ? 'share-old' : null))
+      mockGetShare.mockResolvedValue({
+        id: 'share-old',
+        result: { ...MATCH, version: 'old-version', answers: SHARED_ANSWERS },
+        shared_at: '2026-07-18T00:00:00Z',
+        share_url: 'https://mon-elu.vercel.app/quiz/s/share-old',
+      })
+      mockMatch.mockResolvedValue(MATCH)
+      const user = userEvent.setup()
+      render(<QuizClient />)
+
+      await screen.findByText(/version précédente du quiz/i)
+      expect(screen.queryByText(/faites le test pour voir votre accord/i)).not.toBeInTheDocument()
+
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+      await screen.findByText(/Vous votez à/)
+      expect(screen.queryByText(/Vous êtes d’accord avec ce résultat partagé/)).not.toBeInTheDocument()
+    })
+
+    it('never carries the original sharer answers into the taker’s own share', async () => {
+      mockSearchParamsGet.mockImplementation((key: string) => (key === 'compare' ? 'share-1' : null))
+      mockGetShare.mockResolvedValue({
+        id: 'share-1',
+        result: { ...MATCH, version: QUESTIONS.version, answers: SHARED_ANSWERS },
+        shared_at: '2026-07-18T00:00:00Z',
+        share_url: 'https://mon-elu.vercel.app/quiz/s/share-1',
+      })
+      mockMatch.mockResolvedValue(MATCH)
+      mockShare.mockResolvedValue({
+        id: 'own-share',
+        result: { ...MATCH, answers: null },
+        shared_at: '2026-07-18T00:00:00Z',
+        share_url: 'https://mon-elu.vercel.app/quiz/s/own-share',
+      })
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: jest.fn().mockResolvedValue(undefined) },
+        configurable: true,
+      })
+      const user = userEvent.setup()
+      render(<QuizClient />)
+
+      await answerAllQuestions(user)
+      await skipGroupStep(user)
+      await user.click(
+        screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+      )
+      await screen.findByText(/Vous votez à/)
+
+      await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
+      await screen.findByText('Lien copié !')
+
+      // The taker's own share payload is only their own answers, never the
+      // fetched sharer's SHARED_ANSWERS.
+      expect(mockShare).toHaveBeenCalledWith(
+        [
+          { vote_id: 'V1', position: 'pour' },
+          { vote_id: 'V2', position: 'pour' },
+          { vote_id: 'V3', position: 'pour' },
+        ],
+        undefined,
+        false
+      )
+    })
   })
 })

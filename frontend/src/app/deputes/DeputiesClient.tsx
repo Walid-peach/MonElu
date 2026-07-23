@@ -12,10 +12,10 @@ type DeputyList = { total: number; items: Deputy[]; limit: number; offset: numbe
 type SortKey = 'nom' | 'region' | 'parti'
 
 const PAGE_SIZE = 10
-const NAVY = '#1B2B50'
-const CREAM = '#F7F4ED'
-const LINE = '#E4E6EA'
-const ACCENT = '#E0786E'
+const NAVY = 'var(--dp-text)'
+const CREAM = 'var(--dp-page-bg)'
+const LINE = 'var(--dp-border)'
+const ACCENT = 'var(--dp-accent)'
 
 export function DeputiesClient({ initial }: { initial: DeputyList }) {
   const router = useRouter()
@@ -117,14 +117,14 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
       <div
         className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8 sm:pb-10"
         style={{
-          background: 'linear-gradient(180deg,#fff 0%,' + CREAM + ' 100%)',
-          borderBottom: '1px solid #ECE7DC',
+          background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,' + CREAM + ' 100%)',
+          borderBottom: '1px solid var(--dp-border-subtle)',
         }}
       >
         <div className="xl:grid xl:grid-cols-[1fr_340px] xl:gap-16 xl:items-start" style={{ maxWidth: 1180, margin: '0 auto' }}>
           <div className="xl:col-start-1 xl:row-start-1" style={{
             fontWeight: 700, fontSize: 12, letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: '#C9302A', marginBottom: 16,
+            textTransform: 'uppercase', color: 'var(--dp-red)', marginBottom: 16,
           }}>
             Annuaire des députés
           </div>
@@ -133,21 +133,21 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             letterSpacing: '-0.015em', color: NAVY, margin: 0, maxWidth: 760,
           }}>
             Les {initial.total} députés de l&apos;Assemblée nationale,{' '}
-            <span style={{ color: '#C9302A' }}>en clair</span>.
+            <span style={{ color: 'var(--dp-red)' }}>en clair</span>.
           </h1>
-          <p className="xl:col-start-1 xl:row-start-3" style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 540 }}>
+          <p className="xl:col-start-1 xl:row-start-3" style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: 'var(--dp-text-secondary)', maxWidth: 540 }}>
             Recherchez un élu, filtrez par groupe ou par territoire, et accédez à son bilan de vote complet.
           </p>
 
           {/* Group distribution */}
           <div className="hidden xl:block xl:col-start-2 xl:row-start-1 xl:row-span-5 xl:self-start" style={{ width: 340 }}>
             <div style={{
-              background: '#fff', border: '1px solid ' + LINE, borderRadius: 14,
-              padding: '24px 26px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              background: 'var(--dp-card-bg)', border: '1px solid ' + LINE, borderRadius: 14,
+              padding: '24px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)',
             }}>
               <div style={{
                 fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
-                textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 18,
+                textTransform: 'uppercase', color: 'var(--dp-text-muted)', marginBottom: 18,
               }}>
                 Répartition par groupe
               </div>
@@ -156,11 +156,11 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 999, flexShrink: 0, background: partyHex(g.party) }} />
-                      <span style={{ color: '#374151', fontWeight: 600 }}>{partyShort(g.party)}</span>
+                      <span style={{ color: 'var(--dp-text-secondary)', fontWeight: 600 }}>{partyShort(g.party)}</span>
                     </span>
-                    <span className="font-mono" style={{ color: '#9CA3AF' }}>{g.count}</span>
+                    <span className="font-mono" style={{ color: 'var(--dp-text-muted)' }}>{g.count}</span>
                   </div>
-                  <div style={{ height: 6, borderRadius: 999, background: '#F0F1F3', overflow: 'hidden' }}>
+                  <div style={{ height: 6, borderRadius: 999, background: 'var(--dp-track-bg)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${(g.count / maxGroupCount) * 100}%`, background: partyHex(g.party), borderRadius: 999 }} />
                   </div>
                 </div>
@@ -173,10 +173,10 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             <label htmlFor="deputy-search" className="sr-only">Rechercher un député</label>
             <div style={{
               flex: 1, display: 'flex', alignItems: 'center', gap: 12,
-              background: '#fff', border: '1px solid ' + LINE, borderRadius: 10,
-              padding: '0 18px', height: 54, boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              background: 'var(--dp-card-bg)', border: '1px solid ' + LINE, borderRadius: 10,
+              padding: '0 18px', height: 54, boxShadow: '0 1px 3px var(--dp-shadow-sm)',
             }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dp-text-muted)" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/>
               </svg>
               <input
@@ -187,14 +187,14 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                 onChange={e => setSearch(e.target.value)}
                 style={{
                   flex: 1, border: 'none', outline: 'none', fontSize: 16,
-                  color: '#1F2937', background: 'transparent',
+                  color: 'var(--dp-text)', background: 'transparent',
                 }}
               />
               {search && (
                 <button
                   onClick={clearSearch}
                   aria-label="Effacer la recherche"
-                  style={{ color: '#9CA3AF', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+                  style={{ color: 'var(--dp-text-muted)', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -206,10 +206,10 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
               onClick={() => setDebouncedSearch(search)}
               className="w-full sm:w-auto justify-center"
               style={{
-                display: 'flex', alignItems: 'center', background: ACCENT, color: '#fff',
+                display: 'flex', alignItems: 'center', background: 'var(--dp-cta-bg)', color: '#fff',
                 height: 54, padding: '0 30px', borderRadius: 10, fontWeight: 600,
                 fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap',
-                boxShadow: '0 2px 8px rgba(224,120,110,0.4)', border: 'none',
+                boxShadow: '0 2px 8px var(--dp-cta-shadow)', border: 'none',
               }}
             >
               Rechercher
@@ -218,17 +218,17 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
           {/* Sort dropdown */}
           <div className="xl:col-start-1 xl:row-start-5" style={{ display: 'flex', gap: 9, marginTop: 18, alignItems: 'center' }}>
-            <label htmlFor="deputy-sort" style={{ fontSize: 13.5, color: '#9CA3AF', marginRight: 4 }}>Trier par</label>
+            <label htmlFor="deputy-sort" style={{ fontSize: 13.5, color: 'var(--dp-text-muted)', marginRight: 4 }}>Trier par</label>
             <select
               id="deputy-sort"
               value={sort}
               onChange={e => { setSort(e.target.value as SortKey); setPage(1) }}
               style={{
-                background: '#fff', color: '#1B2B50',
+                background: 'var(--dp-card-bg)', color: 'var(--dp-text)',
                 border: '1px solid ' + LINE, borderRadius: 999,
                 padding: '8px 34px 8px 16px', fontSize: 13.5, fontWeight: 600,
                 cursor: 'pointer', appearance: 'none',
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23808A99' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'right 14px center',
               }}
@@ -242,7 +242,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
               href="/deputes/tableau"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
-                background: '#fff', border: '1px solid ' + LINE, borderRadius: 999,
+                background: 'var(--dp-card-bg)', border: '1px solid ' + LINE, borderRadius: 999,
                 padding: '8px 16px', fontSize: 13.5, fontWeight: 600,
                 color: NAVY, textDecoration: 'none', whiteSpace: 'nowrap',
               }}
@@ -267,10 +267,10 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                 href={`/departements/${matchedDeptCode}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                  background: '#fff', border: '1px solid ' + LINE, borderRadius: 999,
+                  background: 'var(--dp-card-bg)', border: '1px solid ' + LINE, borderRadius: 999,
                   padding: '8px 16px', fontSize: 13.5, fontWeight: 600,
                   color: NAVY, textDecoration: 'none',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  boxShadow: '0 1px 3px var(--dp-shadow-sm)',
                 }}
               >
                 Voir la page du département {departmentLabel(matchedDeptCode)} →
@@ -280,13 +280,13 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
           {/* Count row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>
-            <span className="font-mono" style={{ fontSize: 13, color: '#6B7280' }}>
+            <span className="font-mono" style={{ fontSize: 13, color: 'var(--dp-text-secondary)' }}>
               {filtered.length} député{filtered.length !== 1 ? 's' : ''}
             </span>
             {debouncedSearch && (
               <button
                 onClick={clearSearch}
-                style={{ color: '#C9302A', fontSize: 13, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+                style={{ color: 'var(--dp-red)', fontSize: 13, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
               >
                 Effacer la recherche ×
               </button>
@@ -295,7 +295,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
           {filtered.length === 0 ? (
             <div style={{ padding: '64px 0', textAlign: 'center' }}>
-              <p style={{ color: '#6B7280', fontSize: 15, marginBottom: 12 }}>
+              <p style={{ color: 'var(--dp-text-secondary)', fontSize: 15, marginBottom: 12 }}>
                 {postalNotFound
                   ? 'Code postal introuvable. Essayez un nom, une circonscription ou un département.'
                   : 'Aucun résultat pour cette recherche'}
@@ -311,17 +311,17 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
             <>
               {/* Table card */}
               <div style={{
-                background: '#fff', border: '1px solid ' + LINE,
+                background: 'var(--dp-card-bg)', border: '1px solid ' + LINE,
                 borderRadius: 12, overflow: 'hidden',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                boxShadow: '0 1px 3px var(--dp-shadow-sm)',
               }}>
                 {/* Header */}
                 <div
                   className="grid grid-cols-[1fr_20px] sm:grid-cols-[1fr_260px_34px] gap-3 sm:gap-[18px] px-4 sm:px-[26px] py-[13px]"
                   style={{
-                    borderBottom: '1px solid ' + LINE, background: '#FBFAF6',
+                    borderBottom: '1px solid ' + LINE, background: 'var(--dp-header-bg)',
                     font: '600 11.5px/1 var(--font-body)',
-                    letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF',
+                    letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--dp-text-muted)',
                   }}
                 >
                   <span>Député·e</span>
@@ -337,12 +337,12 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                       <div
                         className="grid grid-cols-[1fr_20px] sm:grid-cols-[1fr_260px_34px] gap-3 sm:gap-[18px] px-4 sm:px-[26px] py-[13px]"
                         style={{
-                          borderBottom: '1px solid #F0F1F3',
+                          borderBottom: '1px solid var(--dp-track-bg)',
                           alignItems: 'center', cursor: 'pointer',
-                          background: '#fff', transition: 'background 0.12s',
+                          background: 'var(--dp-card-bg)', transition: 'background 0.12s',
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#FBFAF6')}
-                        onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--dp-header-bg)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--dp-card-bg)')}
                       >
                         {/* Deputy */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
@@ -351,7 +351,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                             <div style={{ fontWeight: 600, fontSize: 15.5, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {d.full_name}
                             </div>
-                            <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 3 }}>
+                            <div style={{ fontSize: 13, color: 'var(--dp-text-muted)', marginTop: 3 }}>
                               {departmentLabel(d.department) ?? '—'}
                             </div>
                           </div>
@@ -360,13 +360,13 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                         {/* Group */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }} title={d.party ?? undefined}>
                           <span style={{ width: 9, height: 9, borderRadius: 999, flexShrink: 0, background: hex }} />
-                          <span className="hidden sm:inline" style={{ fontSize: 14, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span className="hidden sm:inline" style={{ fontSize: 14, color: 'var(--dp-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {d.party ?? '—'}
                           </span>
                         </div>
 
                         {/* Arrow */}
-                        <svg className="hidden sm:block" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C4C9D2" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                        <svg className="hidden sm:block" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--dp-underline)" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
                           <path d="m9 6 6 6-6 6"/>
                         </svg>
                       </div>
@@ -377,13 +377,13 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 26, fontSize: 14, color: '#6B7280' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 26, fontSize: 14, color: 'var(--dp-text-secondary)' }}>
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={safePage === 1}
                     style={{
                       width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '1px solid ' + LINE, borderRadius: 8, background: '#fff',
+                      border: '1px solid ' + LINE, borderRadius: 8, background: 'var(--dp-card-bg)',
                       cursor: safePage === 1 ? 'default' : 'pointer', opacity: safePage === 1 ? 0.4 : 1,
                     }}
                   >‹</button>
@@ -397,8 +397,8 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                         style={{
                           width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
                           borderRadius: 8, cursor: 'pointer',
-                          background: safePage === n ? NAVY : '#fff',
-                          color: safePage === n ? '#fff' : '#6B7280',
+                          background: safePage === n ? 'var(--dp-active-bg)' : 'var(--dp-card-bg)',
+                          color: safePage === n ? '#fff' : 'var(--dp-text-secondary)',
                           border: safePage === n ? 'none' : '1px solid ' + LINE,
                           fontWeight: safePage === n ? 600 : 400,
                         }}
@@ -410,7 +410,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                     disabled={safePage === totalPages}
                     style={{
                       width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '1px solid ' + LINE, borderRadius: 8, background: '#fff',
+                      border: '1px solid ' + LINE, borderRadius: 8, background: 'var(--dp-card-bg)',
                       cursor: safePage === totalPages ? 'default' : 'pointer', opacity: safePage === totalPages ? 0.4 : 1,
                     }}
                   >›</button>

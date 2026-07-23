@@ -7,9 +7,9 @@ import { departmentLabel } from '@/lib/departments'
 
 type ScorecardList = { total: number; items: ScorecardRow[] }
 
-const NAVY = '#1B2B50'
-const CREAM = '#F7F4ED'
-const LINE = '#E4E6EA'
+const NAVY = 'var(--dp-text)'
+const CREAM = 'var(--dp-page-bg)'
+const LINE = 'var(--dp-border)'
 
 type ColumnKey =
   | 'full_name'
@@ -95,23 +95,23 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
       <div
         className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8"
         style={{
-          background: 'linear-gradient(180deg,#fff 0%,' + CREAM + ' 100%)',
-          borderBottom: '1px solid #ECE7DC',
+          background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,' + CREAM + ' 100%)',
+          borderBottom: '1px solid var(--dp-border-subtle)',
         }}
       >
         <div style={{ maxWidth: 1320, margin: '0 auto' }}>
           <div style={{
             fontWeight: 700, fontSize: 12, letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: '#C9302A', marginBottom: 16,
+            textTransform: 'uppercase', color: 'var(--dp-red)', marginBottom: 16,
           }}>
             Mode chercheur
           </div>
           <h1 className="font-newsreader text-[clamp(30px,4vw,44px)]" style={{
             fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.015em', color: NAVY, margin: 0,
           }}>
-            Tous les bilans de vote, <span style={{ color: '#C9302A' }}>en un tableau</span>.
+            Tous les bilans de vote, <span style={{ color: 'var(--dp-red)' }}>en un tableau</span>.
           </h1>
-          <p style={{ margin: '14px 0 0', fontSize: 16, lineHeight: 1.6, color: '#4B5563', maxWidth: 620 }}>
+          <p style={{ margin: '14px 0 0', fontSize: 16, lineHeight: 1.6, color: 'var(--dp-text-secondary)', maxWidth: 620 }}>
             Les {initial.total} scorecards des députés sur un seul écran. Cliquez sur une colonne
             pour trier, filtrez par nom, groupe ou département — ou emportez tout en CSV.
           </p>
@@ -126,9 +126,9 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
               onChange={e => setFilter(e.target.value)}
               style={{
                 flex: 1, maxWidth: 420, height: 46, padding: '0 16px',
-                background: '#fff', border: '1px solid ' + LINE, borderRadius: 10,
-                fontSize: 15, color: '#1F2937', outline: 'none',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                background: 'var(--dp-card-bg)', border: '1px solid ' + LINE, borderRadius: 10,
+                fontSize: 15, color: 'var(--dp-text)', outline: 'none',
+                boxShadow: '0 1px 3px var(--dp-shadow-sm)',
               }}
             />
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -137,7 +137,7 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
                 download
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                  background: NAVY, color: '#fff', height: 46, padding: '0 20px',
+                  background: 'var(--dp-active-bg)', color: '#fff', height: 46, padding: '0 20px',
                   borderRadius: 10, fontWeight: 600, fontSize: 14.5, textDecoration: 'none',
                   whiteSpace: 'nowrap',
                 }}
@@ -151,10 +151,10 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
                 href="/donnees"
                 style={{
                   display: 'inline-flex', alignItems: 'center',
-                  background: '#fff', color: NAVY, height: 46, padding: '0 18px',
+                  background: 'var(--dp-card-bg)', color: NAVY, height: 46, padding: '0 18px',
                   border: '1px solid ' + LINE, borderRadius: 10, fontWeight: 600,
                   fontSize: 14.5, textDecoration: 'none', whiteSpace: 'nowrap',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  boxShadow: '0 1px 3px var(--dp-shadow-sm)',
                 }}
               >
                 Toutes les données →
@@ -168,7 +168,7 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
       <div className="px-3 sm:px-14 pt-7 pb-14 sm:pb-[72px]">
         <div style={{ maxWidth: 1320, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 12px' }}>
-            <span className="font-mono" style={{ fontSize: 13, color: '#6B7280' }}>
+            <span className="font-mono" style={{ fontSize: 13, color: 'var(--dp-text-secondary)' }}>
               {rows.length} député{rows.length !== 1 ? 's' : ''}
             </span>
             <Link href="/deputes" style={{ fontSize: 13.5, color: NAVY, fontWeight: 600, textDecoration: 'none' }}>
@@ -177,12 +177,12 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
           </div>
 
           <div style={{
-            background: '#fff', border: '1px solid ' + LINE, borderRadius: 12,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflowX: 'auto',
+            background: 'var(--dp-card-bg)', border: '1px solid ' + LINE, borderRadius: 12,
+            boxShadow: '0 1px 3px var(--dp-shadow-sm)', overflowX: 'auto',
           }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 980, fontSize: 13.5 }}>
               <thead>
-                <tr style={{ background: '#FBFAF6', borderBottom: '1px solid ' + LINE }}>
+                <tr style={{ background: 'var(--dp-header-bg)', borderBottom: '1px solid ' + LINE }}>
                   {COLUMNS.map(col => {
                     const active = sortKey === col.key
                     return (
@@ -196,7 +196,7 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
                             justifyContent: col.numeric ? 'flex-end' : 'flex-start',
                             padding: '12px 14px', background: 'none', border: 'none', cursor: 'pointer',
                             font: '600 11.5px/1 var(--font-body)', letterSpacing: '0.07em',
-                            textTransform: 'uppercase', color: active ? NAVY : '#9CA3AF',
+                            textTransform: 'uppercase', color: active ? NAVY : 'var(--dp-text-muted)',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -214,8 +214,8 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
                 {rows.map(r => (
                   <tr
                     key={r.deputy_id}
-                    style={{ borderBottom: '1px solid #F0F1F3' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#FBFAF6')}
+                    style={{ borderBottom: '1px solid var(--dp-track-bg)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--dp-header-bg)')}
                     onMouseLeave={e => (e.currentTarget.style.background = '')}
                   >
                     <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
@@ -226,30 +226,30 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
                     <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }} title={r.party ?? undefined}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                         <span style={{ width: 8, height: 8, borderRadius: 999, flexShrink: 0, background: partyHex(r.party) }} />
-                        <span style={{ color: '#374151' }}>{partyShort(r.party)}</span>
+                        <span style={{ color: 'var(--dp-text-secondary)' }}>{partyShort(r.party)}</span>
                       </span>
                     </td>
-                    <td style={{ padding: '9px 14px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '9px 14px', color: 'var(--dp-text-secondary)', whiteSpace: 'nowrap' }}>
                       {departmentLabel(r.department) ?? r.department ?? '—'}
                     </td>
-                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: '#374151' }}>{r.total_votes}</td>
-                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: '#374151' }}>{formatPct(r.presence_rate)}</td>
-                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: '#374151' }}>{r.votes_for}</td>
-                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: '#374151' }}>{r.votes_against}</td>
-                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: '#374151' }}>{r.abstentions}</td>
-                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: '#374151' }}>{formatPct(r.votes_for_pct)}</td>
-                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: '#374151' }}>{formatPct(r.solennel_participation_rate)}</td>
-                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: '#374151' }}>{formatPct(r.voting_days_rate)}</td>
+                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: 'var(--dp-text-secondary)' }}>{r.total_votes}</td>
+                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: 'var(--dp-text-secondary)' }}>{formatPct(r.presence_rate)}</td>
+                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: 'var(--dp-text-secondary)' }}>{r.votes_for}</td>
+                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: 'var(--dp-text-secondary)' }}>{r.votes_against}</td>
+                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: 'var(--dp-text-secondary)' }}>{r.abstentions}</td>
+                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: 'var(--dp-text-secondary)' }}>{formatPct(r.votes_for_pct)}</td>
+                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: 'var(--dp-text-secondary)' }}>{formatPct(r.solennel_participation_rate)}</td>
+                    <td className="font-mono" style={{ padding: '9px 14px', textAlign: 'right', color: 'var(--dp-text-secondary)' }}>{formatPct(r.voting_days_rate)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <p style={{ margin: '14px 4px 0', fontSize: 12.5, color: '#9CA3AF', lineHeight: 1.6 }}>
+          <p style={{ margin: '14px 4px 0', fontSize: 12.5, color: 'var(--dp-text-muted)', lineHeight: 1.6 }}>
             Données : Assemblée nationale (Licence Ouverte 2.0), via MonÉlu. La « présence » mesure
             la participation aux scrutins publics, pas la présence physique en séance — voir la{' '}
-            <Link href="/methodologie" style={{ color: '#6B7280' }}>méthodologie</Link>.
+            <Link href="/methodologie" style={{ color: 'var(--dp-text-secondary)' }}>méthodologie</Link>.
           </p>
         </div>
       </div>
