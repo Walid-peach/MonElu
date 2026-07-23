@@ -6,6 +6,8 @@ import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion } from '@/lib/
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
 import type { ResolvedDepartment } from '@/lib/postal'
 import { POS } from '@/lib/vote-position'
+import { CANONICAL_GROUP_LABELS } from '@/lib/groups'
+import { partyHex } from '@/lib/utils'
 import { card, QuizResultSections } from './QuizResultSections'
 
 const NAVY = 'var(--dp-text)'
@@ -18,7 +20,7 @@ const GRAY = 'var(--dp-text-secondary)'
 // Mirrors MIN_ANSWERS in api/routers/quiz.py — the backend rejects fewer.
 const MIN_ANSWERS = 3
 
-type Phase = 'intro' | 'questions' | 'postal' | 'results'
+type Phase = 'intro' | 'questions' | 'group' | 'postal' | 'results'
 
 const kicker: React.CSSProperties = {
   fontWeight: 700,
@@ -112,6 +114,7 @@ export function QuizClient() {
   const [questionsError, setQuestionsError] = useState(false)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, QuizAnswerPosition>>({})
+  const [predictedGroup, setPredictedGroup] = useState<string | null>(null)
 
   const [postalInput, setPostalInput] = useState('')
   const [resolving, setResolving] = useState(false)
@@ -155,7 +158,7 @@ export function QuizClient() {
 
   function advance() {
     if (questions && index < questions.length - 1) setIndex(index + 1)
-    else setPhase('postal')
+    else setPhase('group')
   }
 
   function back() {
@@ -198,6 +201,7 @@ export function QuizClient() {
     setPhase('intro')
     setIndex(0)
     setAnswers({})
+    setPredictedGroup(null)
     setPostalInput('')
     setPostalError(null)
     setResolved(null)
@@ -340,6 +344,75 @@ export function QuizClient() {
     )
   }
 
+  // ------------------------------------------------------------------ group
+  if (phase === 'group') {
+    return (
+      <Shell>
+        <div style={{ ...kicker, marginBottom: 16 }}>Encore une chose</div>
+        <h2
+          className="font-newsreader text-[clamp(24px,3.5vw,34px)]"
+          style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.01em' }}
+        >
+          De quel groupe vous sentez-vous le plus proche ?
+        </h2>
+        <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
+          Facultatif — cette réponse reste dans votre navigateur, elle n’est jamais envoyée ni
+          enregistrée. À la fin, on compare votre ressenti à vos votes réels.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {CANONICAL_GROUP_LABELS.map(label => {
+            const hex = partyHex(label)
+            return (
+              <button
+                key={label}
+                onClick={() => {
+                  setPredictedGroup(label)
+                  setPhase('postal')
+                }}
+                style={{
+                  padding: '13px 18px',
+                  borderRadius: 10,
+                  fontWeight: 600,
+                  fontSize: 15,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: hex,
+                  background: 'var(--dp-card-bg)',
+                  border: `2px solid ${hex}`,
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ marginTop: 22, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={() => {
+              setPredictedGroup(null)
+              setPhase('postal')
+            }}
+            style={{
+              background: ACCENT, color: '#fff', padding: '12px 26px', borderRadius: 9,
+              fontWeight: 600, fontSize: 15, border: 'none', cursor: 'pointer',
+            }}
+          >
+            Je préfère ne pas dire / passer
+          </button>
+          <button
+            onClick={() => {
+              setPhase('questions')
+              if (questions) setIndex(questions.length - 1)
+            }}
+            style={{ fontSize: 14.5, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
+          >
+            ← Retour
+          </button>
+        </div>
+      </Shell>
+    )
+  }
+
   // ----------------------------------------------------------------- postal
   if (phase === 'postal') {
     const enough = answeredCount >= MIN_ANSWERS
@@ -456,6 +529,21 @@ export function QuizClient() {
     return (
       <Shell>
         <div style={{ ...kicker, marginBottom: 16 }}>Vos résultats</div>
+        {predictedGroup && result.groups.length > 0 && (
+          <div
+            style={{
+              ...card,
+              marginBottom: 24,
+              borderLeft: `4px solid ${partyHex(result.groups[0].party)}`,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
+              {result.groups[0].party === predictedGroup
+                ? `Vous aviez vu juste : vos réponses vous placent bien près de ${result.groups[0].party} (${result.groups[0].agreement_pct}%)`
+                : `Vous vous sentiez proche de ${predictedGroup} - vos réponses vous rapprochent de ${result.groups[0].party} (${result.groups[0].agreement_pct}%)`}
+            </p>
+          </div>
+        )}
         <QuizResultSections
           result={result}
           resolvedNom={resolved?.nom}
