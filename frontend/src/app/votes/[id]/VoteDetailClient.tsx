@@ -6,6 +6,7 @@ import { EmbedButton } from '@/components/EmbedButton'
 import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { getInitials, partyHex } from '@/lib/utils'
+import { groupSlug } from '@/lib/groups'
 import { resolvePostalCode } from '@/lib/postal'
 import { csvUrl } from '@/lib/api'
 import { HemicycleChart } from '@/components/HemicycleChart'
@@ -426,11 +427,18 @@ export function VoteDetailClient(props: Props) {
                   {groups.map((g) => {
                     const posColor = g.position === 'Pour' ? 'var(--dp-green)' : g.position === 'Contre' ? 'var(--dp-red)' : 'var(--dp-badge-neutral-text)'
                     const posBg   = g.position === 'Pour' ? 'var(--dp-badge-pos-bg)' : g.position === 'Contre' ? 'var(--dp-badge-neg-bg)' : 'var(--dp-badge-neutral-bg)'
+                    const href = groupSlug(g.name)
                     return (
                       <div key={g.name} style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px 90px', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--dp-track-bg)', alignItems: 'center', background: 'var(--dp-card-bg)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                           <span style={{ width: 9, height: 9, borderRadius: 999, flexShrink: 0, background: g.color, display: 'inline-block' }} />
-                          <span style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', fontWeight: 500 }}>{g.name}</span>
+                          {href ? (
+                            <Link href={`/groupes/${href}`} style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', fontWeight: 500, textDecoration: 'none' }}>
+                              {g.name}
+                            </Link>
+                          ) : (
+                            <span style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', fontWeight: 500 }}>{g.name}</span>
+                          )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ flex: 1, height: 7, borderRadius: 999, background: 'var(--dp-track-bg)', overflow: 'hidden', display: 'flex' }}>
