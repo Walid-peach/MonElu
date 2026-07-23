@@ -273,8 +273,10 @@ export function QuizClient() {
     const selected = answers[q.vote_id]
     const revealing = revealVoteId === q.vote_id
     const tallyKnown = q.votes_for != null && q.votes_against != null
+    const resultVerb =
+      q.result === 'adopté' ? 'adopté' : q.result === 'rejeté' ? 'rejeté' : null
     const resultLine = tallyKnown
-      ? `L’Assemblée a ${q.result === 'adopté' ? 'adopté' : 'rejeté'} ce texte : ` +
+      ? (resultVerb ? `L’Assemblée a ${resultVerb} ce texte : ` : 'Résultat du scrutin : ') +
         `${q.votes_for} pour, ${q.votes_against} contre` +
         (q.abstentions != null
           ? `, ${q.abstentions} abstention${q.abstentions > 1 ? 's' : ''}`
