@@ -61,6 +61,7 @@ const BEST = {
   agreement_pct: 83.3,
   matches: 5,
   compared: 6,
+  detail: null,
 }
 
 const MATCH: QuizMatchResponse = {
@@ -243,6 +244,41 @@ describe('QuizClient', () => {
       'href',
       '/mon-depute'
     )
+  })
+
+  it('shows the per-question breakdown with the deputy position and votes/[id] links', async () => {
+    const user = userEvent.setup()
+    mockMatch.mockResolvedValue({
+      ...MATCH,
+      top_matches: [
+        {
+          ...BEST,
+          detail: [
+            { vote_id: 'V1', deputy_position: 'pour' },
+            { vote_id: 'V2', deputy_position: 'contre' },
+            { vote_id: 'V3', deputy_position: null },
+          ],
+        },
+        MATCH.top_matches[1],
+      ],
+    })
+    render(<QuizClient />)
+
+    await answerAllQuestions(user) // answers pour/pour/pour
+    await user.click(
+      screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
+    )
+
+    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    await user.click(screen.getByText('Le détail, scrutin par scrutin'))
+
+    expect(screen.getByRole('link', { name: /Auriez-vous voté pour ou contre la question 1/ })).toHaveAttribute(
+      'href',
+      '/votes/V1'
+    )
+    expect(screen.getByText('En accord avec Jeanne Martin')).toBeInTheDocument()
+    expect(screen.getByText('En désaccord avec Jeanne Martin')).toBeInTheDocument()
+    expect(screen.getByText(/non comparable/)).toBeInTheDocument()
   })
 
   it('shares results by creating a snapshot and copying the URL', async () => {

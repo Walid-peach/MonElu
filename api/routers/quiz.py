@@ -98,6 +98,13 @@ class QuizMatchRequest(BaseModel):
         return answers
 
 
+class QuizVoteDetail(BaseModel):
+    vote_id: str
+    # None when the deputy has no expressed position on this vote (nonVotant
+    # or absent) — the frontend renders that as "non comparable", not disagreement.
+    deputy_position: Optional[Literal["pour", "contre", "abstention"]] = None
+
+
 class QuizDeputyMatch(BaseModel):
     deputy_id: str
     full_name: Optional[str] = None
@@ -109,6 +116,9 @@ class QuizDeputyMatch(BaseModel):
     agreement_pct: Optional[float] = None
     matches: int
     compared: int
+    # Per-question breakdown (MON-181) — populated only for the best match and
+    # the opposite; never persisted in quiz_shares (ADR-025 — see share_result).
+    detail: Optional[list[QuizVoteDetail]] = None
 
 
 class QuizGroupAlignment(BaseModel):
@@ -290,17 +300,32 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
                 dept_rows = cur.fetchall()
 
     stats = compute_deputy_stats(rows, answers)
+    position_by_deputy_vote = {(r["deputy_id"], r["vote_id"]): r["position"] for r in rows}
+
+    def detail_for(deputy_id: str) -> list[QuizVoteDetail]:
+        return [
+            QuizVoteDetail(
+                vote_id=vote_id,
+                deputy_position=position_by_deputy_vote.get((deputy_id, vote_id)),
+            )
+            for vote_id in answers
+        ]
 
     eligible = [e for e in stats.values() if e["compared"] >= threshold]
     eligible.sort(
         key=lambda e: (-e["matches"] / e["compared"], -e["compared"], e["full_name"] or "")
     )
 
+    top_matches = [to_match(e) for e in eligible[:TOP_MATCHES_LIMIT]]
+    if top_matches:
+        top_matches[0].detail = detail_for(top_matches[0].deputy_id)
+
     opposite = None
     if eligible:
         opposite = to_match(
             min(eligible, key=lambda e: (e["matches"] / e["compared"], -e["compared"]))
         )
+        opposite.detail = detail_for(opposite.deputy_id)
 
     my_department = None
     if dept_code is not None:
@@ -317,7 +342,7 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
         version=QUIZ_VERSION,
         answered=len(answers),
         eligible_deputies=len(eligible),
-        top_matches=[to_match(e) for e in eligible[:TOP_MATCHES_LIMIT]],
+        top_matches=top_matches,
         opposite=opposite,
         groups=compute_group_alignment(rows, answers, threshold),
         my_department=my_department,
@@ -354,6 +379,23 @@ def _to_share_response(row: dict) -> QuizShareResponse:
     )
 
 
+def _strip_detail(data: dict) -> dict:
+    """Remove the per-question detail (MON-181) before persisting a share.
+
+    A quiz share pairs the sharer's answers with a deputy's positions —
+    storing `detail` would leak the sharer's own answers, forbidden by
+    ADR-025 pending MON-179's opt-in revision.
+    """
+    for match in data.get("top_matches", []):
+        match.pop("detail", None)
+    if data.get("opposite"):
+        data["opposite"].pop("detail", None)
+    if data.get("my_department"):
+        for match in data["my_department"].get("deputies", []):
+            match.pop("detail", None)
+    return data
+
+
 @router.post(
     "/share",
     response_model=QuizShareResponse,
@@ -365,6 +407,7 @@ def share_result(request: Request, body: QuizMatchRequest) -> QuizShareResponse:
     # from the client (ADR-025) — a share can only contain server-computed
     # numbers. Nothing else about the request is persisted.
     result = _compute_match(body)
+    stored_result = _strip_detail(result.model_dump())
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -374,7 +417,7 @@ def share_result(request: Request, body: QuizMatchRequest) -> QuizShareResponse:
                     VALUES (%s, %s)
                     RETURNING id, result, created_at
                     """,
-                    (result.version, Json(result.model_dump())),
+                    (result.version, Json(stored_result)),
                 )
                 row = cur.fetchone()
             conn.commit()
