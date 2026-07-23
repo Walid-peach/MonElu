@@ -112,6 +112,7 @@ const MATCH: QuizMatchResponse = {
     },
   ],
   my_department: null,
+  focus: null,
 }
 
 const MATCH_WITH_DEPT: QuizMatchResponse = {
