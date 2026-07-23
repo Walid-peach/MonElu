@@ -544,7 +544,12 @@ export function QuizClient() {
             </p>
           </div>
         )}
-        <QuizResultSections result={result} resolvedNom={resolved?.nom} />
+        <QuizResultSections
+          result={result}
+          resolvedNom={resolved?.nom}
+          questions={questions ?? undefined}
+          answers={answers}
+        />
 
         <section style={{ marginTop: 48, ...card, textAlign: 'center' }}>
           <p style={{ margin: '0 0 16px', fontSize: 15, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>

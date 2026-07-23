@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from api.quiz_data import QUIZ_QUESTIONS, QUIZ_VERSION
 from api.routers.quiz import (
     QuizMatchRequest,
+    _strip_detail,
     compute_group_alignment,
     eligibility_threshold,
 )
@@ -121,6 +122,15 @@ def test_match_ranks_agreement_and_applies_threshold(client, mock_cursor):
     assert top[0]["compared"] == 3
 
     assert body["opposite"]["deputy_id"] == "D"
+
+    # Per-question breakdown (MON-181): populated only for the best match
+    # (top[0]) and the opposite, in answered order, with a null position
+    # where the deputy has no expressed row for that vote.
+    assert [d["vote_id"] for d in top[0]["detail"]] == [V1, V2, V3]
+    assert [d["deputy_position"] for d in top[0]["detail"]] == ["pour", "contre", "abstention"]
+    assert top[1]["detail"] is None
+    assert top[2]["detail"] is None
+    assert [d["deputy_position"] for d in body["opposite"]["detail"]] == ["contre", "pour", None]
 
     # Groupe X: majority pour+contre match on V1/V2, V3 is a 1-1 tie (skipped).
     # Groupe Y: V1 ties, only V2 has a line — compared 1 < threshold, excluded.
@@ -277,6 +287,12 @@ def test_share_recomputes_server_side_and_stores_snapshot(client, mock_cursor):
     assert stored["top_matches"][0]["agreement_pct"] == 100.0
     assert stored["top_matches"][1]["agreement_pct"] == 33.3
 
+    # MON-181: the share snapshot must carry no per-question detail — it
+    # would pair the sharer's own answers with a deputy's positions, leaking
+    # answers (forbidden by ADR-025 pending MON-179's opt-in revision).
+    assert "detail" not in stored["top_matches"][0]
+    assert "detail" not in stored["top_matches"][1]
+
 
 def test_share_rejects_unknown_vote_id(client):
     resp = client.post(
@@ -318,3 +334,32 @@ def test_get_share_unknown_id_returns_404(client, mock_cursor):
 def test_get_share_malformed_id_returns_422(client):
     resp = client.get("/quiz/share/not-a-uuid")
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Per-question detail (MON-181)
+# ---------------------------------------------------------------------------
+def test_strip_detail_removes_key_everywhere():
+    data = {
+        "top_matches": [
+            {"deputy_id": "A", "detail": [{"vote_id": V1, "deputy_position": "pour"}]},
+            {"deputy_id": "B", "detail": None},
+        ],
+        "opposite": {"deputy_id": "D", "detail": [{"vote_id": V1, "deputy_position": "contre"}]},
+        "my_department": {
+            "code": "33",
+            "name": "Gironde",
+            "deputies": [
+                {"deputy_id": "A", "detail": [{"vote_id": V1, "deputy_position": "pour"}]}
+            ],
+        },
+    }
+    stripped = _strip_detail(data)
+    assert all("detail" not in m for m in stripped["top_matches"])
+    assert "detail" not in stripped["opposite"]
+    assert all("detail" not in m for m in stripped["my_department"]["deputies"])
+
+
+def test_strip_detail_handles_no_opposite_or_department():
+    data = {"top_matches": [], "opposite": None, "my_department": None}
+    assert _strip_detail(data) == data
