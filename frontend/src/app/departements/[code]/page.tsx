@@ -13,10 +13,10 @@ import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 export const dynamicParams = true
 export const revalidate = 3600
 
-const NAVY   = '#1B2B50'
-const CREAM  = '#F7F4ED'
-const LINE   = '#E4E6EA'
-const RED    = '#C9302A'
+const NAVY   = 'var(--dp-text)'
+const CREAM  = 'var(--dp-page-bg)'
+const LINE   = 'var(--dp-border)'
+const RED    = 'var(--dp-red)'
 
 // "les députés de la Gironde" needs per-department articles the data does
 // not carry — every phrase below stays article-free on the department name.
@@ -100,8 +100,8 @@ export default async function DepartmentPage(
       <div
         className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8 sm:pb-10"
         style={{
-          background: `linear-gradient(180deg,#fff 0%,${CREAM} 100%)`,
-          borderBottom: '1px solid #ECE7DC',
+          background: `linear-gradient(180deg,var(--dp-card-bg) 0%,${CREAM} 100%)`,
+          borderBottom: '1px solid var(--dp-border-subtle)',
         }}
       >
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
@@ -117,7 +117,7 @@ export default async function DepartmentPage(
           }}>
             {data.name}
           </h1>
-          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 560 }}>
+          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: 'var(--dp-text-secondary)', maxWidth: 560 }}>
             Les {data.deputy_count} député{data.deputy_count !== 1 ? 's' : ''} de ce
             territoire à l&apos;Assemblée nationale : bilan de vote, présence et votes
             qui les divisent.
@@ -126,35 +126,35 @@ export default async function DepartmentPage(
           {/* Aggregate cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" style={{ marginTop: 30, maxWidth: 900 }}>
             {avgPresencePct !== null && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>
+              <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Présence moyenne
                 </div>
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: 26, color: NAVY }}>
                   {avgPresencePct}%
                 </div>
                 {nationalPresencePct !== null && (
-                  <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 6 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 6 }}>
                     Moyenne nationale : {nationalPresencePct}%
                   </div>
                 )}
               </div>
             )}
             {dissident && dissidentPct !== null && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>
+              <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Député le plus dissident
                 </div>
                 <Link href={`/deputes/${dissident.deputy_id}`} style={{ fontWeight: 600, fontSize: 16, color: NAVY, textDecoration: 'none' }}>
                   {dissident.full_name}
                 </Link>
-                <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 6 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 6 }}>
                   Vote contre son groupe dans {dissidentPct}% des scrutins
                 </div>
               </div>
             )}
-            <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-              <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 12 }}>
+            <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+              <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 12 }}>
                 Répartition par groupe
               </div>
               {data.party_distribution.map(g => {
@@ -166,16 +166,16 @@ export default async function DepartmentPage(
                     <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 999, flexShrink: 0, background: partyHex(g.party) }} />
                       {href ? (
-                        <Link href={`/groupes/${href}`} style={{ color: '#374151', fontWeight: 600, textDecoration: 'none' }}>
+                        <Link href={`/groupes/${href}`} style={{ color: 'var(--dp-text-secondary)', fontWeight: 600, textDecoration: 'none' }}>
                           {label}
                         </Link>
                       ) : (
-                        <span style={{ color: '#374151', fontWeight: 600 }}>{label}</span>
+                        <span style={{ color: 'var(--dp-text-secondary)', fontWeight: 600 }}>{label}</span>
                       )}
                     </span>
-                    <span className="font-mono" style={{ color: '#9CA3AF' }}>{g.count}</span>
+                    <span className="font-mono" style={{ color: 'var(--dp-text-muted)' }}>{g.count}</span>
                   </div>
-                  <div style={{ height: 5, borderRadius: 999, background: '#F0F1F3', overflow: 'hidden' }}>
+                  <div style={{ height: 5, borderRadius: 999, background: 'var(--dp-track-bg)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${(g.count / maxPartyCount) * 100}%`, background: partyHex(g.party), borderRadius: 999 }} />
                   </div>
                 </div>
@@ -208,9 +208,9 @@ export default async function DepartmentPage(
                     id={circoAnchor(d.circonscription)}
                     href={`/deputes/${d.deputy_id}`}
                     style={{
-                      display: 'block', background: '#fff', border: `1px solid ${LINE}`,
+                      display: 'block', background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`,
                       borderRadius: 12, padding: '20px 22px', textDecoration: 'none',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      boxShadow: '0 1px 3px var(--dp-shadow-sm)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
@@ -219,7 +219,7 @@ export default async function DepartmentPage(
                         <div style={{ fontWeight: 600, fontSize: 15.5, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {d.full_name}
                         </div>
-                        <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 3 }}>
+                        <div style={{ fontSize: 13, color: 'var(--dp-text-muted)', marginTop: 3 }}>
                           {circoLabel(d.circonscription) ?? '—'}
                         </div>
                       </div>
@@ -235,12 +235,12 @@ export default async function DepartmentPage(
                         {partyShort(d.party) || 'NI'}
                       </span>
                       {presence !== null && (
-                        <span className="font-mono" style={{ fontSize: 12, color: '#6B7280' }}>
+                        <span className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-secondary)' }}>
                           Présence {presence}%
                         </span>
                       )}
                       {alignment !== null && (
-                        <span className="font-mono" style={{ fontSize: 12, color: '#6B7280' }}>
+                        <span className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-secondary)' }}>
                           Groupe {alignment}%
                         </span>
                       )}
@@ -260,12 +260,12 @@ export default async function DepartmentPage(
               <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: NAVY, margin: '12px 0 8px', letterSpacing: '-0.01em' }}>
                 Votes récents où vos députés n&apos;étaient pas d&apos;accord
               </h2>
-              <p style={{ margin: '0 0 22px', fontSize: 14.5, color: '#6B7280', maxWidth: 640 }}>
+              <p style={{ margin: '0 0 22px', fontSize: 14.5, color: 'var(--dp-text-secondary)', maxWidth: 640 }}>
                 Scrutins où au moins un député du territoire a voté pour et un autre contre.
               </p>
               <div style={{
-                background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12,
-                overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12,
+                overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)',
               }}>
                 {data.split_votes.map((v, i) => (
                   <Link
@@ -273,7 +273,7 @@ export default async function DepartmentPage(
                     href={`/votes/${v.vote_id}`}
                     style={{
                       display: 'block', padding: '16px 22px', textDecoration: 'none',
-                      borderBottom: i < data.split_votes.length - 1 ? '1px solid #F0F1F3' : 'none',
+                      borderBottom: i < data.split_votes.length - 1 ? '1px solid var(--dp-track-bg)' : 'none',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -281,14 +281,14 @@ export default async function DepartmentPage(
                         {v.vote_title}
                       </span>
                       <span style={{ display: 'flex', gap: 12, alignItems: 'baseline', whiteSpace: 'nowrap' }}>
-                        <span className="font-mono" style={{ fontSize: 12.5, color: '#15803D' }}>{v.pour} pour</span>
+                        <span className="font-mono" style={{ fontSize: 12.5, color: 'var(--dp-green)' }}>{v.pour} pour</span>
                         <span className="font-mono" style={{ fontSize: 12.5, color: RED }}>{v.contre} contre</span>
                         {v.abstention > 0 && (
-                          <span className="font-mono" style={{ fontSize: 12.5, color: '#9CA3AF' }}>{v.abstention} abst.</span>
+                          <span className="font-mono" style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{v.abstention} abst.</span>
                         )}
                       </span>
                     </div>
-                    <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 5 }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 5 }}>
                       {v.voted_at ? formatDate(v.voted_at) : ''}
                       {v.result ? ` · ${v.result === 'adopté' ? 'Adopté' : 'Rejeté'}` : ''}
                     </div>

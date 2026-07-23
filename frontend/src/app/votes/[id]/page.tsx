@@ -145,7 +145,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
         { name: 'Votes', url: `${SITE_URL}/votes` },
         { name: vote.vote_title, url: `${SITE_URL}/votes/${vote.vote_id}` },
       ])} />
-      <Suspense fallback={<div style={{ padding: '48px 32px', color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
+      <Suspense fallback={<div style={{ padding: '48px 32px', color: 'var(--dp-text-muted)', fontSize: 14 }}>Chargement…</div>}>
         <VoteDetailClient
           voteId={vote.vote_id}
           voteTitle={vote.vote_title}

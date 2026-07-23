@@ -19,9 +19,17 @@ const GROUP_SLUGS: Record<string, string> = {
   'non-inscrits': 'Non inscrit',
 }
 
+/** The 12 canonical labels, in the same order as GROUP_SLUGS — used by the quiz's self-perception picker (MON-182). */
+export const CANONICAL_GROUP_LABELS: string[] = Object.values(GROUP_SLUGS)
+
 const NAME_TO_SLUG = new Map(
   Object.entries(GROUP_SLUGS).map(([slug, name]) => [name, slug])
 )
+
+/** All (slug, name) pairs for the 12 canonical groups, for sitemap generation. */
+export const GROUP_ENTRIES: Array<{ slug: string; name: string }> = Object.entries(
+  GROUP_SLUGS
+).map(([slug, name]) => ({ slug, name }))
 
 /**
  * Canonical slug for a group, or null when it isn't one of the 12 groups

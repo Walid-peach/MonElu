@@ -16,11 +16,10 @@ import { departmentLabel } from '@/lib/departments'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
 
-const NAVY   = '#1B2B50'
-const CREAM  = '#F7F4ED'
-const LINE   = '#E4E6EA'
-const ACCENT = '#E0786E'
-const RED    = '#C9302A'
+const NAVY   = 'var(--dp-text)'
+const CREAM  = 'var(--dp-page-bg)'
+const LINE   = 'var(--dp-border)'
+const RED    = 'var(--dp-red)'
 
 type DashboardData = {
   deputy: Deputy
@@ -108,7 +107,7 @@ export default function MonDeputePage() {
           <h1 className="font-newsreader text-[clamp(28px,4vw,40px)]" style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.015em' }}>
             Choisissez votre député
           </h1>
-          <p style={{ margin: '16px 0 28px', fontSize: 16, lineHeight: 1.6, color: '#4B5563' }}>
+          <p style={{ margin: '16px 0 28px', fontSize: 16, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
             Suivez un député depuis sa fiche profil pour retrouver ici son bilan de vote,
             son alignement avec son groupe, et ce qui a changé depuis votre dernière visite.
           </p>
@@ -116,14 +115,14 @@ export default function MonDeputePage() {
             href="/deputes"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: ACCENT, color: '#fff', padding: '12px 26px',
+              background: 'var(--dp-cta-bg)', color: '#fff', padding: '12px 26px',
               borderRadius: 9, fontWeight: 600, fontSize: 15, textDecoration: 'none',
-              boxShadow: '0 2px 8px rgba(224,120,110,0.35)',
+              boxShadow: '0 2px 8px var(--dp-cta-shadow)',
             }}
           >
             Trouver mon député
           </Link>
-          <p style={{ margin: '20px 0 0', fontSize: 14, color: '#6B7280' }}>
+          <p style={{ margin: '20px 0 0', fontSize: 14, color: 'var(--dp-text-secondary)' }}>
             Vous ne savez pas qui suivre ?{' '}
             <Link href="/quiz" style={{ color: NAVY, fontWeight: 600 }}>
               Découvrez quel député vote comme vous →
@@ -144,8 +143,8 @@ export default function MonDeputePage() {
     <div style={{ background: CREAM, minHeight: '100vh' }}>
       <div style={{
         padding: '38px 56px 44px',
-        background: `linear-gradient(180deg,#ffffff 0%,${CREAM} 100%)`,
-        borderBottom: '1px solid #ECE7DC',
+        background: `linear-gradient(180deg,var(--dp-card-bg) 0%,${CREAM} 100%)`,
+        borderBottom: '1px solid var(--dp-border-subtle)',
       }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED, marginBottom: 16 }}>
@@ -160,7 +159,7 @@ export default function MonDeputePage() {
               </h1>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                 {deputy.department && (
-                  <span style={{ fontSize: 14, color: '#6B7280' }}>{departmentLabel(deputy.department)}</span>
+                  <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)' }}>{departmentLabel(deputy.department)}</span>
                 )}
                 {deputy.party && (
                   <span style={{
@@ -179,7 +178,7 @@ export default function MonDeputePage() {
               <Link
                 href={`/deputes/${deputy.deputy_id}`}
                 style={{
-                  fontSize: 13.5, color: NAVY, background: '#fff', border: `1px solid ${LINE}`,
+                  fontSize: 13.5, color: NAVY, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`,
                   padding: '9px 16px', borderRadius: 8, fontWeight: 600, textDecoration: 'none',
                 }}
               >
@@ -215,7 +214,7 @@ export default function MonDeputePage() {
                 {newSinceLastVisit.length} nouveau{newSinceLastVisit.length !== 1 ? 'x' : ''} vote{newSinceLastVisit.length !== 1 ? 's' : ''}
               </h2>
               <div style={{ position: 'relative', paddingLeft: 32 }}>
-                <div style={{ position: 'absolute', left: 6, top: 8, bottom: 8, width: 2, background: '#E7E2D6', borderRadius: 2 }} />
+                <div style={{ position: 'absolute', left: 6, top: 8, bottom: 8, width: 2, background: 'var(--dp-border-subtle)', borderRadius: 2 }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
                   {newSinceLastVisit.map(v => (
                     <VoteTimelineItem key={v.vote_id} vote={v} dotBorderColor={CREAM} />
@@ -228,22 +227,22 @@ export default function MonDeputePage() {
           {/* Stats */}
           <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             {presencePct !== null && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '22px 24px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 10 }}>Taux de présence</div>
+              <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '22px 24px' }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 10 }}>Taux de présence</div>
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: 28, color: NAVY }}>{presencePct}%</div>
-                <div style={{ position: 'relative', height: 8, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden', marginTop: 12 }}>
+                <div style={{ position: 'relative', height: 8, background: 'var(--dp-track-bg)', borderRadius: 999, overflow: 'hidden', marginTop: 12 }}>
                   <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${presencePct}%` }} />
                 </div>
               </div>
             )}
             {alignmentPct !== null && alignment && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '22px 24px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '22px 24px' }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                   Alignement avec son groupe
                   <InfoTooltip text="Alignement calculé en comparant, vote par vote, la position du député à la position majoritaire de son groupe parlementaire actuel." />
                 </div>
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: 28, color: NAVY }}>{alignmentPct}%</div>
-                <div style={{ position: 'relative', height: 8, background: '#EEF0F2', borderRadius: 999, overflow: 'hidden', marginTop: 12 }}>
+                <div style={{ position: 'relative', height: 8, background: 'var(--dp-track-bg)', borderRadius: 999, overflow: 'hidden', marginTop: 12 }}>
                   <div style={{ height: '100%', background: NAVY, borderRadius: 999, width: `${alignmentPct}%` }} />
                 </div>
               </div>
@@ -252,7 +251,7 @@ export default function MonDeputePage() {
 
           {/* Quiz cross-link (MON-140) */}
           <section style={{
-            background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12,
+            background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12,
             padding: '20px 24px', display: 'flex', alignItems: 'center',
             justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
           }}>
@@ -260,7 +259,7 @@ export default function MonDeputePage() {
               <div style={{ fontWeight: 600, fontSize: 15, color: NAVY }}>
                 Votez-vous comme {deputy.full_name} ?
               </div>
-              <div style={{ fontSize: 13.5, color: '#6B7280', marginTop: 4 }}>
+              <div style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', marginTop: 4 }}>
                 Répondez à une dizaine de vrais scrutins et comparez vos positions aux siennes.
               </div>
             </div>
@@ -268,9 +267,9 @@ export default function MonDeputePage() {
               href="/quiz"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: ACCENT, color: '#fff', padding: '10px 20px',
+                background: 'var(--dp-cta-bg)', color: '#fff', padding: '10px 20px',
                 borderRadius: 9, fontWeight: 600, fontSize: 14, textDecoration: 'none',
-                boxShadow: '0 2px 8px rgba(224,120,110,0.35)', whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px var(--dp-cta-shadow)', whiteSpace: 'nowrap',
               }}
             >
               Faire le test →
@@ -287,7 +286,7 @@ export default function MonDeputePage() {
                 Le bilan de vote de {deputy.full_name}
               </h2>
               <div style={{ position: 'relative', paddingLeft: 32 }}>
-                <div style={{ position: 'absolute', left: 6, top: 8, bottom: 8, width: 2, background: '#E7E2D6', borderRadius: 2 }} />
+                <div style={{ position: 'absolute', left: 6, top: 8, bottom: 8, width: 2, background: 'var(--dp-border-subtle)', borderRadius: 2 }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
                   {recentVotes.map(v => (
                     <VoteTimelineItem key={v.vote_id} vote={v} dotBorderColor={CREAM} />

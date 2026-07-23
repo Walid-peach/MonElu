@@ -12,9 +12,9 @@ import { PrintButton } from '@/components/PrintButton'
 export const dynamicParams = true
 export const revalidate = 86400
 
-const NAVY = '#1B2B50'
-const LINE = '#E4E6EA'
-const RED  = '#C9302A'
+const NAVY = 'var(--dp-text)'
+const LINE = 'var(--dp-border)'
+const RED  = 'var(--dp-red)'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -49,9 +49,9 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
   const generatedOn = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
-    <div style={{ background: '#fff', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--dp-card-bg)', minHeight: '100vh' }}>
       <div data-print-hide style={{ padding: '20px 32px', borderBottom: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 14, color: '#6B7280' }}>
+        <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)' }}>
           Aperçu du dossier imprimable — utilisez « Imprimer » et choisissez « Enregistrer en PDF » comme destination.
         </span>
         <PrintButton />
@@ -65,11 +65,11 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
             <div style={{ fontWeight: 800, fontSize: 20, color: NAVY, letterSpacing: '-0.01em' }}>
               Mon<span style={{ color: RED }}>É</span>lu
             </div>
-            <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 2 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--dp-text-secondary)', marginTop: 2 }}>
               Chaque vote. Chaque député. En clair.
             </div>
           </div>
-          <div style={{ textAlign: 'right', fontSize: 11, color: '#9CA3AF' }}>
+          <div style={{ textAlign: 'right', fontSize: 11, color: 'var(--dp-text-muted)' }}>
             Dossier généré le {generatedOn}
             <br />
             XVII<sup>e</sup> législature
@@ -87,7 +87,7 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
             <h1 style={{ fontSize: 26, fontWeight: 700, color: NAVY, margin: 0, letterSpacing: '-0.01em' }}>
               {deputy.full_name}
             </h1>
-            <div style={{ fontSize: 13.5, color: '#4B5563', marginTop: 6 }}>
+            <div style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', marginTop: 6 }}>
               {deptLabel && <span>{deptLabel}</span>}
               {deputy.mandate_start && (
                 <span> · Mandat depuis le {formatDate(deputy.mandate_start)}</span>
@@ -106,7 +106,7 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
           </div>
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
             <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
-            <div style={{ fontSize: 9.5, color: '#9CA3AF', marginTop: 4, maxWidth: 96 }}>
+            <div style={{ fontSize: 9.5, color: 'var(--dp-text-muted)', marginTop: 4, maxWidth: 96 }}>
               Profil complet en ligne
             </div>
           </div>
@@ -121,9 +121,9 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
               { value: alignmentPct !== null ? `${alignmentPct}%` : '—', label: 'loyauté au groupe' },
               { value: scorecard.total_votes.toLocaleString('fr-FR'), label: 'scrutins votés' },
             ].map((s, i) => (
-              <div key={i} style={{ padding: '14px 10px', textAlign: 'center', borderRight: i < 3 ? `1px solid ${LINE}` : undefined, background: '#FAFAF8' }}>
+              <div key={i} style={{ padding: '14px 10px', textAlign: 'center', borderRight: i < 3 ? `1px solid ${LINE}` : undefined, background: 'var(--dp-header-bg)' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: NAVY }}>{s.value}</div>
-                <div style={{ fontSize: 10.5, color: '#6B7280', marginTop: 3, lineHeight: 1.3 }}>{s.label}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--dp-text-secondary)', marginTop: 3, lineHeight: 1.3 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -136,11 +136,11 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
               Répartition des votes exprimés
             </div>
             <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', marginBottom: 8 }}>
-              <div style={{ width: `${pourPct}%`,   background: '#1F8A5B' }} />
+              <div style={{ width: `${pourPct}%`,   background: 'var(--dp-green)' }} />
               <div style={{ width: `${contrePct}%`, background: RED }} />
-              <div style={{ width: `${abstPct}%`,   background: '#D1D5DB' }} />
+              <div style={{ width: `${abstPct}%`,   background: 'var(--dp-abstention)' }} />
             </div>
-            <div style={{ display: 'flex', gap: 18, fontSize: 12, color: '#374151' }}>
+            <div style={{ display: 'flex', gap: 18, fontSize: 12, color: 'var(--dp-text-secondary)' }}>
               <span>Pour {pourPct}%</span>
               <span>Contre {contrePct}%</span>
               <span>Abstention {abstPct}%</span>
@@ -158,11 +158,11 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
               {dissidentVotes.items.map(v => (
                 <div key={v.vote_id} style={{ border: `1px solid ${LINE}`, borderRadius: 6, padding: '10px 12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    {v.voted_at && <span style={{ fontSize: 10.5, color: '#9CA3AF' }}>{formatDate(v.voted_at)}</span>}
+                    {v.voted_at && <span style={{ fontSize: 10.5, color: 'var(--dp-text-muted)' }}>{formatDate(v.voted_at)}</span>}
                     <span style={{ fontSize: 10.5, fontWeight: 700, color: positionStyle(v.position).color }}>
                       A voté {positionStyle(v.position).label}
                     </span>
-                    <span style={{ fontSize: 10.5, color: '#9CA3AF' }}>
+                    <span style={{ fontSize: 10.5, color: 'var(--dp-text-muted)' }}>
                       groupe : {positionStyle(v.majority_position).label}
                     </span>
                   </div>
@@ -174,7 +174,7 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
         )}
 
         {/* Methodology footnote */}
-        <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: 14, fontSize: 10, color: '#9CA3AF', lineHeight: 1.5 }}>
+        <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: 14, fontSize: 10, color: 'var(--dp-text-muted)', lineHeight: 1.5 }}>
           Méthodologie : le taux de présence compte toute position enregistrée (y compris non-votant) sur les
           scrutins tenus pendant le mandat. Le taux de loyauté compare, vote par vote, la position du député à
           la position majoritaire de son groupe parlementaire actuel. Source : données officielles ouvertes de

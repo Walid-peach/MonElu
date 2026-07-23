@@ -11,10 +11,10 @@ import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 export const dynamicParams = true
 export const revalidate = 3600
 
-const NAVY  = '#1B2B50'
-const CREAM = '#F7F4ED'
-const LINE  = '#E4E6EA'
-const RED   = '#C9302A'
+const NAVY  = 'var(--dp-text)'
+const CREAM = 'var(--dp-page-bg)'
+const LINE  = 'var(--dp-border)'
+const RED   = 'var(--dp-red)'
 
 export function generateStaticParams() {
   return THEME_ENTRIES.map(({ slug }) => ({ slug }))
@@ -72,8 +72,8 @@ export default async function ThemePage(
       <div
         className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8 sm:pb-10"
         style={{
-          background: `linear-gradient(180deg,#fff 0%,${CREAM} 100%)`,
-          borderBottom: '1px solid #ECE7DC',
+          background: `linear-gradient(180deg,var(--dp-card-bg) 0%,${CREAM} 100%)`,
+          borderBottom: '1px solid var(--dp-border-subtle)',
         }}
       >
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
@@ -89,14 +89,14 @@ export default async function ThemePage(
           }}>
             {data.name}
           </h1>
-          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 560 }}>
+          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: 'var(--dp-text-secondary)', maxWidth: 560 }}>
             {data.vote_count} scrutin{data.vote_count !== 1 ? 's' : ''} de l&apos;Assemblée
             nationale sur ce thème : qui vote quoi, groupe par groupe.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" style={{ marginTop: 30, maxWidth: 900 }}>
-            <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-              <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>
+            <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+              <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                 Scrutins recensés
               </div>
               <div className="font-mono" style={{ fontWeight: 700, fontSize: 26, color: NAVY }}>
@@ -104,8 +104,8 @@ export default async function ThemePage(
               </div>
             </div>
             {adoptionPct !== null && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>
+              <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Taux d&apos;adoption
                 </div>
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: 26, color: NAVY }}>
@@ -114,8 +114,8 @@ export default async function ThemePage(
               </div>
             )}
             {data.most_divided_vote && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>
+              <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Vote le plus disputé
                 </div>
                 <Link
@@ -124,7 +124,7 @@ export default async function ThemePage(
                 >
                   {data.most_divided_vote.vote_title}
                 </Link>
-                <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 6 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 6 }}>
                   {data.most_divided_vote.votes_for} pour · {data.most_divided_vote.votes_against} contre
                 </div>
               </div>
@@ -146,8 +146,8 @@ export default async function ThemePage(
                 Qui vote pour sur ce thème ?
               </h2>
               <div style={{
-                background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12,
-                padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12,
+                padding: '22px 24px', boxShadow: '0 1px 3px var(--dp-shadow-sm)',
               }}>
                 {data.party_positions.map((p: ThemePartyPosition) => {
                   const label = normalizePartyShort(p.party_short) ?? 'Non inscrit'
@@ -158,13 +158,13 @@ export default async function ThemePage(
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, marginBottom: 5 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ width: 8, height: 8, borderRadius: 999, flexShrink: 0, background: hex }} />
-                          <span style={{ color: '#374151', fontWeight: 600 }}>{label}</span>
+                          <span style={{ color: 'var(--dp-text-secondary)', fontWeight: 600 }}>{label}</span>
                         </span>
-                        <span className="font-mono" style={{ color: '#6B7280' }}>
+                        <span className="font-mono" style={{ color: 'var(--dp-text-secondary)' }}>
                           {pourPct !== null ? `${pourPct}% pour` : '—'} · {p.expressed} vote{p.expressed !== 1 ? 's' : ''} exprimé{p.expressed !== 1 ? 's' : ''}
                         </span>
                       </div>
-                      <div style={{ height: 6, borderRadius: 999, background: '#F0F1F3', overflow: 'hidden' }}>
+                      <div style={{ height: 6, borderRadius: 999, background: 'var(--dp-track-bg)', overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pourPct ?? 0}%`, background: hex, borderRadius: 999 }} />
                       </div>
                     </div>
@@ -183,8 +183,8 @@ export default async function ThemePage(
               Tous les votes sur {data.name}
             </h2>
             <div style={{
-              background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12,
-              overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12,
+              overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)',
             }}>
               {data.votes.map((v: ThemeVoteItem, i: number) => (
                 <Link
@@ -192,11 +192,11 @@ export default async function ThemePage(
                   href={`/votes/${v.vote_id}`}
                   style={{
                     display: 'block', padding: '16px 22px', textDecoration: 'none',
-                    borderBottom: i < data.votes.length - 1 ? '1px solid #F0F1F3' : 'none',
+                    borderBottom: i < data.votes.length - 1 ? '1px solid var(--dp-track-bg)' : 'none',
                   }}
                 >
                   {v.summary_plain && (
-                    <div style={{ fontSize: 14.5, color: '#374151', marginBottom: 4 }}>
+                    <div style={{ fontSize: 14.5, color: 'var(--dp-text-secondary)', marginBottom: 4 }}>
                       {v.summary_plain}
                     </div>
                   )}
@@ -208,15 +208,15 @@ export default async function ThemePage(
                       <span
                         style={{
                           fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-                          color: v.result === 'adopté' ? '#15803D' : RED,
-                          background: v.result === 'adopté' ? '#ECFDF5' : '#FDECEC',
+                          color: v.result === 'adopté' ? 'var(--dp-green)' : RED,
+                          background: v.result === 'adopté' ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)',
                         }}
                       >
                         {v.result === 'adopté' ? 'Adopté' : 'Rejeté'}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 5 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 5 }}>
                     {v.voted_at ? formatDate(v.voted_at) : ''}
                   </div>
                 </Link>

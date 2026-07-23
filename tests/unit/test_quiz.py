@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from api.quiz_data import QUIZ_QUESTIONS, QUIZ_VERSION
 from api.routers.quiz import (
     QuizMatchRequest,
+    _strip_detail,
     compute_group_alignment,
     eligibility_threshold,
 )
@@ -44,13 +45,51 @@ def test_question_set_shape():
         assert q["context"] and q["theme"]
 
 
-def test_get_questions_returns_versioned_set(client):
+def test_get_questions_returns_versioned_set(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": V1,
+            "votes_for": 291,
+            "votes_against": 241,
+            "abstentions": 12,
+            "result": "adopté",
+            "voted_at": None,
+        }
+    ]
     resp = client.get("/quiz/questions")
     assert resp.status_code == 200
     body = resp.json()
     assert body["version"] == QUIZ_VERSION
     assert body["count"] == 10
-    assert body["questions"][0]["vote_id"] == V1
+    first = body["questions"][0]
+    assert first["vote_id"] == V1
+    assert first["votes_for"] == 291
+    assert first["votes_against"] == 241
+    assert first["abstentions"] == 12
+    assert first["result"] == "adopté"
+    # A question whose vote_id has no matching row (defensive: shouldn't
+    # happen per ADR-025, but the SELECT is a plain join, not a guarantee)
+    # degrades gracefully instead of 500ing.
+    second = body["questions"][1]
+    assert second["votes_for"] is None
+    assert second["result"] is None
+
+
+def test_get_questions_formats_vote_date(client, mock_cursor):
+    import datetime
+
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": V1,
+            "votes_for": 291,
+            "votes_against": 241,
+            "abstentions": 12,
+            "result": "adopté",
+            "voted_at": datetime.datetime(2026, 7, 15, 14, 30, tzinfo=datetime.timezone.utc),
+        }
+    ]
+    resp = client.get("/quiz/questions")
+    assert resp.json()["questions"][0]["vote_date"] == "2026-07-15"
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +161,15 @@ def test_match_ranks_agreement_and_applies_threshold(client, mock_cursor):
 
     assert body["opposite"]["deputy_id"] == "D"
 
+    # Per-question breakdown (MON-181): populated only for the best match
+    # (top[0]) and the opposite, in answered order, with a null position
+    # where the deputy has no expressed row for that vote.
+    assert [d["vote_id"] for d in top[0]["detail"]] == [V1, V2, V3]
+    assert [d["deputy_position"] for d in top[0]["detail"]] == ["pour", "contre", "abstention"]
+    assert top[1]["detail"] is None
+    assert top[2]["detail"] is None
+    assert [d["deputy_position"] for d in body["opposite"]["detail"]] == ["contre", "pour", None]
+
     # Groupe X: majority pour+contre match on V1/V2, V3 is a 1-1 tie (skipped).
     # Groupe Y: V1 ties, only V2 has a line — compared 1 < threshold, excluded.
     assert [g["party"] for g in body["groups"]] == ["Groupe X"]
@@ -176,6 +224,77 @@ def test_match_no_positions_returns_empty_results(client, mock_cursor):
     assert body["opposite"] is None
     assert body["groups"] == []
     assert body["eligible_deputies"] == 0
+    assert body["focus"] is None
+
+
+# ---------------------------------------------------------------------------
+# focus_deputy_id (MON-183 — personalized deputy-page quiz entry)
+# ---------------------------------------------------------------------------
+def test_match_with_focus_deputy_below_threshold_returned_anyway(client, mock_cursor):
+    # C has only one comparable vote — below the ranking threshold of 2, so
+    # it never appears in top_matches, but a focus request still wants it.
+    mock_cursor.fetchall.return_value = [
+        _row("A", V1, "pour"),
+        _row("A", V2, "contre"),
+        _row("A", V3, "abstention"),
+        _row("C", V1, "pour", party="Groupe Y"),
+    ]
+    mock_cursor.fetchone.return_value = {
+        "deputy_id": "C",
+        "full_name": "Député C",
+        "party": "Groupe Y",
+        "party_short": "Y",
+        "department": "Gironde",
+        "photo_url": None,
+    }
+
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3, "focus_deputy_id": "C"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "C" not in [m["deputy_id"] for m in body["top_matches"]]
+    assert body["focus"]["deputy_id"] == "C"
+    assert body["focus"]["compared"] == 1
+    assert body["focus"]["matches"] == 1
+    assert body["focus"]["agreement_pct"] == 100.0
+
+
+def test_match_with_focus_deputy_absent_from_scrutins_returns_zero_counts(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [
+        _row("A", V1, "pour"),
+        _row("A", V2, "contre"),
+        _row("A", V3, "abstention"),
+    ]
+    mock_cursor.fetchone.return_value = {
+        "deputy_id": "Z",
+        "full_name": "Député Z",
+        "party": "Groupe Y",
+        "party_short": "Y",
+        "department": "Gironde",
+        "photo_url": None,
+    }
+
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3, "focus_deputy_id": "Z"})
+    assert resp.status_code == 200
+    focus = resp.json()["focus"]
+    assert focus["deputy_id"] == "Z"
+    assert focus["compared"] == 0
+    assert focus["matches"] == 0
+    assert focus["agreement_pct"] is None
+
+
+def test_match_with_unknown_focus_deputy_returns_422(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = None
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3, "focus_deputy_id": "GHOST"})
+    assert resp.status_code == 422
+
+
+def test_match_without_focus_deputy_id_omits_focus(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3})
+    assert resp.status_code == 200
+    assert resp.json()["focus"] is None
+    mock_cursor.fetchone.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +396,12 @@ def test_share_recomputes_server_side_and_stores_snapshot(client, mock_cursor):
     assert stored["top_matches"][0]["agreement_pct"] == 100.0
     assert stored["top_matches"][1]["agreement_pct"] == 33.3
 
+    # MON-181: the share snapshot must carry no per-question detail — it
+    # would pair the sharer's own answers with a deputy's positions, leaking
+    # answers (forbidden by ADR-025 pending MON-179's opt-in revision).
+    assert "detail" not in stored["top_matches"][0]
+    assert "detail" not in stored["top_matches"][1]
+
 
 def test_share_rejects_unknown_vote_id(client):
     resp = client.post(
@@ -318,3 +443,103 @@ def test_get_share_unknown_id_returns_404(client, mock_cursor):
 def test_get_share_malformed_id_returns_422(client):
     resp = client.get("/quiz/share/not-a-uuid")
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Friend comparison — opt-in answer storage (MON-184, ADR-028)
+# ---------------------------------------------------------------------------
+def test_share_without_opt_in_omits_answers_key(client, mock_cursor):
+    import datetime
+
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": _stored_result(),
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+
+    resp = client.post("/quiz/share", json={"answers": ANSWERS_3})
+    assert resp.status_code == 200
+
+    insert_call = mock_cursor.execute.call_args_list[-1]
+    _, params = insert_call.args
+    stored = params[1].adapted
+    assert "answers" not in stored
+
+    body = resp.json()
+    assert body["result"]["answers"] is None
+
+
+def test_share_with_opt_in_stores_submitted_answers(client, mock_cursor):
+    import datetime
+
+    stored_result = _stored_result()
+    stored_result["answers"] = ANSWERS_3
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": stored_result,
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+
+    resp = client.post("/quiz/share", json={"answers": ANSWERS_3, "include_answers": True})
+    assert resp.status_code == 200
+
+    insert_call = mock_cursor.execute.call_args_list[-1]
+    _, params = insert_call.args
+    stored = params[1].adapted
+    assert stored["answers"] == ANSWERS_3
+
+    body = resp.json()
+    assert body["result"]["answers"] == ANSWERS_3
+
+
+def test_share_opt_in_defaults_false_when_field_omitted():
+    from api.routers.quiz import QuizShareRequest
+
+    req = QuizShareRequest(answers=ANSWERS_3)
+    assert req.include_answers is False
+
+
+def test_get_share_returns_answers_when_present(client, mock_cursor):
+    import datetime
+
+    stored_result = _stored_result()
+    stored_result["answers"] = ANSWERS_3
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": stored_result,
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+    resp = client.get(f"/quiz/share/{SHARE_ID}")
+    assert resp.status_code == 200
+    assert resp.json()["result"]["answers"] == ANSWERS_3
+
+
+# ---------------------------------------------------------------------------
+# Per-question detail (MON-181)
+# ---------------------------------------------------------------------------
+def test_strip_detail_removes_key_everywhere():
+    data = {
+        "top_matches": [
+            {"deputy_id": "A", "detail": [{"vote_id": V1, "deputy_position": "pour"}]},
+            {"deputy_id": "B", "detail": None},
+        ],
+        "opposite": {"deputy_id": "D", "detail": [{"vote_id": V1, "deputy_position": "contre"}]},
+        "my_department": {
+            "code": "33",
+            "name": "Gironde",
+            "deputies": [
+                {"deputy_id": "A", "detail": [{"vote_id": V1, "deputy_position": "pour"}]}
+            ],
+        },
+    }
+    stripped = _strip_detail(data)
+    assert all("detail" not in m for m in stripped["top_matches"])
+    assert "detail" not in stripped["opposite"]
+    assert all("detail" not in m for m in stripped["my_department"]["deputies"])
+
+
+def test_strip_detail_handles_no_opposite_or_department():
+    data = {"top_matches": [], "opposite": None, "my_department": None}
+    assert _strip_detail(data) == data

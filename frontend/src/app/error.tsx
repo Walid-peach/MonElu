@@ -18,10 +18,10 @@ export default function Error({
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-8 py-16 text-center">
-      <h2 className="font-serif text-2xl text-navy mb-3">
+      <h2 className="font-serif text-2xl text-navy dark:text-[color:var(--dp-text)] mb-3">
         Une erreur est survenue
       </h2>
-      <p className="text-gray-mid text-sm mb-6">
+      <p className="text-gray-mid dark:text-[color:var(--dp-text-muted)] text-sm mb-6">
         L&apos;API est temporairement indisponible. Les données seront de nouveau accessibles dans quelques instants.
       </p>
       <div className="flex items-center justify-center gap-3">
@@ -33,7 +33,7 @@ export default function Error({
         </button>
         <Link
           href="/"
-          className="border border-navy/30 text-navy px-5 py-2 rounded font-medium text-sm hover:bg-navy/5 transition-colors"
+          className="border border-navy/30 text-navy dark:border-[color:var(--dp-text)]/30 dark:text-[color:var(--dp-text)] px-5 py-2 rounded font-medium text-sm hover:bg-navy/5 transition-colors"
         >
           Accueil
         </Link>

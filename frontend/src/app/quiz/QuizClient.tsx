@@ -1,24 +1,27 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion } from '@/lib/api'
+import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion, QuizShareResult } from '@/lib/api'
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
 import type { ResolvedDepartment } from '@/lib/postal'
 import { POS } from '@/lib/vote-position'
-import { card, QuizResultSections } from './QuizResultSections'
+import { CANONICAL_GROUP_LABELS } from '@/lib/groups'
+import { partyHex } from '@/lib/utils'
+import { pctLabel, card, QuizResultSections } from './QuizResultSections'
 
-const NAVY = '#1B2B50'
-const CREAM = '#F7F4ED'
-const LINE = '#E4E6EA'
-const ACCENT = '#E0786E'
-const RED = '#C9302A'
-const GRAY = '#6B7280'
+const NAVY = 'var(--dp-text)'
+const CREAM = 'var(--dp-page-bg)'
+const LINE = 'var(--dp-border)'
+const ACCENT = 'var(--dp-cta-bg)'
+const RED = 'var(--dp-red)'
+const GRAY = 'var(--dp-text-secondary)'
 
 // Mirrors MIN_ANSWERS in api/routers/quiz.py — the backend rejects fewer.
 const MIN_ANSWERS = 3
 
-type Phase = 'intro' | 'questions' | 'postal' | 'results'
+type Phase = 'intro' | 'questions' | 'group' | 'postal' | 'results'
 
 const kicker: React.CSSProperties = {
   fontWeight: 700,
@@ -39,6 +42,11 @@ function Shell({ children }: { children: React.ReactNode }) {
 // Lazily creates the share snapshot on first click (POST /quiz/share sends the
 // answers; the server recomputes the result before storing, ADR-025), then
 // hands the URL to the native share sheet or the clipboard.
+//
+// `includeAnswers` (ADR-028, MON-184): opt-in, default off — a checkbox lets
+// the sharer additionally store their raw answers so a visitor can run a
+// friend comparison. The disclosure composes two lines: the base share-link
+// notice (MON-175) and, only when checked, the answers-included notice.
 function ShareResultButton({
   answers,
   department,
@@ -48,13 +56,14 @@ function ShareResultButton({
 }) {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [state, setState] = useState<'idle' | 'creating' | 'copied' | 'error'>('idle')
+  const [includeAnswers, setIncludeAnswers] = useState(false)
 
   async function handleShare() {
     let url = shareUrl
     if (!url) {
       setState('creating')
       try {
-        const share = await api.quiz.share(answers, department)
+        const share = await api.quiz.share(answers, department, includeAnswers)
         url = share.share_url
         setShareUrl(url)
       } catch {
@@ -85,33 +94,87 @@ function ShareResultButton({
   }
 
   return (
-    <button
-      onClick={handleShare}
-      disabled={state === 'creating'}
-      style={{
-        background: ACCENT, color: '#fff', padding: '11px 22px', borderRadius: 9,
-        fontWeight: 600, fontSize: 14.5, border: 'none',
-        cursor: state === 'creating' ? 'wait' : 'pointer',
-        boxShadow: '0 2px 8px rgba(224,120,110,0.35)',
-      }}
-    >
-      {state === 'creating'
-        ? 'Création du lien…'
-        : state === 'copied'
-          ? 'Lien copié !'
-          : state === 'error'
-            ? 'Échec — réessayer'
-            : 'Partager mes résultats'}
-    </button>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      <button
+        onClick={handleShare}
+        disabled={state === 'creating'}
+        style={{
+          background: ACCENT, color: '#fff', padding: '11px 22px', borderRadius: 9,
+          fontWeight: 600, fontSize: 14.5, border: 'none',
+          cursor: state === 'creating' ? 'wait' : 'pointer',
+          boxShadow: '0 2px 8px var(--dp-cta-shadow)',
+        }}
+      >
+        {state === 'creating'
+          ? 'Création du lien…'
+          : state === 'copied'
+            ? 'Lien copié !'
+            : state === 'error'
+              ? 'Échec — réessayer'
+              : 'Partager mes résultats'}
+      </button>
+      <label
+        style={{
+          display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 420,
+          fontSize: 12.5, lineHeight: 1.5, color: GRAY, cursor: shareUrl ? 'not-allowed' : 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={includeAnswers}
+          disabled={shareUrl !== null}
+          onChange={e => setIncludeAnswers(e.target.checked)}
+          style={{ marginTop: 2 }}
+        />
+        <span>
+          Le lien créé est public et montre votre département.
+          {includeAnswers
+            ? ' Vos réponses seront aussi incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous.'
+            : ' Inclure mes réponses pour permettre à un ami de se comparer à moi.'}
+        </span>
+      </label>
+    </div>
   )
 }
 
+// Head-to-head agreement between the current taker's own answers and a
+// previously shared result — computed entirely client-side (ADR-028), no
+// /quiz/compare endpoint and nothing persisted or logged.
+type ComparisonRow = { vote_id: string; own: QuizAnswerPosition; theirs: QuizAnswerPosition; agree: boolean }
+
+function computeComparison(
+  answers: Record<string, QuizAnswerPosition>,
+  theirAnswers: Array<{ vote_id: string; position: QuizAnswerPosition }>
+): { agree: number; total: number; rows: ComparisonRow[] } | null {
+  const rows = theirAnswers
+    .filter(a => answers[a.vote_id] !== undefined)
+    .map(a => ({
+      vote_id: a.vote_id,
+      own: answers[a.vote_id],
+      theirs: a.position,
+      agree: answers[a.vote_id] === a.position,
+    }))
+  if (rows.length === 0) return null
+  return { agree: rows.filter(r => r.agree).length, total: rows.length, rows }
+}
+
 export function QuizClient() {
+  const searchParams = useSearchParams()
+  const focusDeputyId = searchParams.get('deputy') || undefined
+  const compareId = searchParams.get('compare')
+
   const [phase, setPhase] = useState<Phase>('intro')
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null)
+  const [questionsVersion, setQuestionsVersion] = useState<string | null>(null)
   const [questionsError, setQuestionsError] = useState(false)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, QuizAnswerPosition>>({})
+  // vote_id currently showing its reveal panel, or null. Cleared on advance
+  // and on back navigation — the reveal never persists across questions.
+  const [revealVoteId, setRevealVoteId] = useState<string | null>(null)
+  const [predictedGroup, setPredictedGroup] = useState<string | null>(null)
+  const [focusDeputyName, setFocusDeputyName] = useState<string | null>(null)
 
   const [postalInput, setPostalInput] = useState('')
   const [resolving, setResolving] = useState(false)
@@ -122,12 +185,18 @@ export function QuizClient() {
   const [matchError, setMatchError] = useState(false)
   const [result, setResult] = useState<QuizMatchResponse | null>(null)
 
+  // Friend comparison (ADR-028, MON-184): the share fetched from ?compare=<id>.
+  const [compareShare, setCompareShare] = useState<QuizShareResult | null>(null)
+
   useEffect(() => {
     let cancelled = false
     api.quiz
       .questions()
       .then(res => {
-        if (!cancelled) setQuestions(res.questions)
+        if (!cancelled) {
+          setQuestions(res.questions)
+          setQuestionsVersion(res.version)
+        }
       })
       .catch(() => {
         if (!cancelled) setQuestionsError(true)
@@ -137,11 +206,61 @@ export function QuizClient() {
     }
   }, [])
 
+  // MON-183: personalizes the intro when arriving from a deputy's profile
+  // page ("Votez-vous comme X ?"). Only fetches the deputy's name for copy —
+  // focus_deputy_id itself is sent to /quiz/match at submit time.
+  useEffect(() => {
+    if (!focusDeputyId) return
+    let cancelled = false
+    api.deputies
+      .get(focusDeputyId)
+      .then(d => {
+        if (!cancelled) setFocusDeputyName(d.full_name)
+      })
+      .catch(() => {
+        // Unknown/invalid id — fall back to the plain, unpersonalized quiz.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [focusDeputyId])
+
+  useEffect(() => {
+    if (!compareId) return
+    let cancelled = false
+    api.quiz
+      .getShare(compareId)
+      .then(share => {
+        if (!cancelled && share.result.answers) setCompareShare(share)
+      })
+      .catch(() => {
+        // Invalid or missing share id — fall back to the plain quiz silently.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [compareId])
+
+  // Question-set version mismatch degrades to the plain flow with a notice
+  // (ADR-028): answers are keyed to a specific question-set version. Derived
+  // at render time rather than via an effect, so no cascading setState.
+  const versionMismatch =
+    compareShare !== null && questionsVersion !== null && compareShare.result.version !== questionsVersion
+  const effectiveCompareShare = versionMismatch ? null : compareShare
+  const compareNotice = versionMismatch
+    ? 'Ce lien de comparaison correspond à une version précédente du quiz — voici le quiz actuel, sans comparaison.'
+    : null
+
+  const comparison =
+    effectiveCompareShare?.result.answers != null
+      ? computeComparison(answers, effectiveCompareShare.result.answers)
+      : null
+
   const answeredCount = Object.keys(answers).length
 
   function answer(voteId: string, position: QuizAnswerPosition) {
     setAnswers(prev => ({ ...prev, [voteId]: position }))
-    advance()
+    setRevealVoteId(voteId)
   }
 
   function skip(voteId: string) {
@@ -153,12 +272,18 @@ export function QuizClient() {
     advance()
   }
 
+  function goNext() {
+    setRevealVoteId(null)
+    advance()
+  }
+
   function advance() {
     if (questions && index < questions.length - 1) setIndex(index + 1)
-    else setPhase('postal')
+    else setPhase('group')
   }
 
   function back() {
+    setRevealVoteId(null)
     if (index > 0) setIndex(index - 1)
     else setPhase('intro')
   }
@@ -171,7 +296,11 @@ export function QuizClient() {
         vote_id,
         position,
       }))
-      const res = await api.quiz.match(payload, department ?? undefined)
+      const res = await api.quiz.match(
+        payload,
+        department ?? undefined,
+        focusDeputyName ? focusDeputyId : undefined
+      )
       setResult(res)
       setPhase('results')
     } catch {
@@ -198,6 +327,7 @@ export function QuizClient() {
     setPhase('intro')
     setIndex(0)
     setAnswers({})
+    setPredictedGroup(null)
     setPostalInput('')
     setPostalError(null)
     setResolved(null)
@@ -215,16 +345,30 @@ export function QuizClient() {
             className="font-newsreader text-[clamp(30px,5vw,46px)]"
             style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.015em' }}
           >
-            Quel député vote comme vous ?
+            {focusDeputyName ? `Votez-vous comme ${focusDeputyName} ?` : 'Quel député vote comme vous ?'}
           </h1>
-          <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: '#4B5563' }}>
-            Une dizaine de vrais scrutins de l’Assemblée nationale, posés en français courant.
-            Répondez pour, contre ou abstention — à la fin, on compare vos réponses aux votes
-            réels des 577 députés.
+          <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: 'var(--dp-text-secondary)' }}>
+            {focusDeputyName ? (
+              <>Répondez aux 10 scrutins et voyez votre accord avec {focusDeputyName} — et avec les 577 députés.</>
+            ) : (
+              <>
+                Une dizaine de vrais scrutins de l’Assemblée nationale, posés en français courant.
+                Répondez pour, contre ou abstention — à la fin, on compare vos réponses aux votes
+                réels des 577 députés.
+              </>
+            )}
           </p>
           <p style={{ margin: '14px auto 0', maxWidth: 520, fontSize: 13.5, color: GRAY }}>
             Sans compte. Vos réponses restent dans votre navigateur : rien n’est enregistré.
           </p>
+          {effectiveCompareShare && (
+            <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 14, color: NAVY, fontWeight: 600 }}>
+              Faites le test pour voir votre accord avec le résultat qu’on vous a partagé.
+            </p>
+          )}
+          {compareNotice && (
+            <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 13.5, color: RED }}>{compareNotice}</p>
+          )}
           {questionsError ? (
             <p style={{ marginTop: 28, fontSize: 15, color: RED }}>
               Impossible de charger le questionnaire pour le moment. Réessayez dans un instant.
@@ -247,7 +391,7 @@ export function QuizClient() {
                 border: 'none',
                 cursor: questions ? 'pointer' : 'wait',
                 opacity: questions ? 1 : 0.6,
-                boxShadow: '0 2px 8px rgba(224,120,110,0.35)',
+                boxShadow: '0 2px 8px var(--dp-cta-shadow)',
               }}
             >
               {questions ? 'Commencer le quiz' : 'Chargement…'}
@@ -262,6 +406,32 @@ export function QuizClient() {
   if (phase === 'questions' && questions) {
     const q = questions[index]
     const selected = answers[q.vote_id]
+    const revealing = revealVoteId === q.vote_id
+    const tallyKnown = q.votes_for != null && q.votes_against != null
+    const resultVerb =
+      q.result === 'adopté' ? 'adopté' : q.result === 'rejeté' ? 'rejeté' : null
+    const resultLine = tallyKnown
+      ? (resultVerb ? `L’Assemblée a ${resultVerb} ce texte : ` : 'Résultat du scrutin : ') +
+        `${q.votes_for} pour, ${q.votes_against} contre` +
+        (q.abstentions != null
+          ? `, ${q.abstentions} abstention${q.abstentions > 1 ? 's' : ''}`
+          : '') +
+        '.'
+      : null
+    const majority =
+      tallyKnown && q.votes_for !== q.votes_against
+        ? q.votes_for! > q.votes_against!
+          ? 'pour'
+          : 'contre'
+        : null
+    const outcomeLine =
+      selected === 'abstention'
+        ? 'Vous vous êtes abstenu·e sur ce texte.'
+        : majority
+          ? selected === majority
+            ? 'Vous étiez avec la majorité.'
+            : 'Vous étiez avec la minorité.'
+          : null
     return (
       <Shell>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -275,7 +445,7 @@ export function QuizClient() {
           aria-valuenow={index + 1}
           aria-valuemin={1}
           aria-valuemax={questions.length}
-          style={{ height: 6, background: '#E7E2D6', borderRadius: 999, overflow: 'hidden', marginBottom: 30 }}
+          style={{ height: 6, background: 'var(--dp-border-subtle)', borderRadius: 999, overflow: 'hidden', marginBottom: 30 }}
         >
           <div
             style={{
@@ -296,31 +466,49 @@ export function QuizClient() {
         </h2>
         <p style={{ margin: '14px 0 30px', fontSize: 14.5, lineHeight: 1.6, color: GRAY }}>{q.context}</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {(['pour', 'contre', 'abstention'] as const).map(pos => {
-            const { label, color, bg } = POS[pos]
-            const active = selected === pos
-            return (
-              <button
-                key={pos}
-                onClick={() => answer(q.vote_id, pos)}
-                style={{
-                  padding: '15px 20px',
-                  borderRadius: 10,
-                  fontWeight: 600,
-                  fontSize: 16,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  color,
-                  background: bg,
-                  border: `2px solid ${active ? color : 'transparent'}`,
-                }}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
+        {revealing ? (
+          <div
+            style={{
+              padding: '20px 22px',
+              borderRadius: 10,
+              background: 'var(--dp-card-bg)',
+              border: `1px solid ${LINE}`,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
+              {resultLine ?? 'Résultat du scrutin indisponible pour ce texte.'}
+            </p>
+            {outcomeLine && (
+              <p style={{ margin: '10px 0 0', fontSize: 14, color: GRAY }}>{outcomeLine}</p>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {(['pour', 'contre', 'abstention'] as const).map(pos => {
+              const { label, color, bg } = POS[pos]
+              const active = selected === pos
+              return (
+                <button
+                  key={pos}
+                  onClick={() => answer(q.vote_id, pos)}
+                  style={{
+                    padding: '15px 20px',
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    fontSize: 16,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    color,
+                    background: bg,
+                    border: `2px solid ${active ? color : 'transparent'}`,
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 28 }}>
           <button
@@ -329,11 +517,93 @@ export function QuizClient() {
           >
             ← Retour
           </button>
+          {revealing ? (
+            <button
+              onClick={goNext}
+              style={{
+                background: ACCENT, color: '#fff', padding: '10px 22px', borderRadius: 9,
+                fontWeight: 600, fontSize: 14.5, border: 'none', cursor: 'pointer',
+                boxShadow: '0 2px 8px var(--dp-cta-shadow)',
+              }}
+            >
+              Question suivante
+            </button>
+          ) : (
+            <button
+              onClick={() => skip(q.vote_id)}
+              style={{ fontSize: 14, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
+            >
+              Passer cette question
+            </button>
+          )}
+        </div>
+      </Shell>
+    )
+  }
+
+  // ------------------------------------------------------------------ group
+  if (phase === 'group') {
+    return (
+      <Shell>
+        <div style={{ ...kicker, marginBottom: 16 }}>Encore une chose</div>
+        <h2
+          className="font-newsreader text-[clamp(24px,3.5vw,34px)]"
+          style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.01em' }}
+        >
+          De quel groupe vous sentez-vous le plus proche ?
+        </h2>
+        <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
+          Facultatif — cette réponse reste dans votre navigateur, elle n’est jamais envoyée ni
+          enregistrée. À la fin, on compare votre ressenti à vos votes réels.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {CANONICAL_GROUP_LABELS.map(label => {
+            const hex = partyHex(label)
+            return (
+              <button
+                key={label}
+                onClick={() => {
+                  setPredictedGroup(label)
+                  setPhase('postal')
+                }}
+                style={{
+                  padding: '13px 18px',
+                  borderRadius: 10,
+                  fontWeight: 600,
+                  fontSize: 15,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: hex,
+                  background: 'var(--dp-card-bg)',
+                  border: `2px solid ${hex}`,
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ marginTop: 22, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
-            onClick={() => skip(q.vote_id)}
-            style={{ fontSize: 14, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
+            onClick={() => {
+              setPredictedGroup(null)
+              setPhase('postal')
+            }}
+            style={{
+              background: ACCENT, color: '#fff', padding: '12px 26px', borderRadius: 9,
+              fontWeight: 600, fontSize: 15, border: 'none', cursor: 'pointer',
+            }}
           >
-            Passer cette question
+            Je préfère ne pas dire / passer
+          </button>
+          <button
+            onClick={() => {
+              setPhase('questions')
+              if (questions) setIndex(questions.length - 1)
+            }}
+            style={{ fontSize: 14.5, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
+          >
+            ← Retour
           </button>
         </div>
       </Shell>
@@ -354,7 +624,7 @@ export function QuizClient() {
             >
               Encore quelques réponses
             </h2>
-            <p style={{ margin: '16px 0 28px', fontSize: 15.5, lineHeight: 1.6, color: '#4B5563' }}>
+            <p style={{ margin: '16px 0 28px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
               Il faut au moins {MIN_ANSWERS} réponses exprimées pour un résultat significatif —
               vous en avez donné {answeredCount}.
             </p>
@@ -379,7 +649,7 @@ export function QuizClient() {
             >
               Et votre député à vous ?
             </h2>
-            <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: '#4B5563' }}>
+            <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
               Donnez votre code postal pour comparer aussi vos réponses aux votes des députés de
               votre département. Facultatif — il n’est ni envoyé à nos serveurs tel quel, ni conservé.
             </p>
@@ -400,7 +670,7 @@ export function QuizClient() {
                 aria-label="Code postal"
                 style={{
                   flex: '1 1 200px', padding: '12px 16px', borderRadius: 9,
-                  border: `1px solid ${LINE}`, fontSize: 15.5, color: NAVY, background: '#fff',
+                  border: `1px solid ${LINE}`, fontSize: 15.5, color: NAVY, background: 'var(--dp-card-bg)',
                 }}
               />
               <button
@@ -456,10 +726,80 @@ export function QuizClient() {
     return (
       <Shell>
         <div style={{ ...kicker, marginBottom: 16 }}>Vos résultats</div>
-        <QuizResultSections result={result} resolvedNom={resolved?.nom} />
+        {result.focus && (
+          <div
+            style={{
+              ...card,
+              marginBottom: 24,
+              borderLeft: `4px solid ${partyHex(result.focus.party)}`,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
+              {result.focus.agreement_pct === null
+                ? `Pas assez de votes comparables avec ${result.focus.full_name} pour l’instant.`
+                : result.top_matches[0] && result.top_matches[0].deputy_id === result.focus.deputy_id
+                  ? `Vous votez à ${pctLabel(result.focus)} comme ${result.focus.full_name} - c’est votre meilleur match.`
+                  : `Vous votez à ${pctLabel(result.focus)} comme ${result.focus.full_name}${
+                      result.top_matches[0]
+                        ? ` - votre meilleur match est ${result.top_matches[0].full_name} (${pctLabel(result.top_matches[0])})`
+                        : ''
+                    }`}
+            </p>
+          </div>
+        )}
+        {predictedGroup && result.groups.length > 0 && (
+          <div
+            style={{
+              ...card,
+              marginBottom: 24,
+              borderLeft: `4px solid ${partyHex(result.groups[0].party)}`,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
+              {result.groups[0].party === predictedGroup
+                ? `Vous aviez vu juste : vos réponses vous placent bien près de ${result.groups[0].party} (${result.groups[0].agreement_pct}%)`
+                : `Vous vous sentiez proche de ${predictedGroup} - vos réponses vous rapprochent de ${result.groups[0].party} (${result.groups[0].agreement_pct}%)`}
+            </p>
+          </div>
+        )}
+
+        {comparison && (
+          <div style={{ ...card, marginBottom: 24, borderLeft: `4px solid ${ACCENT}` }}>
+            <p style={{ margin: '0 0 12px', fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
+              Vous êtes d’accord avec ce résultat partagé sur {comparison.agree}/{comparison.total} scrutin
+              {comparison.total > 1 ? 's' : ''}.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {comparison.rows.map(row => {
+                const q = questions?.find(q => q.vote_id === row.vote_id)
+                return (
+                  <div
+                    key={row.vote_id}
+                    style={{
+                      display: 'flex', justifyContent: 'space-between', gap: 12,
+                      fontSize: 13.5, color: row.agree ? NAVY : GRAY,
+                    }}
+                  >
+                    <span style={{ flex: 1, minWidth: 0 }}>{q?.question ?? row.vote_id}</span>
+                    <span style={{ fontWeight: 700, color: row.agree ? ACCENT : RED, whiteSpace: 'nowrap' }}>
+                      {row.agree ? 'Accord' : 'Désaccord'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <QuizResultSections
+          result={result}
+          resolvedNom={resolved?.nom}
+          questions={questions ?? undefined}
+          answers={answers}
+        />
 
         <section style={{ marginTop: 48, ...card, textAlign: 'center' }}>
-          <p style={{ margin: '0 0 16px', fontSize: 15, lineHeight: 1.6, color: '#4B5563' }}>
+          <p style={{ margin: '0 0 16px', fontSize: 15, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
             Partagez votre résultat, ou suivez un de ces députés vote après vote.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -469,7 +809,7 @@ export function QuizClient() {
             <Link
               href="/mon-depute"
               style={{
-                fontSize: 14.5, color: NAVY, background: '#fff', border: `1px solid ${LINE}`,
+                fontSize: 14.5, color: NAVY, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`,
                 padding: '11px 22px', borderRadius: 9, fontWeight: 600, textDecoration: 'none',
               }}
             >
@@ -478,7 +818,7 @@ export function QuizClient() {
             <button
               onClick={restart}
               style={{
-                fontSize: 14.5, color: NAVY, background: '#fff', border: `1px solid ${LINE}`,
+                fontSize: 14.5, color: NAVY, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`,
                 padding: '11px 22px', borderRadius: 9, fontWeight: 600, cursor: 'pointer',
               }}
             >

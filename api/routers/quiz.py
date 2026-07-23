@@ -4,18 +4,27 @@ api/routers/quiz.py
 "Quel député vote comme vous ?" — vote-matching quiz (MON-109, MON-137, MON-139, ADR-025).
 
 Four endpoints:
-- GET  /quiz/questions  : the curated question set (repo file, api/quiz_data.py).
+- GET  /quiz/questions  : the curated question set (repo file, api/quiz_data.py),
+                          enriched with live vote tallies from the votes table (MON-180).
 - POST /quiz/match      : stateless agreement computation over vote_positions.
 - POST /quiz/share      : store an immutable snapshot of a match result.
 - GET  /quiz/share/{id} : serve a stored snapshot (plain SELECT, no recompute).
 
 ADR-025 constraints: /match persists and logs nothing about the request —
-answers in, results out. The question set is never read from the DB.
+answers in, results out. The question *content* is never read from the DB —
+only its per-question tallies are (MON-180), one SELECT joined at request time.
 /share re-runs the same server-side computation from the submitted answers
 before storing — client-computed percentages are never trusted, which is what
 keeps MonÉlu-branded share cards non-forgeable. The stored snapshot is the
 rendered result only: no user identity, no postal code, no raw answers beyond
 what the card shows.
+
+ADR-028 (MON-184): /share accepts an opt-in `include_answers` flag (default
+False). When set, the already-validated answers used for the match
+computation are added into the stored `result` JSONB so a later visitor can
+run a friend comparison. A share created without the opt-in is byte-identical
+to a pre-ADR-028 share — no "answers" key is written at all, not a null one.
+Comparison itself stays entirely client-side; there is no /quiz/compare.
 
 Denominator rules (consistent with ADR-019's presence framing):
 - Only expressed positions compare: pour / contre / abstention. `nonVotant`
@@ -61,6 +70,13 @@ class QuizQuestion(BaseModel):
     theme: str
     question: str
     context: str
+    # Live aggregates joined from the votes table at request time (MON-180) —
+    # the question content stays a repo file (ADR-025), only these are DB-backed.
+    votes_for: Optional[int] = None
+    votes_against: Optional[int] = None
+    abstentions: Optional[int] = None
+    result: Optional[str] = None
+    vote_date: Optional[str] = None
 
 
 class QuizQuestionsResponse(BaseModel):
@@ -84,6 +100,13 @@ class QuizMatchRequest(BaseModel):
     department: Optional[str] = Field(
         None, description="Code de département pour la comparaison « vos députés » (optionnel)"
     )
+    focus_deputy_id: Optional[str] = Field(
+        None,
+        description=(
+            "Identifiant d'un député à mettre en avant dans la réponse (entrée quiz "
+            "personnalisée depuis sa page profil, MON-183)"
+        ),
+    )
 
     @field_validator("answers")
     @classmethod
@@ -98,6 +121,13 @@ class QuizMatchRequest(BaseModel):
         return answers
 
 
+class QuizVoteDetail(BaseModel):
+    vote_id: str
+    # None when the deputy has no expressed position on this vote (nonVotant
+    # or absent) — the frontend renders that as "non comparable", not disagreement.
+    deputy_position: Optional[Literal["pour", "contre", "abstention"]] = None
+
+
 class QuizDeputyMatch(BaseModel):
     deputy_id: str
     full_name: Optional[str] = None
@@ -109,6 +139,9 @@ class QuizDeputyMatch(BaseModel):
     agreement_pct: Optional[float] = None
     matches: int
     compared: int
+    # Per-question breakdown (MON-181) — populated only for the best match and
+    # the opposite; never persisted in quiz_shares (ADR-025 — see share_result).
+    detail: Optional[list[QuizVoteDetail]] = None
 
 
 class QuizGroupAlignment(BaseModel):
@@ -136,6 +169,11 @@ class QuizMatchResponse(BaseModel):
     opposite: Optional[QuizDeputyMatch] = None
     groups: list[QuizGroupAlignment]
     my_department: Optional[QuizDepartmentResult] = None
+    # Set only when the request carries focus_deputy_id (MON-183) — the
+    # requested deputy's match, returned even below the ranking threshold
+    # (a personalized entry answers "how well do I match *this* deputy?",
+    # not "who ranks in my top matches").
+    focus: Optional[QuizDeputyMatch] = None
 
 
 # ---------------------------------------------------------------------------
@@ -235,10 +273,37 @@ def compute_group_alignment(
 )
 @limiter.limit(tiered_limit(30))
 def get_questions(request: Request) -> QuizQuestionsResponse:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT vote_id, votes_for, votes_against, abstentions, result, voted_at
+                FROM votes
+                WHERE vote_id = ANY(%s)
+                """,
+                (list(QUIZ_VOTE_IDS),),
+            )
+            tallies = {row["vote_id"]: row for row in cur.fetchall()}
+
+    questions = []
+    for q in QUIZ_QUESTIONS:
+        row = tallies.get(q["vote_id"], {})
+        voted_at = row.get("voted_at")
+        questions.append(
+            QuizQuestion(
+                **q,
+                votes_for=row.get("votes_for"),
+                votes_against=row.get("votes_against"),
+                abstentions=row.get("abstentions"),
+                result=row.get("result"),
+                vote_date=voted_at.date().isoformat() if voted_at else None,
+            )
+        )
+
     return QuizQuestionsResponse(
         version=QUIZ_VERSION,
         count=len(QUIZ_QUESTIONS),
-        questions=[QuizQuestion(**q) for q in QUIZ_QUESTIONS],
+        questions=questions,
     )
 
 
@@ -289,18 +354,47 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
                 )
                 dept_rows = cur.fetchall()
 
+            focus_row: Optional[dict] = None
+            if body.focus_deputy_id is not None:
+                cur.execute(
+                    """
+                    SELECT deputy_id, full_name, party, party_short, department, photo_url
+                    FROM deputies
+                    WHERE deputy_id = %s
+                    """,
+                    (body.focus_deputy_id,),
+                )
+                focus_row = cur.fetchone()
+                if focus_row is None:
+                    raise HTTPException(status_code=422, detail="Député inconnu")
+
     stats = compute_deputy_stats(rows, answers)
+    position_by_deputy_vote = {(r["deputy_id"], r["vote_id"]): r["position"] for r in rows}
+
+    def detail_for(deputy_id: str) -> list[QuizVoteDetail]:
+        return [
+            QuizVoteDetail(
+                vote_id=vote_id,
+                deputy_position=position_by_deputy_vote.get((deputy_id, vote_id)),
+            )
+            for vote_id in answers
+        ]
 
     eligible = [e for e in stats.values() if e["compared"] >= threshold]
     eligible.sort(
         key=lambda e: (-e["matches"] / e["compared"], -e["compared"], e["full_name"] or "")
     )
 
+    top_matches = [to_match(e) for e in eligible[:TOP_MATCHES_LIMIT]]
+    if top_matches:
+        top_matches[0].detail = detail_for(top_matches[0].deputy_id)
+
     opposite = None
     if eligible:
         opposite = to_match(
             min(eligible, key=lambda e: (e["matches"] / e["compared"], -e["compared"]))
         )
+        opposite.detail = detail_for(opposite.deputy_id)
 
     my_department = None
     if dept_code is not None:
@@ -313,14 +407,21 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
             ],
         )
 
+    focus = None
+    if focus_row is not None:
+        focus = to_match(
+            stats.get(focus_row["deputy_id"], {**focus_row, "matches": 0, "compared": 0})
+        )
+
     return QuizMatchResponse(
         version=QUIZ_VERSION,
         answered=len(answers),
         eligible_deputies=len(eligible),
-        top_matches=[to_match(e) for e in eligible[:TOP_MATCHES_LIMIT]],
+        top_matches=top_matches,
         opposite=opposite,
         groups=compute_group_alignment(rows, answers, threshold),
         my_department=my_department,
+        focus=focus,
     )
 
 
@@ -337,9 +438,24 @@ def match(request: Request, body: QuizMatchRequest) -> QuizMatchResponse:
 # ---------------------------------------------------------------------------
 # Shares — immutable snapshots (MON-139, ADR-025)
 # ---------------------------------------------------------------------------
+class QuizShareRequest(QuizMatchRequest):
+    include_answers: bool = Field(
+        False,
+        description="Inclut les réponses dans le snapshot pour permettre une comparaison "
+        "amicale (ADR-028) — opt-in, refusé par défaut.",
+    )
+
+
+class QuizShareResult(QuizMatchResponse):
+    # Present only on shares created with include_answers=True (ADR-028).
+    # Omitted entirely (not null) on every other share, so a share created
+    # without the opt-in stays byte-identical to a pre-ADR-028 snapshot.
+    answers: Optional[list[QuizAnswer]] = None
+
+
 class QuizShareResponse(BaseModel):
     id: str
-    result: QuizMatchResponse
+    result: QuizShareResult
     shared_at: str
     share_url: str
 
@@ -348,10 +464,28 @@ def _to_share_response(row: dict) -> QuizShareResponse:
     share_id = str(row["id"])
     return QuizShareResponse(
         id=share_id,
-        result=QuizMatchResponse(**row["result"]),
+        result=QuizShareResult(**row["result"]),
         shared_at=row["created_at"].isoformat(),
         share_url=f"{FRONTEND_BASE_URL}/quiz/s/{share_id}",
     )
+
+
+def _strip_detail(data: dict) -> dict:
+    """Remove the per-question detail (MON-181) before persisting a share.
+
+    `detail` is a derived, redundant encoding of the sharer's own answers
+    (their position on each vote_id) — distinct from the raw `answers` field
+    ADR-028 (MON-184) may add on opt-in. Always stripped regardless of
+    include_answers: it's never reconstructed from `body.answers` server-side.
+    """
+    for match in data.get("top_matches", []):
+        match.pop("detail", None)
+    if data.get("opposite"):
+        data["opposite"].pop("detail", None)
+    if data.get("my_department"):
+        for match in data["my_department"].get("deputies", []):
+            match.pop("detail", None)
+    return data
 
 
 @router.post(
@@ -360,11 +494,16 @@ def _to_share_response(row: dict) -> QuizShareResponse:
     summary="Partagez votre résultat (recalculé côté serveur, snapshot immuable)",
 )
 @limiter.limit(tiered_limit(10))
-def share_result(request: Request, body: QuizMatchRequest) -> QuizShareResponse:
+def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
     # Same input shape as /match: the result is recomputed here, never taken
     # from the client (ADR-025) — a share can only contain server-computed
     # numbers. Nothing else about the request is persisted.
     result = _compute_match(body)
+    stored_result = _strip_detail(result.model_dump())
+    if body.include_answers:
+        # The already-validated answers used for the computation above — never
+        # a separate client-supplied payload (ADR-028).
+        stored_result["answers"] = [a.model_dump() for a in body.answers]
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -374,7 +513,7 @@ def share_result(request: Request, body: QuizMatchRequest) -> QuizShareResponse:
                     VALUES (%s, %s)
                     RETURNING id, result, created_at
                     """,
-                    (result.version, Json(result.model_dump())),
+                    (result.version, Json(stored_result)),
                 )
                 row = cur.fetchone()
             conn.commit()

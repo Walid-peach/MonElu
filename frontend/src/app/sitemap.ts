@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { api, type Deputy, type Vote } from '@/lib/api'
 import { departmentCode } from '@/lib/departments'
 import { THEME_ENTRIES } from '@/lib/themes'
+import { GROUP_ENTRIES } from '@/lib/groups'
 
 const SITE_URL = 'https://mon-elu.vercel.app'
 const PAGE_SIZE = 200
@@ -84,6 +85,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/votes`, changeFrequency: 'daily', priority: 0.9 },
     ...THEME_ENTRIES.map(({ slug }) => ({
       url: `${SITE_URL}/themes/${slug}`,
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    })),
+    ...GROUP_ENTRIES.map(({ slug }) => ({
+      url: `${SITE_URL}/groupes/${slug}`,
       changeFrequency: 'weekly' as const,
       priority: 0.7,
     })),
