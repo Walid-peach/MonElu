@@ -63,7 +63,7 @@ export default async function QuizSharePage({ params }: { params: Promise<{ id: 
         <QuizResultSections result={share.result} />
         <div style={{ marginTop: 48, textAlign: 'center' }}>
           <Link
-            href="/quiz"
+            href={share.result.answers ? `/quiz?compare=${id}` : '/quiz'}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -78,7 +78,9 @@ export default async function QuizSharePage({ params }: { params: Promise<{ id: 
               boxShadow: '0 2px 8px var(--dp-cta-shadow)',
             }}
           >
-            Faites le test — quel député vote comme vous ?
+            {share.result.answers
+              ? 'Faites le test et comparez-vous'
+              : 'Faites le test — quel député vote comme vous ?'}
           </Link>
         </div>
       </main>
