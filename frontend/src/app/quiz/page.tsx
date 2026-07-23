@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { QuizClient } from './QuizClient'
@@ -30,7 +31,9 @@ export default function QuizPage() {
           { name: 'Quel député vote comme vous ?', url: `${SITE_URL}/quiz` },
         ])}
       />
-      <QuizClient />
+      <Suspense fallback={null}>
+        <QuizClient />
+      </Suspense>
     </>
   )
 }

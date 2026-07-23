@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion } from '@/lib/api'
+import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion, QuizShareResult } from '@/lib/api'
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
 import type { ResolvedDepartment } from '@/lib/postal'
 import { POS } from '@/lib/vote-position'
@@ -41,6 +42,11 @@ function Shell({ children }: { children: React.ReactNode }) {
 // Lazily creates the share snapshot on first click (POST /quiz/share sends the
 // answers; the server recomputes the result before storing, ADR-025), then
 // hands the URL to the native share sheet or the clipboard.
+//
+// `includeAnswers` (ADR-028, MON-184): opt-in, default off — a checkbox lets
+// the sharer additionally store their raw answers so a visitor can run a
+// friend comparison. The disclosure composes two lines: the base share-link
+// notice (MON-175) and, only when checked, the answers-included notice.
 function ShareResultButton({
   answers,
   department,
@@ -50,13 +56,14 @@ function ShareResultButton({
 }) {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [state, setState] = useState<'idle' | 'creating' | 'copied' | 'error'>('idle')
+  const [includeAnswers, setIncludeAnswers] = useState(false)
 
   async function handleShare() {
     let url = shareUrl
     if (!url) {
       setState('creating')
       try {
-        const share = await api.quiz.share(answers, department)
+        const share = await api.quiz.share(answers, department, includeAnswers)
         url = share.share_url
         setShareUrl(url)
       } catch {
@@ -87,30 +94,78 @@ function ShareResultButton({
   }
 
   return (
-    <button
-      onClick={handleShare}
-      disabled={state === 'creating'}
-      style={{
-        background: ACCENT, color: '#fff', padding: '11px 22px', borderRadius: 9,
-        fontWeight: 600, fontSize: 14.5, border: 'none',
-        cursor: state === 'creating' ? 'wait' : 'pointer',
-        boxShadow: '0 2px 8px var(--dp-cta-shadow)',
-      }}
-    >
-      {state === 'creating'
-        ? 'Création du lien…'
-        : state === 'copied'
-          ? 'Lien copié !'
-          : state === 'error'
-            ? 'Échec — réessayer'
-            : 'Partager mes résultats'}
-    </button>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      <button
+        onClick={handleShare}
+        disabled={state === 'creating'}
+        style={{
+          background: ACCENT, color: '#fff', padding: '11px 22px', borderRadius: 9,
+          fontWeight: 600, fontSize: 14.5, border: 'none',
+          cursor: state === 'creating' ? 'wait' : 'pointer',
+          boxShadow: '0 2px 8px var(--dp-cta-shadow)',
+        }}
+      >
+        {state === 'creating'
+          ? 'Création du lien…'
+          : state === 'copied'
+            ? 'Lien copié !'
+            : state === 'error'
+              ? 'Échec — réessayer'
+              : 'Partager mes résultats'}
+      </button>
+      <label
+        style={{
+          display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 420,
+          fontSize: 12.5, lineHeight: 1.5, color: GRAY, cursor: shareUrl ? 'not-allowed' : 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={includeAnswers}
+          disabled={shareUrl !== null}
+          onChange={e => setIncludeAnswers(e.target.checked)}
+          style={{ marginTop: 2 }}
+        />
+        <span>
+          Le lien créé est public et montre votre département.
+          {includeAnswers
+            ? ' Vos réponses seront aussi incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous.'
+            : ' Inclure mes réponses pour permettre à un ami de se comparer à moi.'}
+        </span>
+      </label>
+    </div>
   )
 }
 
+// Head-to-head agreement between the current taker's own answers and a
+// previously shared result — computed entirely client-side (ADR-028), no
+// /quiz/compare endpoint and nothing persisted or logged.
+type ComparisonRow = { vote_id: string; own: QuizAnswerPosition; theirs: QuizAnswerPosition; agree: boolean }
+
+function computeComparison(
+  answers: Record<string, QuizAnswerPosition>,
+  theirAnswers: Array<{ vote_id: string; position: QuizAnswerPosition }>
+): { agree: number; total: number; rows: ComparisonRow[] } | null {
+  const rows = theirAnswers
+    .filter(a => answers[a.vote_id] !== undefined)
+    .map(a => ({
+      vote_id: a.vote_id,
+      own: answers[a.vote_id],
+      theirs: a.position,
+      agree: answers[a.vote_id] === a.position,
+    }))
+  if (rows.length === 0) return null
+  return { agree: rows.filter(r => r.agree).length, total: rows.length, rows }
+}
+
 export function QuizClient() {
+  const searchParams = useSearchParams()
+  const compareId = searchParams.get('compare')
+
   const [phase, setPhase] = useState<Phase>('intro')
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null)
+  const [questionsVersion, setQuestionsVersion] = useState<string | null>(null)
   const [questionsError, setQuestionsError] = useState(false)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, QuizAnswerPosition>>({})
@@ -125,12 +180,18 @@ export function QuizClient() {
   const [matchError, setMatchError] = useState(false)
   const [result, setResult] = useState<QuizMatchResponse | null>(null)
 
+  // Friend comparison (ADR-028, MON-184): the share fetched from ?compare=<id>.
+  const [compareShare, setCompareShare] = useState<QuizShareResult | null>(null)
+
   useEffect(() => {
     let cancelled = false
     api.quiz
       .questions()
       .then(res => {
-        if (!cancelled) setQuestions(res.questions)
+        if (!cancelled) {
+          setQuestions(res.questions)
+          setQuestionsVersion(res.version)
+        }
       })
       .catch(() => {
         if (!cancelled) setQuestionsError(true)
@@ -139,6 +200,37 @@ export function QuizClient() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!compareId) return
+    let cancelled = false
+    api.quiz
+      .getShare(compareId)
+      .then(share => {
+        if (!cancelled && share.result.answers) setCompareShare(share)
+      })
+      .catch(() => {
+        // Invalid or missing share id — fall back to the plain quiz silently.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [compareId])
+
+  // Question-set version mismatch degrades to the plain flow with a notice
+  // (ADR-028): answers are keyed to a specific question-set version. Derived
+  // at render time rather than via an effect, so no cascading setState.
+  const versionMismatch =
+    compareShare !== null && questionsVersion !== null && compareShare.result.version !== questionsVersion
+  const effectiveCompareShare = versionMismatch ? null : compareShare
+  const compareNotice = versionMismatch
+    ? 'Ce lien de comparaison correspond à une version précédente du quiz — voici le quiz actuel, sans comparaison.'
+    : null
+
+  const comparison =
+    effectiveCompareShare?.result.answers != null
+      ? computeComparison(answers, effectiveCompareShare.result.answers)
+      : null
 
   const answeredCount = Object.keys(answers).length
 
@@ -229,6 +321,14 @@ export function QuizClient() {
           <p style={{ margin: '14px auto 0', maxWidth: 520, fontSize: 13.5, color: GRAY }}>
             Sans compte. Vos réponses restent dans votre navigateur : rien n’est enregistré.
           </p>
+          {effectiveCompareShare && (
+            <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 14, color: NAVY, fontWeight: 600 }}>
+              Faites le test pour voir votre accord avec le résultat qu’on vous a partagé.
+            </p>
+          )}
+          {compareNotice && (
+            <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 13.5, color: RED }}>{compareNotice}</p>
+          )}
           {questionsError ? (
             <p style={{ marginTop: 28, fontSize: 15, color: RED }}>
               Impossible de charger le questionnaire pour le moment. Réessayez dans un instant.
@@ -544,6 +644,35 @@ export function QuizClient() {
             </p>
           </div>
         )}
+
+        {comparison && (
+          <div style={{ ...card, marginBottom: 24, borderLeft: `4px solid ${ACCENT}` }}>
+            <p style={{ margin: '0 0 12px', fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
+              Vous êtes d’accord avec ce résultat partagé sur {comparison.agree}/{comparison.total} scrutin
+              {comparison.total > 1 ? 's' : ''}.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {comparison.rows.map(row => {
+                const q = questions?.find(q => q.vote_id === row.vote_id)
+                return (
+                  <div
+                    key={row.vote_id}
+                    style={{
+                      display: 'flex', justifyContent: 'space-between', gap: 12,
+                      fontSize: 13.5, color: row.agree ? NAVY : GRAY,
+                    }}
+                  >
+                    <span style={{ flex: 1, minWidth: 0 }}>{q?.question ?? row.vote_id}</span>
+                    <span style={{ fontWeight: 700, color: row.agree ? ACCENT : RED, whiteSpace: 'nowrap' }}>
+                      {row.agree ? 'Accord' : 'Désaccord'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         <QuizResultSections result={result} resolvedNom={resolved?.nom} />
 
         <section style={{ marginTop: 48, ...card, textAlign: 'center' }}>

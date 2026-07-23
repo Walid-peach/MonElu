@@ -17,6 +17,13 @@ keeps MonÉlu-branded share cards non-forgeable. The stored snapshot is the
 rendered result only: no user identity, no postal code, no raw answers beyond
 what the card shows.
 
+ADR-028 (MON-184): /share accepts an opt-in `include_answers` flag (default
+False). When set, the already-validated answers used for the match
+computation are added into the stored `result` JSONB so a later visitor can
+run a friend comparison. A share created without the opt-in is byte-identical
+to a pre-ADR-028 share — no "answers" key is written at all, not a null one.
+Comparison itself stays entirely client-side; there is no /quiz/compare.
+
 Denominator rules (consistent with ADR-019's presence framing):
 - Only expressed positions compare: pour / contre / abstention. `nonVotant`
   (present but not voting) and absence never count as agreement or disagreement;
@@ -337,9 +344,24 @@ def match(request: Request, body: QuizMatchRequest) -> QuizMatchResponse:
 # ---------------------------------------------------------------------------
 # Shares — immutable snapshots (MON-139, ADR-025)
 # ---------------------------------------------------------------------------
+class QuizShareRequest(QuizMatchRequest):
+    include_answers: bool = Field(
+        False,
+        description="Inclut les réponses dans le snapshot pour permettre une comparaison "
+        "amicale (ADR-028) — opt-in, refusé par défaut.",
+    )
+
+
+class QuizShareResult(QuizMatchResponse):
+    # Present only on shares created with include_answers=True (ADR-028).
+    # Omitted entirely (not null) on every other share, so a share created
+    # without the opt-in stays byte-identical to a pre-ADR-028 snapshot.
+    answers: Optional[list[QuizAnswer]] = None
+
+
 class QuizShareResponse(BaseModel):
     id: str
-    result: QuizMatchResponse
+    result: QuizShareResult
     shared_at: str
     share_url: str
 
@@ -348,7 +370,7 @@ def _to_share_response(row: dict) -> QuizShareResponse:
     share_id = str(row["id"])
     return QuizShareResponse(
         id=share_id,
-        result=QuizMatchResponse(**row["result"]),
+        result=QuizShareResult(**row["result"]),
         shared_at=row["created_at"].isoformat(),
         share_url=f"{FRONTEND_BASE_URL}/quiz/s/{share_id}",
     )
@@ -360,11 +382,16 @@ def _to_share_response(row: dict) -> QuizShareResponse:
     summary="Partagez votre résultat (recalculé côté serveur, snapshot immuable)",
 )
 @limiter.limit(tiered_limit(10))
-def share_result(request: Request, body: QuizMatchRequest) -> QuizShareResponse:
+def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
     # Same input shape as /match: the result is recomputed here, never taken
     # from the client (ADR-025) — a share can only contain server-computed
     # numbers. Nothing else about the request is persisted.
     result = _compute_match(body)
+    result_dict = result.model_dump()
+    if body.include_answers:
+        # The already-validated answers used for the computation above — never
+        # a separate client-supplied payload (ADR-028).
+        result_dict["answers"] = [a.model_dump() for a in body.answers]
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -374,7 +401,7 @@ def share_result(request: Request, body: QuizMatchRequest) -> QuizShareResponse:
                     VALUES (%s, %s)
                     RETURNING id, result, created_at
                     """,
-                    (result.version, Json(result.model_dump())),
+                    (result.version, Json(result_dict)),
                 )
                 row = cur.fetchone()
             conn.commit()
