@@ -286,6 +286,12 @@ export type QuizQuestion = {
   theme: string
   question: string
   context: string
+  // Live vote tallies (MON-180) — null if the SELECT joined no matching row.
+  votes_for: number | null
+  votes_against: number | null
+  abstentions: number | null
+  result: string | null
+  vote_date: string | null
 }
 
 export type QuizQuestionsResponse = {
@@ -295,6 +301,13 @@ export type QuizQuestionsResponse = {
 }
 
 export type QuizAnswerPosition = 'pour' | 'contre' | 'abstention'
+
+export type QuizVoteDetail = {
+  vote_id: string
+  // null when the deputy has no expressed position on this vote (nonVotant
+  // or absent) — render as "non comparable", not disagreement.
+  deputy_position: QuizAnswerPosition | null
+}
 
 export type QuizDeputyMatch = {
   deputy_id: string
@@ -307,6 +320,9 @@ export type QuizDeputyMatch = {
   agreement_pct: number | null
   matches: number
   compared: number
+  // Per-question breakdown (MON-181) — present only on the best match and
+  // the opposite; absent on stored shares (ADR-025).
+  detail: QuizVoteDetail[] | null
 }
 
 export type QuizGroupAlignment = {
