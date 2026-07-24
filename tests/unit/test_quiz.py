@@ -93,6 +93,152 @@ def test_get_questions_formats_vote_date(client, mock_cursor):
 
 
 # ---------------------------------------------------------------------------
+# GET /quiz/weekly — selection rule (MON-185)
+# ---------------------------------------------------------------------------
+import datetime as _dt  # noqa: E402
+
+from api.routers.quiz import (  # noqa: E402
+    build_weekly_question,
+    is_divisive_vote,
+    is_whole_text_vote,
+    select_weekly_vote,
+    week_start,
+)
+
+NOT_QUIZ_ID = "VTANR5L17V9999"
+assert NOT_QUIZ_ID not in {q["vote_id"] for q in QUIZ_QUESTIONS}
+
+
+def _weekly_row(
+    vote_id=NOT_QUIZ_ID,
+    vote_title="l'ensemble du projet de loi relatif à un sujet quelconque",
+    summary_plain="Ce texte prévoit une réforme du sujet en question.",
+    votes_for=300,
+    votes_against=200,
+    total_voters=500,
+    voted_at=_dt.datetime(2026, 7, 10, 10, 0, tzinfo=_dt.timezone.utc),
+    result="adopté",
+    abstentions=0,
+):
+    return {
+        "vote_id": vote_id,
+        "vote_title": vote_title,
+        "summary_plain": summary_plain,
+        "votes_for": votes_for,
+        "votes_against": votes_against,
+        "total_voters": total_voters,
+        "voted_at": voted_at,
+        "result": result,
+        "abstentions": abstentions,
+    }
+
+
+def test_is_whole_text_vote_accepts_straight_and_curly_apostrophe():
+    assert is_whole_text_vote("l'ensemble du projet de loi X")
+    assert is_whole_text_vote("l’ensemble du projet de loi X")
+    assert is_whole_text_vote("L'ENSEMBLE DU PROJET DE LOI X")
+
+
+def test_is_whole_text_vote_rejects_amendment_titles():
+    assert not is_whole_text_vote("l'amendement n°42 à l'article 3")
+    assert not is_whole_text_vote("l'article 3 du projet de loi X")
+
+
+def test_is_divisive_vote_threshold():
+    # minority share exactly 35% qualifies
+    assert is_divisive_vote(65, 35)
+    assert not is_divisive_vote(70, 30)
+    assert not is_divisive_vote(0, 0)
+    assert not is_divisive_vote(None, 40)
+    assert not is_divisive_vote(40, None)
+
+
+def test_select_weekly_vote_enforces_participation_threshold():
+    low_turnout = _weekly_row(total_voters=399)
+    ok = _weekly_row(vote_id="VTANR5L17V8888", total_voters=400)
+    assert select_weekly_vote([low_turnout, ok])["vote_id"] == ok["vote_id"]
+
+
+def test_select_weekly_vote_enforces_divisiveness_threshold():
+    lopsided = _weekly_row(votes_for=550, votes_against=10)
+    ok = _weekly_row(vote_id="VTANR5L17V8888", votes_for=300, votes_against=200)
+    assert select_weekly_vote([lopsided, ok])["vote_id"] == ok["vote_id"]
+
+
+def test_select_weekly_vote_enforces_whole_text_pattern():
+    amendment = _weekly_row(vote_title="l'amendement n°12 au projet de loi X")
+    ok = _weekly_row(vote_id="VTANR5L17V8888", vote_title="l'ensemble du projet de loi X")
+    assert select_weekly_vote([amendment, ok])["vote_id"] == ok["vote_id"]
+
+
+def test_select_weekly_vote_excludes_quiz_set_ids():
+    from_quiz_set = _weekly_row(vote_id=QUIZ_QUESTIONS[0]["vote_id"])
+    ok = _weekly_row(vote_id="VTANR5L17V8888")
+    assert select_weekly_vote([from_quiz_set, ok])["vote_id"] == ok["vote_id"]
+
+
+def test_select_weekly_vote_returns_none_when_nothing_qualifies():
+    assert select_weekly_vote([_weekly_row(total_voters=100)]) is None
+    assert select_weekly_vote([]) is None
+
+
+def test_select_weekly_vote_picks_latest_qualifying_first():
+    older = _weekly_row(
+        vote_id="VTANR5L17V1111", voted_at=_dt.datetime(2026, 6, 1, tzinfo=_dt.timezone.utc)
+    )
+    newer = _weekly_row(
+        vote_id="VTANR5L17V2222", voted_at=_dt.datetime(2026, 7, 1, tzinfo=_dt.timezone.utc)
+    )
+    # Candidates arrive latest-first (matches the SQL ORDER BY voted_at DESC) —
+    # selection just returns the first qualifying row, doesn't re-sort.
+    assert select_weekly_vote([newer, older])["vote_id"] == "VTANR5L17V2222"
+
+
+def test_week_start_is_the_monday_of_the_iso_week():
+    # 2026-07-23 is a Thursday
+    thursday = _dt.date(2026, 7, 23)
+    monday = _dt.date(2026, 7, 20)
+    assert week_start(thursday) == monday
+    # Every day of the same ISO week resolves to the same Monday — this is
+    # what makes /quiz/weekly deterministic for all visitors within a week.
+    for offset in range(7):
+        assert week_start(monday + _dt.timedelta(days=offset)) == monday
+
+
+def test_build_weekly_question_uses_summary_plain():
+    q = build_weekly_question("Ce texte prévoit une réforme.", "Titre officiel du scrutin")
+    assert q == "Auriez-vous voté pour ou contre : Ce texte prévoit une réforme ?"
+
+
+def test_build_weekly_question_falls_back_to_title():
+    q = build_weekly_question(None, "l'ensemble du projet de loi X")
+    assert q == "Auriez-vous voté pour ou contre : l'ensemble du projet de loi X ?"
+
+
+def test_get_weekly_returns_qualifying_scrutin(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [_weekly_row()]
+    resp = client.get("/quiz/weekly")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["vote_id"] == NOT_QUIZ_ID
+    assert body["question"].startswith("Auriez-vous voté")
+    assert body["votes_for"] == 300
+    assert body["vote_date"] == "2026-07-10"
+
+
+def test_get_weekly_404_when_no_scrutin_qualifies(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    resp = client.get("/quiz/weekly")
+    assert resp.status_code == 404
+
+
+def test_get_weekly_never_returns_a_curated_quiz_question(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [_weekly_row(vote_id=QUIZ_QUESTIONS[0]["vote_id"])]
+    resp = client.get("/quiz/weekly")
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # Request validation
 # ---------------------------------------------------------------------------
 def test_match_request_rejects_too_few_answers():
