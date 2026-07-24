@@ -43,7 +43,7 @@ import re
 import uuid
 from collections import Counter, defaultdict
 from datetime import date, timedelta
-from math import ceil
+from math import ceil, sqrt
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -251,6 +251,30 @@ def build_weekly_question(summary_plain: Optional[str], vote_title: str) -> str:
     """Plain question derived from summary_plain, with vote_title as fallback."""
     base = (summary_plain or vote_title).strip().rstrip(". ")
     return f"Auriez-vous voté pour ou contre : {base} ?"
+
+
+WILSON_Z = 1.96  # 95% confidence — standard default, not tuned for this corpus
+
+
+def ranking_score(matches: int, compared: int) -> float:
+    """Wilson score lower bound — coverage-aware ranking (MON-172).
+
+    Raw `matches/compared` lets a deputy compared on only the eligibility
+    threshold (e.g. 5/5) outrank one compared on nearly every question
+    (e.g. 9/10), because the two ratios don't encode how much evidence
+    backs them. The Wilson lower bound does: at a fixed raw ratio, more
+    comparisons produce a tighter interval and a higher lower bound, so
+    9/10 (0.596) ranks above 5/5 (0.565) even though 5/5 is the bigger raw
+    percentage. Only the sort order changes — `agreement_pct` on the
+    response is still the raw, unadjusted ratio.
+    """
+    if compared == 0:
+        return 0.0
+    phat = matches / compared
+    denom = 1 + WILSON_Z**2 / compared
+    center = phat + WILSON_Z**2 / (2 * compared)
+    margin = WILSON_Z * sqrt((phat * (1 - phat) + WILSON_Z**2 / (4 * compared)) / compared)
+    return (center - margin) / denom
 
 
 def compute_deputy_stats(rows: list[dict], answers: dict[str, str]) -> dict[str, dict]:
@@ -493,7 +517,11 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
 
     eligible = [e for e in stats.values() if e["compared"] >= threshold]
     eligible.sort(
-        key=lambda e: (-e["matches"] / e["compared"], -e["compared"], e["full_name"] or "")
+        key=lambda e: (
+            -ranking_score(e["matches"], e["compared"]),
+            -e["compared"],
+            e["full_name"] or "",
+        )
     )
 
     top_matches = [to_match(e) for e in eligible[:TOP_MATCHES_LIMIT]]
@@ -503,7 +531,10 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
     opposite = None
     if eligible:
         opposite = to_match(
-            min(eligible, key=lambda e: (e["matches"] / e["compared"], -e["compared"]))
+            min(
+                eligible,
+                key=lambda e: (ranking_score(e["matches"], e["compared"]), -e["compared"]),
+            )
         )
         opposite.detail = detail_for(opposite.deputy_id)
 
@@ -642,7 +673,10 @@ def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
     response_model=QuizShareResponse,
     summary="Relisez un résultat partagé (aucun recalcul)",
 )
-@limiter.limit(tiered_limit(30))
+# Immutable public snapshot behind an unguessable UUID (MON-173): OG scrapers
+# (X, WhatsApp, Facebook, Telegram) and Vercel edge egress funnel through few
+# IPs, so the base per-IP limit was tripping during viral spikes.
+@limiter.limit(tiered_limit(300))
 def get_share(request: Request, share_id: uuid.UUID) -> QuizShareResponse:
     with get_conn() as conn:
         with conn.cursor() as cur:

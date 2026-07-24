@@ -15,13 +15,21 @@ function truncate(text: string, max: number): string {
 export default async function OGImage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const share = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'}/search/share/${id}`
+    `${process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'}/search/share/${id}`,
+    { signal: AbortSignal.timeout(5000) }
   )
     .then(r => (r.ok ? r.json() : null))
     .catch(() => null)
 
-  const question = share ? truncate(share.question, 120) : 'Réponse introuvable'
-  const answer = share ? truncate(share.answer.replace(/\*\*/g, ''), 220) : ''
+  // Don't cache a failure render under `revalidate = 86400` above — a thrown
+  // error bypasses the route's cache, so the next scrape retries instead of
+  // getting stuck with a stale "Réponse introuvable" card for a day.
+  if (!share) {
+    throw new Error(`Chat share ${id} unavailable`)
+  }
+
+  const question = truncate(share.question, 120)
+  const answer = truncate(share.answer.replace(/\*\*/g, ''), 220)
 
   return new ImageResponse(
     (

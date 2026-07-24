@@ -9,6 +9,7 @@ from api.routers.quiz import (
     _strip_detail,
     compute_group_alignment,
     eligibility_threshold,
+    ranking_score,
 )
 
 V1, V2, V3 = (q["vote_id"] for q in QUIZ_QUESTIONS[:3])
@@ -322,6 +323,37 @@ def test_match_ranks_agreement_and_applies_threshold(client, mock_cursor):
     assert body["groups"][0]["agreement_pct"] == 100.0
     assert body["groups"][0]["compared"] == 2
     assert body["groups"][0]["deputy_count"] == 2
+
+
+def test_ranking_score_prefers_coverage_at_equal_or_higher_raw_rate():
+    # 9/10 (90%) outranks 5/5 (100%) — more evidence at a slightly lower raw
+    # rate beats the eligibility floor's worth of evidence at a perfect rate.
+    assert ranking_score(9, 10) > ranking_score(5, 5)
+    # Same raw rate (100%), more comparisons still ranks higher.
+    assert ranking_score(10, 10) > ranking_score(5, 5)
+
+
+def test_match_prefers_higher_coverage_over_higher_raw_percentage(client, mock_cursor):
+    """MON-172: a 5/5 (100%) deputy must not outrank a 9/10 (90%) deputy."""
+    vote_ids = [q["vote_id"] for q in QUIZ_QUESTIONS]
+    answers = [{"vote_id": vid, "position": "pour"} for vid in vote_ids]
+
+    rows = [_row("LOW", vid, "pour") for vid in vote_ids[:5]]
+    rows += [_row("HIGH", vid, "pour") for vid in vote_ids[:9]]
+    rows.append(_row("HIGH", vote_ids[9], "contre"))
+    mock_cursor.fetchall.return_value = rows
+
+    resp = client.post("/quiz/match", json={"answers": answers})
+    assert resp.status_code == 200
+    body = resp.json()
+
+    top = body["top_matches"]
+    assert [m["deputy_id"] for m in top] == ["HIGH", "LOW"]
+
+    by_id = {m["deputy_id"]: m for m in top}
+    # Displayed percentages are still the raw, unadjusted ratios.
+    assert by_id["LOW"]["agreement_pct"] == 100.0
+    assert by_id["HIGH"]["agreement_pct"] == 90.0
 
 
 def test_match_department_roster_includes_absent_deputy(client, mock_cursor):
