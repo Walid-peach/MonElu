@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { track } from '@vercel/analytics/react'
 import { api } from '@/lib/api'
 import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion, QuizShareResult } from '@/lib/api'
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
@@ -75,6 +76,7 @@ function ShareResultButton({
         )
         url = share.share_url
         setShareUrl(url)
+        track('quiz_share')
       } catch {
         setState('error')
         return
@@ -336,6 +338,7 @@ export function QuizClient() {
       )
       setResult(res)
       setPhase('results')
+      track('quiz_complete')
     } catch {
       setMatchError(true)
     } finally {
@@ -409,7 +412,10 @@ export function QuizClient() {
             </p>
           ) : (
             <button
-              onClick={() => setPhase('questions')}
+              onClick={() => {
+                track('quiz_start')
+                setPhase('questions')
+              }}
               disabled={!questions}
               style={{
                 marginTop: 32,

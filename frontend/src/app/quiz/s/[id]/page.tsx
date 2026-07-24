@@ -64,7 +64,7 @@ export default async function QuizSharePage({ params }: { params: Promise<{ id: 
         <QuizResultSections result={share.result} />
         <div style={{ marginTop: 48, textAlign: 'center' }}>
           <Link
-            href={share.result.answers ? `/quiz?compare=${id}` : '/quiz'}
+            href={share.result.answers ? `/quiz?compare=${id}&ref=share` : '/quiz?ref=share'}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

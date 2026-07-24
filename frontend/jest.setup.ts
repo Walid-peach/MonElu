@@ -7,3 +7,11 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: () => null }),
   usePathname: () => '/',
 }))
+
+// Mock Vercel Analytics — the real package ships ESM-only and Jest's
+// transformIgnorePatterns excludes node_modules, so importing it directly
+// fails to parse.
+jest.mock('@vercel/analytics/react', () => ({
+  track: jest.fn(),
+  Analytics: () => null,
+}))
