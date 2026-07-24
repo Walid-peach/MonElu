@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
+import { SITE_URL } from '@/lib/seo'
 import { QuizResultSections } from '../../QuizResultSections'
 
 // Quiz shares are immutable snapshots of server-computed results (ADR-025,
@@ -35,7 +36,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    openGraph: { title, description, url: `https://mon-elu.vercel.app/quiz/s/${id}` },
+    openGraph: { title, description, url: `${SITE_URL}/quiz/s/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }
 }
