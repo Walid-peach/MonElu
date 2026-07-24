@@ -64,6 +64,14 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python scripts/run_ingestion_prod.py --since $(python3 -c "from datetime import date, timedelta; print(date.today() - timedelta(days=30))")
 
+      - name: Validate quiz vote_ids (MON-171)
+        # Unconditional: a curated scrutin corrected/renumbered upstream would
+        # silently skew every quiz agreement percentage — fail the job loudly
+        # instead (the failure-notify steps below fire).
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/check_quiz_votes.py
+
       - name: Rebuild RAG index
         if: steps.ingest.outputs.new_votes != '0'
         env:

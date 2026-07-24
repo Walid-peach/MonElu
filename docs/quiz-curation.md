@@ -68,9 +68,17 @@ own opinion? If yes, rewrite it.
    new quarter (e.g. `2026-Q4`). Old `QUIZ_VERSION` strings remain attached to
    already-stored `quiz_shares` snapshots (ADR-025) — they are never rewritten,
    so a version bump never invalidates a previously shared result card.
-5. Ship as a PR; `tests/unit/test_quiz.py` asserts every `vote_id` round-trips
-   through the API and that the response `version` matches `QUIZ_VERSION` —
-   no other test needs updating for a content-only refresh.
+5. Ship as a PR.
+   Two automated gates validate the set (MON-171):
+   CI runs `scripts/check_quiz_votes.py --api https://monelu-production.up.railway.app`
+   on every PR, failing if any `vote_id` in `QUIZ_VOTE_IDS` is unknown to the
+   production API — a typo'd id cannot merge.
+   The daily ingestion workflow (`ingest_prod.yml`) re-runs the same script
+   against the production `votes` table, so a curated scrutin later
+   corrected or renumbered upstream fails the ingestion job loudly instead
+   of silently skewing agreement percentages.
+   `tests/unit/test_quiz.py` covers set shape (count, uniqueness, phrasing)
+   with a mocked DB — no test needs updating for a content-only refresh.
 
 ## Current set (2026-Q3)
 
