@@ -45,8 +45,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 //
 // `includeAnswers` (ADR-028, MON-184): opt-in, default off — a checkbox lets
 // the sharer additionally store their raw answers so a visitor can run a
-// friend comparison. The disclosure composes two lines: the base share-link
-// notice (MON-175) and, only when checked, the answers-included notice.
+// friend comparison. `includeDepartment` (MON-175): opt-out, default on — a
+// checkbox lets the sharer drop the "my_department" section from the stored
+// snapshot; unchecking it simply omits `department` from the /quiz/share
+// call, so the server never computes or stores it. The disclosure composes
+// the base share-link notice with, only when relevant, the department and
+// answers-included notices.
 function ShareResultButton({
   answers,
   department,
@@ -57,13 +61,18 @@ function ShareResultButton({
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [state, setState] = useState<'idle' | 'creating' | 'copied' | 'error'>('idle')
   const [includeAnswers, setIncludeAnswers] = useState(false)
+  const [includeDepartment, setIncludeDepartment] = useState(true)
 
   async function handleShare() {
     let url = shareUrl
     if (!url) {
       setState('creating')
       try {
-        const share = await api.quiz.share(answers, department, includeAnswers)
+        const share = await api.quiz.share(
+          answers,
+          department && includeDepartment ? department : undefined,
+          includeAnswers
+        )
         url = share.share_url
         setShareUrl(url)
       } catch {
@@ -113,6 +122,31 @@ function ShareResultButton({
               ? 'Échec — réessayer'
               : 'Partager mes résultats'}
       </button>
+      <span style={{ fontSize: 12.5, lineHeight: 1.5, color: GRAY, maxWidth: 420, textAlign: 'left' }}>
+        Le lien créé est public.
+      </span>
+      {department && (
+        <label
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 420,
+            fontSize: 12.5, lineHeight: 1.5, color: GRAY, cursor: shareUrl ? 'not-allowed' : 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={includeDepartment}
+            disabled={shareUrl !== null}
+            onChange={e => setIncludeDepartment(e.target.checked)}
+            style={{ marginTop: 2 }}
+          />
+          <span>
+            {includeDepartment
+              ? 'Montrer mon département sur le lien.'
+              : 'Mon département ne sera pas inclus.'}
+          </span>
+        </label>
+      )}
       <label
         style={{
           display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 420,
@@ -128,10 +162,9 @@ function ShareResultButton({
           style={{ marginTop: 2 }}
         />
         <span>
-          Le lien créé est public et montre votre département.
           {includeAnswers
-            ? ' Vos réponses seront aussi incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous.'
-            : ' Inclure mes réponses pour permettre à un ami de se comparer à moi.'}
+            ? 'Vos réponses seront aussi incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous.'
+            : 'Inclure mes réponses pour permettre à un ami de se comparer à moi.'}
         </span>
       </label>
     </div>
@@ -359,7 +392,8 @@ export function QuizClient() {
             )}
           </p>
           <p style={{ margin: '14px auto 0', maxWidth: 520, fontSize: 13.5, color: GRAY }}>
-            Sans compte. Vos réponses restent dans votre navigateur : rien n’est enregistré.
+            Sans compte. Vos réponses restent dans votre navigateur : rien n’est enregistré
+            tant que vous ne partagez pas vos résultats.
           </p>
           {effectiveCompareShare && (
             <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 14, color: NAVY, fontWeight: 600 }}>
