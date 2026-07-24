@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.quiz_data import QUIZ_VERSION, QUIZ_VOTE_IDS  # noqa: E402
 
 MAX_RETRIES = 5
-BACKOFF_BASE = 2  # seconds
+BACKOFF_BASE = 2  # exponential backoff: waits of 1, 2, 4, 8 s between attempts
 
 
 def missing_from_db(database_url: str) -> list[str]:
@@ -79,10 +79,13 @@ def vote_exists_via_api(base_url: str, vote_id: str) -> bool:
 def missing_from_api(base_url: str) -> list[str]:
     """Return quiz vote_ids the live API does not know."""
     missing = []
-    for vote_id in sorted(QUIZ_VOTE_IDS):
+    for i, vote_id in enumerate(sorted(QUIZ_VOTE_IDS)):
+        if i:
+            # Pace at 2 s per request (true 30 req/min) so the check stays
+            # under the API's global rate limit even if the question set grows.
+            time.sleep(2)
         if not vote_exists_via_api(base_url, vote_id):
             missing.append(vote_id)
-        time.sleep(0.5)  # stay well under the API's 30 req/min global rate limit
     return missing
 
 
@@ -97,7 +100,13 @@ def main() -> int:
 
     if args.api:
         source = args.api
-        missing = missing_from_api(args.api)
+        try:
+            missing = missing_from_api(args.api)
+        except RuntimeError as exc:
+            # Prod unreachable is a different failure from a missing vote_id —
+            # keep it to one readable line instead of a traceback in CI logs.
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
     else:
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
