@@ -166,6 +166,9 @@ class QuizMatchResponse(BaseModel):
     top_matches: list[QuizDeputyMatch]
     # The eligible deputy who agrees with you the least — same threshold as
     # the ranking, so a 0% on two shared votes never headlines the card.
+    # None when there's no eligible deputy distinct from top_matches[0]
+    # (MON-177) — with only one eligible deputy, this would otherwise echo
+    # the best match.
     opposite: Optional[QuizDeputyMatch] = None
     groups: list[QuizGroupAlignment]
     my_department: Optional[QuizDepartmentResult] = None
@@ -238,6 +241,30 @@ def compute_deputy_stats(rows: list[dict], answers: dict[str, str]) -> dict[str,
 def to_match(entry: dict) -> QuizDeputyMatch:
     pct = round(100 * entry["matches"] / entry["compared"], 1) if entry["compared"] else None
     return QuizDeputyMatch(**entry, agreement_pct=pct)
+
+
+def select_opposite(eligible: list[dict], top_matches: list[QuizDeputyMatch]) -> Optional[dict]:
+    """The eligible deputy who agrees the least, or None (MON-177).
+
+    Ties on ranking_score/compared break on full_name — mirroring the
+    top-matches sort so the result is deterministic instead of depending on
+    DB row order. Returns None when the least-agreeing deputy is the same
+    one as top_matches[0]: with only one eligible deputy, that deputy would
+    otherwise headline both "top match" and "opposite" on the same card.
+    """
+    if not eligible:
+        return None
+    candidate = min(
+        eligible,
+        key=lambda e: (
+            ranking_score(e["matches"], e["compared"]),
+            -e["compared"],
+            e["full_name"] or "",
+        ),
+    )
+    if top_matches and candidate["deputy_id"] == top_matches[0].deputy_id:
+        return None
+    return candidate
 
 
 def compute_group_alignment(
@@ -417,14 +444,10 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
     if top_matches:
         top_matches[0].detail = detail_for(top_matches[0].deputy_id)
 
+    opposite_entry = select_opposite(eligible, top_matches)
     opposite = None
-    if eligible:
-        opposite = to_match(
-            min(
-                eligible,
-                key=lambda e: (ranking_score(e["matches"], e["compared"]), -e["compared"]),
-            )
-        )
+    if opposite_entry is not None:
+        opposite = to_match(opposite_entry)
         opposite.detail = detail_for(opposite.deputy_id)
 
     my_department = None

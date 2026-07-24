@@ -5,11 +5,13 @@ from pydantic import ValidationError
 
 from api.quiz_data import QUIZ_QUESTIONS, QUIZ_VERSION
 from api.routers.quiz import (
+    QuizDeputyMatch,
     QuizMatchRequest,
     _strip_detail,
     compute_group_alignment,
     eligibility_threshold,
     ranking_score,
+    select_opposite,
 )
 
 V1, V2, V3 = (q["vote_id"] for q in QUIZ_QUESTIONS[:3])
@@ -208,6 +210,45 @@ def test_match_prefers_higher_coverage_over_higher_raw_percentage(client, mock_c
     # Displayed percentages are still the raw, unadjusted ratios.
     assert by_id["LOW"]["agreement_pct"] == 100.0
     assert by_id["HIGH"]["agreement_pct"] == 90.0
+
+
+def _entry(deputy_id, matches, compared, name):
+    return {
+        "deputy_id": deputy_id,
+        "full_name": name,
+        "party": None,
+        "party_short": None,
+        "department": None,
+        "photo_url": None,
+        "matches": matches,
+        "compared": compared,
+    }
+
+
+def test_select_opposite_tiebreak_is_deterministic_by_name():
+    """MON-177: equal-ratio ties break on full_name, not dict/DB row order."""
+    # Z and A tie on ranking_score and compared — Z appears first in
+    # `eligible`, which would win the old insertion-order tiebreak.
+    eligible = [
+        _entry("Z", 1, 3, "Zoé Martin"),
+        _entry("A", 1, 3, "Amir Ben"),
+    ]
+    top_matches = [QuizDeputyMatch(deputy_id="BEST", matches=3, compared=3)]
+
+    opposite = select_opposite(eligible, top_matches)
+    assert opposite["deputy_id"] == "A"
+
+
+def test_select_opposite_omitted_when_it_equals_top_match():
+    """MON-177: with a single eligible deputy, opposite must not echo top_matches[0]."""
+    eligible = [_entry("A", 3, 3, "Amélie Roux")]
+    top_matches = [QuizDeputyMatch(deputy_id="A", matches=3, compared=3)]
+
+    assert select_opposite(eligible, top_matches) is None
+
+
+def test_select_opposite_returns_none_for_empty_eligible():
+    assert select_opposite([], []) is None
 
 
 def test_match_department_roster_includes_absent_deputy(client, mock_cursor):
