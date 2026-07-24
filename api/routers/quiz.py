@@ -70,6 +70,9 @@ TOP_MATCHES_LIMIT = 10
 # criteria 1, 3, 4 for the curated question set, applied automatically here instead
 # of by hand. Criterion 2 (must exist in prod) is moot: this endpoint only ever
 # reads from whichever DB it's running against.
+# If no qualifying scrutin exists among the 500 most recent, older qualifying
+# ones are never surfaced — an acceptable tradeoff at current data volume
+# (qualifying scrutins are a small fraction of the total, per docs/quiz-curation.md).
 WEEKLY_CANDIDATE_LIMIT = 500
 WEEKLY_MIN_VOTERS = 400
 WEEKLY_MIN_MINORITY_SHARE = 0.35

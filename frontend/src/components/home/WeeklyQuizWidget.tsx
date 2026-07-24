@@ -44,10 +44,7 @@ export function WeeklyQuizWidget({ question }: { question: QuizWeeklyQuestion | 
     <section className="mx-auto max-w-2xl px-4 py-16">
       <div className="border border-navy/10 bg-white p-6 shadow-xl shadow-navy/6 sm:p-8">
         <p className="text-xs font-semibold uppercase text-red-civic">Le scrutin de la semaine</p>
-        <h2 className="mt-3 font-serif text-2xl leading-tight text-navy">
-          Auriez-vous voté pour ou contre&nbsp;?
-        </h2>
-        <p className="mt-3 text-sm leading-6 text-gray-mid">{question.question}</p>
+        <h2 className="mt-3 font-serif text-2xl leading-tight text-navy">{question.question}</h2>
 
         {answer ? (
           <div className="mt-5 rounded-lg border border-navy/10 bg-[var(--dp-card-bg)] p-5">
