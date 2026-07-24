@@ -22,15 +22,23 @@ function truncate(text: string, max: number): string {
 export default async function OGImage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const verdict = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'}/verify/${id}`
+    `${process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'}/verify/${id}`,
+    { signal: AbortSignal.timeout(5000) }
   )
     .then(r => (r.ok ? r.json() : null))
     .catch(() => null)
 
-  const style = VERDICT_STYLES[verdict?.verdict] ?? VERDICT_STYLES.inverifiable
-  const claim = verdict ? truncate(verdict.claim, 150) : 'Vérification introuvable'
-  const citations = verdict?.citations?.length ?? 0
-  const horizon = verdict?.data_horizon ?? null
+  // Don't cache a failure render under `revalidate = 86400` above — a thrown
+  // error bypasses the route's cache, so the next scrape retries instead of
+  // getting stuck with a stale "Vérification introuvable" card for a day.
+  if (!verdict) {
+    throw new Error(`Verification ${id} unavailable`)
+  }
+
+  const style = VERDICT_STYLES[verdict.verdict] ?? VERDICT_STYLES.inverifiable
+  const claim = truncate(verdict.claim, 150)
+  const citations = verdict.citations?.length ?? 0
+  const horizon = verdict.data_horizon ?? null
 
   return new ImageResponse(
     (

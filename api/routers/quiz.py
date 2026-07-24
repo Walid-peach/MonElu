@@ -562,7 +562,10 @@ def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
     response_model=QuizShareResponse,
     summary="Relisez un résultat partagé (aucun recalcul)",
 )
-@limiter.limit(tiered_limit(30))
+# Immutable public snapshot behind an unguessable UUID (MON-173): OG scrapers
+# (X, WhatsApp, Facebook, Telegram) and Vercel edge egress funnel through few
+# IPs, so the base per-IP limit was tripping during viral spikes.
+@limiter.limit(tiered_limit(300))
 def get_share(request: Request, share_id: uuid.UUID) -> QuizShareResponse:
     with get_conn() as conn:
         with conn.cursor() as cur:

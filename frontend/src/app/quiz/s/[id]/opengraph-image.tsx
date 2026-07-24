@@ -18,12 +18,20 @@ type ShareBest = {
 export default async function OGImage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const share = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'}/quiz/share/${id}`
+    `${process.env.NEXT_PUBLIC_API_URL ?? 'https://monelu-production.up.railway.app'}/quiz/share/${id}`,
+    { signal: AbortSignal.timeout(5000) }
   )
     .then(r => (r.ok ? r.json() : null))
     .catch(() => null)
 
-  const best: ShareBest | null = share?.result?.top_matches?.[0] ?? null
+  // Don't cache a failure render under `revalidate = 86400` above — a thrown
+  // error bypasses the route's cache, so the next scrape retries instead of
+  // getting stuck with a stale "Résultat introuvable" card for a day.
+  if (!share) {
+    throw new Error(`Quiz share ${id} unavailable`)
+  }
+
+  const best: ShareBest | null = share.result?.top_matches?.[0] ?? null
   const headline =
     best && best.agreement_pct !== null
       ? `Je vote à ${best.agreement_pct}% comme ${best.full_name}`
