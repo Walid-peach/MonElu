@@ -31,7 +31,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
     throw new Error(`Quiz share ${id} unavailable`)
   }
 
-  const best: ShareBest | null = share?.result?.top_matches?.[0] ?? null
+  const best: ShareBest | null = share.result?.top_matches?.[0] ?? null
   const headline =
     best && best.agreement_pct !== null
       ? `Je vote à ${best.agreement_pct}% comme ${best.full_name}`
