@@ -3,9 +3,12 @@ api/routers/quiz.py
 
 "Quel député vote comme vous ?" — vote-matching quiz (MON-109, MON-137, MON-139, ADR-025).
 
-Four endpoints:
+Five endpoints:
 - GET  /quiz/questions  : the curated question set (repo file, api/quiz_data.py),
                           enriched with live vote tallies from the votes table (MON-180).
+- GET  /quiz/weekly     : "scrutin de la semaine" — auto-picked one-question widget
+                          (MON-185, MON-178 step 7). No question content is curated
+                          here; the DB is the sole source (unlike /questions).
 - POST /quiz/match      : stateless agreement computation over vote_positions.
 - POST /quiz/share      : store an immutable snapshot of a match result.
 - GET  /quiz/share/{id} : serve a stored snapshot (plain SELECT, no recompute).
@@ -36,8 +39,10 @@ Denominator rules (consistent with ADR-019's presence framing):
 
 import logging
 import os
+import re
 import uuid
 from collections import Counter, defaultdict
+from datetime import date, timedelta
 from math import ceil, sqrt
 from typing import Literal, Optional
 
@@ -61,6 +66,18 @@ EXPRESSED_POSITIONS = ("pour", "contre", "abstention")
 MIN_ANSWERS = 3
 TOP_MATCHES_LIMIT = 10
 
+# --- /quiz/weekly selection thresholds (MON-185) — same rule as docs/quiz-curation.md
+# criteria 1, 3, 4 for the curated question set, applied automatically here instead
+# of by hand. Criterion 2 (must exist in prod) is moot: this endpoint only ever
+# reads from whichever DB it's running against.
+# If no qualifying scrutin exists among the 500 most recent, older qualifying
+# ones are never surfaced — an acceptable tradeoff at current data volume
+# (qualifying scrutins are a small fraction of the total, per docs/quiz-curation.md).
+WEEKLY_CANDIDATE_LIMIT = 500
+WEEKLY_MIN_VOTERS = 400
+WEEKLY_MIN_MINORITY_SHARE = 0.35
+WHOLE_TEXT_RE = re.compile(r"^l['’]ensemble", re.IGNORECASE)
+
 
 # ---------------------------------------------------------------------------
 # Models
@@ -83,6 +100,17 @@ class QuizQuestionsResponse(BaseModel):
     version: str
     count: int
     questions: list[QuizQuestion]
+
+
+class QuizWeeklyQuestion(BaseModel):
+    vote_id: str
+    question: str
+    vote_title: str
+    votes_for: Optional[int] = None
+    votes_against: Optional[int] = None
+    abstentions: Optional[int] = None
+    result: Optional[str] = None
+    vote_date: Optional[str] = None
 
 
 class QuizAnswer(BaseModel):
@@ -184,6 +212,51 @@ class QuizMatchResponse(BaseModel):
 # ---------------------------------------------------------------------------
 def eligibility_threshold(answered: int) -> int:
     return max(2, ceil(answered / 2))
+
+
+def week_start(today: date) -> date:
+    """Monday of `today`'s ISO week — the cutoff for /quiz/weekly.
+
+    Only scrutins before this cutoff are eligible, so the pick for a given
+    ISO week never changes as new votes get ingested mid-week.
+    """
+    return today - timedelta(days=today.weekday())
+
+
+def is_whole_text_vote(vote_title: str) -> bool:
+    return bool(WHOLE_TEXT_RE.match(vote_title.strip()))
+
+
+def is_divisive_vote(votes_for: Optional[int], votes_against: Optional[int]) -> bool:
+    if not votes_for or not votes_against:
+        return False
+    expressed = votes_for + votes_against
+    if expressed <= 0:
+        return False
+    return (min(votes_for, votes_against) / expressed) >= WEEKLY_MIN_MINORITY_SHARE
+
+
+def select_weekly_vote(candidates: list[dict]) -> Optional[dict]:
+    """First candidate (latest-first order) passing the quiz-curation thresholds,
+    never one from the curated question set (MON-185).
+    """
+    for row in candidates:
+        if row["vote_id"] in QUIZ_VOTE_IDS:
+            continue
+        if (row.get("total_voters") or 0) < WEEKLY_MIN_VOTERS:
+            continue
+        if not is_whole_text_vote(row.get("vote_title") or ""):
+            continue
+        if not is_divisive_vote(row.get("votes_for"), row.get("votes_against")):
+            continue
+        return row
+    return None
+
+
+def build_weekly_question(summary_plain: Optional[str], vote_title: str) -> str:
+    """Plain question derived from summary_plain, with vote_title as fallback."""
+    base = (summary_plain or vote_title).strip().rstrip(". ")
+    return f"Auriez-vous voté pour ou contre : {base} ?"
 
 
 WILSON_Z = 1.96  # 95% confidence — standard default, not tuned for this corpus
@@ -355,6 +428,47 @@ def get_questions(request: Request) -> QuizQuestionsResponse:
         version=QUIZ_VERSION,
         count=len(QUIZ_QUESTIONS),
         questions=questions,
+    )
+
+
+@router.get(
+    "/weekly",
+    response_model=QuizWeeklyQuestion,
+    summary="Le scrutin de la semaine — un scrutin qualifiant, choisi automatiquement",
+    responses={404: {"description": "Aucun scrutin qualifiant cette semaine"}},
+)
+@limiter.limit(tiered_limit(30))
+def get_weekly(request: Request) -> QuizWeeklyQuestion:
+    cutoff = week_start(date.today())
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT vote_id, vote_title, summary_plain, votes_for, votes_against,
+                       abstentions, result, voted_at, total_voters
+                FROM votes
+                WHERE voted_at IS NOT NULL AND voted_at < %s
+                ORDER BY voted_at DESC
+                LIMIT %s
+                """,
+                (cutoff, WEEKLY_CANDIDATE_LIMIT),
+            )
+            candidates = cur.fetchall()
+
+    row = select_weekly_vote(candidates)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Aucun scrutin qualifiant cette semaine.")
+
+    voted_at = row["voted_at"]
+    return QuizWeeklyQuestion(
+        vote_id=row["vote_id"],
+        question=build_weekly_question(row.get("summary_plain"), row["vote_title"]),
+        vote_title=row["vote_title"],
+        votes_for=row["votes_for"],
+        votes_against=row["votes_against"],
+        abstentions=row["abstentions"],
+        result=row["result"],
+        vote_date=voted_at.date().isoformat() if voted_at else None,
     )
 
 

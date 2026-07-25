@@ -300,6 +300,21 @@ export type QuizQuestionsResponse = {
   questions: QuizQuestion[]
 }
 
+// "Scrutin de la semaine" (MON-185) — one auto-picked question, deterministic
+// per ISO week. null tallies/result/date shouldn't happen in practice (the
+// selection rule only picks rows with real tallies), but the API models them
+// as optional to match the DB-backed columns.
+export type QuizWeeklyQuestion = {
+  vote_id: string
+  question: string
+  vote_title: string
+  votes_for: number | null
+  votes_against: number | null
+  abstentions: number | null
+  result: string | null
+  vote_date: string | null
+}
+
 export type QuizAnswerPosition = 'pour' | 'contre' | 'abstention'
 
 export type QuizVoteDetail = {
@@ -383,6 +398,34 @@ async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promis
       next: { revalidate: opts?.revalidate ?? 300 },
     })
     if (res.ok) return res.json()
+    lastStatus = res.status
+    if (res.status === 429 && rateLimitAttempt < RATE_LIMIT_DELAYS_MS.length) {
+      await new Promise(r => setTimeout(r, RATE_LIMIT_DELAYS_MS[rateLimitAttempt++]))
+      continue
+    }
+    if (res.status >= 500 && serverErrorAttempt < SERVER_ERROR_DELAYS_MS.length) {
+      await new Promise(r => setTimeout(r, SERVER_ERROR_DELAYS_MS[serverErrorAttempt++]))
+      continue
+    }
+    break
+  }
+  throw new Error(`API error: ${lastStatus}`)
+}
+
+// Same retry policy as apiFetch, but a 404 means "nothing to show" rather
+// than an error — used by endpoints with a genuine empty state, like
+// /quiz/weekly on a recess week with no qualifying scrutin (MON-185).
+async function apiFetchOptional<T>(path: string, opts?: { revalidate?: number }): Promise<T | null> {
+  let lastStatus = 0
+  let serverErrorAttempt = 0
+  let rateLimitAttempt = 0
+  for (;;) {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      next: { revalidate: opts?.revalidate ?? 300 },
+    })
+    if (res.ok) return res.json()
+    if (res.status === 404) return null
     lastStatus = res.status
     if (res.status === 429 && rateLimitAttempt < RATE_LIMIT_DELAYS_MS.length) {
       await new Promise(r => setTimeout(r, RATE_LIMIT_DELAYS_MS[rateLimitAttempt++]))
@@ -487,6 +530,9 @@ export const api = {
     // The question set is a versioned repo file server-side (ADR-025) — it only
     // changes by deploy, so cache it as aggressively as immutable snapshots.
     questions: () => apiFetch<QuizQuestionsResponse>('/quiz/questions', { revalidate: 86400 }),
+    // Same qualifying scrutin all week (MON-185); null on a recess week with
+    // no qualifying scrutin — the homepage widget renders nothing then.
+    weekly: () => apiFetchOptional<QuizWeeklyQuestion>('/quiz/weekly', { revalidate: 3600 }),
     match: (
       answers: Array<{ vote_id: string; position: QuizAnswerPosition }>,
       department?: string,

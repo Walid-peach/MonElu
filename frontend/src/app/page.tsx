@@ -1,6 +1,7 @@
-import { api, Vote, Deputy, Scorecard } from '@/lib/api'
+import { api, Vote, Deputy, Scorecard, QuizWeeklyQuestion } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
 import { ThemeNavSection } from '@/components/home/ThemeNavSection'
+import { WeeklyQuizWidget } from '@/components/home/WeeklyQuizWidget'
 
 const FALLBACK_STATS = {
   deputies: 596,
@@ -92,6 +93,14 @@ async function getStats() {
   }
 }
 
+async function getWeeklyQuizQuestion(): Promise<QuizWeeklyQuestion | null> {
+  try {
+    return await api.quiz.weekly()
+  } catch {
+    return null
+  }
+}
+
 function numericStat(value: unknown, fallback: number) {
   return typeof value === 'number' ? value : fallback
 }
@@ -121,7 +130,10 @@ function formatVoteDate(value: string | null | undefined) {
 }
 
 export default async function Home() {
-  const { health, featuredVote, deputyInfo } = await getStats()
+  const [{ health, featuredVote, deputyInfo }, weeklyQuestion] = await Promise.all([
+    getStats(),
+    getWeeklyQuizQuestion(),
+  ])
   const lastUpdated = formatFreshness(
     health ? health.last_ingestion ?? health.last_ingestion_at ?? health.updated_at : null
   )
@@ -150,6 +162,7 @@ export default async function Home() {
     <div className="overflow-x-clip bg-[#070b14]">
       <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} deputyInfo={deputyInfo} />
       <ThemeNavSection />
+      <WeeklyQuizWidget question={weeklyQuestion} />
     </div>
   )
 }

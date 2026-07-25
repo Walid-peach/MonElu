@@ -72,6 +72,40 @@ own opinion? If yes, rewrite it.
    through the API and that the response `version` matches `QUIZ_VERSION` —
    no other test needs updating for a content-only refresh.
 
+## Automated weekly selection (`GET /quiz/weekly`, MON-185)
+
+The curated set above refreshes quarterly, which leaves a traffic dead zone between
+refreshes. `GET /quiz/weekly` ("scrutin de la semaine") fills that gap with a single
+question, auto-picked by the API rather than curated by hand — it powers a homepage
+widget, not the full quiz.
+
+Selection rule (`api/routers/quiz.py`, `select_weekly_vote`):
+
+- Candidates are every scrutin with `voted_at` strictly before the Monday of the
+  current ISO week (`week_start()`), most recent first — the cutoff, not "now",
+  is what makes the pick stable for every visitor for the rest of the week.
+- The first candidate passing all of these qualifies:
+  1. **Whole-text vote** — title matches criterion 1 above (`l'ensemble ...`, straight
+     or curly apostrophe).
+  2. **High participation** — `total_voters >= 400` (criterion 3 above).
+  3. **Divisive** — minority share of expressed votes `>= 35%` (criterion 4 above).
+  4. **Not already in the curated quiz** — `vote_id` must not be in `QUIZ_VOTE_IDS`
+     (`api/quiz_data.py`), so the weekly widget never repeats a question the full
+     quiz already asks.
+- Criterion 2 ("in production") doesn't apply here — the endpoint only ever reads
+  from whichever database it's running against, so there's nothing to verify against
+  a separate prod check.
+- If no candidate qualifies (a recess week, or too early in the legislature to have
+  400-voter whole-text scrutins yet), the endpoint returns `404` and the homepage
+  widget renders nothing — there is no manual override or fallback question.
+
+The question text is generated, not curated: `build_weekly_question()` takes
+`summary_plain` (already generated per-vote by `scripts/generate_vote_summaries.py`)
+and wraps it as `"Auriez-vous voté pour ou contre : <summary> ?"`, falling back to the
+raw `vote_title` when no summary exists. Nothing is written to any table by this
+endpoint or by the widget — the visitor's answer stays client-side, exactly like the
+full quiz (ADR-025).
+
 ## Current set (2026-Q3)
 
 Verified against production (`https://monelu-production.up.railway.app`) on 2026-07-19:
