@@ -33,6 +33,9 @@ jest.mock('next/navigation', () => ({
 
 import { api } from '@/lib/api'
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
+import { track } from '@vercel/analytics/react'
+
+const mockTrack = track as jest.Mock
 
 const mockQuestions = api.quiz.questions as jest.Mock
 const mockMatch = api.quiz.match as jest.Mock
@@ -157,6 +160,8 @@ describe('QuizClient', () => {
 
     expect(screen.getByText('Quel député vote comme vous ?')).toBeInTheDocument()
     await answerAllQuestions(user)
+    // MON-176: privacy-safe funnel counter — fires once, on the intro CTA.
+    expect(mockTrack).toHaveBeenCalledWith('quiz_start')
     await skipGroupStep(user)
 
     // Optional postal step reached after the last question.
@@ -166,6 +171,8 @@ describe('QuizClient', () => {
     )
 
     await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    // MON-176: fires once the match computation succeeds.
+    expect(mockTrack).toHaveBeenCalledWith('quiz_complete')
     expect(mockMatch).toHaveBeenCalledWith(
       [
         { vote_id: 'V1', position: 'pour' },
@@ -410,6 +417,9 @@ describe('QuizClient', () => {
       false
     )
     expect(writeText).toHaveBeenCalledWith('https://mon-elu.vercel.app/quiz/s/abc')
+    // MON-176: fires once the share snapshot is actually created, not on
+    // every click of the share button.
+    expect(mockTrack).toHaveBeenCalledWith('quiz_share')
   })
 
   it('sends include_answers=true when the opt-in checkbox is checked', async () => {
