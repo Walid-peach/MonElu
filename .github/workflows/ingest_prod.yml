@@ -122,6 +122,16 @@ jobs:
             echo "FRONTEND_URL or REVALIDATE_SECRET not set — skipping revalidation."
           fi
 
+      - name: Validate quiz vote_ids (MON-171)
+        # Unconditional, and deliberately last among the pipeline steps: a
+        # curated scrutin corrected/renumbered upstream would silently skew
+        # every quiz agreement percentage, so fail the job loudly (the
+        # failure-notify steps below fire) — but a quiz-content problem must
+        # not abort the RAG/dbt/cache steps above and stale production data.
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/check_quiz_votes.py
+
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
 

@@ -64,6 +64,12 @@ jobs:
       - name: Run integration tests
         run: pytest tests/integration/ -v --tb=short -m integration
 
+      - name: Validate quiz vote_ids against production (MON-171)
+        # Catches a typo'd vote_id in a quarterly quiz refresh before it
+        # merges. Hits the public prod API (no secrets), same dependency the
+        # frontend build already has on prod being reachable.
+        run: python scripts/check_quiz_votes.py --api https://monelu-production.up.railway.app
+
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 20
