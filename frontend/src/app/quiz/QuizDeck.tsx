@@ -219,7 +219,9 @@ export function QuizDeck({
           title="Annuler (Retour arrière)"
           style={{
             background: 'none', border: 'none', color: NAVY, fontSize: 20,
-            cursor: 'pointer', padding: 4, justifySelf: 'start',
+            cursor: 'pointer', justifySelf: 'start',
+            // 44x44 hit area (WCAG target size) around the small visible glyph.
+            width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
           ←
