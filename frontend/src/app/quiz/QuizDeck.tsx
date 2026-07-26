@@ -1,10 +1,11 @@
 'use client'
-// MON-186: Tinder-style swipe deck for the quiz questions phase. One card per
-// scrutin; swipe right = pour, left = contre, down = abstention. The buttons
-// under the stack, the arrow keys and Backspace drive the exact same commit
+// MON-186/187: Tinder-style swipe deck for the quiz questions phase. One card
+// per scrutin; swipe right = pour, left = contre, down = abstention. The
+// circular buttons, the arrow keys and Backspace drive the exact same commit
 // path as the gestures, so touch, mouse, keyboard and assistive tech are all
-// first-class. The old post-answer reveal panel is gone - the scrutin outcome
-// hides behind a per-card "Détails du scrutin" toggle instead.
+// first-class. MON-187 restyled the header, card badge and controls to match
+// the approved mockup; the context paragraph is always visible on the card
+// (no more collapsed "Détails du scrutin" toggle from MON-186).
 import { useEffect, useState } from 'react'
 import {
   AnimatePresence,
@@ -34,26 +35,11 @@ const EXIT: Record<Dir, { x: number; y: number; rotate: number }> = {
   abstention: { x: 0, y: 640, rotate: 0 },
 }
 
-// Percentage split of the votes cast (pour + contre + abstention, MON-186:
-// percentages, not raw counts). Null when the live tally join found no row.
-function tallyBullets(q: QuizQuestion): Array<{ label: string; pct: number }> | null {
-  if (q.votes_for == null || q.votes_against == null) return null
-  const abstentions = q.abstentions ?? 0
-  const total = q.votes_for + q.votes_against + abstentions
-  if (total === 0) return null
-  const pct = (n: number) => Math.round((n / total) * 100)
-  const bullets: Array<{ label: string; pct: number }> = [
-    { label: POS.pour.label, pct: pct(q.votes_for) },
-    { label: POS.contre.label, pct: pct(q.votes_against) },
-  ]
-  if (q.abstentions != null) bullets.push({ label: POS.abstention.label, pct: pct(abstentions) })
-  return bullets
-}
-
-function outcomeLine(q: QuizQuestion): string {
-  if (q.result === 'adopté') return 'L’Assemblée a adopté ce texte :'
-  if (q.result === 'rejeté') return 'L’Assemblée a rejeté ce texte :'
-  return 'Résultat du scrutin :'
+// The glyph + arrow shown per direction in the controls below the deck.
+const DIR_META: Record<Dir, { icon: string; arrow: string; hint: string }> = {
+  contre: { icon: '✕', arrow: '←', hint: 'Glissez à gauche = Contre' },
+  abstention: { icon: '↓', arrow: '↓', hint: 'Glissez vers le bas = Abstention' },
+  pour: { icon: '✓', arrow: '→', hint: 'Glissez à droite = Pour' },
 }
 
 // Rotated Tinder-style stamp whose opacity is driven by the drag distance.
@@ -101,8 +87,6 @@ function TopCard({ question, onCommit }: { question: QuizQuestion; onCommit: (di
       return `1px solid ${LINE}`
     }
   )
-  const [showInfo, setShowInfo] = useState(false)
-  const bullets = tallyBullets(question)
 
   function handleDragEnd(
     _: unknown,
@@ -134,8 +118,8 @@ function TopCard({ question, onCommit }: { question: QuizQuestion; onCommit: (di
       onDragEnd={handleDragEnd}
       style={{
         x, y, rotate, border,
-        position: 'absolute', inset: 0, borderRadius: 16, background: 'var(--dp-card-bg)',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.10)', padding: '22px 22px 18px',
+        position: 'absolute', inset: 0, borderRadius: 20, background: 'var(--dp-card-bg)',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.10)', padding: '24px 22px 22px',
         display: 'flex', flexDirection: 'column', cursor: 'grab', touchAction: 'none',
         userSelect: 'none', zIndex: 3,
       }}
@@ -147,60 +131,27 @@ function TopCard({ question, onCommit }: { question: QuizQuestion; onCommit: (di
         label={POS.abstention.label} color={POS.abstention.color} opacity={absOpacity}
         style={{ left: '50%', x: '-50%', top: 'auto', bottom: 18, fontSize: 18 }}
       />
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: RED }}>
+      <div
+        style={{
+          alignSelf: 'flex-start', padding: '4px 14px', borderRadius: 999,
+          border: `1.5px solid ${RED}`, color: RED, fontWeight: 700, fontSize: 11,
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+        }}
+      >
         {question.theme}
       </div>
       <h2
         className="font-newsreader"
         style={{
-          fontWeight: 600, color: NAVY, margin: '12px 0 0',
-          fontSize: 'clamp(20px,4.5vw,26px)', lineHeight: 1.3, flex: showInfo ? 'none' : 1,
+          fontWeight: 600, color: NAVY, margin: '16px 0 0',
+          fontSize: 'clamp(20px,4.5vw,26px)', lineHeight: 1.3,
         }}
       >
         {question.question}
       </h2>
-      {showInfo && (
-        <div
-          // pan-y + stopped pointer-down so long context stays touch-scrollable
-          // instead of dragging the card.
-          onPointerDownCapture={e => e.stopPropagation()}
-          style={{
-            marginTop: 14, flex: 1, overflowY: 'auto', touchAction: 'pan-y',
-            fontSize: 13.5, lineHeight: 1.55, color: GRAY,
-          }}
-        >
-          <p style={{ margin: 0 }}>{question.context}</p>
-          {bullets ? (
-            <>
-              <p style={{ margin: '10px 0 0', fontWeight: 600, color: NAVY }}>{outcomeLine(question)}</p>
-              <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
-                {bullets.map(b => (
-                  <li key={b.label}>
-                    {b.label} : {b.pct} %
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p style={{ margin: '10px 0 0', fontWeight: 600, color: NAVY }}>
-              Résultat du scrutin indisponible pour ce texte.
-            </p>
-          )}
-        </div>
-      )}
-      <button
-        onClick={() => setShowInfo(v => !v)}
-        // Keeps a tap on the toggle from starting a card drag.
-        onPointerDownCapture={e => e.stopPropagation()}
-        aria-expanded={showInfo}
-        style={{
-          alignSelf: 'flex-start', marginTop: 12, fontSize: 12.5, fontWeight: 600, color: GRAY,
-          background: 'none', border: `1px solid ${LINE}`, borderRadius: 999,
-          padding: '5px 12px', cursor: 'pointer',
-        }}
-      >
-        {showInfo ? 'Masquer les détails' : 'Détails du scrutin'}
-      </button>
+      <p style={{ margin: '14px 0 0', fontSize: 14.5, lineHeight: 1.6, color: GRAY }}>
+        {question.context}
+      </p>
     </motion.div>
   )
 }
@@ -256,6 +207,53 @@ export function QuizDeck({
 
   return (
     <div style={{ maxWidth: 420, margin: '0 auto' }}>
+      <div
+        style={{
+          display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center',
+          gap: 10, marginBottom: 14,
+        }}
+      >
+        <button
+          onClick={onBack}
+          aria-label="Revenir à la question précédente"
+          title="Annuler (Retour arrière)"
+          style={{
+            background: 'none', border: 'none', color: NAVY, fontSize: 20,
+            cursor: 'pointer', padding: 4, justifySelf: 'start',
+          }}
+        >
+          ←
+        </button>
+        <div
+          style={{
+            textAlign: 'center', fontWeight: 700, fontSize: 12, letterSpacing: '0.18em',
+            textTransform: 'uppercase', color: RED,
+          }}
+        >
+          Question {index + 1} / {questions.length}
+        </div>
+        <div style={{ fontSize: 12.5, color: GRAY, justifySelf: 'end', textAlign: 'right' }}>
+          {top?.theme}
+        </div>
+      </div>
+      <div
+        role="progressbar"
+        aria-valuenow={index + 1}
+        aria-valuemin={1}
+        aria-valuemax={questions.length}
+        style={{ height: 6, background: 'var(--dp-border-subtle)', borderRadius: 999, overflow: 'hidden', marginBottom: 24 }}
+      >
+        <div
+          style={{
+            height: '100%',
+            background: NAVY,
+            borderRadius: 999,
+            width: `${((index + 1) / questions.length) * 100}%`,
+            transition: 'width 200ms ease',
+          }}
+        />
+      </div>
+
       <div style={{ position: 'relative', height: 380 }}>
         {/* Back cards, deepest first so the top card paints last. */}
         {stack.slice(1).reverse().map(q => {
@@ -267,7 +265,7 @@ export function QuizDeck({
               initial={false}
               animate={{ scale: 1 - depth * 0.045, y: depth * 14, opacity: 1 - depth * 0.25 }}
               style={{
-                position: 'absolute', inset: 0, borderRadius: 16, background: 'var(--dp-card-bg)',
+                position: 'absolute', inset: 0, borderRadius: 20, background: 'var(--dp-card-bg)',
                 border: `1px solid ${LINE}`, boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
               }}
             />
@@ -303,37 +301,60 @@ export function QuizDeck({
         </AnimatePresence>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 26 }}>
-        <button
-          onClick={onBack}
-          aria-label="Revenir à la question précédente"
-          title="Annuler (Retour arrière)"
-          style={{
-            width: 44, height: 44, borderRadius: '50%', border: `1px solid ${LINE}`,
-            background: 'var(--dp-card-bg)', color: NAVY, fontSize: 18, cursor: 'pointer',
-          }}
-        >
-          ↩
-        </button>
+      <p style={{ textAlign: 'center', fontSize: 13, color: GRAY, margin: '22px 0 14px' }}>
+        Glissez pour choisir
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 28 }}>
         {(['contre', 'abstention', 'pour'] as const).map(pos => (
           <button
             key={pos}
             onClick={() => commit(pos)}
             aria-label={POS[pos].label}
             style={{
-              padding: '12px 18px', borderRadius: 999, fontWeight: 700, fontSize: 14.5,
-              color: POS[pos].color, background: POS[pos].bg, border: `2px solid ${POS[pos].color}`,
-              cursor: 'pointer', minWidth: pos === 'abstention' ? 0 : 108,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
             }}
           >
-            {pos === 'contre' ? '← ' : ''}
-            {POS[pos].label}
-            {pos === 'pour' ? ' →' : ''}
-            {pos === 'abstention' ? ' ↓' : ''}
+            <span
+              aria-hidden
+              style={{
+                width: 76, height: 76, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: POS[pos].bg, color: POS[pos].color, fontSize: 26, fontWeight: 700,
+              }}
+            >
+              {DIR_META[pos].icon}
+            </span>
+            <span style={{ fontSize: 14.5, fontWeight: 600, color: POS[pos].color }}>
+              {POS[pos].label}
+            </span>
           </button>
         ))}
       </div>
-      <div style={{ textAlign: 'center', marginTop: 14 }}>
+
+      <div
+        style={{
+          display: 'flex', justifyContent: 'center', gap: 24, marginTop: 22,
+          flexWrap: 'wrap',
+        }}
+      >
+        {(['contre', 'abstention', 'pour'] as const).map(pos => (
+          <span
+            key={pos}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: GRAY,
+              textAlign: 'center',
+            }}
+          >
+            <span aria-hidden style={{ color: POS[pos].color }}>
+              {DIR_META[pos].arrow}
+            </span>
+            {DIR_META[pos].hint}
+          </span>
+        ))}
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: 20 }}>
         <button
           onClick={skip}
           style={{
