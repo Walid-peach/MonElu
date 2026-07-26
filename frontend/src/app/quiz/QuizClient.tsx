@@ -7,10 +7,10 @@ import { api } from '@/lib/api'
 import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion, QuizShareResult } from '@/lib/api'
 import { resolvePostalCodeToDepartment } from '@/lib/postal'
 import type { ResolvedDepartment } from '@/lib/postal'
-import { POS } from '@/lib/vote-position'
 import { CANONICAL_GROUP_LABELS } from '@/lib/groups'
 import { partyHex } from '@/lib/utils'
 import { pctLabel, card, QuizResultSections } from './QuizResultSections'
+import { QuizDeck } from './QuizDeck'
 
 const NAVY = 'var(--dp-text)'
 const CREAM = 'var(--dp-page-bg)'
@@ -205,9 +205,6 @@ export function QuizClient() {
   const [questionsError, setQuestionsError] = useState(false)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, QuizAnswerPosition>>({})
-  // vote_id currently showing its reveal panel, or null. Cleared on advance
-  // and on back navigation — the reveal never persists across questions.
-  const [revealVoteId, setRevealVoteId] = useState<string | null>(null)
   const [predictedGroup, setPredictedGroup] = useState<string | null>(null)
   const [focusDeputyName, setFocusDeputyName] = useState<string | null>(null)
 
@@ -293,9 +290,11 @@ export function QuizClient() {
 
   const answeredCount = Object.keys(answers).length
 
+  // MON-186: answering advances immediately - the swipe deck has no blocking
+  // reveal step; the scrutin outcome lives behind the card's details toggle.
   function answer(voteId: string, position: QuizAnswerPosition) {
     setAnswers(prev => ({ ...prev, [voteId]: position }))
-    setRevealVoteId(voteId)
+    advance()
   }
 
   function skip(voteId: string) {
@@ -307,18 +306,12 @@ export function QuizClient() {
     advance()
   }
 
-  function goNext() {
-    setRevealVoteId(null)
-    advance()
-  }
-
   function advance() {
     if (questions && index < questions.length - 1) setIndex(index + 1)
     else setPhase('group')
   }
 
   function back() {
-    setRevealVoteId(null)
     if (index > 0) setIndex(index - 1)
     else setPhase('intro')
   }
@@ -443,139 +436,42 @@ export function QuizClient() {
   }
 
   // -------------------------------------------------------------- questions
+  // MON-186: swipe deck - one card per scrutin, gestures + buttons + keyboard
+  // share one commit path inside QuizDeck. The deck column is narrower than
+  // the shell so the cards keep a card-like aspect on desktop.
   if (phase === 'questions' && questions) {
-    const q = questions[index]
-    const selected = answers[q.vote_id]
-    const revealing = revealVoteId === q.vote_id
-    const tallyKnown = q.votes_for != null && q.votes_against != null
-    const resultVerb =
-      q.result === 'adopté' ? 'adopté' : q.result === 'rejeté' ? 'rejeté' : null
-    const resultLine = tallyKnown
-      ? (resultVerb ? `L’Assemblée a ${resultVerb} ce texte : ` : 'Résultat du scrutin : ') +
-        `${q.votes_for} pour, ${q.votes_against} contre` +
-        (q.abstentions != null
-          ? `, ${q.abstentions} abstention${q.abstentions > 1 ? 's' : ''}`
-          : '') +
-        '.'
-      : null
-    const majority =
-      tallyKnown && q.votes_for !== q.votes_against
-        ? q.votes_for! > q.votes_against!
-          ? 'pour'
-          : 'contre'
-        : null
-    const outcomeLine =
-      selected === 'abstention'
-        ? 'Vous vous êtes abstenu·e sur ce texte.'
-        : majority
-          ? selected === majority
-            ? 'Vous étiez avec la majorité.'
-            : 'Vous étiez avec la minorité.'
-          : null
     return (
       <Shell>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={kicker}>
-            Question {index + 1} / {questions.length}
+        <div style={{ maxWidth: 420, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={kicker}>
+              Question {index + 1} / {questions.length}
+            </div>
           </div>
-          <div style={{ fontSize: 12.5, color: GRAY }}>{q.theme}</div>
-        </div>
-        <div
-          role="progressbar"
-          aria-valuenow={index + 1}
-          aria-valuemin={1}
-          aria-valuemax={questions.length}
-          style={{ height: 6, background: 'var(--dp-border-subtle)', borderRadius: 999, overflow: 'hidden', marginBottom: 30 }}
-        >
           <div
-            style={{
-              height: '100%',
-              background: NAVY,
-              borderRadius: 999,
-              width: `${((index + 1) / questions.length) * 100}%`,
-              transition: 'width 200ms ease',
-            }}
-          />
-        </div>
-
-        <h2
-          className="font-newsreader text-[clamp(22px,3.5vw,32px)]"
-          style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.01em', lineHeight: 1.3 }}
-        >
-          {q.question}
-        </h2>
-        <p style={{ margin: '14px 0 30px', fontSize: 14.5, lineHeight: 1.6, color: GRAY }}>{q.context}</p>
-
-        {revealing ? (
-          <div
-            style={{
-              padding: '20px 22px',
-              borderRadius: 10,
-              background: 'var(--dp-card-bg)',
-              border: `1px solid ${LINE}`,
-            }}
+            role="progressbar"
+            aria-valuenow={index + 1}
+            aria-valuemin={1}
+            aria-valuemax={questions.length}
+            style={{ height: 6, background: 'var(--dp-border-subtle)', borderRadius: 999, overflow: 'hidden', marginBottom: 24 }}
           >
-            <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: NAVY, fontWeight: 600 }}>
-              {resultLine ?? 'Résultat du scrutin indisponible pour ce texte.'}
-            </p>
-            {outcomeLine && (
-              <p style={{ margin: '10px 0 0', fontSize: 14, color: GRAY }}>{outcomeLine}</p>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {(['pour', 'contre', 'abstention'] as const).map(pos => {
-              const { label, color, bg } = POS[pos]
-              const active = selected === pos
-              return (
-                <button
-                  key={pos}
-                  onClick={() => answer(q.vote_id, pos)}
-                  style={{
-                    padding: '15px 20px',
-                    borderRadius: 10,
-                    fontWeight: 600,
-                    fontSize: 16,
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    color,
-                    background: bg,
-                    border: `2px solid ${active ? color : 'transparent'}`,
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 28 }}>
-          <button
-            onClick={back}
-            style={{ fontSize: 14, color: NAVY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
-          >
-            ← Retour
-          </button>
-          {revealing ? (
-            <button
-              onClick={goNext}
+            <div
               style={{
-                background: ACCENT, color: '#fff', padding: '10px 22px', borderRadius: 9,
-                fontWeight: 600, fontSize: 14.5, border: 'none', cursor: 'pointer',
-                boxShadow: '0 2px 8px var(--dp-cta-shadow)',
+                height: '100%',
+                background: NAVY,
+                borderRadius: 999,
+                width: `${((index + 1) / questions.length) * 100}%`,
+                transition: 'width 200ms ease',
               }}
-            >
-              Question suivante
-            </button>
-          ) : (
-            <button
-              onClick={() => skip(q.vote_id)}
-              style={{ fontSize: 14, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
-            >
-              Passer cette question
-            </button>
-          )}
+            />
+          </div>
+          <QuizDeck
+            questions={questions}
+            index={index}
+            onAnswer={answer}
+            onSkip={skip}
+            onBack={back}
+          />
         </div>
       </Shell>
     )
