@@ -22,6 +22,56 @@ jest.mock('@/lib/postal', () => ({
   resolvePostalCodeToDepartment: jest.fn(),
 }))
 
+// MON-186: the swipe deck animates via framer-motion, whose rAF-driven
+// springs and AnimatePresence exit delays are nondeterministic in jsdom.
+// Render plain elements instead: motion.* becomes its tag with the motion
+// props stripped (MotionValue style entries dropped), AnimatePresence
+// renders its children synchronously, and the hooks return inert values.
+jest.mock('framer-motion', () => {
+  const React = jest.requireActual<typeof import('react')>('react')
+  const MOTION_ONLY_PROPS = new Set([
+    'drag', 'dragSnapToOrigin', 'dragElastic', 'onDragEnd', 'whileTap',
+    'initial', 'animate', 'exit', 'transition', 'layout', 'layoutId',
+  ])
+  function clean(props: Record<string, unknown>) {
+    const out: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(props)) {
+      if (MOTION_ONLY_PROPS.has(key)) continue
+      if (key === 'style' && value && typeof value === 'object') {
+        const style: Record<string, unknown> = {}
+        for (const [sk, sv] of Object.entries(value as Record<string, unknown>)) {
+          if (sv !== null && typeof sv === 'object') continue // MotionValue
+          style[sk] = sv
+        }
+        out.style = style
+        continue
+      }
+      out[key] = value
+    }
+    return out
+  }
+  const motion = new Proxy(
+    {},
+    {
+      get: (_target, tag: string) => {
+        const Component = React.forwardRef<unknown, Record<string, unknown>>((props, ref) =>
+          React.createElement(tag, { ...clean(props), ref })
+        )
+        Component.displayName = `motion.${tag}`
+        return Component
+      },
+    }
+  )
+  return {
+    motion,
+    AnimatePresence: ({ children }: { children: React.ReactNode }) =>
+      React.createElement(React.Fragment, null, children),
+    useMotionValue: (initial: number) => ({ get: () => initial, set: () => {} }),
+    useTransform: () => 0,
+    useReducedMotion: () => false,
+  }
+})
+
 // Overrides jest.setup.ts's blanket next/navigation mock so individual tests
 // can simulate arriving at /quiz?deputy=<id> (MON-183) or /quiz?compare=<id> (MON-184).
 const mockSearchParamsGet = jest.fn<string | null, [string]>(() => null)
@@ -132,11 +182,12 @@ const MATCH_WITH_DEPT: QuizMatchResponse = {
   },
 }
 
+// MON-186: answering via the deck buttons advances immediately - there is no
+// reveal step to click through anymore.
 async function answerAllQuestions(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
   for (let i = 0; i < QUESTIONS.questions.length; i++) {
     await user.click(screen.getByRole('button', { name: 'Pour' }))
-    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
   }
 }
 
@@ -187,57 +238,71 @@ describe('QuizClient', () => {
     expect(screen.queryByText('Les députés de votre département')).not.toBeInTheDocument()
   })
 
-  it('shows a progress indicator, reveals the real outcome, and supports going back', async () => {
+  it('shows a progress indicator, advances on answer, and supports undo', async () => {
     const user = userEvent.setup()
     render(<QuizClient />)
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
 
     expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
-    // The outcome must never appear before an answer is given.
-    expect(screen.queryByText(/291 pour, 241 contre/)).not.toBeInTheDocument()
-
+    // MON-186: no reveal step - answering advances straight to the next card.
     await user.click(screen.getByRole('button', { name: 'Contre' }))
-    // Reveal panel appears with the real tallies before advancing. 291
-    // pour vs 241 contre means "pour" is the majority — the "Contre" answer
-    // is with the minority.
-    await screen.findByText(/291 pour, 241 contre, 12 abstentions/)
-    expect(screen.getByText('Vous étiez avec la minorité.')).toBeInTheDocument()
-    expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
     expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
+    expect(screen.queryByText(/L’Assemblée a/)).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '← Retour' }))
+    await user.click(screen.getByRole('button', { name: 'Revenir à la question précédente' }))
     expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
-    // The previously selected answer stays highlighted (selected state kept),
-    // and the reveal panel does not persist across back navigation.
-    expect(screen.getByRole('button', { name: 'Contre' })).toHaveStyle({
-      border: '2px solid var(--dp-red)',
-    })
-    expect(screen.queryByText(/291 pour, 241 contre/)).not.toBeInTheDocument()
+
+    // Undo from the first question returns to the intro.
+    await user.click(screen.getByRole('button', { name: 'Revenir à la question précédente' }))
+    expect(screen.getByText('Quel député vote comme vous ?')).toBeInTheDocument()
   })
 
-  it('allows going back directly from the reveal panel, landing on the answer screen', async () => {
+  it('hides the scrutin outcome behind the details toggle, as percentages', async () => {
     const user = userEvent.setup()
     render(<QuizClient />)
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
+
+    // Collapsed by default: neither the context nor the outcome is visible.
+    expect(screen.queryByText('Contexte 1.')).not.toBeInTheDocument()
+    expect(screen.queryByText(/L’Assemblée a adopté ce texte/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Détails du scrutin' }))
+    expect(screen.getByText('Contexte 1.')).toBeInTheDocument()
+    expect(screen.getByText('L’Assemblée a adopté ce texte :')).toBeInTheDocument()
+    // 291 / 241 / 12 of 544 votes cast - percentages, never raw counts.
+    expect(screen.getByText('Pour : 53 %')).toBeInTheDocument()
+    expect(screen.getByText('Contre : 44 %')).toBeInTheDocument()
+    expect(screen.getByText('Abstention : 2 %')).toBeInTheDocument()
+    expect(screen.queryByText(/291 pour/)).not.toBeInTheDocument()
+
+    // Toggling closed hides it again, and it stays closed on the next card.
+    await user.click(screen.getByRole('button', { name: 'Détails du scrutin' }))
+    expect(screen.queryByText(/L’Assemblée a adopté ce texte/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Pour' }))
-    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
-
-    // Answer question 2 to trigger its reveal panel, then go back without
-    // advancing past it.
-    await user.click(screen.getByRole('button', { name: 'Contre' }))
-    await screen.findByText(/200 pour, 300 contre/)
-
-    await user.click(screen.getByRole('button', { name: '← Retour' }))
-    expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
-    expect(screen.queryByText(/200 pour, 300 contre/)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Pour' })).toHaveStyle({
-      border: '2px solid var(--dp-green)',
-    })
+    expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
+    expect(screen.queryByText(/L’Assemblée a rejeté ce texte/)).not.toBeInTheDocument()
   })
 
-  it('skipping a question shows no reveal and advances directly', async () => {
+  it('answers with the arrow keys and undoes with Backspace', async () => {
+    const user = userEvent.setup()
+    render(<QuizClient />)
+    await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
+
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
+    await user.keyboard('{ArrowLeft}')
+    expect(screen.getByText('Question 3 / 3')).toBeInTheDocument()
+    await user.keyboard('{Backspace}')
+    expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
+    await user.keyboard('{ArrowLeft}')
+    await user.keyboard('{ArrowDown}')
+
+    // Past the last card, the flow continues into the group step, with the
+    // keyboard answers recorded (pour / contre / abstention).
+    expect(screen.getByText('De quel groupe vous sentez-vous le plus proche ?')).toBeInTheDocument()
+  })
+
+  it('skipping a question advances directly and records no answer', async () => {
     const user = userEvent.setup()
     render(<QuizClient />)
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
@@ -286,10 +351,8 @@ describe('QuizClient', () => {
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
 
     await user.click(screen.getByRole('button', { name: 'Pour' }))
-    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
     await user.click(screen.getByRole('button', { name: 'Passer cette question' }))
     await user.click(screen.getByRole('button', { name: 'Abstention' }))
-    await user.click(screen.getByRole('button', { name: 'Question suivante' }))
     await skipGroupStep(user)
 
     expect(screen.getByText('Encore quelques réponses')).toBeInTheDocument()
@@ -307,11 +370,8 @@ describe('QuizClient', () => {
     expect(screen.getByText('Et votre député à vous ?')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '← Revenir aux questions' }))
-    // Lands on the last question with the previous selection still highlighted.
+    // Lands back on the last question's card.
     expect(screen.getByText('Question 3 / 3')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Pour' })).toHaveStyle({
-      border: '2px solid var(--dp-green)',
-    })
   })
 
   it('links results to the matched deputy profiles', async () => {
