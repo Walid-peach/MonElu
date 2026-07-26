@@ -160,7 +160,15 @@ function TopCard({ question, onCommit }: { question: QuizQuestion; onCommit: (di
         {question.question}
       </h2>
       {showInfo && (
-        <div style={{ marginTop: 14, flex: 1, overflowY: 'auto', fontSize: 13.5, lineHeight: 1.55, color: GRAY }}>
+        <div
+          // pan-y + stopped pointer-down so long context stays touch-scrollable
+          // instead of dragging the card.
+          onPointerDownCapture={e => e.stopPropagation()}
+          style={{
+            marginTop: 14, flex: 1, overflowY: 'auto', touchAction: 'pan-y',
+            fontSize: 13.5, lineHeight: 1.55, color: GRAY,
+          }}
+        >
           <p style={{ margin: 0 }}>{question.context}</p>
           {bullets ? (
             <>
@@ -185,14 +193,13 @@ function TopCard({ question, onCommit }: { question: QuizQuestion; onCommit: (di
         // Keeps a tap on the toggle from starting a card drag.
         onPointerDownCapture={e => e.stopPropagation()}
         aria-expanded={showInfo}
-        aria-label="Détails du scrutin"
         style={{
           alignSelf: 'flex-start', marginTop: 12, fontSize: 12.5, fontWeight: 600, color: GRAY,
           background: 'none', border: `1px solid ${LINE}`, borderRadius: 999,
           padding: '5px 12px', cursor: 'pointer',
         }}
       >
-        {showInfo ? 'Masquer les détails' : 'ℹ Détails du scrutin'}
+        {showInfo ? 'Masquer les détails' : 'Détails du scrutin'}
       </button>
     </motion.div>
   )

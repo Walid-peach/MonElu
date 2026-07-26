@@ -276,7 +276,7 @@ describe('QuizClient', () => {
     expect(screen.queryByText(/291 pour/)).not.toBeInTheDocument()
 
     // Toggling closed hides it again, and it stays closed on the next card.
-    await user.click(screen.getByRole('button', { name: 'Détails du scrutin' }))
+    await user.click(screen.getByRole('button', { name: 'Masquer les détails' }))
     expect(screen.queryByText(/L’Assemblée a adopté ce texte/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Pour' }))
     expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
