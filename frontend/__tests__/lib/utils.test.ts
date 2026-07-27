@@ -100,8 +100,8 @@ describe('groupVotesByParty', () => {
 })
 
 describe('partyHex', () => {
-  it('resolves a full party name to its color', () => {
-    expect(partyHex('Rassemblement National')).toBe('#003189')
+  it('resolves a full party name to a theme-aware CSS var (MON-197)', () => {
+    expect(partyHex('Rassemblement National')).toBe('var(--party-rn)')
   })
 
   it('resolves a short code to the same color as its full name', () => {
@@ -110,11 +110,11 @@ describe('partyHex', () => {
   })
 
   it('returns fallback gray for null', () => {
-    expect(partyHex(null)).toBe('#9CA3AF')
+    expect(partyHex(null)).toBe('var(--dp-text-muted)')
   })
 
   it('returns fallback gray for an unrecognized value', () => {
-    expect(partyHex('PO838901')).toBe('#6B7280')
+    expect(partyHex('PO838901')).toBe('var(--dp-text-secondary)')
   })
 })
 
