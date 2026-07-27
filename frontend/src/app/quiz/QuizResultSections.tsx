@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
 import type { QuizAnswerPosition, QuizDeputyMatch, QuizMatchResponse, QuizQuestion } from '@/lib/api'
 import { partyHex } from '@/lib/utils'
@@ -217,6 +218,10 @@ export function QuizResultSections({
   const best = result.top_matches[0] ?? null
   const others = result.top_matches.slice(1)
   const bestHex = best ? partyHex(best.party) : NAVY
+  // Top 3 matches shown initially (the hero best-match card plus these two),
+  // rest revealed on demand behind "Voir tous les députés".
+  const [showAllOthers, setShowAllOthers] = useState(false)
+  const visibleOthers = showAllOthers ? others : others.slice(0, 2)
 
   return (
     <>
@@ -275,11 +280,33 @@ export function QuizResultSections({
           <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 22, color: NAVY, margin: '0 0 16px' }}>
             Vos autres meilleurs matchs
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {others.map((m, i) => (
+          <div id="quiz-other-matches" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {visibleOthers.map((m, i) => (
               <DeputyMatchRow key={m.deputy_id} match={m} rank={i + 2} />
             ))}
           </div>
+          {!showAllOthers && others.length > visibleOthers.length && (
+            <button
+              type="button"
+              onClick={() => setShowAllOthers(true)}
+              aria-expanded={showAllOthers}
+              aria-controls="quiz-other-matches"
+              style={{
+                marginTop: 14,
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: 10,
+                border: `1px solid ${LINE}`,
+                background: 'var(--dp-card-bg)',
+                color: NAVY,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Voir tous les députés
+            </button>
+          )}
         </section>
       )}
 
