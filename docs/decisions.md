@@ -676,6 +676,36 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 
 ---
 
+## ADR-029 — Sustainability model: donations first, supporter tier on existing infra, grants opportunistic (MON-116)
+
+**Date:** 2026-07-27
+**Status:** Final
+
+**Decision:** Three funding tracks, not one, with an explicit priority order:
+
+1. **Donations are the primary mechanism.** A "coûts du projet" page (new `frontend/src/app/couts/`) publishes actual monthly infra spend (Railway ~$5/month, Supabase — free today, paid tier once upgraded) next to a HelloAsso donation link. HelloAsso is chosen over Stripe for the donation flow specifically: no mandatory platform fee (donors get an optional tip prompt instead), and no MonÉlu-run payment code to build, secure, or reconcile — it's an outbound link, not an integration. (HelloAsso primarily serves declared associations, not informal projects — confirming MonÉlu's eligibility for an account is part of the follow-up page issue, not settled by this ADR.) This mirrors the NosDéputés/Wikipedia trust model the issue proposes: donations funding a transparently-costed public good, fully decoupled from content or ranking.
+2. **The supporter API tier ships on infrastructure that already exists — no new billing integration.** MON-98 already gives every `api_keys` row a `rate_limit_multiplier` column and a manual issuance flow (email request → row insert). A paid tier reuses this as-is: a heavy commercial user pays via the same HelloAsso (or a Stripe payment link, for a one-off business invoice HelloAsso doesn't fit) and an admin bumps their key's multiplier by hand. No `stripe`/webhook code, no `plan` column, no automated billing is built now.
+3. **Institutional grants are pursued opportunistically, not scheduled.** NGI/EU civic-tech funds and French foundations (e.g. Fondation pour le progrès de l'homme) are worth applying to, but grant cycles are external and slow — this track has no code impact and blocks nothing else here.
+
+**First spend target:** once donation income covers it, the Supabase upgrade to backfill the full legislature (`2024-07-07` instead of the free-tier-forced `2025-07-01`, decision 7 in CLAUDE.md / ADR-003's migration trigger). The ingestion pipeline already supports this — `make ingest-prod` with an earlier `--since` — so the upgrade is pure spend, not engineering work.
+
+**Reason:**
+
+- **Why donations over supporter-tier-first:** the API tier already has real technical debt in the other direction — MON-98 shipped it manually-issued specifically because no signup/billing flow exists, and heavy commercial users of a civic-transparency API are a smaller, slower-to-materialize audience than potential individual donors reacting to "your presence rate ignores year one." Donations can start collecting before any code ships (the page is the only build); a monetized API tier needs a paying customer to show up first.
+- **Why not build a full billing integration now:** zero paying customers exist today. Wiring Stripe subscriptions or a webhook against `api_keys.rate_limit_multiplier` before a single commercial user has asked to pay is exactly the kind of premature engineering ADR-002 (alerts) and ADR-014 (RAG Phase C) already reject elsewhere in this project — build the trigger, not the infrastructure, first.
+- **Why HelloAsso for donations specifically:** Stripe takes a percentage fee on every transaction and is built for commercial checkout, not association giving; HelloAsso is the standard French civic/nonprofit donation rail (used by NosDéputés and similar transparency projects) with no mandatory platform fee, and needs zero MonÉlu-side payment code — just a link and a page stating where the money goes.
+- **Why the Supabase backfill is the named first spend target, not left generic:** the issue itself identifies the data horizon (2025-07-01 vs the legislature's 2024-07-07 start) as "the single biggest product weakness vs Datan/NosDéputés" per this ADR's own research — it's the one spend that directly fixes a named competitive gap, is already engineered (idempotent upsert, just needs an earlier `--since`), and gives donors a concrete, achievable target to fund rather than an abstract "support us."
+
+**Impact:**
+- Follow-up issues (filed separately, not built under MON-116 itself): a donations/cost-transparency page (`/couts`) with the HelloAsso link and live-ish infra cost figures; a Footer.tsx + `sitemap.ts` entry for that page; a documented manual process for bumping `rate_limit_multiplier` on payment (no code change — an ops runbook note, not a migration).
+- Do NOT build Stripe/webhook billing integration or a `plan` column on `api_keys` until a real paying commercial API customer exists — reuse the existing manual `rate_limit_multiplier` flow (MON-98) instead.
+- Do NOT block the donations page or the Supabase backfill spend on grant outcomes — grants are a parallel, opportunistic track with no dependency in either direction.
+- Do NOT run the Supabase upgrade or `make ingest-prod --since 2024-07-07` backfill until donation (or other) income actually covers the higher tier — this ADR sets the spend target, it does not authorize the spend itself.
+
+**Trigger to revisit:** first paying commercial API customer (build the minimal billing hook then, not before); Supabase free tier hit (500 MB, ADR-003's existing migration trigger) or donation income sufficient to upgrade voluntarily; a grant application actually being awarded (would likely fund the backfill directly, making the donation-funded path moot for that specific spend).
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -690,3 +720,4 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 10. Dark mode is approved and being built (ADR-027, MON-103) — landing page stays light-only by design
 11. Quiz share answers may be stored only when the sharer opts in (`include_answers`, default off) for friend comparison (ADR-028) — never store answers by default, never add a server-side compare endpoint
 12. When in doubt: check what's actually deployed before writing new code
+13. Sustainability funding is donations-first via HelloAsso, with the existing `api_keys.rate_limit_multiplier` (ADR-029, MON-116/MON-98) as the paid-tier mechanism — do not build Stripe/webhook billing until a real paying commercial API customer exists
