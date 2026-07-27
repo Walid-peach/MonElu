@@ -54,6 +54,25 @@ export function groupVotesByParty(
   return map
 }
 
+// Raw brand hex, keyed the same as PARTY_HEX below. Needed anywhere CSS
+// custom properties can't be resolved — namely next/og's ImageResponse
+// (satori), which renders outside the DOM/CSS cascade and has no access to
+// globals.css. Use partyHexStatic() there; everywhere else (regular
+// browser-rendered React) use partyHex(), which is dark-mode aware.
+const PARTY_HEX_STATIC: Record<string, string> = {
+  'Rassemblement National':                           '#003189',
+  'Ensemble pour la République':                      '#C79A2E',
+  'La France insoumise - Nouveau Front Populaire':    '#C9302A',
+  'Socialistes et apparentés':                        '#E07A2E',
+  'Droite Républicaine':                              '#0066CC',
+  'Écologiste et Social':                             '#1F8A5B',
+  'Les Démocrates':                                   '#F97316',
+  'Horizons & Indépendants':                          '#0D9488',
+  'Libertés, Indépendants, Outre-mer et Territoires': '#7C3AED',
+  'Union des droites pour la République':             '#DC2626',
+  'Gauche Démocrate et Républicaine':                 '#B45309',
+}
+
 // MON-197: values are CSS var() references, not raw hex — the vars are
 // defined in globals.css with light/dark-mode-adjusted pairs so party colors
 // keep sufficient contrast against --dp-card-bg in both themes. A raw hex
@@ -97,6 +116,13 @@ export function partyHex(party: string | null): string {
     console.warn(`partyHex: unknown party "${party}", using fallback. Add it to the map in lib/utils.ts.`)
   }
   return color ?? 'var(--dp-text-secondary)'
+}
+
+// For next/og ImageResponse (satori) contexts only — see PARTY_HEX_STATIC.
+export function partyHexStatic(party: string | null): string {
+  if (!party) return '#9CA3AF'
+  const fullName = SHORT_TO_FULL_PARTY[party] ?? party
+  return PARTY_HEX_STATIC[fullName] ?? '#6B7280'
 }
 
 export function themeColors(theme: string | null): { c: string; bg: string } {

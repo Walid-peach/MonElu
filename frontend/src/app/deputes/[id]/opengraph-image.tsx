@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { api } from '@/lib/api'
-import { partyHex } from '@/lib/utils'
+import { partyHexStatic } from '@/lib/utils'
 
 export const runtime = 'edge'
 export const alt = 'Bilan de mandat — MonÉlu'
@@ -17,7 +17,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
   ])
 
   const presencePct = scorecard ? Math.round((scorecard.presence_rate ?? 0) * 100) : null
-  const hex = deputy ? partyHex(deputy.party) : '#9CA3AF'
+  const hex = deputy ? partyHexStatic(deputy.party) : '#9CA3AF'
 
   return new ImageResponse(
     (
