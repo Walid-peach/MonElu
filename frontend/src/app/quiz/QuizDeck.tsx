@@ -260,12 +260,20 @@ export function QuizDeck({
     onSkip(top.vote_id)
   }
 
+  // Undo removes an uncommitted card, not a just-committed one - it must not
+  // inherit `pendingExit` from the last real commit, or the uncommitted card
+  // would fly off in that stale direction instead of the neutral default.
+  function handleBack() {
+    setPendingExit(null)
+    onBack()
+  }
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'ArrowRight') commit('pour')
       else if (e.key === 'ArrowLeft') commit('contre')
       else if (e.key === 'ArrowDown') commit('abstention')
-      else if (e.key === 'Backspace') onBack()
+      else if (e.key === 'Backspace') handleBack()
       else return
       e.preventDefault()
     }
@@ -285,7 +293,7 @@ export function QuizDeck({
         }}
       >
         <button
-          onClick={onBack}
+          onClick={handleBack}
           aria-label="Revenir à la question précédente"
           title="Annuler (Retour arrière)"
           style={{
