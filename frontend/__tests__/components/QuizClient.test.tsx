@@ -31,7 +31,7 @@ jest.mock('framer-motion', () => {
   const React = jest.requireActual<typeof import('react')>('react')
   const MOTION_ONLY_PROPS = new Set([
     'drag', 'dragSnapToOrigin', 'dragElastic', 'onDragEnd', 'whileTap',
-    'initial', 'animate', 'exit', 'transition', 'layout', 'layoutId',
+    'initial', 'animate', 'exit', 'variants', 'custom', 'transition', 'layout', 'layoutId',
   ])
   function clean(props: Record<string, unknown>) {
     const out: Record<string, unknown> = {}
@@ -257,17 +257,16 @@ describe('QuizClient', () => {
     expect(screen.getByText('Quel député vote comme vous ?')).toBeInTheDocument()
   })
 
-  it('hides the scrutin outcome behind the details toggle, as percentages', async () => {
+  it('shows the context sentence directly on the card, with the vote breakdown behind a toggle', async () => {
     const user = userEvent.setup()
     render(<QuizClient />)
     await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
 
-    // Collapsed by default: neither the context nor the outcome is visible.
-    expect(screen.queryByText('Contexte 1.')).not.toBeInTheDocument()
+    // Context is always visible; the percentage breakdown stays collapsed until toggled.
+    expect(screen.getByText('Contexte 1.')).toBeInTheDocument()
     expect(screen.queryByText(/L’Assemblée a adopté ce texte/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Détails du scrutin' }))
-    expect(screen.getByText('Contexte 1.')).toBeInTheDocument()
     expect(screen.getByText('L’Assemblée a adopté ce texte :')).toBeInTheDocument()
     // 291 / 241 / 12 of 544 votes cast - percentages, never raw counts.
     expect(screen.getByText('Pour : 53 %')).toBeInTheDocument()
@@ -275,12 +274,27 @@ describe('QuizClient', () => {
     expect(screen.getByText('Abstention : 2 %')).toBeInTheDocument()
     expect(screen.queryByText(/291 pour/)).not.toBeInTheDocument()
 
-    // Toggling closed hides it again, and it stays closed on the next card.
+    // Toggling closed hides it again, and the next card starts collapsed.
     await user.click(screen.getByRole('button', { name: 'Masquer les détails' }))
     expect(screen.queryByText(/L’Assemblée a adopté ce texte/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Pour' }))
     expect(screen.getByText('Question 2 / 3')).toBeInTheDocument()
+    expect(screen.getByText('Contexte 2.')).toBeInTheDocument()
     expect(screen.queryByText(/L’Assemblée a rejeté ce texte/)).not.toBeInTheDocument()
+  })
+
+  it('shows the header with the undo arrow, question count and current theme', async () => {
+    const user = userEvent.setup()
+    render(<QuizClient />)
+    await user.click(await screen.findByRole('button', { name: 'Commencer le quiz' }))
+
+    expect(screen.getByText('Question 1 / 3')).toBeInTheDocument()
+    // Theme appears twice: plain text in the header, and as a pill badge on the card.
+    expect(screen.getAllByText('Fin de vie')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Revenir à la question précédente' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Pour' }))
+    expect(screen.getAllByText('Budget')).toHaveLength(2)
   })
 
   it('answers with the arrow keys and undoes with Backspace', async () => {

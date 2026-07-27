@@ -1,10 +1,11 @@
 'use client'
-// MON-186: Tinder-style swipe deck for the quiz questions phase. One card per
-// scrutin; swipe right = pour, left = contre, down = abstention. The buttons
-// under the stack, the arrow keys and Backspace drive the exact same commit
+// MON-186/187: Tinder-style swipe deck for the quiz questions phase. One card
+// per scrutin; swipe right = pour, left = contre, down = abstention. The
+// circular buttons, the arrow keys and Backspace drive the exact same commit
 // path as the gestures, so touch, mouse, keyboard and assistive tech are all
-// first-class. The old post-answer reveal panel is gone - the scrutin outcome
-// hides behind a per-card "Détails du scrutin" toggle instead.
+// first-class. MON-187 restyled the header, card badge and controls to match
+// the approved mockup; the context paragraph is always visible on the card
+// (no more collapsed "Détails du scrutin" toggle from MON-186).
 import { useEffect, useState } from 'react'
 import {
   AnimatePresence,
@@ -34,8 +35,11 @@ const EXIT: Record<Dir, { x: number; y: number; rotate: number }> = {
   abstention: { x: 0, y: 640, rotate: 0 },
 }
 
-// Percentage split of the votes cast (pour + contre + abstention, MON-186:
-// percentages, not raw counts). Null when the live tally join found no row.
+// The glyph shown inside each circular action button.
+const DIR_ICON: Record<Dir, string> = { contre: '✕', abstention: '↓', pour: '✓' }
+
+// Percentage split of the votes cast (pour + contre + abstention). Null when
+// the live tally join found no row for this scrutin.
 function tallyBullets(q: QuizQuestion): Array<{ label: string; pct: number }> | null {
   if (q.votes_for == null || q.votes_against == null) return null
   const abstentions = q.abstentions ?? 0
@@ -134,8 +138,8 @@ function TopCard({ question, onCommit }: { question: QuizQuestion; onCommit: (di
       onDragEnd={handleDragEnd}
       style={{
         x, y, rotate, border,
-        position: 'absolute', inset: 0, borderRadius: 16, background: 'var(--dp-card-bg)',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.10)', padding: '22px 22px 18px',
+        position: 'absolute', inset: 0, borderRadius: 20, background: 'var(--dp-card-bg)',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.10)', padding: '24px 22px 22px',
         display: 'flex', flexDirection: 'column', cursor: 'grab', touchAction: 'none',
         userSelect: 'none', zIndex: 3,
       }}
@@ -147,32 +151,40 @@ function TopCard({ question, onCommit }: { question: QuizQuestion; onCommit: (di
         label={POS.abstention.label} color={POS.abstention.color} opacity={absOpacity}
         style={{ left: '50%', x: '-50%', top: 'auto', bottom: 18, fontSize: 18 }}
       />
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: RED }}>
+      <div
+        style={{
+          alignSelf: 'flex-start', padding: '4px 14px', borderRadius: 999,
+          border: `1.5px solid ${RED}`, color: RED, fontWeight: 700, fontSize: 11,
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+        }}
+      >
         {question.theme}
       </div>
       <h2
         className="font-newsreader"
         style={{
-          fontWeight: 600, color: NAVY, margin: '12px 0 0',
-          fontSize: 'clamp(20px,4.5vw,26px)', lineHeight: 1.3, flex: showInfo ? 'none' : 1,
+          fontWeight: 600, color: NAVY, margin: '16px 0 0',
+          fontSize: 'clamp(20px,4.5vw,26px)', lineHeight: 1.3,
         }}
       >
         {question.question}
       </h2>
+      <p style={{ margin: '14px 0 0', fontSize: 14.5, lineHeight: 1.6, color: GRAY }}>
+        {question.context}
+      </p>
       {showInfo && (
         <div
-          // pan-y + stopped pointer-down so long context stays touch-scrollable
+          // pan-y + stopped pointer-down so long content stays touch-scrollable
           // instead of dragging the card.
           onPointerDownCapture={e => e.stopPropagation()}
           style={{
-            marginTop: 14, flex: 1, overflowY: 'auto', touchAction: 'pan-y',
+            marginTop: 12, flex: 1, minHeight: 0, overflowY: 'auto', touchAction: 'pan-y',
             fontSize: 13.5, lineHeight: 1.55, color: GRAY,
           }}
         >
-          <p style={{ margin: 0 }}>{question.context}</p>
           {bullets ? (
             <>
-              <p style={{ margin: '10px 0 0', fontWeight: 600, color: NAVY }}>{outcomeLine(question)}</p>
+              <p style={{ margin: 0, fontWeight: 600, color: NAVY }}>{outcomeLine(question)}</p>
               <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
                 {bullets.map(b => (
                   <li key={b.label}>
@@ -182,7 +194,7 @@ function TopCard({ question, onCommit }: { question: QuizQuestion; onCommit: (di
               </ul>
             </>
           ) : (
-            <p style={{ margin: '10px 0 0', fontWeight: 600, color: NAVY }}>
+            <p style={{ margin: 0, fontWeight: 600, color: NAVY }}>
               Résultat du scrutin indisponible pour ce texte.
             </p>
           )}
@@ -219,9 +231,17 @@ export function QuizDeck({
   onBack: () => void
 }) {
   const reducedMotion = useReducedMotion()
-  // Exit direction of each committed card, keyed by vote_id, so
-  // AnimatePresence knows which way to fling it and undo where to re-enter from.
+  // Exit direction of each committed card, keyed by vote_id, so an undone
+  // card slides back in from the direction it left.
   const [exitDir, setExitDir] = useState<Record<string, Dir>>({})
+  // The direction just committed/skipped, read live by the exiting card's
+  // dynamic `exit` value via AnimatePresence's `custom` prop. A plain object
+  // computed inline (e.g. `exitOf(top.vote_id)`) would go stale: React 18
+  // batches the exitDir and index updates into one render, so by the time
+  // the old top card is actually removed from the tree its `exit` prop was
+  // already captured from the PREVIOUS render, before this commit happened.
+  // `custom` is propagated to already-exiting components, so it isn't.
+  const [pendingExit, setPendingExit] = useState<Dir | null>(null)
 
   const stack = questions.slice(index, index + 3)
   const top = stack[0]
@@ -229,13 +249,23 @@ export function QuizDeck({
   function commit(dir: Dir) {
     if (!top) return
     setExitDir(prev => ({ ...prev, [top.vote_id]: dir }))
+    setPendingExit(dir)
     onAnswer(top.vote_id, dir)
   }
 
   function skip() {
     if (!top) return
     setExitDir(prev => ({ ...prev, [top.vote_id]: 'abstention' }))
+    setPendingExit('abstention')
     onSkip(top.vote_id)
+  }
+
+  // Undo removes an uncommitted card, not a just-committed one - it must not
+  // inherit `pendingExit` from the last real commit, or the uncommitted card
+  // would fly off in that stale direction instead of the neutral default.
+  function handleBack() {
+    setPendingExit(null)
+    onBack()
   }
 
   useEffect(() => {
@@ -243,7 +273,7 @@ export function QuizDeck({
       if (e.key === 'ArrowRight') commit('pour')
       else if (e.key === 'ArrowLeft') commit('contre')
       else if (e.key === 'ArrowDown') commit('abstention')
-      else if (e.key === 'Backspace') onBack()
+      else if (e.key === 'Backspace') handleBack()
       else return
       e.preventDefault()
     }
@@ -256,6 +286,55 @@ export function QuizDeck({
 
   return (
     <div style={{ maxWidth: 420, margin: '0 auto' }}>
+      <div
+        style={{
+          display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center',
+          gap: 10, marginBottom: 14,
+        }}
+      >
+        <button
+          onClick={handleBack}
+          aria-label="Revenir à la question précédente"
+          title="Annuler (Retour arrière)"
+          style={{
+            background: 'none', border: 'none', color: NAVY, fontSize: 20,
+            cursor: 'pointer', justifySelf: 'start',
+            // 44x44 hit area (WCAG target size) around the small visible glyph.
+            width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          ←
+        </button>
+        <div
+          style={{
+            textAlign: 'center', fontWeight: 700, fontSize: 12, letterSpacing: '0.18em',
+            textTransform: 'uppercase', color: RED,
+          }}
+        >
+          Question {index + 1} / {questions.length}
+        </div>
+        <div style={{ fontSize: 12.5, color: GRAY, justifySelf: 'end', textAlign: 'right' }}>
+          {top?.theme}
+        </div>
+      </div>
+      <div
+        role="progressbar"
+        aria-valuenow={index + 1}
+        aria-valuemin={1}
+        aria-valuemax={questions.length}
+        style={{ height: 6, background: 'var(--dp-border-subtle)', borderRadius: 999, overflow: 'hidden', marginBottom: 24 }}
+      >
+        <div
+          style={{
+            height: '100%',
+            background: NAVY,
+            borderRadius: 999,
+            width: `${((index + 1) / questions.length) * 100}%`,
+            transition: 'width 200ms ease',
+          }}
+        />
+      </div>
+
       <div style={{ position: 'relative', height: 380 }}>
         {/* Back cards, deepest first so the top card paints last. */}
         {stack.slice(1).reverse().map(q => {
@@ -267,16 +346,17 @@ export function QuizDeck({
               initial={false}
               animate={{ scale: 1 - depth * 0.045, y: depth * 14, opacity: 1 - depth * 0.25 }}
               style={{
-                position: 'absolute', inset: 0, borderRadius: 16, background: 'var(--dp-card-bg)',
+                position: 'absolute', inset: 0, borderRadius: 20, background: 'var(--dp-card-bg)',
                 border: `1px solid ${LINE}`, boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
               }}
             />
           )
         })}
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} custom={pendingExit}>
           {top && (
             <motion.div
               key={top.vote_id}
+              custom={pendingExit}
               style={{ position: 'absolute', inset: 0 }}
               initial={
                 exitDir[top.vote_id]
@@ -291,11 +371,16 @@ export function QuizDeck({
                   ? { duration: 0.15 }
                   : { type: 'spring', stiffness: 300, damping: 28 },
               }}
-              exit={
-                reducedMotion
-                  ? { opacity: 0, transition: { duration: 0.15 } }
-                  : { ...exitOf(top.vote_id), opacity: 0, transition: { duration: 0.3, ease: 'easeIn' } }
-              }
+              // Dynamic variant (fed by `custom`) instead of a plain object -
+              // a plain object here would be captured from the render before
+              // this card's commit, before `pendingExit` held the real direction.
+              variants={{
+                exit: (dir: Dir | null) =>
+                  reducedMotion
+                    ? { opacity: 0, transition: { duration: 0.15 } }
+                    : { ...EXIT[dir ?? 'abstention'], opacity: 0, transition: { duration: 0.3, ease: 'easeIn' } },
+              }}
+              exit="exit"
             >
               <TopCard question={top} onCommit={commit} />
             </motion.div>
@@ -303,37 +388,38 @@ export function QuizDeck({
         </AnimatePresence>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 26 }}>
-        <button
-          onClick={onBack}
-          aria-label="Revenir à la question précédente"
-          title="Annuler (Retour arrière)"
-          style={{
-            width: 44, height: 44, borderRadius: '50%', border: `1px solid ${LINE}`,
-            background: 'var(--dp-card-bg)', color: NAVY, fontSize: 18, cursor: 'pointer',
-          }}
-        >
-          ↩
-        </button>
+      <p style={{ textAlign: 'center', fontSize: 13, color: GRAY, margin: '22px 0 14px' }}>
+        Glissez pour choisir
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 28 }}>
         {(['contre', 'abstention', 'pour'] as const).map(pos => (
           <button
             key={pos}
             onClick={() => commit(pos)}
             aria-label={POS[pos].label}
             style={{
-              padding: '12px 18px', borderRadius: 999, fontWeight: 700, fontSize: 14.5,
-              color: POS[pos].color, background: POS[pos].bg, border: `2px solid ${POS[pos].color}`,
-              cursor: 'pointer', minWidth: pos === 'abstention' ? 0 : 108,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
             }}
           >
-            {pos === 'contre' ? '← ' : ''}
-            {POS[pos].label}
-            {pos === 'pour' ? ' →' : ''}
-            {pos === 'abstention' ? ' ↓' : ''}
+            <span
+              aria-hidden
+              style={{
+                width: 76, height: 76, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: POS[pos].bg, color: POS[pos].color, fontSize: 26, fontWeight: 700,
+              }}
+            >
+              {DIR_ICON[pos]}
+            </span>
+            <span style={{ fontSize: 14.5, fontWeight: 600, color: POS[pos].color }}>
+              {POS[pos].label}
+            </span>
           </button>
         ))}
       </div>
-      <div style={{ textAlign: 'center', marginTop: 14 }}>
+
+      <div style={{ textAlign: 'center', marginTop: 22 }}>
         <button
           onClick={skip}
           style={{

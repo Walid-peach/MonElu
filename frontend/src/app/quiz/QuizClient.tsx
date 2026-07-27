@@ -436,43 +436,19 @@ export function QuizClient() {
   }
 
   // -------------------------------------------------------------- questions
-  // MON-186: swipe deck - one card per scrutin, gestures + buttons + keyboard
-  // share one commit path inside QuizDeck. The deck column is narrower than
-  // the shell so the cards keep a card-like aspect on desktop.
+  // MON-186/187: swipe deck - one card per scrutin, gestures + circular
+  // buttons + keyboard share one commit path inside QuizDeck, which also
+  // owns the header (undo, progress, theme) to match the approved mockup.
   if (phase === 'questions' && questions) {
     return (
       <Shell>
-        <div style={{ maxWidth: 420, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={kicker}>
-              Question {index + 1} / {questions.length}
-            </div>
-          </div>
-          <div
-            role="progressbar"
-            aria-valuenow={index + 1}
-            aria-valuemin={1}
-            aria-valuemax={questions.length}
-            style={{ height: 6, background: 'var(--dp-border-subtle)', borderRadius: 999, overflow: 'hidden', marginBottom: 24 }}
-          >
-            <div
-              style={{
-                height: '100%',
-                background: NAVY,
-                borderRadius: 999,
-                width: `${((index + 1) / questions.length) * 100}%`,
-                transition: 'width 200ms ease',
-              }}
-            />
-          </div>
-          <QuizDeck
-            questions={questions}
-            index={index}
-            onAnswer={answer}
-            onSkip={skip}
-            onBack={back}
-          />
-        </div>
+        <QuizDeck
+          questions={questions}
+          index={index}
+          onAnswer={answer}
+          onSkip={skip}
+          onBack={back}
+        />
       </Shell>
     )
   }
