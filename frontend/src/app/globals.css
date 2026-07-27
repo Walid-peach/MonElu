@@ -68,6 +68,22 @@
   /* MON-166: translucent sticky-header backdrop (backdrop-filter: blur).
      Needs its own token since it is not opaque like --dp-card-bg. */
   --dp-sticky-bg: rgba(255,255,255,0.94);
+
+  /* MON-197: per-party brand colors, referenced via partyHex() in lib/utils.ts
+     for text/border/fill usage on the quiz results page (and anywhere else
+     that needs a party-tinted accent). Light values are the parties' actual
+     brand colors; see .dark below for contrast-adjusted dark-mode values. */
+  --party-rn: #003189;
+  --party-epr: #C79A2E;
+  --party-lfi: #C9302A;
+  --party-soc: #E07A2E;
+  --party-dr: #0066CC;
+  --party-ecs: #1F8A5B;
+  --party-dem: #F97316;
+  --party-hor: #0D9488;
+  --party-liot: #7C3AED;
+  --party-udr: #DC2626;
+  --party-gdr: #B45309;
 }
 
 /* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
@@ -108,6 +124,18 @@
   --dp-badge-info-bg: rgba(74,144,226,0.18);
   --dp-badge-info-text: #7EB0F0;
   --dp-sticky-bg: rgba(18,29,48,0.92);
+
+  /* MON-197: lightened so each still clears 4.5:1 against --dp-card-bg
+     (#121D30) — the originals (esp. --party-rn navy-on-navy) fell as low as
+     1.45:1. --party-epr/--party-soc/--party-dem/--party-hor already cleared
+     4.5:1 unmodified, so they're omitted here and fall through to :root. */
+  --party-rn: #3980FF;
+  --party-lfi: #DB5A55;
+  --party-dr: #0482FF;
+  --party-ecs: #229864;
+  --party-liot: #9A67F1;
+  --party-udr: #E35454;
+  --party-gdr: #D6630B;
 }
 
 @layer base {
@@ -164,5 +192,16 @@
     --dp-badge-info-bg: #E8EFFE;
     --dp-badge-info-text: #2A5DB0;
     --dp-sticky-bg: rgba(255,255,255,0.94);
+    --party-rn: #003189;
+    --party-epr: #C79A2E;
+    --party-lfi: #C9302A;
+    --party-soc: #E07A2E;
+    --party-dr: #0066CC;
+    --party-ecs: #1F8A5B;
+    --party-dem: #F97316;
+    --party-hor: #0D9488;
+    --party-liot: #7C3AED;
+    --party-udr: #DC2626;
+    --party-gdr: #B45309;
   }
 }

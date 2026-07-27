@@ -54,18 +54,22 @@ export function groupVotesByParty(
   return map
 }
 
+// MON-197: values are CSS var() references, not raw hex — the vars are
+// defined in globals.css with light/dark-mode-adjusted pairs so party colors
+// keep sufficient contrast against --dp-card-bg in both themes. A raw hex
+// here (as before MON-197) can't respond to the dark theme.
 const PARTY_HEX: Record<string, string> = {
-  'Rassemblement National':                           '#003189',
-  'Ensemble pour la République':                      '#C79A2E',
-  'La France insoumise - Nouveau Front Populaire':    '#C9302A',
-  'Socialistes et apparentés':                        '#E07A2E',
-  'Droite Républicaine':                              '#0066CC',
-  'Écologiste et Social':                             '#1F8A5B',
-  'Les Démocrates':                                   '#F97316',
-  'Horizons & Indépendants':                          '#0D9488',
-  'Libertés, Indépendants, Outre-mer et Territoires': '#7C3AED',
-  'Union des droites pour la République':             '#DC2626',
-  'Gauche Démocrate et Républicaine':                 '#B45309',
+  'Rassemblement National':                           'var(--party-rn)',
+  'Ensemble pour la République':                      'var(--party-epr)',
+  'La France insoumise - Nouveau Front Populaire':    'var(--party-lfi)',
+  'Socialistes et apparentés':                        'var(--party-soc)',
+  'Droite Républicaine':                              'var(--party-dr)',
+  'Écologiste et Social':                             'var(--party-ecs)',
+  'Les Démocrates':                                   'var(--party-dem)',
+  'Horizons & Indépendants':                          'var(--party-hor)',
+  'Libertés, Indépendants, Outre-mer et Territoires': 'var(--party-liot)',
+  'Union des droites pour la République':             'var(--party-udr)',
+  'Gauche Démocrate et Républicaine':                 'var(--party-gdr)',
 }
 
 // party_short values (e.g. "EPR") resolve through this table before the
@@ -86,13 +90,13 @@ export const SHORT_TO_FULL_PARTY: Record<string, string> = {
 }
 
 export function partyHex(party: string | null): string {
-  if (!party) return '#9CA3AF'
+  if (!party) return 'var(--dp-text-muted)'
   const fullName = SHORT_TO_FULL_PARTY[party] ?? party
   const color = PARTY_HEX[fullName]
   if (!color && process.env.NODE_ENV === 'development') {
     console.warn(`partyHex: unknown party "${party}", using fallback. Add it to the map in lib/utils.ts.`)
   }
-  return color ?? '#6B7280'
+  return color ?? 'var(--dp-text-secondary)'
 }
 
 export function themeColors(theme: string | null): { c: string; bg: string } {
