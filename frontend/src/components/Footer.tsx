@@ -7,6 +7,7 @@ const legalLinks = [
   { href: '/mentions-legales', label: 'Mentions légales' },
   { href: '/confidentialite', label: 'Confidentialité' },
   { href: '/licence-donnees', label: 'Licence des données' },
+  { href: '/accessibilite', label: "Accessibilité : non conforme" },
 ]
 
 export function Footer() {
