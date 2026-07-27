@@ -280,7 +280,7 @@ export function QuizResultSections({
           <h2 className="font-newsreader" style={{ fontWeight: 600, fontSize: 22, color: NAVY, margin: '0 0 16px' }}>
             Vos autres meilleurs matchs
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div id="quiz-other-matches" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {visibleOthers.map((m, i) => (
               <DeputyMatchRow key={m.deputy_id} match={m} rank={i + 2} />
             ))}
@@ -289,6 +289,8 @@ export function QuizResultSections({
             <button
               type="button"
               onClick={() => setShowAllOthers(true)}
+              aria-expanded={showAllOthers}
+              aria-controls="quiz-other-matches"
               style={{
                 marginTop: 14,
                 width: '100%',
