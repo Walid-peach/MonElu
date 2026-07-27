@@ -35,6 +35,7 @@ export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false }: 
           height={h}
           className="object-cover object-top w-full h-full"
           priority={priority}
+          unoptimized
           onError={() => setImgError(true)}
         />
       </div>
