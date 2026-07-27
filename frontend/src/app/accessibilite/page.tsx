@@ -77,7 +77,9 @@ export default function AccessibilitePage() {
         <p style={pStyle}>
           Les non-conformités listées ci-dessus affectent principalement la page d&apos;accueil, le pied de page
           (sur l&apos;ensemble du site), l&apos;assistant conversationnel et les photos de député. Leur correction
-          est suivie individuellement dans le suivi de projet public de MonÉlu.
+          est suivie individuellement ; le code source de MonÉlu étant public (voir{' '}
+          <Link href="/mentions-legales" style={{ color: 'var(--dp-text)' }}>mentions légales</Link>), l&apos;avancement
+          de ces corrections est vérifiable dans l&apos;historique du dépôt.
         </p>
       </LegalSection>
 
