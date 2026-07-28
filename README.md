@@ -502,6 +502,8 @@ cd frontend && npm test               # Jest + Testing Library
 
 Both suites run on every PR via `ci.yml` and block merge on failure.
 
+`tests/unit/test_readme_endpoints.py` checks the **API Endpoints** tables above against `app.openapi()` and the live slowapi limits: adding, removing, or re-limiting an endpoint without updating this file fails CI. Edit the table, don't loosen the test.
+
 ---
 
 ## Data Notes
