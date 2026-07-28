@@ -46,7 +46,7 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 
 | Doc | What's in it |
 |---|---|
-| [`docs/decisions.md`](docs/decisions.md) | Architecture Decision Records (ADR-001 → ADR-029) - read before changing anything structural |
+| [`docs/decisions.md`](docs/decisions.md) | The full decisions log (ADR-001 to ADR-029, ADR-015 unused) - read before changing anything structural |
 | [`CLAUDE.md`](CLAUDE.md) | Working guide for AI assistants on this repo |
 | [`docs/monitoring.md`](docs/monitoring.md) | Sentry setup, health checks, weekly feedback triage query |
 | [`docs/branch_protection.md`](docs/branch_protection.md) | Required checks and merge rules |
@@ -254,7 +254,8 @@ A full dbt project (`transform/`) sits between raw ingestion and the FastAPI lay
 | `GET /votes` · `GET /votes/latest` | `analytics_marts.mart_vote_summary` |
 | `GET /votes/{id}` | `analytics_marts.mart_vote_summary` + raw `vote_positions` |
 | `GET /groups/{slug}` | `mart_deputy_scorecard` + `mart_party_alignment` + raw `vote_positions` |
-| `GET /departments/{code}` · `GET /themes/{slug}` | Raw tables only - no mart dependency |
+| `GET /departments/{code}` | Raw tables, plus the marts for the highlight rates on a dedicated connection - falls back to raw-only when the marts are absent |
+| `GET /themes/{slug}` | Raw tables only - no mart dependency |
 | Landing page latest votes | `analytics_marts.mart_vote_summary` |
 
 ### Production deployment
@@ -285,8 +286,10 @@ All PRs must pass CI before merge — see [`docs/branch_protection.md`](docs/bra
 ```
 rag/
 ├── pipeline/
-│   ├── chunker.py                 vote · deputy · party · global_stats chunk strategies
-│   ├── chunk_notable_deputies.py  vote-by-vote chunks for high-profile deputies (ADR-017)
+│   ├── chunker.py                 Five strategies: vote · deputy · party · global_stats ·
+│   │                              notable_deputy; chunk_all() emits the whole corpus
+│   ├── chunk_notable_deputies.py  Index builder for the notable-deputy chunks (ADR-017,
+│   │                              `make rag-notable`) - has its own already_indexed guard
 │   ├── chunk_law_summaries.py     plain-French summaries of the main texts
 │   ├── embedder.py                Batched OpenAI embedding (100 chunks/batch) → document_chunks
 │   └── index_manager.py           CLI: build / stats / clear
@@ -302,7 +305,7 @@ rag/
     └── mlflow_eval.py     11 golden Q&A pairs: router suite (SQL ground truth) + retrieval suite
 ```
 
-**Index stats (2026-07):** ~5,900 chunks - 5,105 vote · 645 deputy · 102 notable_deputy · 20 law_summary · 12 party · 1 global_stats. ~$0.006 to embed the full corpus · $0 per query beyond the question embedding.
+**Index stats (2026-07, refresh with `make rag-stats`):** ~5,900 chunks - 5,105 vote · 645 deputy · 102 notable_deputy · 20 law_summary · 12 party · 1 global_stats. ~$0.006 to embed the full corpus · $0 per query beyond the question embedding.
 
 The IVFFlat index was dropped (migration 003) - at this corpus size an exact cosine scan is faster and gives perfect recall. The notable-deputy retrieval pin was removed with it (MON-76): an MLflow pin-on/pin-off run showed the exact scan already ranks the deputy's own chunk first. See ADR-008 in [`docs/decisions.md`](docs/decisions.md).
 
@@ -423,8 +426,11 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `/chat` · `/chat/s/[id]` | RAG chat (the fact-check UI lives here, ADR-023) and shared answer snapshots |
 | `/verifier` · `/verifier/v/[id]` | Redirect to the chat · shared fact-check verdicts |
 | `/quiz` · `/quiz/s/[id]` | Vote-matching quiz and shared results |
-| `/mon-depute` · `/partager` · `/embed` | Personal deputy view, share cards, embeddable widgets |
-| `/donnees` · `/developpeurs` · `/methodologie` · `/api` | Open data, API docs, methodology |
+| `/mon-depute` | Personal deputy view |
+| `/embed/votes/[id]` | Embeddable vote widget |
+| `/partager` | Web Share Target endpoint (MON-115) - normalises an OS share payload into a claim and redirects to `/chat?mode=verify` |
+| `/donnees` · `/developpeurs` · `/methodologie` | Open data, API usage guide, methodology |
+| `/api/revalidate` | Internal ISR revalidation webhook, guarded by a shared secret - not a public route |
 | `/a-propos` · `/accessibilite` · `/mentions-legales` · `/confidentialite` · `/licence-donnees` | Institutional pages |
 
 | Module | Purpose |
