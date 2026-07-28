@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { api, Vote, Deputy, Scorecard, QuizWeeklyQuestion } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
 import { ThemeNavSection } from '@/components/home/ThemeNavSection'
@@ -61,7 +62,9 @@ async function getStats() {
           picked = await api.deputies.get(middle.deputy_id)
           pickedPosition = middle.position as (typeof votingPositions)[number]
         }
-      } catch { /* ignore */ }
+      } catch (err) {
+        Sentry.captureException(err)
+      }
     }
 
     if (!picked) {
@@ -84,11 +87,14 @@ async function getStats() {
           abstentions: sc.abstentions ?? 0,
           votePosition: pickedPosition,
         }
-      } catch { /* ignore */ }
+      } catch (err) {
+        Sentry.captureException(err)
+      }
     }
 
     return { health, featuredVote, deputyInfo }
-  } catch {
+  } catch (err) {
+    Sentry.captureException(err)
     return { health: null, featuredVote: null, deputyInfo: null }
   }
 }
@@ -96,7 +102,8 @@ async function getStats() {
 async function getWeeklyQuizQuestion(): Promise<QuizWeeklyQuestion | null> {
   try {
     return await api.quiz.weekly()
-  } catch {
+  } catch (err) {
+    Sentry.captureException(err)
     return null
   }
 }
