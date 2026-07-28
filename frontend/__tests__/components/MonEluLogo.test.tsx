@@ -24,17 +24,20 @@ describe('MonEluLogo', () => {
   it('rounds every numeric SVG attribute to a hydration-safe precision', () => {
     const { container } = render(<MonEluLogo />)
     const numeric = /-?\d+(\.\d+)?/g
+    const offenders: string[] = []
 
     for (const el of Array.from(container.querySelectorAll('rect, circle'))) {
       for (const attr of Array.from(el.attributes)) {
         for (const match of attr.value.match(numeric) ?? []) {
-          // Message carries the offending attribute so a failure is self-explanatory
-          expect(`${attr.name}="${attr.value}" → ${decimals(match)} decimals`).toBe(
-            `${attr.name}="${attr.value}" → ${Math.min(decimals(match), MAX_DECIMALS)} decimals`,
-          )
+          if (decimals(match) > MAX_DECIMALS) {
+            offenders.push(`<${el.tagName}> ${attr.name}="${attr.value}"`)
+          }
         }
       }
     }
+
+    // Asserting against [] rather than a count so a failure names the attribute
+    expect(offenders).toEqual([])
   })
 
   it('renders the wordmark unless hidden', () => {

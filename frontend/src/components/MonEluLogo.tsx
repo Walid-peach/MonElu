@@ -76,8 +76,8 @@ export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false 
           })
         )}
         {/* Deputy at the podium */}
-        <circle cx={CX} cy={FIGURE_CY} r={FIGURE_R} fill={navy} />
-        <rect x={CX - FIGURE_BW / 2} y={FIGURE_CY + FIGURE_R} width={FIGURE_BW} height={FIGURE_BH} rx={3} fill={navy} />
+        <circle cx={CX} cy={round3(FIGURE_CY)} r={FIGURE_R} fill={navy} />
+        <rect x={round3(CX - FIGURE_BW / 2)} y={round3(FIGURE_CY + FIGURE_R)} width={FIGURE_BW} height={FIGURE_BH} rx={3} fill={navy} />
       </svg>
 
       {!hideWordmark && (
