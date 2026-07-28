@@ -74,11 +74,20 @@ function MobileExperience({ stats, leadVote }: Props) {
   return (
     <section className="md:hidden">
       <div className="relative isolate overflow-hidden bg-navy px-4 pb-10 pt-14 text-white">
+        {/*
+          Deliberately NOT `priority` (MON-200): this section is always mounted and
+          only hidden with `md:hidden`, so a priority preload would make every
+          desktop visitor download this optimized copy on top of the cinematic
+          image set. Lazy loading means a `display:none` section never fetches it,
+          while on mobile the image is in the initial viewport and starts loading
+          at first layout; `fetchPriority="high"` keeps it ahead of the other
+          below-the-fold card images for LCP.
+        */}
         <Image
           src="/exterior-morning.jpg"
           alt="Vue extérieure de l'Assemblée Nationale"
           fill
-          priority
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover object-center"
         />
