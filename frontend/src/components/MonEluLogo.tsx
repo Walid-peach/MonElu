@@ -17,6 +17,14 @@ const RINGS = [
   { r: 28, w: 9,  h: 6, rx: 3 },
 ] as const
 
+// Trig-derived coordinates are rounded to a fixed precision before rendering.
+// React's SSR float-to-string serialization and the browser's own attribute
+// formatting disagree on the trailing digits of raw floats, which produced a
+// hydration mismatch on every page load (MON-199).
+function round3(v: number): number {
+  return Math.round(v * 1000) / 1000
+}
+
 function segColor(deg: number, navy: string, gray: string, red: string): string {
   if (deg <= 240) return navy   // 180 · 210 · 240
   if (deg === 270) return gray  // 270
@@ -51,13 +59,13 @@ export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false 
         {RINGS.map((ring, ri) =>
           ANGLES.map((deg, si) => {
             const rad = (deg * Math.PI) / 180
-            const x   = CX + ring.r * Math.cos(rad)
-            const y   = CY + ring.r * Math.sin(rad)
+            const x   = round3(CX + ring.r * Math.cos(rad))
+            const y   = round3(CY + ring.r * Math.sin(rad))
             return (
               <rect
                 key={`${ri}-${si}`}
-                x={x - ring.w / 2}
-                y={y - ring.h / 2}
+                x={round3(x - ring.w / 2)}
+                y={round3(y - ring.h / 2)}
                 width={ring.w}
                 height={ring.h}
                 rx={ring.rx}
