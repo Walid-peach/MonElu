@@ -3,16 +3,23 @@ import type { ReactNode } from 'react'
 // Shared information architecture for the top nav (desktop dropdowns) and the
 // mobile menu drawer, so both surfaces stay in sync.
 
-export interface NavEntry {
-  /** Internal route, or an absolute URL when `external`. Omitted for actions. */
-  href?: string
+interface NavEntryBase {
   label: string
   description: string
   icon: ReactNode
-  external?: boolean
-  /** Entries that run something instead of navigating. */
-  action?: 'search'
 }
+
+/** A route within the site. */
+export type NavLinkEntry = NavEntryBase & { kind: 'link'; href: string }
+/** An absolute URL, opened in a new tab. */
+export type NavExternalEntry = NavEntryBase & { kind: 'external'; href: string }
+/** Runs something instead of navigating. */
+export type NavActionEntry = NavEntryBase & { kind: 'action'; action: 'search' }
+
+// A discriminated union, not optional `href`/`external`/`action` fields on one
+// shape — the previous shape let an entry compile with none of the three set
+// and only fail at render, force-unwrapping `href` with `!`.
+export type NavEntry = NavLinkEntry | NavExternalEntry | NavActionEntry
 
 export interface NavSection {
   /** Column heading. Omitted for single-section menus, which need no label. */
@@ -73,16 +80,16 @@ export const exploreSections: NavSection[] = [
   {
     title: 'Parlement',
     entries: [
-      { href: '/deputes', label: 'Députés', description: 'Annuaire des 577 élus', icon: DeputyIcon },
-      { href: '/deputes/comparer', label: 'Comparer', description: 'Deux élus, vote par vote', icon: CompareIcon },
-      { href: '/votes', label: 'Votes', description: 'Chaque scrutin, décrypté et sourcé', icon: VoteIcon },
+      { kind: 'link', href: '/deputes', label: 'Députés', description: 'Annuaire des 577 élus', icon: DeputyIcon },
+      { kind: 'link', href: '/deputes/comparer', label: 'Comparer', description: 'Deux élus, vote par vote', icon: CompareIcon },
+      { kind: 'link', href: '/votes', label: 'Votes', description: 'Chaque scrutin, décrypté et sourcé', icon: VoteIcon },
     ],
   },
   {
     title: 'Outils',
     entries: [
-      { action: 'search', label: 'Rechercher', description: 'Un député, un vote, une question — ⌘K', icon: SearchIcon },
-      { href: API_DOCS_URL, external: true, label: 'API Explorer', description: 'Interroger les données en direct', icon: CodeIcon },
+      { kind: 'action', action: 'search', label: 'Rechercher', description: 'Un député, un vote, une question — ⌘K', icon: SearchIcon },
+      { kind: 'external', href: API_DOCS_URL, label: 'API Explorer', description: 'Interroger les données en direct', icon: CodeIcon },
     ],
   },
 ]
@@ -92,10 +99,10 @@ export const aboutSections: NavSection[] = [
   {
     grid: true,
     entries: [
-      { href: '/a-propos', label: 'À propos', description: 'Pourquoi MonÉlu existe', icon: InfoIcon },
-      { href: '/donnees', label: 'Données', description: 'Sources officielles, mises à jour en continu', icon: DataIcon },
-      { href: '/developpeurs', label: 'Développeurs', description: 'API publique et documentation', icon: CodeIcon },
-      { href: '/methodologie', label: 'Méthodologie', description: 'Comment les scores sont calculés', icon: MethodIcon },
+      { kind: 'link', href: '/a-propos', label: 'À propos', description: 'Pourquoi MonÉlu existe', icon: InfoIcon },
+      { kind: 'link', href: '/donnees', label: 'Données', description: 'Sources officielles, mises à jour en continu', icon: DataIcon },
+      { kind: 'link', href: '/developpeurs', label: 'Développeurs', description: 'API publique et documentation', icon: CodeIcon },
+      { kind: 'link', href: '/methodologie', label: 'Méthodologie', description: 'Comment les scores sont calculés', icon: MethodIcon },
     ],
   },
 ]
@@ -110,7 +117,14 @@ export function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/')
 }
 
+/** External links and actions never count as the active entry. */
+export function isEntryActive(entry: NavEntry, pathname: string): boolean {
+  return entry.kind === 'link' && isActivePath(pathname, entry.href)
+}
+
 /** Internal hrefs a menu covers — drives the active state of its trigger. */
 export function sectionHrefs(sections: NavSection[]): string[] {
-  return sections.flatMap(s => s.entries.filter(e => e.href && !e.external).map(e => e.href!))
+  return sections.flatMap(s =>
+    s.entries.filter((e): e is NavLinkEntry => e.kind === 'link').map(e => e.href)
+  )
 }

@@ -1,15 +1,18 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
 import { ThemeToggle } from './ThemeToggle'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
 import { MenuEntry } from './nav/MenuEntry'
-import { aboutSections, exploreSections, isActivePath } from './nav/navigation'
+import { aboutSections, exploreSections, isEntryActive } from './nav/navigation'
 
 const sections = [...exploreSections, ...aboutSections]
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
 /**
  * Mobile counterpart of the desktop dropdowns: the same sections, opened as a
@@ -18,11 +21,36 @@ const sections = [...exploreSections, ...aboutSections]
  */
 export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname()
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
+
+    // A real aria-modal dialog needs a focus trap: without one, Tab can walk
+    // focus out into the page content sitting behind the sheet.
+    function focusableElements(): HTMLElement[] {
+      return Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
+    }
+
+    focusableElements()[0]?.focus()
+
     function onKeyDown(e: globalThis.KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const elements = focusableElements()
+      if (elements.length === 0) return
+      const first = elements[0]
+      const last = elements[elements.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     const previousOverflow = document.body.style.overflow
@@ -45,6 +73,7 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
       />
 
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Menu de navigation"
@@ -89,7 +118,7 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
                 <MenuEntry
                   key={entry.label}
                   entry={entry}
-                  active={!!entry.href && !entry.external && isActivePath(pathname, entry.href)}
+                  active={isEntryActive(entry, pathname)}
                   reachable={open}
                   onNavigate={onClose}
                 />

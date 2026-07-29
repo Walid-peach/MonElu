@@ -31,7 +31,7 @@ export function MenuEntry({
       <span className="text-left">
         <span className="block text-[14.5px] font-semibold text-navy group-hover:text-red-civic transition-colors dark:text-[color:var(--dp-text)]">
           {entry.label}
-          {entry.external && <span aria-hidden="true"> ↗</span>}
+          {entry.kind === 'external' && <span aria-hidden="true"> ↗</span>}
         </span>
         <span className="block text-[12.5px] mt-0.5 text-gray-mid dark:text-[color:var(--dp-text-muted)]">
           {entry.description}
@@ -43,7 +43,7 @@ export function MenuEntry({
   const className = 'group flex items-start gap-3 w-full'
   const tabIndex = reachable ? undefined : -1
 
-  if (entry.action === 'search') {
+  if (entry.kind === 'action') {
     return (
       <button
         type="button"
@@ -56,7 +56,7 @@ export function MenuEntry({
     )
   }
 
-  if (entry.external) {
+  if (entry.kind === 'external') {
     return (
       <a
         href={entry.href}
@@ -72,7 +72,7 @@ export function MenuEntry({
   }
 
   return (
-    <Link href={entry.href!} tabIndex={tabIndex} className={className} onClick={onNavigate}>
+    <Link href={entry.href} tabIndex={tabIndex} className={className} onClick={onNavigate}>
       {inner}
     </Link>
   )

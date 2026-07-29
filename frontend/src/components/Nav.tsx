@@ -11,6 +11,7 @@ import {
   aboutSections,
   exploreSections,
   isActivePath,
+  isEntryActive,
   sectionHrefs,
   topLinks,
   type NavSection,
@@ -73,7 +74,12 @@ export function Nav() {
         {topLinks.map(({ href, label }) => {
           const active = isActivePath(pathname, href)
           return (
-            <Link key={href} href={href} className={`${linkBase} ${active ? linkActive : ''}`}>
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setOpenMenu(null)}
+              className={`${linkBase} ${active ? linkActive : ''}`}
+            >
               {label}
               {active && (
                 <span className="absolute -bottom-2 left-0 right-0 h-0.5 bg-red-civic" aria-hidden="true" />
@@ -117,73 +123,73 @@ function Dropdown({
 }) {
   const menuActive = sectionHrefs(sections).some(href => isActivePath(pathname, href))
   return (
-      <div className="relative">
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-haspopup="true"
-          onClick={onToggle}
-          className={`flex items-center gap-1.5 cursor-pointer ${linkBase} ${open || menuActive ? linkActive : ''}`}
+    <div className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={onToggle}
+        className={`flex items-center gap-1.5 cursor-pointer ${linkBase} ${open || menuActive ? linkActive : ''}`}
+      >
+        {label}
+        <svg
+          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+          className="transition-transform duration-200"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
         >
-          {label}
-          <svg
-            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-            className="transition-transform duration-200"
-            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-          {menuActive && (
-            <span className="absolute -bottom-2 left-0 right-0 h-0.5 bg-red-civic" aria-hidden="true" />
-          )}
-        </button>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+        {menuActive && (
+          <span className="absolute -bottom-2 left-0 right-0 h-0.5 bg-red-civic" aria-hidden="true" />
+        )}
+      </button>
 
-        <div
-          className="absolute left-1/2 -translate-x-1/2 rounded-[10px] border border-gray-border bg-white shadow-lg transition-[opacity,transform] duration-200 ease-out dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)]"
-          style={{
-            top: 'calc(100% + 18px)',
-            opacity: open ? 1 : 0,
-            transform: `translateX(-50%) translateY(${open ? '0' : '-6px'})`,
-            pointerEvents: open ? 'auto' : 'none',
-          }}
-          aria-hidden={!open}
-        >
-          <div className="flex gap-12 px-8 py-7">
-            {sections.map((section, i) => (
+      <div
+        className="absolute left-1/2 -translate-x-1/2 rounded-[10px] border border-gray-border bg-white shadow-lg transition-[opacity,transform] duration-200 ease-out dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)]"
+        style={{
+          top: 'calc(100% + 18px)',
+          opacity: open ? 1 : 0,
+          transform: `translateX(-50%) translateY(${open ? '0' : '-6px'})`,
+          pointerEvents: open ? 'auto' : 'none',
+        }}
+        aria-hidden={!open}
+      >
+        <div className="flex gap-12 px-8 py-7">
+          {sections.map((section, i) => (
+            <div
+              key={section.title ?? i}
+              className={`flex flex-col gap-[18px] ${i > 0 ? 'border-l border-gray-border dark:border-[color:var(--dp-border)] pl-8' : ''}`}
+            >
+              {section.title && (
+                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
+                  {section.title}
+                </span>
+              )}
               <div
-                key={section.title ?? i}
-                className={`flex flex-col gap-[18px] ${i > 0 ? 'border-l border-gray-border dark:border-[color:var(--dp-border)] pl-8' : ''}`}
+                className={
+                  // Fixed tracks, not `grid-cols-2`: the panel is a
+                  // shrink-to-fit absolute box, where `1fr` tracks collapse
+                  // below their content and the entries overlap.
+                  section.grid
+                    ? 'grid [grid-template-columns:repeat(2,240px)] gap-x-12 gap-y-6'
+                    : 'flex flex-col gap-[18px] w-[230px]'
+                }
               >
-                {section.title && (
-                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
-                    {section.title}
-                  </span>
-                )}
-                <div
-                  className={
-                    // Fixed tracks, not `grid-cols-2`: the panel is a
-                    // shrink-to-fit absolute box, where `1fr` tracks collapse
-                    // below their content and the entries overlap.
-                    section.grid
-                      ? 'grid [grid-template-columns:repeat(2,240px)] gap-x-12 gap-y-6'
-                      : 'flex flex-col gap-[18px] w-[230px]'
-                  }
-                >
-                  {section.entries.map(entry => (
-                    <MenuEntry
-                      key={entry.label}
-                      entry={entry}
-                      active={!!entry.href && !entry.external && isActivePath(pathname, entry.href)}
-                      reachable={open}
-                      onNavigate={onNavigate}
-                    />
-                  ))}
-                </div>
+                {section.entries.map(entry => (
+                  <MenuEntry
+                    key={entry.label}
+                    entry={entry}
+                    active={isEntryActive(entry, pathname)}
+                    reachable={open}
+                    onNavigate={onNavigate}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
+    </div>
   )
 }
