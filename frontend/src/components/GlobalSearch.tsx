@@ -23,7 +23,16 @@ type Results = { query: string; deputies: Deputy[]; votes: Vote[] }
 
 const EMPTY_RESULTS: Results = { query: '', deputies: [], votes: [] }
 
-export function GlobalSearch() {
+// The search overlay is mounted once in the layout; the nav menus and the
+// mobile sheet open it by firing this event rather than owning a trigger.
+const OPEN_SEARCH_EVENT = 'monelu:open-search'
+
+export function openGlobalSearch() {
+  window.dispatchEvent(new Event(OPEN_SEARCH_EVENT))
+}
+
+/** `hideTrigger` mounts the overlay without its own button (⌘K / event only). */
+export function GlobalSearch({ hideTrigger = false }: { hideTrigger?: boolean }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -49,8 +58,13 @@ export function GlobalSearch() {
         closeSearch()
       }
     }
+    function onOpenRequest() { setOpen(true) }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener(OPEN_SEARCH_EVENT, onOpenRequest)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener(OPEN_SEARCH_EVENT, onOpenRequest)
+    }
   }, [])
 
   useEffect(() => {
@@ -113,6 +127,7 @@ export function GlobalSearch() {
 
   return (
     <>
+      {!hideTrigger && (
       <button
         onClick={() => setOpen(true)}
         aria-label="Rechercher (Cmd+K)"
@@ -122,6 +137,7 @@ export function GlobalSearch() {
         <span className="hidden lg:inline">Rechercher</span>
         <span className="hidden lg:inline font-mono" style={{ fontSize: 11, color: '#9CA3AF', border: '1px solid #E4E6EA', borderRadius: 4, padding: '1px 5px' }}>⌘K</span>
       </button>
+      )}
 
       {open && (
         <div

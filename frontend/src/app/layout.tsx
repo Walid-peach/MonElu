@@ -6,6 +6,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import { Nav } from '@/components/Nav'
+import { GlobalSearch } from '@/components/GlobalSearch'
 import { BottomNav } from '@/components/BottomNav'
 import { PageTransition } from '@/components/PageTransition'
 import { FreshnessBadge } from '@/components/FreshnessBadge'
@@ -80,6 +81,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense fallback={null}>
             <Nav />
           </Suspense>
+          {/* Triggerless: the nav menus and the mobile sheet open it, plus ⌘K. */}
+          <HideOnEmbed><GlobalSearch hideTrigger /></HideOnEmbed>
           <HideOnEmbed><FreshnessBadge /></HideOnEmbed>
           <MainFrame><PageTransition>{children}</PageTransition></MainFrame>
           <Footer />

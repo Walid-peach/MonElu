@@ -4,25 +4,40 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
-import { GlobalSearch } from './GlobalSearch'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
 import { ThemeToggle } from './ThemeToggle'
-import { exploreHrefs, exploreSections, isActivePath, topLinks } from './nav/navigation'
+import { MenuEntry } from './nav/MenuEntry'
+import {
+  aboutSections,
+  exploreSections,
+  isActivePath,
+  sectionHrefs,
+  topLinks,
+  type NavSection,
+} from './nav/navigation'
 
 export const NAV_HEIGHT_PX = 72
 
+type MenuId = 'explorer' | 'apropos'
+
+const linkBase =
+  'relative text-[14.5px] font-semibold transition-colors text-gray-mid hover:text-navy dark:text-[color:var(--dp-text-muted)] dark:hover:text-[color:var(--dp-text)]'
+const linkActive = 'text-navy dark:text-[color:var(--dp-text)]'
+
 export function Nav() {
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [openMenu, setOpenMenu] = useState<MenuId | null>(null)
+  const navRef = useRef<HTMLDivElement>(null)
 
+  // Menus are click-driven: once open they stay open until Escape, a click
+  // outside, or a click on one of their entries.
   useEffect(() => {
-    if (!open) return
+    if (!openMenu) return
     function onKeyDown(e: globalThis.KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') setOpenMenu(null)
     }
     function onPointerDown(e: MouseEvent) {
-      if (!menuRef.current?.contains(e.target as Node)) setOpen(false)
+      if (!navRef.current?.contains(e.target as Node)) setOpenMenu(null)
     }
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('mousedown', onPointerDown)
@@ -30,16 +45,10 @@ export function Nav() {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('mousedown', onPointerDown)
     }
-  }, [open])
+  }, [openMenu])
 
   // /embed/* pages are iframed into third-party sites — no site chrome there.
   if (pathname.startsWith('/embed')) return null
-
-  const exploreActive = exploreHrefs.some(href => isActivePath(pathname, href))
-
-  const linkBase =
-    'relative text-[14.5px] font-semibold transition-colors text-gray-mid hover:text-navy dark:text-[color:var(--dp-text-muted)] dark:hover:text-[color:var(--dp-text)]'
-  const linkActive = 'text-navy dark:text-[color:var(--dp-text)]'
 
   return (
     <nav
@@ -51,83 +60,15 @@ export function Nav() {
         <MonEluLogo size={32} variant="light" />
       </Link>
 
-      <div
-        ref={menuRef}
-        className="flex items-center gap-9"
-        onMouseLeave={() => setOpen(false)}
-      >
-        <div className="relative" onMouseEnter={() => setOpen(true)}>
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-haspopup="true"
-            onClick={() => setOpen(o => !o)}
-            className={`flex items-center gap-1.5 cursor-pointer ${linkBase} ${open || exploreActive ? linkActive : ''}`}
-          >
-            Explorer
-            <svg
-              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-              className="transition-transform duration-200"
-              style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-            {exploreActive && (
-              <span className="absolute -bottom-2 left-0 right-0 h-0.5 bg-red-civic" aria-hidden="true" />
-            )}
-          </button>
-
-          <div
-            className="absolute left-1/2 -translate-x-1/2 rounded-[10px] border border-gray-border bg-white shadow-lg transition-[opacity,transform] duration-200 ease-out dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)]"
-            style={{
-              top: 'calc(100% + 18px)',
-              opacity: open ? 1 : 0,
-              transform: `translateX(-50%) translateY(${open ? '0' : '-6px'})`,
-              pointerEvents: open ? 'auto' : 'none',
-            }}
-            aria-hidden={!open}
-          >
-            <div className="flex gap-12 px-8 py-7">
-              {exploreSections.map((section, i) => (
-                <div
-                  key={section.title}
-                  className={`flex flex-col gap-[18px] min-w-[230px] ${i > 0 ? 'border-l border-gray-border dark:border-[color:var(--dp-border)] pl-8' : ''}`}
-                >
-                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
-                    {section.title}
-                  </span>
-                  {section.entries.map(entry => {
-                    const active = isActivePath(pathname, entry.href)
-                    return (
-                      <Link
-                        key={entry.href}
-                        href={entry.href}
-                        tabIndex={open ? undefined : -1}
-                        onClick={() => setOpen(false)}
-                        className="group flex items-start gap-3"
-                      >
-                        <span
-                          className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-red-civic transition-opacity ${active ? 'opacity-100' : 'opacity-0'}`}
-                          aria-hidden="true"
-                        />
-                        <span className="mt-0.5 shrink-0 text-navy dark:text-[color:var(--dp-text)]">{entry.icon}</span>
-                        <span>
-                          <span className="block text-[14.5px] font-semibold text-navy group-hover:text-red-civic transition-colors dark:text-[color:var(--dp-text)]">
-                            {entry.label}
-                          </span>
-                          <span className="block text-[12.5px] mt-0.5 text-gray-mid dark:text-[color:var(--dp-text-muted)]">
-                            {entry.description}
-                          </span>
-                        </span>
-                      </Link>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div ref={navRef} className="flex items-center gap-9">
+        <Dropdown
+          label="Explorer"
+          sections={exploreSections}
+          pathname={pathname}
+          open={openMenu === 'explorer'}
+          onToggle={() => setOpenMenu(m => (m === 'explorer' ? null : 'explorer'))}
+          onNavigate={() => setOpenMenu(null)}
+        />
 
         {topLinks.map(({ href, label }) => {
           const active = isActivePath(pathname, href)
@@ -140,13 +81,96 @@ export function Nav() {
             </Link>
           )
         })}
+
+        <Dropdown
+          label="À propos"
+          sections={aboutSections}
+          pathname={pathname}
+          open={openMenu === 'apropos'}
+          onToggle={() => setOpenMenu(m => (m === 'apropos' ? null : 'apropos'))}
+          onNavigate={() => setOpenMenu(null)}
+        />
       </div>
 
       <div className="flex items-center gap-4 shrink-0">
         <ThemeToggle />
         <FollowedDeputyChip />
-        <GlobalSearch />
       </div>
     </nav>
+  )
+}
+
+function Dropdown({
+  label,
+  sections,
+  pathname,
+  open,
+  onToggle,
+  onNavigate,
+}: {
+  label: string
+  sections: NavSection[]
+  pathname: string
+  open: boolean
+  onToggle: () => void
+  onNavigate: () => void
+}) {
+  const menuActive = sectionHrefs(sections).some(href => isActivePath(pathname, href))
+  return (
+      <div className="relative">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-haspopup="true"
+          onClick={onToggle}
+          className={`flex items-center gap-1.5 cursor-pointer ${linkBase} ${open || menuActive ? linkActive : ''}`}
+        >
+          {label}
+          <svg
+            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+            className="transition-transform duration-200"
+            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+          {menuActive && (
+            <span className="absolute -bottom-2 left-0 right-0 h-0.5 bg-red-civic" aria-hidden="true" />
+          )}
+        </button>
+
+        <div
+          className="absolute left-1/2 -translate-x-1/2 rounded-[10px] border border-gray-border bg-white shadow-lg transition-[opacity,transform] duration-200 ease-out dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)]"
+          style={{
+            top: 'calc(100% + 18px)',
+            opacity: open ? 1 : 0,
+            transform: `translateX(-50%) translateY(${open ? '0' : '-6px'})`,
+            pointerEvents: open ? 'auto' : 'none',
+          }}
+          aria-hidden={!open}
+        >
+          <div className="flex gap-12 px-8 py-7">
+            {sections.map((section, i) => (
+              <div
+                key={section.title}
+                className={`flex flex-col gap-[18px] min-w-[230px] ${i > 0 ? 'border-l border-gray-border dark:border-[color:var(--dp-border)] pl-8' : ''}`}
+              >
+                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
+                  {section.title}
+                </span>
+                {section.entries.map(entry => (
+                  <MenuEntry
+                    key={entry.label}
+                    entry={entry}
+                    active={!!entry.href && !entry.external && isActivePath(pathname, entry.href)}
+                    reachable={open}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
   )
 }

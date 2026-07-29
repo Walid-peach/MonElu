@@ -1,20 +1,25 @@
 import type { ReactNode } from 'react'
 
-// Shared information architecture for the top nav (desktop dropdown) and the
+// Shared information architecture for the top nav (desktop dropdowns) and the
 // mobile menu drawer, so both surfaces stay in sync.
 
 export interface NavEntry {
-  href: string
+  /** Internal route, or an absolute URL when `external`. Omitted for actions. */
+  href?: string
   label: string
   description: string
   icon: ReactNode
   external?: boolean
+  /** Entries that run something instead of navigating. */
+  action?: 'search'
 }
 
 export interface NavSection {
   title: string
   entries: NavEntry[]
 }
+
+export const API_DOCS_URL = 'https://monelu-production.up.railway.app/docs'
 
 const iconProps = {
   width: 18,
@@ -40,6 +45,10 @@ const VoteIcon = (
   <svg {...iconProps}><path d="M3 12h4l3 8 4-16 3 8h4" /></svg>
 )
 
+const SearchIcon = (
+  <svg {...iconProps}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></svg>
+)
+
 const DataIcon = (
   <svg {...iconProps}><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v14a8 3 0 0 0 16 0V5" /><path d="M4 12a8 3 0 0 0 16 0" /></svg>
 )
@@ -52,7 +61,11 @@ const MethodIcon = (
   <svg {...iconProps}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="13" y2="17" /></svg>
 )
 
-/** The "Explorer" mega-menu — two columns on desktop, two blocks on mobile. */
+const InfoIcon = (
+  <svg {...iconProps}><circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="17" /><circle cx="12" cy="7.5" r="0.8" fill="currentColor" stroke="none" /></svg>
+)
+
+/** The "Explorer" mega-menu — the parliament itself, plus the ways into it. */
 export const exploreSections: NavSection[] = [
   {
     title: 'Parlement',
@@ -60,6 +73,23 @@ export const exploreSections: NavSection[] = [
       { href: '/deputes', label: 'Députés', description: 'Annuaire des 577 élus', icon: DeputyIcon },
       { href: '/deputes/comparer', label: 'Comparer', description: 'Deux élus, vote par vote', icon: CompareIcon },
       { href: '/votes', label: 'Votes', description: 'Chaque scrutin, décrypté et sourcé', icon: VoteIcon },
+    ],
+  },
+  {
+    title: 'Outils',
+    entries: [
+      { action: 'search', label: 'Rechercher', description: 'Un député, un vote, une question — ⌘K', icon: SearchIcon },
+      { href: API_DOCS_URL, external: true, label: 'API Explorer', description: 'Interroger les données en direct', icon: CodeIcon },
+    ],
+  },
+]
+
+/** The "À propos" menu — the project and everything around the data. */
+export const aboutSections: NavSection[] = [
+  {
+    title: 'Le projet',
+    entries: [
+      { href: '/a-propos', label: 'À propos', description: 'Pourquoi MonÉlu existe', icon: InfoIcon },
     ],
   },
   {
@@ -72,16 +102,17 @@ export const exploreSections: NavSection[] = [
   },
 ]
 
-/** Top-level links shown flat next to the "Explorer" trigger. */
+/** Top-level links shown flat between the two dropdown triggers. */
 export const topLinks = [
   { href: '/quiz', label: 'Quiz' },
   { href: '/chat', label: 'Chat IA' },
-  { href: '/a-propos', label: 'À propos' },
 ]
-
-/** Every href reachable through the "Explorer" trigger — drives its active state. */
-export const exploreHrefs = exploreSections.flatMap(s => s.entries.map(e => e.href))
 
 export function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/')
+}
+
+/** Internal hrefs a menu covers — drives the active state of its trigger. */
+export function sectionHrefs(sections: NavSection[]): string[] {
+  return sections.flatMap(s => s.entries.filter(e => e.href && !e.external).map(e => e.href!))
 }
