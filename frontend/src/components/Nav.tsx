@@ -152,21 +152,31 @@ function Dropdown({
           <div className="flex gap-12 px-8 py-7">
             {sections.map((section, i) => (
               <div
-                key={section.title}
-                className={`flex flex-col gap-[18px] min-w-[230px] ${i > 0 ? 'border-l border-gray-border dark:border-[color:var(--dp-border)] pl-8' : ''}`}
+                key={section.title ?? i}
+                className={`flex flex-col gap-[18px] ${i > 0 ? 'border-l border-gray-border dark:border-[color:var(--dp-border)] pl-8' : ''}`}
               >
-                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
-                  {section.title}
-                </span>
-                {section.entries.map(entry => (
-                  <MenuEntry
-                    key={entry.label}
-                    entry={entry}
-                    active={!!entry.href && !entry.external && isActivePath(pathname, entry.href)}
-                    reachable={open}
-                    onNavigate={onNavigate}
-                  />
-                ))}
+                {section.title && (
+                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
+                    {section.title}
+                  </span>
+                )}
+                <div
+                  className={
+                    section.grid
+                      ? 'grid grid-cols-2 gap-x-12 gap-y-[18px] [&>*]:min-w-[230px]'
+                      : 'flex flex-col gap-[18px] min-w-[230px]'
+                  }
+                >
+                  {section.entries.map(entry => (
+                    <MenuEntry
+                      key={entry.label}
+                      entry={entry}
+                      active={!!entry.href && !entry.external && isActivePath(pathname, entry.href)}
+                      reachable={open}
+                      onNavigate={onNavigate}
+                    />
+                  ))}
+                </div>
               </div>
             ))}
           </div>

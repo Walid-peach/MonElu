@@ -15,8 +15,11 @@ export interface NavEntry {
 }
 
 export interface NavSection {
-  title: string
+  /** Column heading. Omitted for single-section menus, which need no label. */
+  title?: string
   entries: NavEntry[]
+  /** Lay the entries out as a 2-column grid instead of a single column. */
+  grid?: boolean
 }
 
 export const API_DOCS_URL = 'https://monelu-production.up.railway.app/docs'
@@ -84,17 +87,12 @@ export const exploreSections: NavSection[] = [
   },
 ]
 
-/** The "À propos" menu — the project and everything around the data. */
+/** The "À propos" menu — the project and everything around the data, 2×2. */
 export const aboutSections: NavSection[] = [
   {
-    title: 'Le projet',
+    grid: true,
     entries: [
       { href: '/a-propos', label: 'À propos', description: 'Pourquoi MonÉlu existe', icon: InfoIcon },
-    ],
-  },
-  {
-    title: 'Ressources',
-    entries: [
       { href: '/donnees', label: 'Données', description: 'Sources officielles, mises à jour en continu', icon: DataIcon },
       { href: '/developpeurs', label: 'Développeurs', description: 'API publique et documentation', icon: CodeIcon },
       { href: '/methodologie', label: 'Méthodologie', description: 'Comment les scores sont calculés', icon: MethodIcon },

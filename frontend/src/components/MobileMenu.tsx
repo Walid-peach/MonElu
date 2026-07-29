@@ -77,11 +77,13 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
           <FollowedDeputyChip />
         </div>
 
-        {sections.map(section => (
-          <div key={section.title} className="px-5 pt-5">
-            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
-              {section.title}
-            </span>
+        {sections.map((section, i) => (
+          <div key={section.title ?? i} className="px-5 pt-5">
+            {section.title && (
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
+                {section.title}
+              </span>
+            )}
             <div className="mt-3 flex flex-col gap-4">
               {section.entries.map(entry => (
                 <MenuEntry
