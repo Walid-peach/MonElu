@@ -1,7 +1,6 @@
 import * as Sentry from '@sentry/nextjs'
 import { api, Vote, Deputy, Scorecard, QuizWeeklyQuestion } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
-import { ThemeNavSection } from '@/components/home/ThemeNavSection'
 import { WeeklyQuizWidget } from '@/components/home/WeeklyQuizWidget'
 
 const FALLBACK_STATS = {
@@ -168,7 +167,6 @@ export default async function Home() {
   return (
     <div className="overflow-x-clip bg-[#070b14]">
       <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} deputyInfo={deputyInfo} />
-      <ThemeNavSection />
       <WeeklyQuizWidget question={weeklyQuestion} />
     </div>
   )
