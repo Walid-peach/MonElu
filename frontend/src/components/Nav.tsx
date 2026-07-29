@@ -162,9 +162,12 @@ function Dropdown({
                 )}
                 <div
                   className={
+                    // Fixed tracks, not `grid-cols-2`: the panel is a
+                    // shrink-to-fit absolute box, where `1fr` tracks collapse
+                    // below their content and the entries overlap.
                     section.grid
-                      ? 'grid grid-cols-2 gap-x-12 gap-y-[18px] [&>*]:min-w-[230px]'
-                      : 'flex flex-col gap-[18px] min-w-[230px]'
+                      ? 'grid [grid-template-columns:repeat(2,240px)] gap-x-12 gap-y-6'
+                      : 'flex flex-col gap-[18px] w-[230px]'
                   }
                 >
                   {section.entries.map(entry => (
