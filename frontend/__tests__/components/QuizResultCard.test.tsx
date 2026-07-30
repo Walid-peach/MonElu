@@ -136,4 +136,18 @@ describe('QuizResultCard (MON-203)', () => {
     expect(screen.getByText('84% d’accord')).toBeInTheDocument()
     expect(screen.getByText('18% d’accord')).toBeInTheDocument()
   })
+
+  it('does not caption a focus deputy as a local one when the roster came back empty', () => {
+    render(
+      <QuizResultCard
+        result={makeResult({
+          my_department: { code: '33', name: 'Gironde', deputies: [] },
+          focus: makeMatch('f1', 64),
+        })}
+      />
+    )
+
+    expect(screen.queryByText(/Vos députés/)).not.toBeInTheDocument()
+    expect(screen.getByText('Le député que vous suiviez')).toBeInTheDocument()
+  })
 })

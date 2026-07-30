@@ -221,10 +221,13 @@ function DotMeter({ value, hex }: { value: number | null; hex: string }) {
 // département.
 function LocalDeputy({ result }: { result: QuizMatchResponse }) {
   const fromDepartment = result.my_department
-    ? [...result.my_department.deputies].sort(
+    ? ([...result.my_department.deputies].sort(
         (a, b) => (b.agreement_pct ?? -1) - (a.agreement_pct ?? -1)
-      )[0]
+      )[0] ?? null)
     : null
+  // The label follows whichever source actually produced the deputy, not the
+  // mere presence of my_department: a département whose roster came back empty
+  // must not caption a focus deputy as one of "vos députés".
   const deputy = fromDepartment ?? result.focus
   if (!deputy) return null
   const hex = partyHex(deputy.party)
@@ -232,7 +235,9 @@ function LocalDeputy({ result }: { result: QuizMatchResponse }) {
   return (
     <section>
       <p style={kicker}>
-        {result.my_department ? `Vos députés · ${result.my_department.name}` : 'Le député que vous suiviez'}
+        {fromDepartment
+          ? `Vos députés · ${result.my_department!.name}`
+          : 'Le député que vous suiviez'}
       </p>
       <div style={{ ...inset, display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ width: 4, alignSelf: 'stretch', borderRadius: 999, background: hex }} />
