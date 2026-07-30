@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
 import { SITE_URL } from '@/lib/seo'
+import { QuizResultCard } from '../../QuizResultCard'
 import { QuizResultSections } from '../../QuizResultSections'
 
 // Quiz shares are immutable snapshots of server-computed results (ADR-025,
@@ -61,7 +62,13 @@ export default async function QuizSharePage({ params }: { params: Promise<{ id: 
         >
           MonÉlu — résultat partagé
         </p>
-        <QuizResultSections result={share.result} />
+        <QuizResultCard result={share.result} />
+        {/* The card is the hero; the full sections stay below it so the
+            crawlable detail and the internal links to /deputes and /votes
+            survive the redesign (MON-203). */}
+        <div style={{ marginTop: 48 }}>
+          <QuizResultSections result={share.result} />
+        </div>
         <div style={{ marginTop: 48, textAlign: 'center' }}>
           <Link
             href={share.result.answers ? `/quiz?compare=${id}&ref=share` : '/quiz?ref=share'}
