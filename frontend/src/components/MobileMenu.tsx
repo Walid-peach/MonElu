@@ -5,9 +5,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
 import { ThemeToggle } from './ThemeToggle'
+import { useTheme } from './ThemeProvider'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
 import { MenuEntry } from './nav/MenuEntry'
 import { aboutSections, exploreSections, isEntryActive } from './nav/navigation'
+import { isLightOnlyPath } from '@/lib/theme'
 
 const sections = [...exploreSections, ...aboutSections]
 
@@ -21,6 +23,7 @@ const FOCUSABLE_SELECTOR =
  */
 export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname()
+  const { theme } = useTheme()
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -85,7 +88,10 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
       >
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 bg-white border-b border-gray-border dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)]">
           <Link href="/" className="flex items-center" onClick={onClose}>
-            <MonEluLogo size={28} variant="light" />
+            <MonEluLogo
+              size={28}
+              variant={theme === 'dark' && !isLightOnlyPath(pathname) ? 'dark' : 'light'}
+            />
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
