@@ -57,7 +57,7 @@ export function Footer() {
         <Link href="/methodologie" style={{ color: '#6B7280', textDecoration: 'none' }}>Méthodologie</Link>
         <a href="https://github.com/Walid-peach" target="_blank" rel="noopener noreferrer" style={{ color: '#6B7280', textDecoration: 'none' }}>GitHub</a>
         {legalLinks.map((l) => (
-          <Link key={l.href} href={l.href} style={{ color: '#6B7280', textDecoration: 'none' }}>{l.label}</Link>
+          <Link key={l.href} href={l.href} style={{ color: '#94A3B8', textDecoration: 'none' }}>{l.label}</Link>
         ))}
       </div>
     </footer>
