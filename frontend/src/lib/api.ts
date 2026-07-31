@@ -355,6 +355,15 @@ export type QuizDepartmentResult = {
   deputies: QuizDeputyMatch[]
 }
 
+// The themes answered pour / contre (MON-203) — the share card's centre block.
+// The curated set has one question per theme, so this re-encodes the answers:
+// /quiz/match always returns it, but a stored share only carries it when the
+// sharer opted into publishing their answers (ADR-028).
+export type QuizThemeSummary = {
+  supported: string[]
+  opposed: string[]
+}
+
 export type QuizMatchResponse = {
   version: string
   answered: number
@@ -366,6 +375,9 @@ export type QuizMatchResponse = {
   // Set only when the request carried focus_deputy_id (MON-183) — the
   // personalized "Votez-vous comme X ?" deputy-page quiz entry.
   focus: QuizDeputyMatch | null
+  // Absent on shares stored before MON-203 and on shares without the
+  // answers opt-in — the card drops its centre block rather than filling it.
+  themes?: QuizThemeSummary | null
 }
 
 // Quiz shares are immutable snapshots of server-recomputed results

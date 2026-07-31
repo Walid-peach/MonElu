@@ -221,7 +221,7 @@ describe('QuizClient', () => {
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
 
-    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    await screen.findAllByText(/Vous votez à 83.3% comme Jeanne Martin/)
     // MON-176: fires once the match computation succeeds.
     expect(mockTrack).toHaveBeenCalledWith('quiz_complete')
     expect(mockMatch).toHaveBeenCalledWith(
@@ -340,7 +340,7 @@ describe('QuizClient', () => {
     await screen.findByText('Les députés de votre département')
     expect(mockResolve).toHaveBeenCalledWith('33000')
     expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), '33', undefined)
-    expect(screen.getByText('Marie Bordeaux')).toBeInTheDocument()
+    expect(screen.getAllByText('Marie Bordeaux')[0]).toBeInTheDocument()
     // A department deputy with no comparable vote renders gracefully.
     expect(screen.getByText('aucun vote comparable')).toBeInTheDocument()
   })
@@ -442,7 +442,7 @@ describe('QuizClient', () => {
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
 
-    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    await screen.findAllByText(/Vous votez à 83.3% comme Jeanne Martin/)
     await user.click(screen.getByText('Le détail, scrutin par scrutin'))
 
     expect(screen.getByRole('link', { name: /Auriez-vous voté pour ou contre la question 1/ })).toHaveAttribute(
@@ -516,7 +516,7 @@ describe('QuizClient', () => {
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
-    await screen.findByText(/Vous votez à/)
+    await screen.findAllByText(/Vous votez à/)
 
     await user.click(screen.getByRole('checkbox'))
     await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
@@ -536,7 +536,7 @@ describe('QuizClient', () => {
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
-    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    await screen.findAllByText(/Vous votez à 83.3% comme Jeanne Martin/)
 
     await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
     await screen.findByText('Échec — réessayer')
@@ -557,7 +557,7 @@ describe('QuizClient', () => {
     await user.click(
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
-    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    await screen.findAllByText(/Vous votez à 83.3% comme Jeanne Martin/)
   })
 
   it('shows an error state when the question set cannot load', async () => {
@@ -580,7 +580,7 @@ describe('QuizClient', () => {
       screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
     )
 
-    await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+    await screen.findAllByText(/Vous votez à 83.3% comme Jeanne Martin/)
     // Skipping the prediction renders no gap/confirmation line at all.
     expect(screen.queryByText(/vos réponses vous/)).not.toBeInTheDocument()
     // No network call — match or share — ever carries the predicted group.
@@ -692,7 +692,7 @@ describe('QuizClient', () => {
         screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
       )
 
-      await screen.findByText(/Vous votez à 83.3% comme Jeanne Martin/)
+      await screen.findAllByText(/Vous votez à 83.3% comme Jeanne Martin/)
       // No personalization resolved — focus_deputy_id must not be sent.
       expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), undefined, undefined)
     })
@@ -749,7 +749,7 @@ describe('QuizClient', () => {
       await user.click(
         screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
       )
-      await screen.findByText(/Vous votez à/)
+      await screen.findAllByText(/Vous votez à/)
       expect(screen.queryByText(/Vous êtes d’accord avec ce résultat partagé/)).not.toBeInTheDocument()
     })
 
@@ -780,7 +780,7 @@ describe('QuizClient', () => {
       await user.click(
         screen.getByRole('button', { name: 'Passer cette étape et voir mes résultats' })
       )
-      await screen.findByText(/Vous votez à/)
+      await screen.findAllByText(/Vous votez à/)
 
       await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
       await screen.findByText('Lien copié !')

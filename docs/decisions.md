@@ -665,12 +665,23 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 - **Client-side comparison over a new endpoint.** ADR-025's server-side-computation principle exists to make match *results* non-forgeable — a visitor could otherwise claim "je vote à 100% comme X" with fabricated numbers on a MonÉlu-branded card. Friend comparison doesn't have that risk: both answer sets being compared are already server-computed and already in the visitor's possession (their own submitted answers, and the sharer's answers from the fetched snapshot) before any comparison math runs. Counting agreement between two known, trusted sets client-side produces the same output a server endpoint would, without adding persistence, a new rate-limit surface, or a new router — and nothing about the comparison is stored or shareable as its own artifact (the visitor's *own* subsequent share, per MON-184's acceptance criteria, never carries the original sharer's data forward).
 - **Privacy copy contract with MON-175.** MON-175 fixes the general share-flow disclosure. The `include_answers` checkbox needs its own line, additive to that base disclosure, not a competing paragraph: base disclosure always shows when sharing; a second line appears only when the checkbox is checked, stating that the sharer's answers will be included and visible to anyone who opens the link (enabling comparison). MON-175 and MON-184 must both reference this same disclosure component rather than each inventing wording. **Resolved (MON-175):** the base disclosure is "Le lien créé est public." — the département clause was pulled out into its own conditional line (only rendered when a `department` was resolved), gated by its own opt-out checkbox (default checked — `includeDepartment`) mirroring `includeAnswers`'s opt-in shape. Unchecking it omits `department` from the `POST /quiz/share` call entirely, so the server never computes or stores `my_department` for that share — no backend change needed, since `_compute_match` already treats a missing `department` as "no department section."
 
+- **The opt-in gates derived encodings too, not just the raw `answers` array (MON-203).**
+The curated question set carries exactly one question per `theme` (a hard rule in `docs/quiz-curation.md`),
+so naming the themes a taker voted pour / contre identifies their answers exactly — it is the same
+information in different words, not a coarser summary.
+That is the reasoning `_strip_detail` already applies to the per-question `detail` block, and it generalizes:
+any snapshot field from which the sharer's answers can be reconstructed is subject to `include_answers`,
+whatever its shape.
+The `themes` summary added for the MON-203 share card is therefore stripped from the stored snapshot unless the sharer opted in.
+`POST /quiz/match` always returns it — the live results screen is the taker's own browser, not a published document.
+
 **Impact:**
 - MON-184 implements: `include_answers` field on `POST /quiz/share`; `answers` returned by `GET /quiz/share/{id}` when present; the opt-in checkbox with the two-tier disclosure copy described above; client-side comparison logic in `QuizClient.tsx` for `/quiz?compare=<share_id>`; version-mismatch (`share.result.version !== QUIZ_VERSION`) falls back to the plain quiz flow with a notice, since answers are keyed to a specific question-set version.
 - Do NOT add a `POST /quiz/compare` endpoint or persist/log comparison results — comparison stays exactly as stateless as `/quiz/match`.
 - Do NOT default `include_answers` to `true`, and do NOT let a request that omits the field behave as if it were `true`.
 - Do NOT let the comparison taker's own share (if they choose to share their result) carry the original sharer's `answers` forward — each share's `answers` field reflects only its own creator's opt-in choice.
 - Do NOT invent separate disclosure copy for the opt-in checkbox — it must compose with the base share-link disclosure from MON-175, not contradict it.
+- Do NOT add a snapshot field that lets the sharer's answers be reconstructed without gating it on `include_answers` — `detail` (MON-181) and `themes` (MON-203) are both stripped for this reason. Check any new derived field against "could a reader recover which way they answered?", not against whether it literally contains an answers array.
 
 **Trigger to revisit:** if comparison needs to extend beyond two parties (e.g. group/leaderboard comparison), the client-side-diff approach may need a server aggregation step — revisit choice 3. If `answers` storage meaningfully changes `quiz_shares` row size or moderation exposure at scale, revisit choice 1 in favor of a separate table with its own retention policy.
 
@@ -718,6 +729,6 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never trust client-computed percentages; answers may be persisted only via the opt-in path in ADR-028 (see rule 11), never by default
 9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
 10. Dark mode is approved and being built (ADR-027, MON-103) — landing page stays light-only by design
-11. Quiz share answers may be stored only when the sharer opts in (`include_answers`, default off) for friend comparison (ADR-028) — never store answers by default, never add a server-side compare endpoint
+11. Quiz share answers may be stored only when the sharer opts in (`include_answers`, default off) for friend comparison (ADR-028) — never store answers by default, never add a server-side compare endpoint, and gate any *derived* field that re-encodes them the same way (`detail`, `themes`)
 12. When in doubt: check what's actually deployed before writing new code
 13. Sustainability funding is donations-first via HelloAsso, with the existing `api_keys.rate_limit_multiplier` (ADR-029, MON-116/MON-98) as the paid-tier mechanism — do not build Stripe/webhook billing until a real paying commercial API customer exists
