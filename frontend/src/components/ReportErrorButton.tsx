@@ -84,7 +84,7 @@ export function ReportErrorButton({ entityType, entityId, entityLabel, pageUrl }
             style={{
               width: '100%', border: '1px solid #E4E6EA', borderRadius: 8,
               padding: '9px 11px', fontSize: 13.5, color: '#1B2B50',
-              resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+              resize: 'vertical', fontFamily: 'inherit',
             }}
           />
           <input
@@ -97,7 +97,7 @@ export function ReportErrorButton({ entityType, entityId, entityLabel, pageUrl }
             style={{
               width: '100%', border: '1px solid #E4E6EA', borderRadius: 8,
               padding: '8px 11px', fontSize: 13, color: '#1B2B50',
-              marginTop: 8, outline: 'none', fontFamily: 'inherit',
+              marginTop: 8, fontFamily: 'inherit',
             }}
           />
           {status === 'error' && (

@@ -84,6 +84,12 @@
   --party-liot: #7C3AED;
   --party-udr: #DC2626;
   --party-gdr: #B45309;
+
+  /* MON-193: global keyboard-focus indicator color (RGAA 10.7 / WCAG 2.4.7).
+     #2563EB clears 3:1 (WCAG 1.4.11 non-text contrast) against every light
+     surface token above (page/card bg, off-white); .dark below swaps to a
+     lighter blue that clears 3:1 against the dark surfaces instead. */
+  --focus-ring: #2563EB;
 }
 
 /* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
@@ -136,11 +142,34 @@
   --party-liot: #9A67F1;
   --party-udr: #E35454;
   --party-gdr: #D6630B;
+
+  /* MON-193: lighter blue keeps 3:1+ against dark surfaces (--dp-page-bg
+     #0B1424, --dp-card-bg #121D30) where the light-mode --focus-ring value
+     would fail. */
+  --focus-ring: #7EB0F0;
 }
 
 @layer base {
   body { @apply font-sans; background-color: var(--color-bg); color: var(--color-fg); }
   h1, h2, h3 { @apply font-newsreader; }
+
+  /* MON-193: global visible keyboard-focus indicator (RGAA 10.7 / WCAG
+     2.4.7). :focus-visible only fires for keyboard/programmatic focus, not
+     mouse clicks, so this doesn't add a ring on every click. Covers the
+     usual interactive tags plus any element made focusable via tabindex
+     (e.g. HemicycleChart's SVG and group-arc paths, which suppress the
+     native outline and rely on this rule instead). */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
 
 @layer utilities {

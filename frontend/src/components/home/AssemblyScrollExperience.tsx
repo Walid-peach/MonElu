@@ -872,7 +872,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                     placeholder="Posez votre question sur un député, un vote..."
-                    style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 'clamp(14px,1.6vw,17px)', color: 'rgba(230,238,252,0.96)', letterSpacing: '-0.01em' }}
+                    style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 'clamp(14px,1.6vw,17px)', color: 'rgba(230,238,252,0.96)', letterSpacing: '-0.01em' }}
                   />
                   <button
                     type="submit"

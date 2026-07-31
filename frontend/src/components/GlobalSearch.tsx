@@ -157,7 +157,7 @@ export function GlobalSearch({ hideTrigger = false }: { hideTrigger?: boolean })
                 onKeyDown={onInputKeyDown}
                 placeholder="Un député, un vote, ou une question…"
                 aria-label="Rechercher un député, un vote, ou poser une question"
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#1B2B50' }}
+                style={{ flex: 1, border: 'none', fontSize: 16, color: '#1B2B50' }}
               />
               <button onClick={closeSearch} aria-label="Fermer la recherche" style={{ border: 'none', background: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 12.5 }}>Échap</button>
             </div>

@@ -157,7 +157,7 @@ export function HemicycleChart({ deputies }: Props) {
       <div style={{ position: 'relative' }}>
       <svg
         viewBox={`0 0 ${vb.width} ${vb.height}`}
-        style={{ width: '100%', height: 'auto', display: 'block', outline: 'none' }}
+        style={{ width: '100%', height: 'auto', display: 'block' }}
         tabIndex={view === 'seats' ? 0 : -1}
         role="application"
         aria-label={`Hémicycle du scrutin : ${counts.pour} pour, ${counts.contre} contre, ${counts.abstention} abstentions, ${counts.nonVotant} non votants. Utilisez les flèches pour parcourir les députés, Entrée pour ouvrir le profil.`}
@@ -204,7 +204,7 @@ export function HemicycleChart({ deputies }: Props) {
                   opacity={activeArc === null || isActive ? 1 : 0.35}
                   stroke="#F7F4ED"
                   strokeWidth={3}
-                  style={{ cursor: 'pointer', transition: 'opacity 0.15s ease', outline: 'none' }}
+                  style={{ cursor: 'pointer', transition: 'opacity 0.15s ease' }}
                   tabIndex={0}
                   role="button"
                   aria-label={`${a.group} : ${a.seatCount} députés, ${a.counts.pour} pour, ${a.counts.contre} contre, ${a.counts.abstention} abstentions, ${a.counts.nonVotant} non votants`}

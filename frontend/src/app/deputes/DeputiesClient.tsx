@@ -186,7 +186,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{
-                  flex: 1, border: 'none', outline: 'none', fontSize: 16,
+                  flex: 1, border: 'none', fontSize: 16,
                   color: 'var(--dp-text)', background: 'transparent',
                 }}
               />
