@@ -56,11 +56,6 @@ export default function AccessibilitePage() {
             <code>prefers-reduced-motion</code> (critères RGAA 13.8/13.9 / WCAG 2.3.3).
           </li>
           <li style={liStyle}>
-            <strong>Réponses du chat non annoncées</strong> - l&apos;assistant conversationnel (<code>/chat</code>)
-            ne place pas les réponses entrantes dans une zone <code>aria-live</code>, si bien que les nouveaux
-            messages ne sont pas annoncés aux utilisateurs de lecteur d&apos;écran (critère RGAA 9.3 / WCAG 4.1.3).
-          </li>
-          <li style={liStyle}>
             <strong>Texte alternatif minimal sur les photos de député</strong> - l&apos;attribut <code>alt</code>{' '}
             des portraits contient uniquement le nom du député, sans contexte descriptif (critère RGAA 1.1 / WCAG 1.1.1).
           </li>
@@ -76,7 +71,7 @@ export default function AccessibilitePage() {
       <LegalSection title="Contenus non accessibles">
         <p style={pStyle}>
           Les non-conformités listées ci-dessus affectent principalement la page d&apos;accueil, le pied de page
-          (sur l&apos;ensemble du site), l&apos;assistant conversationnel et les photos de député. Leur correction
+          (sur l&apos;ensemble du site) et les photos de député. Leur correction
           est suivie individuellement ; le code source de MonÉlu étant public (voir{' '}
           <Link href="/mentions-legales" style={{ color: 'var(--dp-text)' }}>mentions légales</Link>), l&apos;avancement
           de ces corrections est vérifiable dans l&apos;historique du dépôt.
