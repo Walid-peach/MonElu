@@ -145,6 +145,11 @@ function ChatInner() {
   const [copied, setCopied]       = useState(false)
   const [feedbackByMsg, setFeedbackByMsg] = useState<Record<number, 'pending' | 'up' | 'down' | 'error'>>({})
   const [shareByMsg, setShareByMsg] = useState<Record<number, 'pending' | 'shared' | 'copied' | 'error'>>({})
+  // Announced to screen readers via the aria-live region below. Set only when
+  // send/submitClaim actually receive a new result or error - never derived
+  // from `messages` itself, so restoring a past conversation or starting a
+  // new chat doesn't re-announce old content (RGAA 9.3 / WCAG 4.1.3).
+  const [announcement, setAnnouncement] = useState('')
 
   const scrollRef     = useRef<HTMLDivElement>(null)
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
@@ -236,6 +241,7 @@ function ChatInner() {
       const isNew = isNewConvRef.current
       const existingConvs = loadConversations()
       const existing = existingConvs.find(c => c.id === id)
+      setAnnouncement(`Nouvelle réponse : ${result.answer.slice(0, 200)}`)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), { role: 'assistant' as const, result }]
         const conv: StoredConv = {
@@ -258,6 +264,7 @@ function ChatInner() {
       const id = activeConvRef.current!
       const isNew = isNewConvRef.current
       const existingConvs = isNew ? loadConversations() : null
+      setAnnouncement(errMsg.text)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), errMsg]
         if (isNew && existingConvs) {
@@ -298,6 +305,7 @@ function ChatInner() {
       const isNew = isNewConvRef.current
       const existingConvs = loadConversations()
       const existing = existingConvs.find(c => c.id === id)
+      setAnnouncement(`Vérification terminée : ${result.verdict}`)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), { role: 'verdict' as const, result }]
         const conv: StoredConv = {
@@ -316,6 +324,7 @@ function ChatInner() {
       const id = activeConvRef.current!
       const isNew = isNewConvRef.current
       const existingConvs = isNew ? loadConversations() : null
+      setAnnouncement(errMsg.text)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), errMsg]
         if (isNew && existingConvs) {
@@ -357,6 +366,7 @@ function ChatInner() {
     setInputVal('')
     setActiveConvId(null)
     activeConvRef.current = null
+    setAnnouncement('')
     textareaRef.current?.focus()
   }, [])
 
@@ -364,6 +374,7 @@ function ChatInner() {
     setActiveConvId(conv.id)
     setMessages(conv.messages as Message[])
     setFeedbackByMsg({})
+    setAnnouncement('')
   }, [])
 
   const handleTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -420,17 +431,6 @@ function ChatInner() {
       setShareByMsg(prev => ({ ...prev, [i]: 'error' }))
     }
   }, [])
-
-  // Announced to screen readers via the aria-live region below — derived from
-  // just the latest finished message (assistant/verdict/error), never the
-  // whole conversation, so the live region doesn't re-read prior history
-  // (RGAA 9.3 / WCAG 4.1.3).
-  const lastMsg = messages[messages.length - 1]
-  const announcement =
-    lastMsg?.role === 'assistant' ? `Nouvelle réponse : ${lastMsg.result.answer.slice(0, 200)}`
-    : lastMsg?.role === 'verdict' ? `Vérification terminée : ${lastMsg.result.verdict}`
-    : lastMsg?.role === 'error' ? lastMsg.text
-    : ''
 
   const hasMessages = messages.length > 0
   const tooShortForVerify = mode === 'verify' && inputVal.trim().length < VERIFY_MIN_LENGTH
