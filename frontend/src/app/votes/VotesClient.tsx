@@ -135,7 +135,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                 onChange={e => setInputVal(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder="Titre du scrutin, numéro, mot-clé…"
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: 'var(--dp-text)', background: 'transparent' }}
+                style={{ flex: 1, border: 'none', fontSize: 16, color: 'var(--dp-text)', background: 'transparent' }}
               />
             </div>
             <button

@@ -49,7 +49,7 @@ export function HeroSearch({
         value={value}
         onChange={e => setValue(e.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 border border-navy/15 bg-white/95 px-4 py-4 text-sm text-navy shadow-sm outline-none transition-colors placeholder:text-navy/35 focus:border-navy"
+        className="min-w-0 flex-1 border border-navy/15 bg-white/95 px-4 py-4 text-sm text-navy shadow-sm transition-colors placeholder:text-navy/35 focus:border-navy"
       />
       <button
         type="submit"

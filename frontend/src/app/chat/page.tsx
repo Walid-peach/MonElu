@@ -861,7 +861,7 @@ function ChatInner() {
                 onKeyDown={handleKey}
                 placeholder={mode === 'verify' ? "Le député X a voté contre l'augmentation du SMIC…" : 'Posez une question sur vos élus…'}
                 rows={1}
-                style={{ resize: 'none', outline: 'none', border: 'none', background: 'transparent', fontFamily: 'var(--font-sans)', fontSize: 15, color: dk ? 'rgba(255,255,255,0.88)' : '#1B2B50', width: '100%', display: 'block', lineHeight: 1.6, maxHeight: 140, overflowY: 'auto' }}
+                style={{ resize: 'none', border: 'none', background: 'transparent', fontFamily: 'var(--font-sans)', fontSize: 15, color: dk ? 'rgba(255,255,255,0.88)' : '#1B2B50', width: '100%', display: 'block', lineHeight: 1.6, maxHeight: 140, overflowY: 'auto' }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                 {mode === 'verify' ? (

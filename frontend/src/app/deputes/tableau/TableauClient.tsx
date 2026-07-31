@@ -127,7 +127,7 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
               style={{
                 flex: 1, maxWidth: 420, height: 46, padding: '0 16px',
                 background: 'var(--dp-card-bg)', border: '1px solid ' + LINE, borderRadius: 10,
-                fontSize: 15, color: 'var(--dp-text)', outline: 'none',
+                fontSize: 15, color: 'var(--dp-text)',
                 boxShadow: '0 1px 3px var(--dp-shadow-sm)',
               }}
             />

@@ -46,11 +46,6 @@ export default function AccessibilitePage() {
             3,5:1, sous le minimum de 4,5:1 requis pour du texte de taille normale (critère RGAA 3.2 / WCAG 1.4.3).
           </li>
           <li style={liStyle}>
-            <strong>Absence d&apos;indicateur de focus visible global</strong> - aucune règle <code>:focus-visible</code>{' '}
-            n&apos;est définie au niveau global ; certains composants interactifs (dont l&apos;hémicycle) suppriment
-            le contour de focus par défaut du navigateur (critère RGAA 10.7 / WCAG 2.4.7).
-          </li>
-          <li style={liStyle}>
             <strong>Animations non désactivables</strong> - le défilement animé de la page d&apos;accueil et les
             transitions de l&apos;interface ne tiennent pas compte de la préférence système{' '}
             <code>prefers-reduced-motion</code> (critères RGAA 13.8/13.9 / WCAG 2.3.3).

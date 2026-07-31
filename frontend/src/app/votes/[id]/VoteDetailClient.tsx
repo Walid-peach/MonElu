@@ -351,7 +351,7 @@ export function VoteDetailClient(props: Props) {
                     value={lookupQuery}
                     onChange={e => { setLookupQuery(e.target.value); setSelected(null) }}
                     placeholder="Nom du député ou code postal…"
-                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14.5, color: 'var(--dp-text)', background: 'transparent' }}
+                    style={{ flex: 1, border: 'none', fontSize: 14.5, color: 'var(--dp-text)', background: 'transparent' }}
                   />
                 </div>
 
