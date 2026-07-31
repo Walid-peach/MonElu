@@ -41,11 +41,6 @@ export default function AccessibilitePage() {
         <p style={pStyle}>Non-conformités identifiées à ce jour :</p>
         <ul style={{ margin: '10px 0 0', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <li style={liStyle}>
-            <strong>Contraste insuffisant du pied de page</strong> - les liens légaux du pied de page
-            (<code>#6B7280</code> sur fond <code>#111C35</code>) atteignent un ratio de contraste d&apos;environ
-            3,5:1, sous le minimum de 4,5:1 requis pour du texte de taille normale (critère RGAA 3.2 / WCAG 1.4.3).
-          </li>
-          <li style={liStyle}>
             <strong>Absence d&apos;indicateur de focus visible global</strong> - aucune règle <code>:focus-visible</code>{' '}
             n&apos;est définie au niveau global ; certains composants interactifs (dont l&apos;hémicycle) suppriment
             le contour de focus par défaut du navigateur (critère RGAA 10.7 / WCAG 2.4.7).
@@ -70,9 +65,8 @@ export default function AccessibilitePage() {
 
       <LegalSection title="Contenus non accessibles">
         <p style={pStyle}>
-          Les non-conformités listées ci-dessus affectent principalement la page d&apos;accueil, le pied de page
-          (sur l&apos;ensemble du site) et les photos de député. Leur correction
-          est suivie individuellement ; le code source de MonÉlu étant public (voir{' '}
+          Les non-conformités listées ci-dessus affectent principalement la page d&apos;accueil et les photos de
+          député. Leur correction est suivie individuellement ; le code source de MonÉlu étant public (voir{' '}
           <Link href="/mentions-legales" style={{ color: 'var(--dp-text)' }}>mentions légales</Link>), l&apos;avancement
           de ces corrections est vérifiable dans l&apos;historique du dépôt.
         </p>

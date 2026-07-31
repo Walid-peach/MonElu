@@ -10,6 +10,7 @@ import type { ResolvedDepartment } from '@/lib/postal'
 import { CANONICAL_GROUP_LABELS } from '@/lib/groups'
 import { partyHex } from '@/lib/utils'
 import { pctLabel, card, QuizResultSections } from './QuizResultSections'
+import { QuizResultCard } from './QuizResultCard'
 import { QuizDeck } from './QuizDeck'
 
 const NAVY = 'var(--dp-text)'
@@ -165,8 +166,8 @@ function ShareResultButton({
         />
         <span>
           {includeAnswers
-            ? 'Vos réponses seront aussi incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous.'
-            : 'Inclure mes réponses pour permettre à un ami de se comparer à moi.'}
+            ? 'Vos réponses seront aussi incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous. Votre carte gardera le bloc « vous votez pour ».'
+            : 'Inclure mes réponses pour permettre à un ami de se comparer à moi, et garder le bloc « vous votez pour » sur ma carte.'}
         </span>
       </label>
     </div>
@@ -638,6 +639,13 @@ export function QuizClient() {
     return (
       <Shell>
         <div style={{ ...kicker, marginBottom: 16 }}>Vos résultats</div>
+        {/* Same component as the share page (MON-203). One block differs by
+            design: "vous votez pour" names the themes you answered, so it
+            only survives into a share when you opt into publishing your
+            answers (ADR-028) — see ShareResultButton's checkbox copy. */}
+        <div style={{ marginBottom: 40 }}>
+          <QuizResultCard result={result} />
+        </div>
         {result.focus && (
           <div
             style={{
