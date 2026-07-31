@@ -29,6 +29,12 @@ run a friend comparison. A share created without the opt-in is byte-identical
 to a pre-ADR-028 share — no "answers" key is written at all, not a null one.
 Comparison itself stays entirely client-side; there is no /quiz/compare.
 
+The same opt-in gates `themes` (MON-203, the share card's centre block): with
+one curated question per theme, naming the themes voted pour / contre re-encodes
+the answers exactly, so it is stripped from the stored snapshot unless the
+sharer opted in. /match always returns it — the live results card is the
+taker's own screen, not a published document.
+
 Denominator rules (consistent with ADR-019's presence framing):
 - Only expressed positions compare: pour / contre / abstention. `nonVotant`
   (present but not voting) and absence never count as agreement or disagreement;
@@ -187,6 +193,20 @@ class QuizDepartmentResult(BaseModel):
     deputies: list[QuizDeputyMatch]
 
 
+class QuizThemeSummary(BaseModel):
+    """Which themes the taker voted for and against (MON-203).
+
+    Derived from the answers and the curated question set only — no DB, no
+    ranking. The curated set carries exactly one question per theme, so there
+    is nothing to aggregate and no "dominant" theme to compute: these are
+    literally the themes the taker answered pour / contre, in question-set
+    order. Abstentions appear in neither list.
+    """
+
+    supported: list[str]
+    opposed: list[str]
+
+
 class QuizMatchResponse(BaseModel):
     version: str
     answered: int
@@ -205,6 +225,11 @@ class QuizMatchResponse(BaseModel):
     # (a personalized entry answers "how well do I match *this* deputy?",
     # not "who ranks in my top matches").
     focus: Optional[QuizDeputyMatch] = None
+    # The themes voted for / against (MON-203), feeding the share card's
+    # centre block. Optional so shares stored before MON-203 — whose result
+    # JSONB has no "themes" key — still deserialize; /match and every new
+    # share always populate it.
+    themes: Optional[QuizThemeSummary] = None
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +363,23 @@ def select_opposite(eligible: list[dict], top_matches: list[QuizDeputyMatch]) ->
     if top_matches and candidate["deputy_id"] == top_matches[0].deputy_id:
         return None
     return candidate
+
+
+def compute_theme_summary(answers: dict[str, str]) -> QuizThemeSummary:
+    """Themes answered pour / contre, in curated question-set order (MON-203).
+
+    Iterates QUIZ_QUESTIONS rather than `answers` so the order is the stable
+    editorial one, not dict-insertion order from the request body.
+    """
+    supported: list[str] = []
+    opposed: list[str] = []
+    for question in QUIZ_QUESTIONS:
+        position = answers.get(question["vote_id"])
+        if position == "pour":
+            supported.append(question["theme"])
+        elif position == "contre":
+            opposed.append(question["theme"])
+    return QuizThemeSummary(supported=supported, opposed=opposed)
 
 
 def compute_group_alignment(
@@ -590,6 +632,7 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
         groups=compute_group_alignment(rows, answers, threshold),
         my_department=my_department,
         focus=focus,
+        themes=compute_theme_summary(answers),
     )
 
 
@@ -668,6 +711,14 @@ def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
     # numbers. Nothing else about the request is persisted.
     result = _compute_match(body)
     stored_result = _strip_detail(result.model_dump())
+    if not body.include_answers:
+        # `themes` (MON-203) names the themes answered pour / contre. The
+        # curated set carries one question per theme, so that list is a 1:1
+        # re-encoding of the sharer's answers — the same reason `detail` is
+        # stripped above. It is therefore published only on shares whose
+        # author opted into publishing their answers (ADR-028); on every
+        # other share the card's centre block is simply absent.
+        stored_result.pop("themes", None)
     if body.include_answers:
         # The already-validated answers used for the computation above — never
         # a separate client-supplied payload (ADR-028).

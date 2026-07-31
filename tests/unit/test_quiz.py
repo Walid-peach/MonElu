@@ -9,6 +9,7 @@ from api.routers.quiz import (
     QuizMatchRequest,
     _strip_detail,
     compute_group_alignment,
+    compute_theme_summary,
     eligibility_threshold,
     ranking_score,
     select_opposite,
@@ -762,3 +763,91 @@ def test_strip_detail_removes_key_everywhere():
 def test_strip_detail_handles_no_opposite_or_department():
     data = {"top_matches": [], "opposite": None, "my_department": None}
     assert _strip_detail(data) == data
+
+
+# ---------------------------------------------------------------------------
+# Theme summary — the share card's centre block (MON-203)
+# ---------------------------------------------------------------------------
+def test_theme_summary_splits_pour_and_contre_and_drops_abstentions():
+    themes = {q["vote_id"]: q["theme"] for q in QUIZ_QUESTIONS}
+    summary = compute_theme_summary({V1: "pour", V2: "contre", V3: "abstention"})
+
+    assert summary.supported == [themes[V1]]
+    assert summary.opposed == [themes[V2]]
+    assert themes[V3] not in summary.supported + summary.opposed
+
+
+def test_theme_summary_follows_question_set_order_not_answer_order():
+    first, second = QUIZ_QUESTIONS[0], QUIZ_QUESTIONS[1]
+    # Answered in reverse; the summary must still read in curated order.
+    summary = compute_theme_summary({second["vote_id"]: "pour", first["vote_id"]: "pour"})
+    assert summary.supported == [first["theme"], second["theme"]]
+
+
+def test_theme_summary_empty_when_everything_abstained():
+    summary = compute_theme_summary({V1: "abstention", V2: "abstention"})
+    assert summary.supported == []
+    assert summary.opposed == []
+
+
+def test_match_returns_theme_summary(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    resp = client.post("/quiz/match", json={"answers": ANSWERS_3})
+
+    assert resp.status_code == 200
+    themes = resp.json()["themes"]
+    assert themes["supported"] == [QUIZ_QUESTIONS[0]["theme"]]
+    assert themes["opposed"] == [QUIZ_QUESTIONS[1]["theme"]]
+
+
+def test_share_without_opt_in_strips_themes(client, mock_cursor):
+    """Naming the themes voted pour/contre re-encodes the answers 1:1 — it must
+    not reach a snapshot whose author declined to publish them (ADR-028)."""
+    import datetime
+
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": _stored_result(),
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+
+    resp = client.post("/quiz/share", json={"answers": ANSWERS_3})
+    assert resp.status_code == 200
+
+    _, params = mock_cursor.execute.call_args_list[-1].args
+    assert "themes" not in params[1].adapted
+
+
+def test_share_with_opt_in_stores_themes(client, mock_cursor):
+    import datetime
+
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": _stored_result(),
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+
+    resp = client.post("/quiz/share", json={"answers": ANSWERS_3, "include_answers": True})
+    assert resp.status_code == 200
+
+    _, params = mock_cursor.execute.call_args_list[-1].args
+    assert params[1].adapted["themes"]["supported"] == [QUIZ_QUESTIONS[0]["theme"]]
+
+
+def test_get_share_tolerates_snapshot_stored_before_themes_existed(client, mock_cursor):
+    """Pre-MON-203 snapshots have no "themes" key — they must still deserialize."""
+    import datetime
+
+    legacy = _stored_result()
+    assert "themes" not in legacy
+    mock_cursor.fetchone.return_value = {
+        "id": SHARE_ID,
+        "result": legacy,
+        "created_at": datetime.datetime(2026, 7, 18, tzinfo=datetime.timezone.utc),
+    }
+
+    resp = client.get(f"/quiz/share/{SHARE_ID}")
+    assert resp.status_code == 200
+    assert resp.json()["result"]["themes"] is None

@@ -31,6 +31,11 @@ Within the votes that pass all four filters, prefer:
 - **Topic diversity.** No two questions share a `theme` tag — the quiz should span
   civic ground (institutions, justice, economy, social policy, etc.), not cluster
   on one axis.
+  This one-to-one mapping also has a privacy consequence: because a theme names
+  exactly one scrutin, the `themes` summary on the share card (MON-203) identifies
+  how the sharer answered, which is why it is gated on the `include_answers` opt-in
+  (ADR-028). Keep that in mind if the set ever grows to several questions per theme —
+  the gate should stay regardless, but the reasoning behind it would change.
 - **Recognizability.** Prefer scrutins that received general-audience press coverage
   (aide à mourir, Corse, Nouvelle-Calédonie, fraudes fiscales, etc.) over technical
   or procedural texts a non-specialist wouldn't have an intuition about.

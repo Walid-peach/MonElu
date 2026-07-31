@@ -1,7 +1,7 @@
 'use client'
 // Typography exception: this cinematic scroll component uses inline styles throughout
 // because all colors, opacities, and sizes are computed dynamically by the animation engine.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -978,8 +978,31 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
   )
 }
 
+const DESKTOP_QUERY = '(min-width: 768px)'
+
+function subscribeToDesktopMatch(callback: () => void) {
+  const mql = window.matchMedia(DESKTOP_QUERY)
+  mql.addEventListener('change', callback)
+  return () => mql.removeEventListener('change', callback)
+}
+
+function getIsDesktopMatch() {
+  return window.matchMedia(DESKTOP_QUERY).matches
+}
+
+function getIsDesktopServerSnapshot() {
+  return false
+}
+
 export function AssemblyScrollExperience({ stats, leadVote, deputyInfo }: Props) {
   const reduceMotion = useReducedMotion()
+  // Server snapshot is always false, so hydration never mismatches; resolves
+  // to the real viewport right after mount (MON-202). This is a render gate,
+  // not a CSS hide - `CinematicExperience` (and its 1.2 MB of raw JPEG plus
+  // its scroll-animation effect) does not mount at all until this confirms
+  // desktop, unlike `useReducedMotion` above which resolves the same way but
+  // for a different axis.
+  const isDesktop = useSyncExternalStore(subscribeToDesktopMatch, getIsDesktopMatch, getIsDesktopServerSnapshot)
 
   if (reduceMotion) {
     return <StaticExperience stats={stats} leadVote={leadVote} deputyInfo={deputyInfo} />
@@ -987,9 +1010,11 @@ export function AssemblyScrollExperience({ stats, leadVote, deputyInfo }: Props)
 
   return (
     <>
-      <div className="hidden md:block">
-        <CinematicExperience stats={stats} leadVote={leadVote} deputyInfo={deputyInfo} />
-      </div>
+      {isDesktop && (
+        <div className="hidden md:block">
+          <CinematicExperience stats={stats} leadVote={leadVote} deputyInfo={deputyInfo} />
+        </div>
+      )}
       <MobileExperience stats={stats} leadVote={leadVote} deputyInfo={deputyInfo} />
     </>
   )

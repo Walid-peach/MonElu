@@ -369,7 +369,7 @@ design.
 | `api_key_usage` | Per-key, per-endpoint, per-day request counters |
 | `verifications` | Immutable fact-check verdict snapshots behind `/verifier/v/<id>` (ADR-022) |
 | `chat_shares` | Immutable chat answer snapshots behind `/chat/s/<id>` (ADR-024) |
-| `quiz_shares` | Server-recomputed quiz result snapshots behind `/quiz/s/<id>` (ADR-025); `result` JSONB optionally carries the sharer's answers when they opt in (ADR-028) |
+| `quiz_shares` | Server-recomputed quiz result snapshots behind `/quiz/s/<id>` (ADR-025); `result` JSONB optionally carries the sharer's answers, and the themes derived from them, when they opt in (ADR-028) |
 | `feedback` | `type`-discriminated feedback sink (chat thumbs / data-page reports) with a JSONB payload |
 
 ### Migrations
