@@ -145,6 +145,11 @@ function ChatInner() {
   const [copied, setCopied]       = useState(false)
   const [feedbackByMsg, setFeedbackByMsg] = useState<Record<number, 'pending' | 'up' | 'down' | 'error'>>({})
   const [shareByMsg, setShareByMsg] = useState<Record<number, 'pending' | 'shared' | 'copied' | 'error'>>({})
+  // Announced to screen readers via the aria-live region below. Set only when
+  // send/submitClaim actually receive a new result or error - never derived
+  // from `messages` itself, so restoring a past conversation or starting a
+  // new chat doesn't re-announce old content (RGAA 9.3 / WCAG 4.1.3).
+  const [announcement, setAnnouncement] = useState('')
 
   const scrollRef     = useRef<HTMLDivElement>(null)
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
@@ -236,6 +241,7 @@ function ChatInner() {
       const isNew = isNewConvRef.current
       const existingConvs = loadConversations()
       const existing = existingConvs.find(c => c.id === id)
+      setAnnouncement(`Nouvelle réponse : ${result.answer.slice(0, 200)}`)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), { role: 'assistant' as const, result }]
         const conv: StoredConv = {
@@ -258,6 +264,7 @@ function ChatInner() {
       const id = activeConvRef.current!
       const isNew = isNewConvRef.current
       const existingConvs = isNew ? loadConversations() : null
+      setAnnouncement(errMsg.text)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), errMsg]
         if (isNew && existingConvs) {
@@ -298,6 +305,7 @@ function ChatInner() {
       const isNew = isNewConvRef.current
       const existingConvs = loadConversations()
       const existing = existingConvs.find(c => c.id === id)
+      setAnnouncement(`Vérification terminée : ${result.verdict}`)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), { role: 'verdict' as const, result }]
         const conv: StoredConv = {
@@ -316,6 +324,7 @@ function ChatInner() {
       const id = activeConvRef.current!
       const isNew = isNewConvRef.current
       const existingConvs = isNew ? loadConversations() : null
+      setAnnouncement(errMsg.text)
       setMessages(prev => {
         const next = [...prev.filter(m => m.role !== 'typing'), errMsg]
         if (isNew && existingConvs) {
@@ -357,6 +366,7 @@ function ChatInner() {
     setInputVal('')
     setActiveConvId(null)
     activeConvRef.current = null
+    setAnnouncement('')
     textareaRef.current?.focus()
   }, [])
 
@@ -364,6 +374,7 @@ function ChatInner() {
     setActiveConvId(conv.id)
     setMessages(conv.messages as Message[])
     setFeedbackByMsg({})
+    setAnnouncement('')
   }, [])
 
   const handleTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -454,6 +465,12 @@ function ChatInner() {
 
   return (
     <div style={{ display: 'flex', height: 'calc(100dvh - 4rem)', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: bg0 }}>
+
+      {/* Screen-reader announcement of new assistant/verdict/error messages only —
+          never the full conversation (RGAA 9.3 / WCAG 4.1.3). */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {announcement}
+      </div>
 
       {/* ══════════ SIDEBAR ══════════ */}
       <div style={{ width: 260, flexShrink: 0, background: '#111C35', flexDirection: 'column', overflow: 'hidden' }} className="hidden md:flex">
@@ -860,6 +877,7 @@ function ChatInner() {
                 onChange={handleTextarea}
                 onKeyDown={handleKey}
                 placeholder={mode === 'verify' ? "Le député X a voté contre l'augmentation du SMIC…" : 'Posez une question sur vos élus…'}
+                aria-label={mode === 'verify' ? 'Affirmation à vérifier' : 'Votre question'}
                 rows={1}
                 style={{ resize: 'none', outline: 'none', border: 'none', background: 'transparent', fontFamily: 'var(--font-sans)', fontSize: 15, color: dk ? 'rgba(255,255,255,0.88)' : '#1B2B50', width: '100%', display: 'block', lineHeight: 1.6, maxHeight: 140, overflowY: 'auto' }}
               />
@@ -883,9 +901,10 @@ function ChatInner() {
                 <button
                   onClick={submit}
                   disabled={!canSend}
+                  aria-label={mode === 'verify' ? "Envoyer l'affirmation à vérifier" : 'Envoyer la question'}
                   style={{ width: 34, height: 34, borderRadius: 9, background: canSend ? '#1B2B50' : (dk ? '#1E2D4A' : '#D1D5DB'), display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'default', transition: 'background 150ms', flexShrink: 0, border: 'none' }}
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                  <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 2L11 13"/><path d="M22 2 15 22 11 13 2 9l20-7z"/>
                   </svg>
                 </button>
