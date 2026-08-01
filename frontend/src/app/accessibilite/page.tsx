@@ -9,7 +9,6 @@ export const metadata: Metadata = {
 }
 
 const pStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }
-const liStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)' }
 
 export default function AccessibilitePage() {
   return (
@@ -38,34 +37,31 @@ export default function AccessibilitePage() {
       </LegalSection>
 
       <LegalSection title="Résultats des tests">
-        <p style={pStyle}>Non-conformités identifiées à ce jour :</p>
-        <ul style={{ margin: '10px 0 0', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <li style={liStyle}>
-            <strong>Texte alternatif minimal sur les photos de député</strong> - l&apos;attribut <code>alt</code>{' '}
-            des portraits contient uniquement le nom du député, sans contexte descriptif (critère RGAA 1.1 / WCAG 1.1.1).
-          </li>
-        </ul>
-        <p style={{ ...pStyle, margin: '14px 0 0' }}>
-          En complément, ces mêmes tests ont confirmé qu&apos;une partie du travail d&apos;accessibilité était déjà en
-          place : l&apos;hémicycle interactif (<code>/votes/[id]</code>) est navigable au clavier avec des libellés{' '}
-          <code>aria-label</code> dynamiques, et la recherche globale expose des rôles <code>dialog</code>/
-          <code>listbox</code> corrects.
+        <p style={pStyle}>
+          Aucune non-conformité n&apos;est actuellement identifiée sur l&apos;échantillon de pages couvert par
+          cette auto-évaluation. Ces tests ont notamment confirmé qu&apos;une partie du travail
+          d&apos;accessibilité était déjà en place : l&apos;hémicycle interactif (<code>/votes/[id]</code>) est
+          navigable au clavier avec des libellés <code>aria-label</code> dynamiques, la recherche globale expose
+          des rôles <code>dialog</code>/<code>listbox</code> corrects, et le défilement animé de la page
+          d&apos;accueil comme les transitions de l&apos;interface respectent la préférence système{' '}
+          <code>prefers-reduced-motion</code>.
         </p>
       </LegalSection>
 
       <LegalSection title="Contenus non accessibles">
         <p style={pStyle}>
-          Les non-conformités listées ci-dessus affectent principalement la page d&apos;accueil et les photos de
-          député. Leur correction est suivie individuellement ; le code source de MonÉlu étant public (voir{' '}
-          <Link href="/mentions-legales" style={{ color: 'var(--dp-text)' }}>mentions légales</Link>), l&apos;avancement
-          de ces corrections est vérifiable dans l&apos;historique du dépôt.
+          Aucun contenu non accessible n&apos;est actuellement identifié à partir de cette auto-évaluation ;
+          celle-ci ne couvre toutefois qu&apos;un échantillon de pages (voir méthode ci-dessus), pas un audit
+          exhaustif. Le code source de MonÉlu étant public (voir{' '}
+          <Link href="/mentions-legales" style={{ color: 'var(--dp-text)' }}>mentions légales</Link>), tout
+          correctif reste vérifiable dans l&apos;historique du dépôt.
         </p>
       </LegalSection>
 
       <LegalSection title="Établissement de cette déclaration">
         <p style={pStyle}>
-          Cette déclaration a été établie le 27 juillet 2026. Elle sera mise à jour au fur et à mesure de la
-          correction des non-conformités listées ci-dessus et de tout nouvel audit.
+          Cette déclaration a été établie le 27 juillet 2026. Elle sera mise à jour au fur et à mesure de tout
+          nouvel audit ou de toute non-conformité identifiée.
         </p>
       </LegalSection>
 

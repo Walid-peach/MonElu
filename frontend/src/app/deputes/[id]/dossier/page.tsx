@@ -80,7 +80,7 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
         <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: 26 }}>
           <div style={{ width: 80, flexShrink: 0 }}>
             <div style={{ borderRadius: 999, overflow: 'hidden', border: `1px solid ${LINE}` }}>
-              <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="xl" />
+              <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="xl" decorative />
             </div>
           </div>
           <div style={{ flex: 1 }}>

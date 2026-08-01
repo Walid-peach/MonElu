@@ -800,7 +800,7 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
                 {deputyInfo?.photoUrl ? (
                   <Image
                     src={deputyInfo.photoUrl}
-                    alt={deputyInfo.name}
+                    alt=""
                     width={94}
                     height={94}
                     style={{ borderRadius: 999, objectFit: 'cover', width: 94, height: 94 }}

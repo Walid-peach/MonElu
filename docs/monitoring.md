@@ -99,3 +99,86 @@ ORDER BY created_at DESC;
 Error reports (`type = 'report'`) that carry a `reply_to` e-mail are the ones a
 user expects a response to. Build a dashboard only once weekly volume makes the
 manual query impractical.
+
+## 5. Supporter API tier: bumping `rate_limit_multiplier` on payment (MON-190, ADR-029)
+
+Per ADR-029: no Stripe/webhook billing is built until a real paying commercial
+API customer exists. Until then, a heavy commercial user is moved to a paid
+tier by hand, reusing MON-98's existing `api_keys.rate_limit_multiplier`
+column and manual issuance flow. This is the runbook for that manual step.
+
+### Step 1 — the customer pays
+
+A commercial user asking for a higher rate limit is pointed at one of:
+
+- **HelloAsso** (default) — the same donation link used on the `/couts`
+  cost-transparency page. Fits a recurring or one-off contribution from an
+  organisation comfortable giving through an association donation rail.
+- **A one-off Stripe payment link**, for a business that needs a proper
+  invoice/receipt HelloAsso doesn't produce. Create a single Stripe Payment
+  Link by hand in the Stripe Dashboard for the agreed amount — no MonÉlu-side
+  Stripe integration, webhook, or API key is involved. Delete or let the link
+  expire after use.
+
+Either way, payment confirmation is a manual check (HelloAsso dashboard /
+Stripe Dashboard / bank statement) — there is no automated hook.
+
+### Step 2 — issue or find their API key
+
+If the customer already has a free-tier key (issued per the process on
+`/developpeurs` — email request to walidelkhoukh99@gmail.com, then a manual
+row insert), skip to Step 3. Otherwise, issue one first:
+
+```bash
+# Generate a raw key and its sha256 hash (never store the raw key).
+# Run in a shell with history disabled/cleared afterward, e.g. `set +o history` first.
+python3 -c "import secrets, hashlib; raw = secrets.token_urlsafe(32); print('raw:', raw); print('hash:', hashlib.sha256(raw.encode()).hexdigest())"
+```
+
+```sql
+INSERT INTO api_keys (key_hash, label, contact_email, rate_limit_multiplier)
+VALUES ('<hash from above>', '<customer/org name>', '<their email>', 4);
+```
+
+Send the customer the raw key over a private channel (email) — it is never
+recoverable from the database afterwards.
+
+### Step 3 — bump the multiplier
+
+`contact_email` is neither unique nor required, so confirm the exact row
+first rather than matching on email alone:
+
+```sql
+SELECT id, label, contact_email, rate_limit_multiplier
+FROM api_keys
+WHERE contact_email = '<their email>' AND revoked_at IS NULL;
+```
+
+Once payment is confirmed, raise that key's multiplier by `id` (effective
+limit is `base * rate_limit_multiplier`, see
+`data/migrations/004_api_keys.sql`):
+
+```sql
+UPDATE api_keys
+SET rate_limit_multiplier = <agreed multiplier>
+WHERE id = <id from the SELECT above>;
+```
+
+Pick the multiplier by agreement with the customer (e.g. 10x-20x for a small
+commercial integration); there is no fixed pricing tier table yet — this is
+one-off, negotiated per customer, consistent with ADR-029 not building a
+`plan` column. The in-process key cache (`api/auth.py`) picks up the change
+within 5 minutes (`_CACHE_TTL_SECONDS`), no deploy needed.
+
+### Step 4 — revoke on non-payment / offboarding
+
+If a paid arrangement ends, either revoke the key entirely or drop it back to
+the default multiplier. Again, confirm the `id` via the `SELECT` above first:
+
+```sql
+-- Revoke outright:
+UPDATE api_keys SET revoked_at = now() WHERE id = <id>;
+
+-- Or just drop back to the free-tier default:
+UPDATE api_keys SET rate_limit_multiplier = 4 WHERE id = <id>;
+```

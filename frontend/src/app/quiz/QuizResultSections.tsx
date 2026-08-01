@@ -69,7 +69,7 @@ function DeputyMatchRow({ match, rank }: { match: QuizDeputyMatch; rank?: number
           {rank}
         </span>
       )}
-      <DeputyAvatar name={match.full_name ?? '?'} photoUrl={match.photo_url} size="sm" />
+      <DeputyAvatar name={match.full_name ?? '?'} photoUrl={match.photo_url} size="sm" decorative />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 15, color: NAVY }}>{match.full_name}</div>
         <div style={{ fontSize: 12.5, color: GRAY, marginTop: 2 }}>
@@ -243,7 +243,7 @@ export function QuizResultSections({
             href={`/deputes/${best.deputy_id}`}
             style={{ ...card, display: 'flex', alignItems: 'center', gap: 20, textDecoration: 'none', borderLeft: `4px solid ${bestHex}` }}
           >
-            <DeputyAvatar name={best.full_name ?? '?'} photoUrl={best.photo_url} size="xl" priority />
+            <DeputyAvatar name={best.full_name ?? '?'} photoUrl={best.photo_url} size="xl" priority decorative />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 20, color: NAVY }}>{best.full_name}</div>
               <div style={{ fontSize: 14, color: GRAY, marginTop: 4 }}>

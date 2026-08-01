@@ -8,6 +8,9 @@ type Props = {
   photoUrl: string | null
   size?: 'sm' | 'lg' | 'xl' | '2xl'
   priority?: boolean
+  /** Set when the deputy's name is already rendered as visible text next to the
+   * avatar, so the image doesn't get announced twice (RGAA 1.1 / WCAG 1.1.1). */
+  decorative?: boolean
 }
 
 const sizes = {
@@ -17,7 +20,7 @@ const sizes = {
   '2xl': { w: 210, h: 262, className: 'text-4xl',           rounded: 'rounded-[14px]' },
 }
 
-export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false }: Props) {
+export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false, decorative = false }: Props) {
   const [imgError, setImgError] = useState(false)
   const { w, h, className, rounded } = sizes[size]
   const style = size === '2xl' ? { width: 210, height: 262, flexShrink: 0 } : undefined
@@ -30,7 +33,7 @@ export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false }: 
       >
         <Image
           src={photoUrl}
-          alt={name}
+          alt={decorative ? '' : name}
           width={w}
           height={h}
           className="object-cover object-top w-full h-full"

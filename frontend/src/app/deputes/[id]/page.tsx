@@ -134,7 +134,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
             {/* Left: photo */}
             <div className="sm:shrink-0" style={{ width: 210 }}>
               <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid var(--dp-border-subtle)`, boxShadow: '0 6px 20px var(--dp-avatar-shadow)' }}>
-                <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="2xl" priority />
+                <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="2xl" priority decorative />
               </div>
             </div>
 

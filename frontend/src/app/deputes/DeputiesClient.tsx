@@ -346,7 +346,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
                       >
                         {/* Deputy */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-                          <DeputyAvatar name={d.full_name} photoUrl={d.photo_url} size="sm" />
+                          <DeputyAvatar name={d.full_name} photoUrl={d.photo_url} size="sm" decorative />
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontWeight: 600, fontSize: 15.5, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {d.full_name}
