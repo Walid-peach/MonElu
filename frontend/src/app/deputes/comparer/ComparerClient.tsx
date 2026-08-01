@@ -79,7 +79,7 @@ function DeputyPicker({
         display: 'flex', alignItems: 'center', gap: 12, background: 'var(--dp-card-bg)',
         border: `1px solid ${LINE}`, borderRadius: 10, padding: '10px 14px',
       }}>
-        <DeputyAvatar name={selected.full_name} photoUrl={selected.photo_url} size="sm" />
+        <DeputyAvatar name={selected.full_name} photoUrl={selected.photo_url} size="sm" decorative />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 15, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {selected.full_name}
@@ -126,7 +126,7 @@ function DeputyPicker({
                 textAlign: 'left',
               }}
             >
-              <DeputyAvatar name={d.full_name} photoUrl={d.photo_url} size="sm" />
+              <DeputyAvatar name={d.full_name} photoUrl={d.photo_url} size="sm" decorative />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {d.full_name}

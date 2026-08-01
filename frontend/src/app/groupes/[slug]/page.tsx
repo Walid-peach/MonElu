@@ -184,7 +184,7 @@ export default async function GroupPage(
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-                      <DeputyAvatar name={m.full_name} photoUrl={m.photo_url} size="sm" />
+                      <DeputyAvatar name={m.full_name} photoUrl={m.photo_url} size="sm" decorative />
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 600, fontSize: 15.5, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {m.full_name}

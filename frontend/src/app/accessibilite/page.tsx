@@ -45,10 +45,6 @@ export default function AccessibilitePage() {
             transitions de l&apos;interface ne tiennent pas compte de la préférence système{' '}
             <code>prefers-reduced-motion</code> (critères RGAA 13.8/13.9 / WCAG 2.3.3).
           </li>
-          <li style={liStyle}>
-            <strong>Texte alternatif minimal sur les photos de député</strong> - l&apos;attribut <code>alt</code>{' '}
-            des portraits contient uniquement le nom du député, sans contexte descriptif (critère RGAA 1.1 / WCAG 1.1.1).
-          </li>
         </ul>
         <p style={{ ...pStyle, margin: '14px 0 0' }}>
           En complément, ces mêmes tests ont confirmé qu&apos;une partie du travail d&apos;accessibilité était déjà en
@@ -60,8 +56,8 @@ export default function AccessibilitePage() {
 
       <LegalSection title="Contenus non accessibles">
         <p style={pStyle}>
-          Les non-conformités listées ci-dessus affectent principalement la page d&apos;accueil et les photos de
-          député. Leur correction est suivie individuellement ; le code source de MonÉlu étant public (voir{' '}
+          La non-conformité listée ci-dessus affecte principalement la page d&apos;accueil. Sa correction est
+          suivie individuellement ; le code source de MonÉlu étant public (voir{' '}
           <Link href="/mentions-legales" style={{ color: 'var(--dp-text)' }}>mentions légales</Link>), l&apos;avancement
           de ces corrections est vérifiable dans l&apos;historique du dépôt.
         </p>
