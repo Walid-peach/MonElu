@@ -152,7 +152,7 @@ export default function MonDeputePage() {
           </div>
 
           <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-            <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="lg" />
+            <DeputyAvatar name={deputy.full_name} photoUrl={deputy.photo_url} size="lg" decorative />
             <div style={{ flex: 1, minWidth: 0 }}>
               <h1 className="font-newsreader text-[clamp(26px,3.5vw,38px)]" style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.015em' }}>
                 {deputy.full_name}
