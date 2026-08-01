@@ -41,11 +41,6 @@ export default function AccessibilitePage() {
         <p style={pStyle}>Non-conformités identifiées à ce jour :</p>
         <ul style={{ margin: '10px 0 0', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <li style={liStyle}>
-            <strong>Animations non désactivables</strong> - le défilement animé de la page d&apos;accueil et les
-            transitions de l&apos;interface ne tiennent pas compte de la préférence système{' '}
-            <code>prefers-reduced-motion</code> (critères RGAA 13.8/13.9 / WCAG 2.3.3).
-          </li>
-          <li style={liStyle}>
             <strong>Texte alternatif minimal sur les photos de député</strong> - l&apos;attribut <code>alt</code>{' '}
             des portraits contient uniquement le nom du député, sans contexte descriptif (critère RGAA 1.1 / WCAG 1.1.1).
           </li>
