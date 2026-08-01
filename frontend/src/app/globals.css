@@ -12,6 +12,19 @@
 @keyframes nudge { 0%,100% { transform: translate(-50%,0); } 50% { transform: translate(-50%,5px); } }
 [data-hint] { animation: nudge 2s ease-in-out infinite; }
 
+/* RGAA 13.8/13.9, WCAG 2.3.3: honor the OS "reduce motion" preference as a
+   CSS-level fallback in addition to the JS useReducedMotion() gates - this
+   catches any transition/animation that isn't already gated in script
+   (MON-194). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 :root {
   --color-bg: theme('colors.gray.off');
   --color-fg: theme('colors.navy.DEFAULT');
