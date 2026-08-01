@@ -130,7 +130,8 @@ If the customer already has a free-tier key (issued per the process on
 row insert), skip to Step 3. Otherwise, issue one first:
 
 ```bash
-# Generate a raw key and its sha256 hash (never store the raw key)
+# Generate a raw key and its sha256 hash (never store the raw key).
+# Run in a shell with history disabled/cleared afterward, e.g. `set +o history` first.
 python3 -c "import secrets, hashlib; raw = secrets.token_urlsafe(32); print('raw:', raw); print('hash:', hashlib.sha256(raw.encode()).hexdigest())"
 ```
 
@@ -144,13 +145,23 @@ recoverable from the database afterwards.
 
 ### Step 3 — bump the multiplier
 
-Once payment is confirmed, raise the key's multiplier (effective limit is
-`base * rate_limit_multiplier`, see `data/migrations/004_api_keys.sql`):
+`contact_email` is neither unique nor required, so confirm the exact row
+first rather than matching on email alone:
+
+```sql
+SELECT id, label, contact_email, rate_limit_multiplier
+FROM api_keys
+WHERE contact_email = '<their email>' AND revoked_at IS NULL;
+```
+
+Once payment is confirmed, raise that key's multiplier by `id` (effective
+limit is `base * rate_limit_multiplier`, see
+`data/migrations/004_api_keys.sql`):
 
 ```sql
 UPDATE api_keys
 SET rate_limit_multiplier = <agreed multiplier>
-WHERE contact_email = '<their email>' AND revoked_at IS NULL;
+WHERE id = <id from the SELECT above>;
 ```
 
 Pick the multiplier by agreement with the customer (e.g. 10x-20x for a small
@@ -162,12 +173,12 @@ within 5 minutes (`_CACHE_TTL_SECONDS`), no deploy needed.
 ### Step 4 — revoke on non-payment / offboarding
 
 If a paid arrangement ends, either revoke the key entirely or drop it back to
-the default multiplier:
+the default multiplier. Again, confirm the `id` via the `SELECT` above first:
 
 ```sql
 -- Revoke outright:
-UPDATE api_keys SET revoked_at = now() WHERE contact_email = '<their email>';
+UPDATE api_keys SET revoked_at = now() WHERE id = <id>;
 
 -- Or just drop back to the free-tier default:
-UPDATE api_keys SET rate_limit_multiplier = 4 WHERE contact_email = '<their email>';
+UPDATE api_keys SET rate_limit_multiplier = 4 WHERE id = <id>;
 ```
