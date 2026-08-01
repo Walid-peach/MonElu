@@ -124,6 +124,10 @@ def report(reunions: list[dict], xsi_type: str) -> None:
         print(f"    {name}: {count}")
     print()
 
+    if not selected:
+        print(f"No réunion of type {xsi_type!r} in this export — nothing to analyse.")
+        return
+
     print("--- sitting days per month ---")
     days: dict[str, set[str]] = collections.defaultdict(set)
     for r in selected:
@@ -167,6 +171,13 @@ def report(reunions: list[dict], xsi_type: str) -> None:
 
     points = [p for r in selected for p in odj_points(r)]
     print(f"--- content quality across {len(points)} ODJ points ---")
+    if not points:
+        # reunionInitParlementaire_type and most commission records carry a free-text
+        # ODJ.convocationODJ.item instead of structured pointsODJ entries.
+        print("    no structured ODJ points on this réunion type — nothing to measure.")
+        print()
+        cancellations(reunions, selected, xsi_type)
+        return
     with_dossier = sum(
         1 for p in points if (p.get("dossiersLegislatifsRefs") or {}).get("dossierRef")
     )
@@ -191,6 +202,11 @@ def report(reunions: list[dict], xsi_type: str) -> None:
     print("    most common stub objets:", stubs.most_common(5))
     print()
 
+    cancellations(reunions, selected, xsi_type)
+
+
+def cancellations(reunions: list[dict], selected: list[dict], xsi_type: str) -> None:
+    """Report cancellation volume and how much notice a cancellation gives."""
     print("--- cancellations (the mutability question, MON-209) ---")
     print("  across the whole export:")
     for state, count in collections.Counter(
