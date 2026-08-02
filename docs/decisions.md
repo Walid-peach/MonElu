@@ -717,6 +717,87 @@ The `themes` summary added for the MON-203 share card is therefore stripped from
 
 ---
 
+## ADR-030 — Agenda: one denormalized table, soft-state refresh, séance publique only (MON-209)
+
+**Date:** 2026-08-02
+**Status:** Final
+
+**Decision:** The MON-110 agenda ingestion lands in a single new table, scoped to séance publique, refreshed by upsert with no DELETE.
+
+**1. One denormalized `agenda_items` table, not two, and not an extension of `votes`.**
+One row per ODJ point, with the parent réunion's fields inlined.
+`votes` is keyed on the AN scrutin uid and only exists once a vote has happened; an agenda item may never become a scrutin at all, and 69 % of them carry no dossier reference to become one by.
+The exact column set MON-210 must create:
+
+```sql
+CREATE TABLE IF NOT EXISTS agenda_items (
+    point_uid       TEXT PRIMARY KEY,        -- ODJ point uid, e.g. RUANR5L17S2026IDS29879PT50907
+    reunion_uid     TEXT NOT NULL,           -- parent réunion uid
+    sitting_start   TIMESTAMPTZ NOT NULL,    -- réunion timeStampDebut
+    sitting_end     TIMESTAMPTZ,             -- réunion timeStampFin
+    objet           TEXT,                    -- free text; may be a one-word stub
+    point_type      TEXT,                    -- typePointODJ ("Vote solennel", "Discussion", …)
+    travaux_nature  TEXT,                    -- natureTravauxODJ (ODJPR | ODJSN | ODJAN)
+    procedure_label TEXT,                    -- point procedure; present on ~5 % of points
+    dossier_id      TEXT,                    -- dossiersLegislatifsRefs.dossierRef; joins votes.dossier_id
+    reunion_etat    TEXT NOT NULL,           -- réunion cycleDeVie.etat (Confirmé | Annulé | Supprimé | Eventuel)
+    point_etat      TEXT,                    -- point cycleDeVie.etat
+    published_at    DATE,                    -- cycleDeVie.chrono.creation, when the item was scheduled
+    cancelled_at    DATE,                    -- cycleDeVie.chrono.cloture, set when cancelled
+    objet_hash      TEXT,                    -- sha256 of objet; drives summary regeneration
+    summary_plain   TEXT,                    -- Groq one-liner; NULL for stubs, by design
+    theme           TEXT,                    -- one of VALID_THEMES, or NULL
+    last_seen_at    TIMESTAMPTZ NOT NULL,    -- stamped on every ingestion run
+    ingested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+`point_uid` is verified present and unique across all 3 644 séance ODJ points in the export, so it is a safe natural key and no surrogate is needed (MON-77 removed exactly such a surrogate elsewhere).
+Index `sitting_start` (every API query is a date window) and `dossier_id` (the join to `votes`).
+No dbt mart: the API reads this table directly, as ADR-026 established for group pages.
+
+**2. Refresh is soft-state plus `last_seen_at`. The upsert-only rule survives intact.**
+Ingestion upserts on `point_uid` with `ON CONFLICT DO UPDATE` and stamps `last_seen_at` on every row it touches, including unchanged ones.
+Nothing is ever deleted.
+The API surfaces an item only when it was seen in the most recent completed ingestion run and its state is not `Annulé`/`Supprimé`.
+
+This covers two distinct disappearance modes, which is why the freshness stamp is not redundant with `etat`:
+the Assemblée usually *marks* a cancelled sitting (`Supprimé`, 27 % of séances), but an item silently dropped from the export would otherwise sit on the page as a phantom forever, and MON-208 could not measure how often that happens.
+
+**3. Séance publique only (`@xsi:type = seance_type`).**
+Commission réunions are not ingested, despite being the bulk of the export and having better dossier coverage (72 % vs 31 %).
+
+**4. Dossier linking.** An item links to a scrutin through `dossier_id = votes.dossier_id`.
+Where a dossier has several scrutins, bind to the earliest one on or after the sitting date, so an item points at the vote it actually scheduled rather than an unrelated later reading of the same bill.
+Where no scrutin exists yet, the link falls back to the official AN dossier page, the construction MON-89 already uses on vote cards.
+
+**5. Summaries are generated only where there is something to summarize.**
+Groq `llama-3.3-70b-versatile` at temperature 0.1, reusing the prompt and the `VALID_THEMES` set from `scripts/generate_vote_summaries.py`.
+Items whose `objet` is a stub get **no LLM call and no summary**; the UI renders `point_type` instead.
+A summary is regenerated when `objet_hash` changes.
+
+**Reason:**
+
+- **Why a new table rather than extending `votes`:** the two have different lifecycles and different cardinality. An agenda item exists before, and often without, a vote. Forcing them into `votes` would mean nullable-everything rows that break every existing query's assumption that a row means a vote happened, and would corrupt `mart_vote_summary` and the RAG vote chunks downstream.
+- **Why denormalized rather than a `reunions` + `agenda_items` pair:** every read is "points for a date window", so the join would be paid on every request to save roughly 1 000 duplicated sitting rows. At this scale normalization buys nothing. Cancelling a sitting updates its handful of point rows in one statement.
+- **Why soft-state over full-replace:** a delete-and-reinsert window breaks the no-DELETE rule outright, discards the record that something *was* scheduled and then pulled (which is itself civic information), and makes a mid-run ingestion failure visible to users as an empty agenda. Upsert keeps the pipeline re-runnable at any time, which is the property CLAUDE.md decision 8 exists to protect.
+- **Why `last_seen_at` and not just `etat`:** `etat` covers cancellations the Assemblée announces. It cannot cover an item that quietly vanishes from the export. MON-208 deliberately deferred measuring silent churn because the feed exposes only current values; the freshness stamp makes that unmeasured risk structurally harmless instead of leaving it as an open question the page would eventually expose.
+- **Why séance-only, against the better dossier coverage of commissions:** "what your committee is hearing this week" is a different product from "what gets voted this week", and MonÉlu's subject is votes. Ingesting commissions to keep them in reserve would double the summary spend and the ingestion surface for a product decision not yet taken. The parser is type-agnostic, so adding them later is a `--type` argument and a backfill, not a redesign.
+- **Why the earliest scrutin on or after the sitting date:** a dossier accumulates scrutins across readings and years. Binding to the latest would make a 2024 agenda item link to a 2026 vote on the same bill; binding to the earliest overall would link forward to a vote that had already happened. Neither is what "here is how that sitting turned out" means.
+- **Why no summary for stubs:** 16 % of ODJ points have `objet` values whose entire content is `Discussion` or `Questions au Gouvernement`. Sending one word to an LLM and rendering the result would produce invented specifics on a civic-transparency site, which is worse than showing the type label. Measured in MON-208, raised on MON-211.
+
+**Impact:**
+- MON-210 implements exactly the table above in `data/migrations/009_agenda.sql`, with no further schema decisions to make.
+- MON-212's `GET /agenda` must filter on both freshness and state; an item not seen in the last run is invisible regardless of its `etat`.
+- MON-213 renders `point_type` wherever `summary_plain` is NULL, and never renders a placeholder summary.
+- CLAUDE.md decision 8 ("Upsert-only ingestion") is **unchanged and now applies here too**. This ADR does not create an exception to it; it shows the rule holds for a mutable source given a freshness column.
+- Out of scope, deliberately: RAG indexing of agenda chunks, alert triggers (MON-91, and ADR-002 still defers the dispatch machinery), and bill-timeline deep links (MON-105).
+- Scope note carried from MON-208 for MON-213: `Vote solennel` (84 points over two years) is the headline section and `Suite de la discussion` should be collapsed rather than listed per day, since the latter repeats across consecutive days of one bill.
+
+**Trigger to revisit:** commission agenda demand (the parser already supports it, so this is a product call, not an engineering one); the AN publishing a real REST agenda API, which would supersede ADR-010's ZIP-only constraint; or observed phantom items surviving on the page, which would mean `last_seen_at` is being stamped incorrectly rather than that the model is wrong.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -732,3 +813,4 @@ The `themes` summary added for the MON-203 share card is therefore stripped from
 11. Quiz share answers may be stored only when the sharer opts in (`include_answers`, default off) for friend comparison (ADR-028) — never store answers by default, never add a server-side compare endpoint, and gate any *derived* field that re-encodes them the same way (`detail`, `themes`)
 12. When in doubt: check what's actually deployed before writing new code
 13. Sustainability funding is donations-first via HelloAsso, with the existing `api_keys.rate_limit_multiplier` (ADR-029, MON-116/MON-98) as the paid-tier mechanism — do not build Stripe/webhook billing until a real paying commercial API customer exists
+14. Agenda ingestion is séance publique only, upserted into one `agenda_items` table and never deleted (ADR-030, MON-110) - an item is visible only when it was seen in the latest ingestion run and is not cancelled; never generate a summary for a stub `objet`
