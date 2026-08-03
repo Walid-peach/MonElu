@@ -76,6 +76,11 @@ Then comment on the epic (`save_comment`) with the plan summary and links, and m
 
 Print the created sub-issue ids and URLs in execution order, marking which one `/solve-mon` should pick up first and which are blocked on an ADR.
 
+Also publish the plan as an Artifact: load the `artifact-design` skill first, then write an HTML file to the session scratchpad directory and publish it with the `Artifact` tool.
+Render the sub-issues as a dependency-ordered chain (numbered nodes, connector between blocked/blocking steps), each card carrying its title linked to the Linear issue URL, one-line scope, and dependency note.
+Use a status line noting how many sub-issues exist, how many are created, and the epic's current state.
+If this report follows step 6 (issues actually created), link the real MON-ids; if the user has not yet approved creation, publish the draft plan instead and mark it as not yet filed - either way, keep the same file path across a single planning session so re-publishing after Linear writes updates the same artifact URL instead of minting a new one.
+
 ## Guard rails
 
 - This skill never writes code, never branches, never opens PRs.
