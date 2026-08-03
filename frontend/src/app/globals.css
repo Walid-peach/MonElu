@@ -12,6 +12,26 @@
 @keyframes nudge { 0%,100% { transform: translate(-50%,0); } 50% { transform: translate(-50%,5px); } }
 [data-hint] { animation: nudge 2s ease-in-out infinite; }
 
+/* MON-207/MON-214: shared skeleton shimmer for ContentSkeleton's SkeletonBlock.
+   Neutralized by the prefers-reduced-motion rule below (animation-duration
+   forced to 0.001ms), same mechanism as the rest of MON-194's motion gating. */
+.dp-skeleton-block {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--dp-border-subtle) 25%,
+    var(--dp-border) 37%,
+    var(--dp-border-subtle) 63%
+  );
+  background-size: 400% 100%;
+  animation: dp-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes dp-skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 /* RGAA 13.8/13.9, WCAG 2.3.3: honor the OS "reduce motion" preference as a
    CSS-level fallback in addition to the JS useReducedMotion() gates - this
    catches any transition/animation that isn't already gated in script
