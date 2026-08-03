@@ -452,11 +452,12 @@ async function apiFetchOptional<T>(path: string, opts?: { revalidate?: number })
   throw new Error(`API error: ${lastStatus}`)
 }
 
-async function apiPost<T>(path: string, body: unknown): Promise<T> {
+async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal,
   })
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   return res.json()
@@ -572,8 +573,10 @@ export const api = {
     // Immutable snapshots — cache like chat shares / verifications.
     getShare: (id: string) => apiFetch<QuizShareResult>(`/quiz/share/${id}`, { revalidate: 86400 }),
   },
-  search: (question: string) => apiPost<SearchResult>('/search/', { question }),
-  verify: (claim: string) => apiPost<VerifyResult>('/verify/', { claim }),
+  search: (question: string, signal?: AbortSignal) =>
+    apiPost<SearchResult>('/search/', { question }, signal),
+  verify: (claim: string, signal?: AbortSignal) =>
+    apiPost<VerifyResult>('/verify/', { claim }, signal),
   // Verdicts are immutable snapshots (ADR-022) — cache aggressively.
   verification: (id: string) => apiFetch<VerifyResult>(`/verify/${id}`, { revalidate: 86400 }),
   // Chat shares are immutable snapshots too (ADR-024) — same caching approach.

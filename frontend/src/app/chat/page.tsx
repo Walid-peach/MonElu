@@ -9,6 +9,7 @@ import { api } from '@/lib/api'
 import type { SearchResult, VerifyResult } from '@/lib/api'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { VerdictCard } from '@/components/VerdictCard'
+import { AsyncStatus } from '@/components/ui/AsyncStatus'
 import { mdToHtml, mapSource, CONFIDENCE_META, CONFIDENCE_EXPLANATION } from '@/lib/chatFormat'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -19,7 +20,9 @@ type UserMsg    = { role: 'user'; text: string }
 type AsstMsg    = { role: 'assistant'; result: SearchResult }
 type VerdictMsg = { role: 'verdict'; result: VerifyResult }
 type TypingMsg  = { role: 'typing'; verifying?: boolean }
-type ErrMsg     = { role: 'error'; text: string }
+// `retry` is omitted for errors restored from older, pre-MON-216 stored
+// conversations — AsyncStatus simply hides the retry affordance when absent.
+type ErrMsg     = { role: 'error'; text: string; retry?: { kind: 'search' | 'verify'; value: string } }
 type Message    = UserMsg | AsstMsg | VerdictMsg | TypingMsg | ErrMsg
 
 type StoredMsg = UserMsg | AsstMsg | VerdictMsg | ErrMsg  // no typing — never persisted
@@ -94,6 +97,7 @@ const VERIFY_MAX_LENGTH = 500
 const VERIFY_EXAMPLE_CLAIM = '« Le député X a voté contre l’augmentation du SMIC »'
 const VERIFY_LOADING_TEXT =
   'Recherche des scrutins correspondants et de la position enregistrée du député…'
+const SEARCH_LOADING_TEXT = 'Recherche dans les votes et profils des députés…'
 
 const VERIFY_NUDGE_TEXT =
   'Cela ressemble à une affirmation - la vérifier contre les scrutins officiels ?'
@@ -156,6 +160,7 @@ function ChatInner() {
   const activeConvRef = useRef<string | null>(null)  // sync for use inside callbacks
   const isNewConvRef  = useRef(false)               // sync counterpart so setMessages updater never closes over stale value
   const sentRef       = useRef(false)
+  const activeAbortRef = useRef<AbortController | null>(null)  // in-flight search/verify request, for the AsyncStatus cancel affordance
 
   // Keep ref in sync with state
   useEffect(() => { activeConvRef.current = activeConvId }, [activeConvId])
@@ -232,9 +237,11 @@ function ChatInner() {
 
     setMessages(prev => [...prev, { role: 'user', text: q }, { role: 'typing' }])
     setLoading(true)
+    const controller = new AbortController()
+    activeAbortRef.current = controller
 
     try {
-      const result = await api.search(q)
+      const result = await api.search(q, controller.signal)
       // Read localStorage once, outside the updater, to avoid repeated I/O
       // and to ensure the snapshot is consistent for title/createdAt lookups.
       const id = activeConvRef.current!
@@ -256,10 +263,21 @@ function ChatInner() {
         return next
       })
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Cancel reads as "return to editing," not "silently swallow what I
+        // typed": drop both the user bubble and the typing indicator it
+        // triggered (safe to assume they're the trailing pair - nothing else
+        // can be appended between them while `loading` blocks new submits)
+        // and restore the text into the input.
+        setMessages(prev => prev.slice(0, -2))
+        setInputVal(q)
+        return
+      }
       const is429 = err instanceof Error && err.message.includes('429')
       const errMsg: ErrMsg = {
         role: 'error',
         text: is429 ? 'Trop de questions, patientez une minute.' : 'Erreur de connexion. Réessayez.',
+        retry: { kind: 'search', value: q },
       }
       const id = activeConvRef.current!
       const isNew = isNewConvRef.current
@@ -277,6 +295,7 @@ function ChatInner() {
       })
     } finally {
       setLoading(false)
+      activeAbortRef.current = null
     }
   }, [loading])
 
@@ -298,9 +317,11 @@ function ChatInner() {
 
     setMessages(prev => [...prev, { role: 'user', text: claim }, { role: 'typing', verifying: true }])
     setLoading(true)
+    const controller = new AbortController()
+    activeAbortRef.current = controller
 
     try {
-      const result = await api.verify(claim)
+      const result = await api.verify(claim, controller.signal)
       const id = activeConvRef.current!
       const isNew = isNewConvRef.current
       const existingConvs = loadConversations()
@@ -320,7 +341,12 @@ function ChatInner() {
         return next
       })
     } catch (err) {
-      const errMsg: ErrMsg = { role: 'error', text: verifyErrorMessage(err) }
+      if (err instanceof Error && err.name === 'AbortError') {
+        setMessages(prev => prev.slice(0, -2))
+        setInputVal(claim)
+        return
+      }
+      const errMsg: ErrMsg = { role: 'error', text: verifyErrorMessage(err), retry: { kind: 'verify', value: claim } }
       const id = activeConvRef.current!
       const isNew = isNewConvRef.current
       const existingConvs = isNew ? loadConversations() : null
@@ -337,6 +363,7 @@ function ChatInner() {
       })
     } finally {
       setLoading(false)
+      activeAbortRef.current = null
     }
   }, [loading])
 
@@ -344,6 +371,11 @@ function ChatInner() {
     if (mode === 'verify') submitClaim(inputVal)
     else send(inputVal)
   }, [mode, inputVal, submitClaim, send])
+
+  // AsyncStatus's cancel affordance while a search/verify request is in flight.
+  const cancelActive = useCallback(() => {
+    activeAbortRef.current?.abort()
+  }, [])
 
   // Nudge chip (ADR-023): explicit click switches to verify mode and submits
   // the user's original text through POST /verify/. This is the only path
@@ -656,17 +688,13 @@ function ChatInner() {
                 if (msg.role === 'typing') return (
                   <div key={i} style={{ display: 'flex', gap: 13, marginBottom: 28, alignItems: 'flex-start' }}>
                     <AiAvatar />
-                    {msg.verifying ? (
-                      <div style={{ background: bg1, border: `1px solid ${dk ? 'rgba(255,255,255,0.07)' : '#EDEEF0'}`, borderRadius: '5px 18px 18px 18px', padding: '15px 20px', marginTop: 2, fontSize: 13.5, color: txt2 }} role="status">
-                        {VERIFY_LOADING_TEXT}
-                      </div>
-                    ) : (
-                      <div style={{ background: bg1, border: `1px solid ${dk ? 'rgba(255,255,255,0.07)' : '#EDEEF0'}`, borderRadius: '5px 18px 18px 18px', padding: '15px 20px', display: 'flex', gap: 5, alignItems: 'center', marginTop: 2 }}>
-                        <Dot delay="0ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
-                        <Dot delay="180ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
-                        <Dot delay="360ms" color={dk ? 'rgba(255,255,255,0.28)' : '#C4C8CF'} />
-                      </div>
-                    )}
+                    <div style={{ background: bg1, border: `1px solid ${dk ? 'rgba(255,255,255,0.07)' : '#EDEEF0'}`, borderRadius: '5px 18px 18px 18px', padding: '15px 20px', marginTop: 2, color: txt2 }}>
+                      <AsyncStatus
+                        status={msg.verifying ? VERIFY_LOADING_TEXT : SEARCH_LOADING_TEXT}
+                        onCancel={cancelActive}
+                        className="flex flex-col gap-1"
+                      />
+                    </div>
                   </div>
                 )
 
@@ -682,7 +710,30 @@ function ChatInner() {
                 if (msg.role === 'error') return (
                   <div key={i} style={{ display: 'flex', gap: 13, marginBottom: 28, alignItems: 'flex-start' }}>
                     <AiAvatar />
-                    <div style={{ flex: 1, marginTop: 4, fontSize: 15, lineHeight: 1.75, color: '#DC2626' }}>{msg.text}</div>
+                    {/* AsyncStatus's text has no color of its own — it inherits, so the
+                        error red from the pre-MON-216 plain-text rendering is preserved
+                        here rather than added to the shared component. */}
+                    <div style={{ flex: 1, marginTop: 4, fontSize: 15, lineHeight: 1.75, color: '#DC2626' }}>
+                      <AsyncStatus
+                        status={msg.text}
+                        error={msg.text}
+                        onRetry={
+                          msg.retry
+                            ? () => {
+                                // Every error message is always immediately preceded by its
+                                // own user message (append-only; error/typing only ever
+                                // follow their own user message) - strip that pair before
+                                // resubmitting so retry doesn't leave a duplicate user bubble.
+                                const retry = msg.retry!
+                                setMessages(prev => prev.filter((_, idx) => idx !== i && idx !== i - 1))
+                                if (retry.kind === 'verify') submitClaim(retry.value)
+                                else send(retry.value)
+                              }
+                            : undefined
+                        }
+                        className="flex flex-col gap-1"
+                      />
+                    </div>
                   </div>
                 )
 
@@ -938,10 +989,6 @@ function AiAvatar() {
   )
 }
 
-function Dot({ delay, color }: { delay: string; color: string }) {
-  return <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 999, background: color, animation: 'monelu-bounce 1.3s ease infinite', animationDelay: delay }} />
-}
-
 function ActionBtn({ children, onClick, dark }: { children: React.ReactNode; onClick?: () => void; dark: boolean }) {
   const [hover, setHover] = useState(false)
   return (
@@ -956,17 +1003,10 @@ function ActionBtn({ children, onClick, dark }: { children: React.ReactNode; onC
   )
 }
 
-function KeyframeStyle() {
-  return <style>{`@keyframes monelu-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
-}
-
 export default function ChatPage() {
   return (
-    <>
-      <KeyframeStyle />
-      <Suspense fallback={<div style={{ padding: 32, color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
-        <ChatInner />
-      </Suspense>
-    </>
+    <Suspense fallback={<div style={{ padding: 32, color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
+      <ChatInner />
+    </Suspense>
   )
 }
