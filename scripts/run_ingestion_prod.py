@@ -168,6 +168,15 @@ def main() -> None:
             if t_party is None:
                 soft_failures.append("Fix party + department names")
 
+            # Non-critical: the agenda export is a separate feed (MON-210,
+            # ADR-030) from the scrutins/deputies ZIPs above, so a failure here
+            # must not block core votes/deputies/positions ingestion.
+            t_agenda = run_step(
+                "Agenda", "ingest_agenda.py", ["--since", args.since], critical=False
+            )
+            if t_agenda is None:
+                soft_failures.append("Agenda")
+
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
         n_positions = row_count(lock_conn, "vote_positions")
@@ -211,6 +220,7 @@ def main() -> None:
         log.info("║  Votes     : %6d   (%5.1fs)      ║", n_votes, t_votes)
         log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
         log.info("║  Party fix :          (%s)      ║", _fmt(t_party))
+        log.info("║  Agenda    :          (%s)      ║", _fmt(t_agenda))
         log.info("║  Summaries :          (%s)      ║", _fmt(t_summaries))
         log.info("╠══════════════════════════════════════╣")
         log.info("║  Total time: %.1fs                   ║", total_elapsed)

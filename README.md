@@ -448,6 +448,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `ingest_votes.py` | Downloads Scrutins ZIP, upserts votes (`--since` flag) |
 | `ingest_positions.py` | Extracts individual deputy positions from Scrutins ZIP |
 | `ingest_organes.py` | Parses `Organes.json` for parliamentary group membership |
+| `ingest_agenda.py` | Downloads the Agenda ZIP, upserts séance publique ODJ points (`--since` flag, MON-210) |
 | `run_ingestion_prod.py` | Orchestrates the full pipeline with timing summary |
 | `update_party.py` | Resolves GP party names and expands department codes |
 | `backfill_party_labels.py` | Enforces the 12 canonical group labels behind `/groups/{slug}` |

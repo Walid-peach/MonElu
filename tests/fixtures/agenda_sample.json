@@ -1,0 +1,109 @@
+[
+  {
+    "uid": "RUANR5L17S2026IDS29879",
+    "@xsi:type": "seance_type",
+    "timeStampDebut": "2026-01-14T09:30:00",
+    "timeStampFin": "2026-01-14T13:00:00",
+    "cycleDeVie": {
+      "etat": "Confirmé",
+      "chrono": { "creation": "2026-01-05", "cloture": null }
+    },
+    "ODJ": {
+      "pointsODJ": {
+        "pointODJ": {
+          "uid": "RUANR5L17S2026IDS29879PT50907",
+          "objet": "Discussion du projet de loi de finances pour 2027",
+          "typePointODJ": "Discussion générale",
+          "natureTravauxODJ": "ODJAN",
+          "procedure": { "libelle": "Procédure accélérée" },
+          "dossiersLegislatifsRefs": { "dossierRef": "DLR5L17N53980" },
+          "cycleDeVie": {
+            "etat": "Confirmé",
+            "chrono": { "creation": "2026-01-05", "cloture": null }
+          }
+        }
+      }
+    }
+  },
+  {
+    "uid": "RUANR5L17S2026IDS29900",
+    "@xsi:type": "seance_type",
+    "timeStampDebut": "2026-01-15T15:00:00",
+    "timeStampFin": "2026-01-15T20:00:00",
+    "cycleDeVie": {
+      "etat": "Confirmé",
+      "chrono": { "creation": "2026-01-06", "cloture": null }
+    },
+    "ODJ": {
+      "pointsODJ": {
+        "pointODJ": [
+          {
+            "uid": "RUANR5L17S2026IDS29900PT50920",
+            "objet": "Questions au Gouvernement",
+            "typePointODJ": "Questions au Gouvernement",
+            "natureTravauxODJ": "ODJAN",
+            "cycleDeVie": {
+              "etat": "Confirmé",
+              "chrono": { "creation": "2026-01-06", "cloture": null }
+            }
+          },
+          {
+            "uid": "RUANR5L17S2026IDS29900PT50921",
+            "objet": "Vote solennel sur la proposition de loi relative à la transition énergétique",
+            "typePointODJ": "Vote solennel",
+            "natureTravauxODJ": "ODJAN",
+            "dossiersLegislatifsRefs": { "dossierRef": "DLR5L17N54012" },
+            "cycleDeVie": {
+              "etat": "Confirmé",
+              "chrono": { "creation": "2026-01-06", "cloture": null }
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "uid": "RUANR5L17S2026IDS29950",
+    "@xsi:type": "seance_type",
+    "timeStampDebut": "2026-01-20T09:30:00",
+    "timeStampFin": "2026-01-20T13:00:00",
+    "cycleDeVie": {
+      "etat": "Annulé",
+      "chrono": { "creation": "2026-01-10", "cloture": "2026-01-18" }
+    },
+    "ODJ": {
+      "pointsODJ": {
+        "pointODJ": {
+          "uid": "RUANR5L17S2026IDS29950PT50999",
+          "objet": "Discussion",
+          "typePointODJ": "Discussion générale",
+          "natureTravauxODJ": "ODJAN",
+          "cycleDeVie": {
+            "etat": "Annulé",
+            "chrono": { "creation": "2026-01-10", "cloture": "2026-01-18" }
+          }
+        }
+      }
+    }
+  },
+  {
+    "uid": "RUANR5L17C2026IDS30000",
+    "@xsi:type": "commission_type",
+    "timeStampDebut": "2026-01-14T09:00:00",
+    "timeStampFin": "2026-01-14T11:00:00",
+    "cycleDeVie": {
+      "etat": "Confirmé",
+      "chrono": { "creation": "2026-01-05", "cloture": null }
+    },
+    "ODJ": {
+      "pointsODJ": {
+        "pointODJ": {
+          "uid": "RUANR5L17C2026IDS30000PT60000",
+          "objet": "Examen du rapport annuel",
+          "typePointODJ": "Examen de rapport",
+          "natureTravauxODJ": "ODJPR"
+        }
+      }
+    }
+  }
+]
