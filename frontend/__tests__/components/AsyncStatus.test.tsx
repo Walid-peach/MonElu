@@ -60,6 +60,21 @@ describe('AsyncStatus', () => {
     expect(onRetry).toHaveBeenCalledTimes(1)
   })
 
+  it('focuses the cancel button on mount when autoFocusAction is set (MON-217)', () => {
+    render(<AsyncStatus status="Recherche…" onCancel={jest.fn()} autoFocusAction />)
+    expect(screen.getByRole('button', { name: /annuler/i })).toHaveFocus()
+  })
+
+  it('focuses the retry button on mount when autoFocusAction is set (MON-217)', () => {
+    render(<AsyncStatus status="Recherche…" error="Échec." onRetry={jest.fn()} autoFocusAction />)
+    expect(screen.getByRole('button', { name: /réessayer/i })).toHaveFocus()
+  })
+
+  it('does not steal focus when autoFocusAction is left off', () => {
+    render(<AsyncStatus status="Recherche…" onCancel={jest.fn()} />)
+    expect(screen.getByRole('button', { name: /annuler/i })).not.toHaveFocus()
+  })
+
   it('does not animate the activity indicator when reduced motion is requested', () => {
     mockReducedMotion = true
     const { container } = render(<AsyncStatus status="Recherche…" />)
