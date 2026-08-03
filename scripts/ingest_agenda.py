@@ -139,6 +139,10 @@ def parse_point(reunion: dict, point: dict) -> dict | None:
         reunion_etat = reunion_life.get("etat") or ""
         reunion_chrono = reunion_life.get("chrono") or {}
 
+        # point_etat is stored as-is from the feed and is not guaranteed to be
+        # updated in lockstep with reunion_etat when a sitting is cancelled —
+        # readers (MON-212) should treat reunion_etat as the authoritative
+        # cancellation signal and point_etat as a secondary, point-level one.
         point_life = point.get("cycleDeVie") or {}
         point_etat = point_life.get("etat") or None
         point_chrono = point_life.get("chrono") or reunion_chrono
@@ -255,8 +259,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest AN séance publique agenda into MonÉlu DB")
     parser.add_argument(
         "--since",
-        default=(date.today() - timedelta(days=90)).isoformat(),
-        help="Only ingest réunions on or after this date (YYYY-MM-DD). Default: rolling 90 days.",
+        # Matches ingest_votes.py / run_ingestion_prod.py's default so a
+        # standalone run behaves the same as the orchestrated one — the
+        # orchestrator always passes --since explicitly, but this default is
+        # what you get running the script directly with no flag.
+        default=(date.today() - timedelta(days=365)).isoformat(),
+        help="Only ingest réunions on or after this date (YYYY-MM-DD). Default: rolling 12 months.",
     )
     parser.add_argument(
         "--zip-path",
