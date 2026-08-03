@@ -11,7 +11,7 @@ import { departmentCode, departmentLabel } from '@/lib/departments'
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 type SortKey = 'nom' | 'region' | 'parti'
 
-const PAGE_SIZE = 10
+export const PAGE_SIZE = 10
 const NAVY = 'var(--dp-text)'
 const CREAM = 'var(--dp-page-bg)'
 const LINE = 'var(--dp-border)'

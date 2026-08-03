@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Explicit factory mock so useSWR is a controllable jest.fn().
@@ -7,6 +7,7 @@ import useSWR from 'swr'
 const mockUseSWR = useSWR as jest.Mock
 
 import { VotesClient } from '@/app/votes/VotesClient'
+import { LOADING_INLINE_MS, LOADING_NO_INDICATOR_MS } from '@/lib/loadingPolicy'
 
 const vote = {
   vote_id: 'v1',
@@ -70,5 +71,48 @@ describe('VotesClient pagination', () => {
     await user.click(screen.getByRole('button', { name: '›' }))
     // Page 2 button should now be active (highlighted)
     expect(screen.getByRole('button', { name: '2' })).toBeInTheDocument()
+  })
+})
+
+describe('VotesClient loading treatment (MON-215)', () => {
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.clearAllMocks()
+  })
+
+  it('does not show a loader for a fast completion under the no-indicator threshold', () => {
+    mockUseSWR.mockReturnValue({ data: makeList(120), isLoading: true })
+    render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+
+    act(() => {
+      jest.advanceTimersByTime(LOADING_NO_INDICATOR_MS - 50)
+    })
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('shows subtle inline activity between the no-indicator and skeleton thresholds', () => {
+    mockUseSWR.mockReturnValue({ data: makeList(120), isLoading: true })
+    render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+
+    act(() => {
+      jest.advanceTimersByTime(LOADING_NO_INDICATOR_MS + 50)
+    })
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('Chargement…')
+    // Inline phase, not the full row-skeleton treatment.
+    expect(status.querySelector('.dp-skeleton-block')).not.toBeInTheDocument()
+  })
+
+  it('shows the layout-matched row skeleton for a delayed completion', () => {
+    mockUseSWR.mockReturnValue({ data: makeList(120), isLoading: true })
+    render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+
+    act(() => {
+      jest.advanceTimersByTime(LOADING_INLINE_MS + 50)
+    })
+    const status = screen.getByRole('status')
+    expect(status).toHaveAttribute('aria-busy', 'true')
+    expect(status.querySelectorAll('.dp-skeleton-block').length).toBeGreaterThan(0)
   })
 })
