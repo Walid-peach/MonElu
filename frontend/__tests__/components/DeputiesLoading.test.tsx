@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react'
 
 import DeputiesLoading from '@/app/deputes/loading'
+import { PAGE_SIZE } from '@/app/deputes/DeputiesClient'
 
 describe('DeputiesLoading (route skeleton)', () => {
+  it('renders one skeleton row per real page row, so the list height does not jump once data lands', () => {
+    render(<DeputiesLoading />)
+    expect(screen.getAllByTestId('deputy-row-skeleton')).toHaveLength(PAGE_SIZE)
+  })
+
   it('exposes aria-busy and a status role for the list region', () => {
     render(<DeputiesLoading />)
     const status = screen.getByRole('status')

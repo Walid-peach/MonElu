@@ -8,6 +8,7 @@ import { SkeletonBlock } from '@/components/ui/ContentSkeleton'
 export function DeputyRowSkeleton() {
   return (
     <div
+      data-testid="deputy-row-skeleton"
       className="grid grid-cols-[1fr_20px] sm:grid-cols-[1fr_260px_34px] gap-3 sm:gap-[18px] px-4 sm:px-[26px] py-[13px]"
       style={{ borderBottom: '1px solid var(--dp-track-bg)' }}
     >

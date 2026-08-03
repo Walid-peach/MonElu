@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react'
 
 import VotesLoading from '@/app/votes/loading'
+import { PAGE_SIZE } from '@/app/votes/VotesClient'
 
 describe('VotesLoading (route skeleton)', () => {
+  it('renders one skeleton row per real page row, so the list height does not jump once data lands', () => {
+    render(<VotesLoading />)
+    expect(screen.getAllByTestId('vote-row-skeleton')).toHaveLength(PAGE_SIZE)
+  })
+
   it('exposes aria-busy and a status role for the list region', () => {
     render(<VotesLoading />)
     const status = screen.getByRole('status')

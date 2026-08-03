@@ -1,13 +1,16 @@
 import { ContentSkeleton, SkeletonBlock } from '@/components/ui/ContentSkeleton'
 import { DeputyRowSkeleton } from './DeputyRowSkeleton'
+import { PAGE_SIZE } from './DeputiesClient'
 
 // /deputes has no client-side loading state of its own (the list is filtered
 // client-side over data already fetched server-side) — the only moment a user
 // ever sees a loading treatment here is this route-level Suspense fallback
 // while the server awaits fetchAllDeputies(). Approximates the hero's height
 // too, not just the list, so landing here doesn't cause a large layout jump
-// once the real page replaces it.
-const ROW_COUNT = 10
+// once the real page replaces it. Matches DeputiesClient's own PAGE_SIZE (the
+// real per-page row count) rather than an arbitrary placeholder, for the same
+// CLS reason as votes/loading.tsx.
+const ROW_COUNT = PAGE_SIZE
 
 export default function DeputiesLoading() {
   return (

@@ -29,7 +29,7 @@ const THEMES = [
   'Autre',
 ]
 
-const PAGE_SIZE = 50
+export const PAGE_SIZE = 50
 
 function shortDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })

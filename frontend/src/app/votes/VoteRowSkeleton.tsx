@@ -9,6 +9,7 @@ import { SkeletonBlock } from '@/components/ui/ContentSkeleton'
 export function VoteRowSkeleton() {
   return (
     <div
+      data-testid="vote-row-skeleton"
       className="grid grid-cols-1 sm:grid-cols-[100px_1fr_180px_260px_36px] gap-1.5 sm:gap-4 px-4 sm:px-[26px] py-4 sm:py-[18px]"
       style={{ borderBottom: '1px solid var(--dp-track-bg)' }}
     >

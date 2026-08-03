@@ -1,11 +1,17 @@
 import { ContentSkeleton, SkeletonBlock } from '@/components/ui/ContentSkeleton'
 import { VoteRowSkeleton } from './VoteRowSkeleton'
+import { PAGE_SIZE } from './VotesClient'
 
 // Route-level Suspense fallback for the initial navigation, while the server
 // awaits VotesPage's api.votes.list() calls. Distinct from VotesClient's own
 // isLoading-gated skeleton, which covers client-side filter/pagination
 // refetches after the page has already mounted.
-const ROW_COUNT = 10
+//
+// Matches VotesClient's own PAGE_SIZE (not a smaller placeholder count):
+// VotesPage fetches and renders up to PAGE_SIZE rows with no client-side
+// windowing, so a shorter skeleton would grow substantially once the real
+// list mounts, causing a large, visible layout jump on first navigation.
+const ROW_COUNT = PAGE_SIZE
 
 export default function VotesLoading() {
   return (
