@@ -97,6 +97,11 @@ describe('ChatPage loading treatment (MON-216)', () => {
 
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
     expect(screen.queryByRole('button', { name: /réessayer/i })).not.toBeInTheDocument()
+    // Cancel reads as "return to editing" — the dangling user bubble is
+    // removed and the text comes back into the input, not lost. The only
+    // remaining occurrence of the text should be the textarea's own value.
+    expect(screen.getAllByText('Quels groupes ont voté pour ?')).toHaveLength(1)
+    expect(screen.getByLabelText('Votre question')).toHaveValue('Quels groupes ont voté pour ?')
   })
 
   it('shows a retry affordance on failure and resubmits the same question', async () => {
@@ -114,6 +119,10 @@ describe('ChatPage loading treatment (MON-216)', () => {
     await waitFor(() => expect(screen.getByText('Réponse test')).toBeInTheDocument())
     expect(mockSearch).toHaveBeenCalledTimes(2)
     expect(mockSearch.mock.calls[1][0]).toBe('Quels groupes ont voté pour ?')
+    // Retry must not leave the failed attempt's user bubble behind alongside
+    // the resubmitted one — exactly one bubble, plus the sidebar conversation
+    // title (also derived from the same text), not two bubbles' worth.
+    expect(screen.getAllByText('Quels groupes ont voté pour ?')).toHaveLength(2)
   })
 
   it('shows the verify-mode contextual status text for claim verification', async () => {

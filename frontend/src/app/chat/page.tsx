@@ -264,7 +264,13 @@ function ChatInner() {
       })
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        setMessages(prev => prev.filter(m => m.role !== 'typing'))
+        // Cancel reads as "return to editing," not "silently swallow what I
+        // typed": drop both the user bubble and the typing indicator it
+        // triggered (safe to assume they're the trailing pair - nothing else
+        // can be appended between them while `loading` blocks new submits)
+        // and restore the text into the input.
+        setMessages(prev => prev.slice(0, -2))
+        setInputVal(q)
         return
       }
       const is429 = err instanceof Error && err.message.includes('429')
@@ -336,7 +342,8 @@ function ChatInner() {
       })
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        setMessages(prev => prev.filter(m => m.role !== 'typing'))
+        setMessages(prev => prev.slice(0, -2))
+        setInputVal(claim)
         return
       }
       const errMsg: ErrMsg = { role: 'error', text: verifyErrorMessage(err), retry: { kind: 'verify', value: claim } }
@@ -712,7 +719,16 @@ function ChatInner() {
                         error={msg.text}
                         onRetry={
                           msg.retry
-                            ? () => (msg.retry!.kind === 'verify' ? submitClaim(msg.retry!.value) : send(msg.retry!.value))
+                            ? () => {
+                                // Every error message is always immediately preceded by its
+                                // own user message (append-only; error/typing only ever
+                                // follow their own user message) - strip that pair before
+                                // resubmitting so retry doesn't leave a duplicate user bubble.
+                                const retry = msg.retry!
+                                setMessages(prev => prev.filter((_, idx) => idx !== i && idx !== i - 1))
+                                if (retry.kind === 'verify') submitClaim(retry.value)
+                                else send(retry.value)
+                              }
                             : undefined
                         }
                         className="flex flex-col gap-1"
