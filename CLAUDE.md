@@ -116,7 +116,7 @@ Assemblée Nationale Open Data (ZIPs)
 **`scripts/`** — Data ingestion and maintenance
 - Scripts fetch ZIPs from the AN open data portal with exponential-backoff retry (5 attempts, 2 s base) and upsert via `ON CONFLICT ... DO UPDATE`
 - `migrate.py` doubles as the Railway start hook (runs before uvicorn in `railway.json`)
-- `run_ingestion_prod.py` orchestrates the full pipeline for production runs
+- `run_ingestion_prod.py` orchestrates the full pipeline for production runs, including `ingest_agenda.py` (MON-210) as a non-critical step - an agenda-feed failure must not block core deputies/votes/positions ingestion
 - `create_dbt_profile.py` generates `transform/profiles.yml` from `DBT_*` env vars (used by CI and deploy workflows)
 
 **`transform/`** — dbt project
@@ -158,6 +158,7 @@ Assemblée Nationale Open Data (ZIPs)
 | `chat_shares` | Stored chat/RAG answer snapshots (MON-66, ADR-024): immutable snapshots behind `/chat/s/<id>` share URLs |
 | `quiz_shares` | Stored quiz result snapshots (MON-139, ADR-025): server-recomputed, immutable snapshots behind `/quiz/s/<id>` share URLs; `result` JSONB optionally carries the sharer's answers when they opt in (MON-184, ADR-028) |
 | `feedback` | Generic user-feedback sink (MON-70, MON-101): `type`-discriminated rows (`chat` thumbs / `report` data-page error reports) with a JSONB `payload`; weekly manual triage query in `docs/monitoring.md` |
+| `agenda_items` | Séance publique ODJ points (MON-210, ADR-030): one denormalized row per point, upserted only - never deleted. `dossier_id` joins `votes.dossier_id`. `last_seen_at` plus `reunion_etat`/`point_etat` (not `DELETE`) are how cancelled or dropped items are reflected |
 
 Important data quirks:
 - `nonVotant` ≠ `abstention`: present in chamber but did not vote vs. formally abstained
