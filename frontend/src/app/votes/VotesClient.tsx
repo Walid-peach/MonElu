@@ -6,6 +6,12 @@ import Link from 'next/link'
 import { api, Vote } from '@/lib/api'
 import { formatDate, themeColors } from '@/lib/utils'
 import { themeSlug } from '@/lib/themes'
+import { AsyncStatus } from '@/components/ui/AsyncStatus'
+import { ContentSkeleton } from '@/components/ui/ContentSkeleton'
+import { useLoadingPhase } from '@/lib/loadingPolicy'
+import { VoteRowSkeleton } from './VoteRowSkeleton'
+
+const SKELETON_ROW_COUNT = 8
 
 type VoteList = { total: number; items: Vote[]; limit: number; offset: number }
 type HeroStat = { value: string; label: string }
@@ -67,6 +73,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
     () => api.votes.list({ result: result || undefined, theme: theme || undefined, search: search || undefined, limit: PAGE_SIZE, offset }),
     { keepPreviousData: true }
   )
+  const loadingPhase = useLoadingPhase(isLoading)
 
   const votes = data?.items ?? (search ? [] : initial.items)
   const total = data?.total  ?? (search ? 0 : initial.total)
@@ -212,8 +219,16 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
               <span>Date</span><span>Scrutin</span><span>Thème</span><span>Résultat</span><span></span>
             </div>
 
-            {isLoading ? (
-              <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 14 }}>Chargement…</div>
+            {loadingPhase === 'content' ? (
+              <ContentSkeleton label="Chargement des scrutins…">
+                {Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
+                  <VoteRowSkeleton key={i} />
+                ))}
+              </ContentSkeleton>
+            ) : loadingPhase === 'inline' ? (
+              <div style={{ padding: '20px 0' }}>
+                <AsyncStatus status="Chargement…" phase="inline" className="flex justify-center" />
+              </div>
             ) : votes.length === 0 ? (
               <div style={{ padding: '40px 26px', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 14 }}>Aucun scrutin trouvé.</div>
             ) : (
