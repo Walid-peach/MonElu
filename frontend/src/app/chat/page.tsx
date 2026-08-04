@@ -692,6 +692,7 @@ function ChatInner() {
                       <AsyncStatus
                         status={msg.verifying ? VERIFY_LOADING_TEXT : SEARCH_LOADING_TEXT}
                         onCancel={cancelActive}
+                        autoFocusAction
                         className="flex flex-col gap-1"
                       />
                     </div>
@@ -731,6 +732,7 @@ function ChatInner() {
                               }
                             : undefined
                         }
+                        autoFocusAction
                         className="flex flex-col gap-1"
                       />
                     </div>

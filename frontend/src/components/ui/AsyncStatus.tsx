@@ -13,6 +13,15 @@ export interface AsyncStatusProps {
   onRetry?: () => void
   /** Cancel affordance shown only while the operation is still in progress. */
   onCancel?: () => void
+  /**
+   * Focuses the cancel/retry button as soon as it mounts. Without this, a
+   * keyboard user who just submitted stays focused on the input they typed
+   * into — which sits later in the DOM than this status region in the usual
+   * chat layout (messages above, input fixed below), so plain forward-Tab
+   * skips over the newly-appeared action entirely (MON-217). Off by default
+   * since not every AsyncStatus placement has that DOM ordering problem.
+   */
+  autoFocusAction?: boolean
   className?: string
 }
 
@@ -28,6 +37,7 @@ export function AsyncStatus({
   error = null,
   onRetry,
   onCancel,
+  autoFocusAction = false,
   className = '',
 }: AsyncStatusProps) {
   const reduceMotion = useReducedMotion()
@@ -54,6 +64,7 @@ export function AsyncStatus({
             <button
               type="button"
               onClick={onCancel}
+              autoFocus={autoFocusAction}
               className="text-sm underline underline-offset-2"
             >
               Annuler
@@ -63,6 +74,7 @@ export function AsyncStatus({
             <button
               type="button"
               onClick={onRetry}
+              autoFocus={autoFocusAction}
               className="text-sm underline underline-offset-2"
             >
               Réessayer
