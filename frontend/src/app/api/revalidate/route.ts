@@ -20,11 +20,17 @@ export async function POST(req: NextRequest) {
   if (!expected || !secretsMatch(provided, expected))
     return new Response('Unauthorized', { status: 401 })
 
+  // Every route family reading ingestion-refreshed data (deputy presence/dissidence,
+  // party rosters, vote lists) needs a line here - `/mon-depute` is exempt because it's
+  // a client component that fetches the API directly, with no ISR cache to invalidate.
   revalidatePath('/')
   revalidatePath('/votes')
   revalidatePath('/deputes')
   revalidatePath('/deputes/[id]', 'page')
   revalidatePath('/votes/[id]', 'page')
+  revalidatePath('/departements/[code]', 'page')
+  revalidatePath('/groupes/[slug]', 'page')
+  revalidatePath('/themes/[slug]', 'page')
   revalidatePath('/sitemap.xml')
 
   return Response.json({ revalidated: true, at: new Date().toISOString() })
