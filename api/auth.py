@@ -41,21 +41,30 @@ def _hash_key(raw_key: str) -> str:
 def _reload_cache() -> None:
     global _cache_by_hash, _cache_loaded_at
     fresh: dict[str, ApiKeyRecord] = {}
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT key_hash, id, label, rate_limit_multiplier
-                FROM api_keys
-                WHERE revoked_at IS NULL
-                """
-            )
-            for row in cur.fetchall():
-                fresh[row["key_hash"]] = ApiKeyRecord(
-                    id=row["id"],
-                    label=row["label"],
-                    rate_limit_multiplier=row["rate_limit_multiplier"],
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT key_hash, id, label, rate_limit_multiplier
+                    FROM api_keys
+                    WHERE revoked_at IS NULL
+                    """
                 )
+                for row in cur.fetchall():
+                    fresh[row["key_hash"]] = ApiKeyRecord(
+                        id=row["id"],
+                        label=row["label"],
+                        rate_limit_multiplier=row["rate_limit_multiplier"],
+                    )
+    except Exception:
+        # Advance the timestamp even on failure (MON-229) - otherwise every
+        # keyed request repeats this blocking query on the event loop until
+        # a reload finally succeeds, stalling all concurrent requests for up
+        # to the statement timeout each time. The stale cache is kept as-is.
+        with _cache_lock:
+            _cache_loaded_at = time.monotonic()
+        raise
     with _cache_lock:
         _cache_by_hash = fresh
         _cache_loaded_at = time.monotonic()

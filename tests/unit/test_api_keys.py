@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 import api.auth as auth
 from api.limiter import rate_limit_key, tiered_limit
 
@@ -38,6 +40,33 @@ def test_resolve_api_key_unknown_key_returns_none():
     auth._cache_loaded_at = time.monotonic()
     with patch.object(auth, "_reload_cache"):
         assert auth.resolve_api_key("not-a-real-key") is None
+    _reset_cache()
+
+
+def test_reload_cache_advances_timestamp_on_failure():
+    """MON-229: a failed reload must still bump _cache_loaded_at, or every
+    subsequent keyed request repeats the blocking DB call until it succeeds."""
+    _reset_cache()
+    record = auth.ApiKeyRecord(id=1, label="Test", rate_limit_multiplier=4)
+    auth._cache_by_hash[auth._hash_key("secret")] = record
+
+    with patch.object(auth, "get_conn", side_effect=RuntimeError("db down")):
+        with pytest.raises(RuntimeError):
+            auth._reload_cache()
+
+    assert auth._cache_loaded_at > 0.0
+    assert auth._cache_by_hash[auth._hash_key("secret")] == record
+    _reset_cache()
+
+
+def test_resolve_api_key_does_not_retry_storm_after_failed_reload():
+    """A failed reload should only be retried after the TTL, not on every request."""
+    _reset_cache()
+    with patch.object(auth, "get_conn", side_effect=RuntimeError("db down")):
+        auth.resolve_api_key("secret")  # first call: attempts + fails + advances timestamp
+        with patch.object(auth, "_reload_cache") as reload_mock:
+            auth.resolve_api_key("secret")  # second call: cache no longer stale, no retry
+        reload_mock.assert_not_called()
     _reset_cache()
 
 
