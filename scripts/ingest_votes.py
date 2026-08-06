@@ -16,6 +16,7 @@ import io
 import json
 import logging
 import os
+import sys
 import zipfile
 from datetime import date, timedelta
 
@@ -40,6 +41,10 @@ AN_BASE_URL = os.getenv("AN_API_BASE_URL", "https://data.assemblee-nationale.fr"
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 SCRUTINS_ZIP_PATH = "/static/openData/repository/17/loi/scrutins/Scrutins.json.zip"
+
+# Abort the run if more than this share of records fail to parse — a silent
+# AN format change should fail loudly, not ship a skeleton dataset (MON-220).
+SKIP_RATE_THRESHOLD = 0.05
 
 
 # ---------------------------------------------------------------------------
@@ -197,11 +202,21 @@ def fetch_all_votes(since: str | None = None) -> list[dict]:
 def upsert_votes(raw_items: list[dict]) -> int:
     """Parse raw scrutin dicts and upsert into votes table. Returns count written."""
     records = [r for item in raw_items if (r := parse_vote(item)) is not None]
-    log.info(
-        "Parsed %d valid records (skipped %d unparseable).",
-        len(records),
-        len(raw_items) - len(records),
-    )
+    skipped = len(raw_items) - len(records)
+    skip_rate = skipped / len(raw_items) if raw_items else 0.0
+    log.info("Parsed %d valid records (skipped %d unparseable).", len(records), skipped)
+    if skip_rate > SKIP_RATE_THRESHOLD:
+        log.error(
+            "High parse failure rate: %d/%d records skipped (%.0f%%). "
+            "Check the AN data format for unexpected changes.",
+            skipped,
+            len(raw_items),
+            skip_rate * 100,
+        )
+        # Abort without upserting: writing the surviving records would still
+        # stamp them with a fresh ingested_at, masking the failure from dbt
+        # source freshness checks (MON-220).
+        sys.exit(1)
     _upsert_records(records)
     return len(records)
 
