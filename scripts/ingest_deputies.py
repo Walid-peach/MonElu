@@ -14,6 +14,7 @@ import io
 import json
 import logging
 import os
+import sys
 import zipfile
 
 import psycopg2
@@ -35,6 +36,10 @@ log = logging.getLogger(__name__)
 
 AN_API_BASE_URL = os.getenv("AN_API_BASE_URL", "https://data.assemblee-nationale.fr")
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Abort the run if more than this share of records fail to parse — a silent
+# AN format change should fail loudly, not ship a skeleton dataset (MON-220).
+SKIP_RATE_THRESHOLD = 0.05
 
 # Static export — one ZIP, one JSON file per deputy
 DEPUTIES_ZIP_PATH = (
@@ -198,7 +203,7 @@ def upsert_deputies(raw_items: list[dict]) -> int:
     skipped = len(raw_items) - len(records)
     skip_rate = skipped / len(raw_items) if raw_items else 0.0
     log.info("Parsed %d valid records (skipped %d unparseable).", len(records), skipped)
-    if skip_rate > 0.05:
+    if skip_rate > SKIP_RATE_THRESHOLD:
         log.error(
             "High parse failure rate: %d/%d records skipped (%.0f%%). "
             "Check the AN data format for unexpected changes.",
@@ -206,6 +211,10 @@ def upsert_deputies(raw_items: list[dict]) -> int:
             len(raw_items),
             skip_rate * 100,
         )
+        # Abort without upserting: writing the surviving records would still
+        # stamp them with a fresh ingested_at, masking the failure from dbt
+        # source freshness checks (MON-220).
+        sys.exit(1)
     _upsert_records(records)
     return len(records)
 
