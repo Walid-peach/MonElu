@@ -13,7 +13,9 @@ Usage:
 import glob
 import logging
 import os
+import re
 import sys
+from collections import defaultdict
 
 import psycopg2
 import psycopg2.extras
@@ -26,6 +28,34 @@ log = logging.getLogger(__name__)
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MIGRATIONS_DIR = os.path.join(PROJECT_ROOT, "data", "migrations")
+
+MIGRATION_PREFIX_RE = re.compile(r"^(\d+)_")
+
+# 005_feedback.sql / 005_verifications.sql were both already applied before this
+# check existed. Renaming applied files would re-run them under the filename-keyed
+# ledger, so they're grandfathered here rather than fixed (MON-226) - this set
+# must never gain new entries.
+GRANDFATHERED_DUPLICATE_PREFIXES = {"005"}
+
+
+def assert_unique_numeric_prefixes(migration_files: list[str]) -> None:
+    """Numeric prefixes are the ordering contract humans read - two files sharing
+    one collide silently once a later migration depends on ordering (MON-226)."""
+    by_prefix = defaultdict(list)
+    for migration_file in migration_files:
+        filename = os.path.basename(migration_file)
+        match = MIGRATION_PREFIX_RE.match(filename)
+        if match:
+            by_prefix[match.group(1)].append(filename)
+
+    duplicates = {
+        prefix: names
+        for prefix, names in by_prefix.items()
+        if len(names) > 1 and prefix not in GRANDFATHERED_DUPLICATE_PREFIXES
+    }
+    if duplicates:
+        details = "; ".join(f"{prefix}: {names}" for prefix, names in sorted(duplicates.items()))
+        raise AssertionError(f"Duplicate migration numeric prefixes found - {details}")
 
 
 def _applied_migrations(conn) -> set[str]:
@@ -50,6 +80,12 @@ def main() -> None:
     migration_files = sorted(glob.glob(os.path.join(MIGRATIONS_DIR, "*.sql")))
     if not migration_files:
         log.error("No migration files found in %s", MIGRATIONS_DIR)
+        sys.exit(1)
+
+    try:
+        assert_unique_numeric_prefixes(migration_files)
+    except AssertionError as exc:
+        log.error(str(exc))
         sys.exit(1)
 
     log.info("Connecting to database…")
