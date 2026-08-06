@@ -21,6 +21,10 @@ import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from api.departments_data import DEPT_NAMES  # noqa: E402
+
 try:
     from scripts._http import download_with_retry
 except ImportError:  # running as a plain file: python scripts/ingest_deputies.py
@@ -118,10 +122,17 @@ def parse_deputy(item: dict) -> dict | None:
         mandate_start = mandat_start_raw[:10] if mandat_start_raw else None
         mandate_end = mandat_end_raw[:10] if mandat_end_raw else None
 
-        # Circonscription / department
+        # Circonscription / department — expand the raw AN code ("75", "2A")
+        # to its full name at insert time (MON-219): department used to reach
+        # the DB as a raw code and rely on the separate, non-critical
+        # update_party.py step to expand it, so a soft-failed update_party
+        # run left every deputy showing raw codes until the next successful
+        # run. Codes absent from DEPT_NAMES (should not happen for current
+        # mandates) fall back to the raw code, same as before this fix.
         place = mandat.get("election", {}).get("lieu", {})
         circonscription = place.get("numCirco")
-        department = place.get("numDepartement")
+        department_code = str(place.get("numDepartement")) if place.get("numDepartement") else None
+        department = DEPT_NAMES.get(department_code, department_code) if department_code else None
 
         # Party (groupe politique) — not available inline in AMO10; both
         # left NULL here and filled by update_party.py, which resolves them
@@ -143,7 +154,7 @@ def parse_deputy(item: dict) -> dict | None:
             "party": party,
             "party_short": party_short,
             "circonscription": str(circonscription) if circonscription else None,
-            "department": str(department) if department else None,
+            "department": department,
             "mandate_start": mandate_start,
             "mandate_end": mandate_end,
             "photo_url": photo_url,

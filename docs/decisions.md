@@ -208,6 +208,18 @@ the RAG index could be built.
 **Result:** 575/577 deputies have real party names. 2 NULL deputies have
 no active parliamentary group — expected edge case, not a bug.
 
+**Update (MON-219):** the department fix above was a second-pass backfill,
+which meant a soft-failed `update_party.py` run left every deputy showing
+raw codes for a full day. `scripts/ingest_deputies.py`'s `parse_deputy()`
+now expands the code to its full name at insert time, importing the shared
+`DEPT_NAMES` map from `api/departments_data.py` (the same map
+`update_party.py` now also imports, instead of keeping its own copy).
+`update_party.py`'s `update_departments()` step stays as a defensive
+backfill for any row still holding a raw code, but is no longer the only
+path to a correct value. Party remains a genuine two-phase dependency —
+AMO10 has no inline party, so `party`/`party_short` are still NULL at
+insert time and only `update_party.py` can fill them.
+
 ---
 
 ## ADR-010 — AN portal has no REST API
