@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MIGRATIONS_DIR = os.path.join(PROJECT_ROOT, "data", "migrations")
 
-MIGRATION_PREFIX_RE = re.compile(r"^(\d+)_")
+MIGRATION_PREFIX_RE = re.compile(r"^(\d{3})_")
 
 # 005_feedback.sql / 005_verifications.sql were both already applied before this
 # check existed. Renaming applied files would re-run them under the filename-keyed
