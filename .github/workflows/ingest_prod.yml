@@ -65,16 +65,19 @@ jobs:
         run: python scripts/run_ingestion_prod.py --since $(python3 -c "from datetime import date, timedelta; print(date.today() - timedelta(days=30))")
 
       - name: Rebuild RAG index
-        if: steps.ingest.outputs.new_votes != '0'
+        # Unconditional: vote corrections (upsert DO UPDATE, delta 0) and
+        # summaries that soft-failed yesterday and succeed today must still
+        # get re-embedded, not just runs with new votes (MON-218).
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python -m rag.pipeline.index_manager build
 
-      # dbt install + profile run unconditionally: snapshots and source
-      # freshness below must run even on no-new-votes days (freshness exists
-      # to alarm on silence; party changes arrive without new votes).
+      # dbt install + profile run unconditionally: snapshots, source
+      # freshness, and dbt run below must all run even on no-new-votes days
+      # (freshness exists to alarm on silence; party changes and vote
+      # corrections arrive without new votes - MON-218).
       - name: Install dbt
         run: pip install "dbt-core>=1.9,<1.10" "dbt-postgres>=1.9,<1.10"
 
@@ -88,7 +91,9 @@ jobs:
         run: python3 scripts/create_dbt_profile.py
 
       - name: Run dbt transformations
-        if: steps.ingest.outputs.new_votes != '0'
+        # Unconditional: a deputy switching groups or a corrected vote (delta
+        # 0) must still rebuild mart_party_alignment/mart_deputy_scorecard,
+        # not wait for the next new-vote day - weeks during recess (MON-218).
         run: |
           cd transform
           dbt deps --profiles-dir .
