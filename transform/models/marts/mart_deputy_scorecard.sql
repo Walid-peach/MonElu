@@ -10,8 +10,13 @@ votes as (
     select * from {{ ref('stg_votes') }}
 ),
 
+-- Deputies are re-upserted on every successful ingestion run, recess or not
+-- (see transform/models/staging/sources.yml), so their ingested_at is the
+-- cron-death detector. stg_vote_positions.ingested_at only advances when a
+-- new vote falls inside the cron's --since window, which legitimately
+-- stalls for 30+ days during a parliamentary recess (MON-231).
 last_ingested as (
-    select max(ingested_at) as ingested_at from {{ ref('stg_vote_positions') }}
+    select max(ingested_at) as ingested_at from {{ ref('stg_deputies') }}
 ),
 
 -- Presence denominator: only votes held during the deputy's mandate window.
@@ -154,7 +159,9 @@ final as (
             else 0
         end                                                  as voting_days_rate,
 
-        -- metadata: reflects last ingest, not query time — makes recency test meaningful
+        -- metadata: last deputies ingest, not query time or vote-positions
+        -- ingest (see last_ingested above) - makes the recency test meaningful
+        -- year-round, including during a recess (MON-231)
         l.ingested_at                                        as updated_at
 
     from deputies d
