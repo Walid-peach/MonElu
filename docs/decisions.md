@@ -810,6 +810,29 @@ A summary is regenerated when `objet_hash` changes.
 
 ---
 
+## ADR-031 - Null voted_at is a warn-only anomaly, not a hard test failure (MON-232)
+
+**Date:** 2026-08-07
+**Status:** Final
+
+**Decision:** `votes.voted_at` stays nullable at ingestion (per ADR from MON-13's remediation), and null-dated rows stay filtered out of `stg_votes` and everything downstream.
+The dbt source `not_null` test on `voted_at` (`transform/models/staging/sources.yml`) is downgraded to `severity: warn` instead of being dropped.
+
+**Reason:**
+Before this ADR, one upstream scrutin missing `dateScrutin` produced three contradictory outcomes at once: ingestion succeeded (by design, since MON-13 made the column nullable so a single bad record can't abort the whole `execute_batch`), the daily dbt test step failed hard and emailed a "stale data" alert that wasn't about staleness, and the vote itself never reached a mart or the API regardless of the test outcome.
+Dropping the test entirely would remove the only visibility into how often this quirk actually happens.
+Keeping it at `severity: warn` preserves that visibility in the dbt run output without blocking the daily pipeline or triggering a misleading failure email.
+The staging filter is unchanged: a vote with no date is not something the API, marts, or RAG corpus can meaningfully render, so it stays invisible past `stg_votes` by design, not by accident.
+
+**Impact:**
+- `api/routers/votes.py`'s `NULLS LAST` keyset-cursor handling over `mart_vote_summary` cannot currently be exercised, since the mart can never contain a null `voted_at` row under this contract.
+  It is kept as defense-in-depth rather than removed, since it only matters if the staging filter is ever relaxed, and the code cost of keeping it is small.
+- Any future change to relax the `stg_votes` filter (e.g. surfacing undated votes in the UI) must revisit this ADR, since the warn-only test and the "invisible by design" framing both assume the filter stays in place.
+
+**Trigger to revisit:** if the AN source starts omitting `dateScrutin` often enough that the warn becomes noise, or if a product decision surfaces undated votes to users instead of hiding them.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -826,3 +849,4 @@ A summary is regenerated when `objet_hash` changes.
 12. When in doubt: check what's actually deployed before writing new code
 13. Sustainability funding is donations-first via HelloAsso, with the existing `api_keys.rate_limit_multiplier` (ADR-029, MON-116/MON-98) as the paid-tier mechanism — do not build Stripe/webhook billing until a real paying commercial API customer exists
 14. Agenda ingestion is séance publique only, upserted into one `agenda_items` table and never deleted (ADR-030, MON-110) - an item is visible only when it was seen in the latest ingestion run and is not cancelled; never generate a summary for a stub `objet`
+15. Null `voted_at` is a tolerated upstream quirk, not an ingestion failure (ADR-031, MON-232) - the source test is `severity: warn`, `stg_votes` keeps filtering the row out, and undated votes stay invisible past staging by design

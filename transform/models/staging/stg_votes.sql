@@ -30,6 +30,7 @@ renamed as (
 
     from source
     where vote_id is not null
+      -- Null voted_at is a tolerated upstream quirk (MON-13, ADR-031); rows are dropped here, not at ingestion
       and voted_at is not null
 )
 

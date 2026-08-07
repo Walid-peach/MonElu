@@ -43,8 +43,13 @@ sources:
               - not_null
               - unique
           - name: voted_at
+            description: >
+              Nullable by design (MON-13, ADR-031) - stg_votes drops null-dated
+              rows before the marts, so this test is a warn-only anomaly alert.
             tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
           - name: result
             tests:
               - not_null
