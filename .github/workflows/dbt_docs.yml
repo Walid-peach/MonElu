@@ -6,9 +6,14 @@ on:
     paths:
       - 'transform/**'
 
+concurrency:
+  group: dbt-docs
+  cancel-in-progress: false
+
 jobs:
   dbt-docs:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
