@@ -16,6 +16,7 @@ import psycopg2.pool
 from dotenv import load_dotenv
 
 from rag.constants import NOTABLE_DEPUTY_NAMES
+from rag.pipeline.chunker import dept_preposition
 
 load_dotenv()
 
@@ -90,6 +91,10 @@ CODE_TO_DEPT_NAME: dict[str, str] = {
     "94": "Val-de-Marne",
     "95": "Val-d'Oise",
 }
+
+# deputies.department stores the full name (update_party.py writes it), not the code —
+# invert CODE_TO_DEPT_NAME to recover the code for display.
+DEPT_NAME_TO_CODE_DISPLAY: dict[str, str] = {name: code for code, name in CODE_TO_DEPT_NAME.items()}
 
 
 def normalize_text(text: str) -> str:
@@ -449,6 +454,19 @@ def _fmt_vote_line(r: dict) -> str:
     )
 
 
+def _fmt_deputy_by_department(rows: list[dict]) -> str:
+    if not rows:
+        return "Aucun député trouvé pour ce département."
+    dept_name = rows[0]["department"]
+    code = DEPT_NAME_TO_CODE_DISPLAY.get(dept_name)
+    prep = dept_preposition(dept_name)
+    sep = "" if prep.endswith("'") else " "
+    dept_suffix = f" (département {code})" if code else ""
+    return f"{len(rows)} député(s) {prep}{sep}{dept_name}{dept_suffix} :\n" + "\n".join(
+        f"- {r['full_name']} ({r['party'] or 'parti non renseigné'})" for r in rows
+    )
+
+
 FORMATTERS = {
     "deputy_top_presence": lambda rows: (
         "Députés en exercice avec le meilleur taux de présence "
@@ -544,16 +562,7 @@ FORMATTERS = {
             for r in rows
         )
     ),
-    "deputy_by_department": lambda rows: (
-        (
-            f"{len(rows)} député(s) dans les "
-            f"{CODE_TO_DEPT_NAME.get(rows[0]['department'], rows[0]['department'])} "
-            f"(département {rows[0]['department']}) :\n"
-            + "\n".join(f"- {r['full_name']} ({r['party'] or 'parti non renseigné'})" for r in rows)
-        )
-        if rows
-        else "Aucun député trouvé pour ce département."
-    ),
+    "deputy_by_department": _fmt_deputy_by_department,
     "deputy_total_count": lambda rows: (
         f"MonÉlu suit {rows[0]['active']} députés en exercice "
         f"({rows[0]['total']} au total sur la 17e législature, "

@@ -234,3 +234,24 @@ def test_every_new_formatter_renders_its_row_shape():
     for intent, rows in _SAMPLE_ROWS.items():
         out = FORMATTERS[intent](rows)
         assert isinstance(out, str) and out, intent
+
+
+def test_deputy_by_department_shows_code_and_correct_preposition():
+    from rag.chain.sql_router import FORMATTERS
+
+    rows = [{"full_name": "A B", "party": "P", "department": "Yvelines"}]
+    out = FORMATTERS["deputy_by_department"](rows)
+    assert "(département 78)" in out
+    assert "des Yvelines" in out
+
+    rows = [{"full_name": "A B", "party": "P", "department": "Paris"}]
+    out = FORMATTERS["deputy_by_department"](rows)
+    assert "(département 75)" in out
+    assert "de Paris" in out
+    assert "les Paris" not in out
+
+
+def test_deputy_by_department_empty():
+    from rag.chain.sql_router import FORMATTERS
+
+    assert FORMATTERS["deputy_by_department"]([]) == "Aucun député trouvé pour ce département."
