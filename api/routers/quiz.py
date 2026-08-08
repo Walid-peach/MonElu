@@ -46,6 +46,7 @@ Denominator rules (consistent with ADR-019's presence framing):
 import logging
 import os
 import re
+import threading
 import uuid
 from collections import Counter, defaultdict
 from datetime import date, timedelta
@@ -473,6 +474,16 @@ def get_questions(request: Request) -> QuizQuestionsResponse:
     )
 
 
+# The pick is deliberately stable for a whole ISO week (see week_start), and the
+# candidate query's cutoff means the eligible row set never changes mid-week either
+# — so the resolved pick (including "none qualified") is cached per week_start,
+# skipping the 500-row scan on every request (MON-230). Same lock-guarded
+# read-then-recompute-then-store shape as the /health stats cache (api/main.py).
+_weekly_lock = threading.Lock()
+_weekly_cache_key: Optional[date] = None
+_weekly_cache_value: Optional[QuizWeeklyQuestion] = None
+
+
 @router.get(
     "/weekly",
     response_model=QuizWeeklyQuestion,
@@ -481,7 +492,18 @@ def get_questions(request: Request) -> QuizQuestionsResponse:
 )
 @limiter.limit(tiered_limit(30))
 def get_weekly(request: Request) -> QuizWeeklyQuestion:
+    global _weekly_cache_key, _weekly_cache_value
     cutoff = week_start(date.today())
+
+    with _weekly_lock:
+        if _weekly_cache_key == cutoff:
+            cached = _weekly_cache_value
+            if cached is None:
+                raise HTTPException(
+                    status_code=404, detail="Aucun scrutin qualifiant cette semaine."
+                )
+            return cached
+
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -498,20 +520,27 @@ def get_weekly(request: Request) -> QuizWeeklyQuestion:
             candidates = cur.fetchall()
 
     row = select_weekly_vote(candidates)
-    if row is None:
-        raise HTTPException(status_code=404, detail="Aucun scrutin qualifiant cette semaine.")
+    result = None
+    if row is not None:
+        voted_at = row["voted_at"]
+        result = QuizWeeklyQuestion(
+            vote_id=row["vote_id"],
+            question=build_weekly_question(row.get("summary_plain"), row["vote_title"]),
+            vote_title=row["vote_title"],
+            votes_for=row["votes_for"],
+            votes_against=row["votes_against"],
+            abstentions=row["abstentions"],
+            result=row["result"],
+            vote_date=voted_at.date().isoformat() if voted_at else None,
+        )
 
-    voted_at = row["voted_at"]
-    return QuizWeeklyQuestion(
-        vote_id=row["vote_id"],
-        question=build_weekly_question(row.get("summary_plain"), row["vote_title"]),
-        vote_title=row["vote_title"],
-        votes_for=row["votes_for"],
-        votes_against=row["votes_against"],
-        abstentions=row["abstentions"],
-        result=row["result"],
-        vote_date=voted_at.date().isoformat() if voted_at else None,
-    )
+    with _weekly_lock:
+        _weekly_cache_key = cutoff
+        _weekly_cache_value = result
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Aucun scrutin qualifiant cette semaine.")
+    return result
 
 
 def _normalized_department(body: QuizMatchRequest) -> Optional[str]:
