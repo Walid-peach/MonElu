@@ -113,6 +113,19 @@ NOT_QUIZ_ID = "VTANR5L17V9999"
 assert NOT_QUIZ_ID not in {q["vote_id"] for q in QUIZ_QUESTIONS}
 
 
+@pytest.fixture(autouse=True)
+def _reset_weekly_cache():
+    """The weekly pick is cached per ISO week (MON-230) — clear it so each
+    test's mocked candidates are actually read instead of a prior test's."""
+    import api.routers.quiz as quiz_module
+
+    quiz_module._weekly_cache_key = None
+    quiz_module._weekly_cache_value = None
+    yield
+    quiz_module._weekly_cache_key = None
+    quiz_module._weekly_cache_value = None
+
+
 def _weekly_row(
     vote_id=NOT_QUIZ_ID,
     vote_title="l'ensemble du projet de loi relatif à un sujet quelconque",
@@ -240,6 +253,33 @@ def test_get_weekly_never_returns_a_curated_quiz_question(client, mock_cursor):
     mock_cursor.fetchall.return_value = [_weekly_row(vote_id=QUIZ_QUESTIONS[0]["vote_id"])]
     resp = client.get("/quiz/weekly")
     assert resp.status_code == 404
+
+
+def test_get_weekly_caches_the_pick_for_the_week(client, mock_cursor):
+    """MON-230 — a second request within the same ISO week must not re-scan."""
+    mock_cursor.fetchall.return_value = [_weekly_row()]
+    first = client.get("/quiz/weekly")
+    assert first.status_code == 200
+    calls_after_first = mock_cursor.execute.call_count
+
+    # Even if the DB would now answer differently, the cached pick wins.
+    mock_cursor.fetchall.return_value = [_weekly_row(vote_id="VTANR5L17V8888", votes_for=999)]
+    second = client.get("/quiz/weekly")
+    assert second.status_code == 200
+    assert second.json() == first.json()
+    assert mock_cursor.execute.call_count == calls_after_first
+
+
+def test_get_weekly_caches_the_404_for_the_week(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    first = client.get("/quiz/weekly")
+    assert first.status_code == 404
+    calls_after_first = mock_cursor.execute.call_count
+
+    mock_cursor.fetchall.return_value = [_weekly_row()]
+    second = client.get("/quiz/weekly")
+    assert second.status_code == 404
+    assert mock_cursor.execute.call_count == calls_after_first
 
 
 # ---------------------------------------------------------------------------
