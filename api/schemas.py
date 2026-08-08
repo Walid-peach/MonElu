@@ -415,3 +415,37 @@ class ApiKeyUsageResponse(_Base):
     label: str
     rate_limit_multiplier: int
     items: list[ApiKeyUsageDay]
+
+
+# ---------------------------------------------------------------------------
+# Agenda (MON-212, ADR-030)
+# ---------------------------------------------------------------------------
+
+
+class AgendaItem(_Base):
+    point_uid: str
+    sitting_start: datetime
+    sitting_end: Optional[datetime] = None
+    objet: Optional[str] = None
+    point_type: Optional[str] = None
+    summary_plain: Optional[str] = None
+    theme: Optional[str] = None
+    dossier_id: Optional[str] = None
+    dossier_url: Optional[str] = Field(
+        default=None, description="Official AN dossier page; set whenever dossier_id is known"
+    )
+    vote_id: Optional[str] = Field(
+        default=None, description="Set once a scrutin exists for this item's dossier"
+    )
+    result: Optional[str] = None
+
+
+class AgendaDay(_Base):
+    sitting_date: date
+    items: list[AgendaItem]
+
+
+class AgendaResponse(_Base):
+    from_date: date
+    to_date: date
+    days: list[AgendaDay]
