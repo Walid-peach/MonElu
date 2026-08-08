@@ -19,8 +19,10 @@ router = APIRouter()
 def _encode_cursor(voted_at: Optional[datetime], vote_id: str) -> str:
     """Opaque keyset cursor over the list's sort key (voted_at, vote_id).
 
-    voted_at may be None — undated votes sort last (NULLS LAST) and still
-    need a cursor to page past them.
+    voted_at may be None - undated votes sort last (NULLS LAST) and still
+    need a cursor to page past them. stg_votes currently drops null-dated
+    votes before the mart (ADR-031), so this path is defense-in-depth, not
+    dead code: it only fires if that filter is ever relaxed.
     """
     ts = voted_at.isoformat() if voted_at is not None else ""
     raw = f"{ts}|{vote_id}"
