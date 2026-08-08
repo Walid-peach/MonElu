@@ -61,3 +61,13 @@ class TestDownloadWithRetryTransientErrors:
         ):
             with patch("scripts._http.time.sleep"):
                 assert download_with_retry("https://example.com/ok.zip") == b"payload"
+
+    def test_network_error_with_no_response_is_retried_not_raised_immediately(self):
+        with patch(
+            "scripts._http.requests.get",
+            side_effect=requests.ConnectionError("connection refused"),
+        ) as mock_get:
+            with patch("scripts._http.time.sleep"):
+                with pytest.raises(RuntimeError, match="Failed to download"):
+                    download_with_retry("https://example.com/unreachable.zip")
+        assert mock_get.call_count == 5
