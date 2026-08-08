@@ -10,6 +10,8 @@ transform/models/intermediate/int_party_vote_majority.sql.
 
 import pytest
 
+from rag.chain.sql_router import SQL_QUERIES
+
 _ALIGNMENT_SQL = """
 SELECT
     deputy_id,
@@ -105,3 +107,18 @@ def test_dissident_votes_respects_limit(db_conn):
         rows = cur.fetchall()
 
     assert len(rows) == 2
+
+
+@pytest.mark.integration
+def test_party_alignment_reads_mart(db_conn):
+    """rag.chain.sql_router's party_alignment intent (MON-234) must read
+    analytics_marts.mart_party_alignment, not re-derive it via a live join."""
+    with db_conn.cursor() as cur:
+        cur.execute(SQL_QUERIES["party_alignment"])
+        rows = cur.fetchall()
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["party"] == "Rassemblement National"
+    assert row["total_votes"] == 25
+    assert float(row["alignment_pct"]) == 80.0

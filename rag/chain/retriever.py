@@ -39,7 +39,18 @@ def _get_retriever_pool() -> psycopg2.pool.ThreadedConnectionPool:
     if _retriever_pool is None:
         with _retriever_pool_lock:
             if _retriever_pool is None:
-                _retriever_pool = psycopg2.pool.ThreadedConnectionPool(1, 3, dsn=DATABASE_URL)
+                try:
+                    _retriever_pool = psycopg2.pool.ThreadedConnectionPool(
+                        1, 3, dsn=DATABASE_URL, options="-c statement_timeout=5000"
+                    )
+                except psycopg2.OperationalError:
+                    # PgBouncer in transaction mode rejects startup options=;
+                    # see api/db.py init_pool for the same fallback.
+                    log.warning(
+                        "DB rejected startup options (statement_timeout) — initializing "
+                        "retriever pool without statement_timeout"
+                    )
+                    _retriever_pool = psycopg2.pool.ThreadedConnectionPool(1, 3, dsn=DATABASE_URL)
     return _retriever_pool
 
 
