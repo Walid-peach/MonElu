@@ -33,7 +33,18 @@ def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     if _pool is None:
         with _pool_lock:
             if _pool is None:
-                _pool = psycopg2.pool.ThreadedConnectionPool(1, 5, dsn=DATABASE_URL)
+                try:
+                    _pool = psycopg2.pool.ThreadedConnectionPool(
+                        1, 5, dsn=DATABASE_URL, options="-c statement_timeout=5000"
+                    )
+                except psycopg2.OperationalError:
+                    # PgBouncer in transaction mode rejects startup options=;
+                    # see api/db.py init_pool for the same fallback.
+                    log.warning(
+                        "DB rejected startup options (statement_timeout) — initializing "
+                        "sql_router pool without statement_timeout"
+                    )
+                    _pool = psycopg2.pool.ThreadedConnectionPool(1, 5, dsn=DATABASE_URL)
     return _pool
 
 
@@ -416,30 +427,18 @@ SQL_QUERIES = {
         ORDER BY count DESC
     """,
     "party_alignment": """
+        -- per-deputy aligned_votes/total_votes rolled up to party level;
+        -- reads the mart instead of re-deriving the majority via a live
+        -- 715k-row self-join (MON-118 materialized it for this reason)
         SELECT
-            d.party,
+            party,
             ROUND(
-                COUNT(*) FILTER (WHERE vp.position = majority.majority_pos)::numeric
-                / NULLIF(COUNT(*), 0) * 100, 1
+                SUM(aligned_votes)::numeric / NULLIF(SUM(total_votes), 0) * 100, 1
             ) as alignment_pct,
-            COUNT(*) as total_votes
-        FROM vote_positions vp
-        JOIN deputies d ON vp.deputy_id = d.deputy_id
-        JOIN (
-            SELECT
-                vp2.vote_id,
-                d2.party,
-                MODE() WITHIN GROUP (ORDER BY vp2.position) as majority_pos
-            FROM vote_positions vp2
-            JOIN deputies d2 ON vp2.deputy_id = d2.deputy_id
-            WHERE vp2.position IN ('pour','contre','abstention')
-              AND d2.party IS NOT NULL
-            GROUP BY vp2.vote_id, d2.party
-        ) majority ON vp.vote_id = majority.vote_id
-            AND d.party = majority.party
-        WHERE d.party IS NOT NULL
-          AND vp.position IN ('pour','contre','abstention')
-        GROUP BY d.party
+            SUM(total_votes) as total_votes
+        FROM analytics_marts.mart_party_alignment
+        WHERE party IS NOT NULL
+        GROUP BY party
         ORDER BY alignment_pct DESC
         LIMIT 12
     """,
