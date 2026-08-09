@@ -1,7 +1,7 @@
 """Smoke tests for API routers — no real DB required."""
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import groq
@@ -1009,3 +1009,95 @@ def test_export_deputy_votes_csv_marts_missing(client, mock_cursor):
     mock_cursor.fetchall.side_effect = psycopg2.errors.UndefinedTable("mart missing")
     resp = client.get("/deputies/PA1/votes.csv")
     assert resp.status_code == 503
+
+
+_AGENDA_ROWS = [
+    {
+        "point_uid": "RUANR5L17S2026IDS1PT1",
+        "sitting_start": datetime(2026, 8, 3, 9, 0, tzinfo=timezone.utc),
+        "sitting_end": datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc),
+        "objet": "Discussion générale du projet de loi de finances",
+        "point_type": "Discussion",
+        "summary_plain": "Les députés débattent du budget de l'État.",
+        "theme": "budget",
+        "dossier_id": "DLR5L17N1",
+        "vote_id": None,
+        "result": None,
+    },
+    {
+        "point_uid": "RUANR5L17S2026IDS2PT2",
+        "sitting_start": datetime(2026, 8, 4, 15, 0, tzinfo=timezone.utc),
+        "sitting_end": None,
+        "objet": "Vote solennel sur le projet de loi de finances",
+        "point_type": "Vote solennel",
+        "summary_plain": "Vote final sur le budget.",
+        "theme": "budget",
+        "dossier_id": "DLR5L17N1",
+        "vote_id": "VTANR5L17V1",
+        "result": "adopté",
+    },
+]
+
+
+def test_get_agenda_default_week(client, mock_cursor):
+    mock_cursor.fetchall.return_value = _AGENDA_ROWS
+    resp = client.get("/agenda")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["days"]) == 2
+    assert data["days"][0]["sitting_date"] == "2026-08-03"
+    assert data["days"][0]["items"][0]["point_uid"] == "RUANR5L17S2026IDS1PT1"
+    assert data["days"][0]["items"][0]["dossier_url"] == (
+        "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N1"
+    )
+    assert data["days"][0]["items"][0]["vote_id"] is None
+    assert data["days"][1]["items"][0]["vote_id"] == "VTANR5L17V1"
+    assert data["days"][1]["items"][0]["result"] == "adopté"
+
+
+def test_get_agenda_groups_same_day_items(client, mock_cursor):
+    same_day = [
+        {**_AGENDA_ROWS[0], "point_uid": "PT-A"},
+        {
+            **_AGENDA_ROWS[0],
+            "point_uid": "PT-B",
+            "sitting_start": datetime(2026, 8, 3, 16, 0, tzinfo=timezone.utc),
+        },
+    ]
+    mock_cursor.fetchall.return_value = same_day
+    resp = client.get("/agenda")
+    data = resp.json()
+    assert len(data["days"]) == 1
+    assert [i["point_uid"] for i in data["days"][0]["items"]] == ["PT-A", "PT-B"]
+
+
+def test_get_agenda_explicit_range(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    resp = client.get("/agenda", params={"from": "2026-09-01", "to": "2026-09-10"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["from_date"] == "2026-09-01"
+    assert data["to_date"] == "2026-09-10"
+    assert data["days"] == []
+
+
+def test_get_agenda_partial_range_rejected(client, mock_cursor):
+    resp = client.get("/agenda", params={"from": "2026-09-01"})
+    assert resp.status_code == 422
+
+
+def test_get_agenda_to_before_from_rejected(client, mock_cursor):
+    resp = client.get("/agenda", params={"from": "2026-09-10", "to": "2026-09-01"})
+    assert resp.status_code == 422
+
+
+def test_get_agenda_span_too_large_rejected(client, mock_cursor):
+    resp = client.get("/agenda", params={"from": "2026-01-01", "to": "2026-12-31"})
+    assert resp.status_code == 422
+
+
+def test_get_agenda_empty_window_returns_empty_list(client, mock_cursor):
+    mock_cursor.fetchall.return_value = []
+    resp = client.get("/agenda")
+    assert resp.status_code == 200
+    assert resp.json()["days"] == []

@@ -185,6 +185,7 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------------------------
 from api.routers import (  # noqa: E402
+    agenda,
     departments,
     deputies,
     feedback,
@@ -207,6 +208,7 @@ app.include_router(search_router, prefix="/search", tags=["Search"])
 app.include_router(verify_router, prefix="/verify", tags=["Verify"])
 app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
 app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
+app.include_router(agenda.router, prefix="/agenda", tags=["Agenda"])
 
 
 # ---------------------------------------------------------------------------
