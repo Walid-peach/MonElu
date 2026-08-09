@@ -139,8 +139,8 @@ Assemblée Nationale Open Data (ZIPs)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
 - `networking`, `s3`, `rds` modules are the only parts worth salvaging if an AWS migration ever happens; `ec2` does not survive that design.
 
-**`data/migrations/001_init.sql`** — Full schema
-- Four tables: `deputies`, `votes`, `vote_positions`, `document_chunks`
+**`data/migrations/`** — 10 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
+- `001_init.sql`: `deputies`, `votes`, `vote_positions`, `document_chunks`
 - All `CREATE TABLE IF NOT EXISTS` — safe to re-run
 - `migrate.py` keeps a `schema_migrations` ledger: each file is applied once and skipped on later deploys
 
