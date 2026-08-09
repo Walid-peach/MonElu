@@ -39,7 +39,7 @@ Production API: https://monelu-production.up.railway.app
 | RAG embeddings | OpenAI `text-embedding-3-small` | 1 536 dimensions, ~$0.006 per full re-index |
 | RAG inference | Groq `llama-3.3-70b-versatile` | temperature=0.2; free tier, faster than OpenAI |
 | Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
-| CI/CD | GitHub Actions (4 workflows) | See Workflows section |
+| CI/CD | GitHub Actions (5 workflows) | See Workflows section |
 | Error tracking | Sentry (API + frontend) | Opt-in via `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` — no-ops when unset. See `docs/monitoring.md` |
 | Experiment tracking | MLflow (local) | router suite + retrieval suite eval (11 questions total) |
 | IaC | Terraform ~> 5.0 (AWS, archived) | `archive/infra-aws/` — not applied, kept as reference |
@@ -103,6 +103,7 @@ Assemblée Nationale Open Data (ZIPs)
 | `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test; posts dbt results as PR comment |
 | `deploy.yml` | Merge to `master` | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index |
+| `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window — the actual retry backstop (MON-221) |
 | `dbt_docs.yml` | Push to `master` touching `transform/` | Generate + deploy lineage docs to GitHub Pages |
 
 ### Key Layers

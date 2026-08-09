@@ -192,9 +192,14 @@ def main() -> None:
                 f.write(f"new_votes={new_votes}\n")
 
         # Always run summaries: the `summary_plain IS NULL` query no-ops when there is
-        # nothing to do, and this retries summaries that failed on a previous run
-        # instead of waiting for the next new vote. Non-critical: a Groq/OpenAI outage
-        # here must not block the dbt run/RAG rebuild that follows this script.
+        # nothing to do, and this retries any failure from *this run's* --since window
+        # without waiting for the next new vote. It is not the full retry backstop —
+        # summarize_backfill.yml (07:00 UTC daily) is the one that sweeps every vote
+        # with summary_plain IS NULL regardless of window, so a summary that fails here
+        # still gets picked up there even if it falls outside `args.since`. Do not
+        # remove summarize_backfill.yml as "redundant" with this step. Non-critical: a
+        # Groq/OpenAI outage here must not block the dbt run/RAG rebuild that follows
+        # this script.
         t_summaries = run_step(
             "Vote summaries",
             "generate_vote_summaries.py",
