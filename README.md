@@ -79,6 +79,7 @@ Full interactive reference at `/docs`. Rate limits are per endpoint (column *rpm
 | GET | `/departments/{code}` | 30 | Department page data - deputies, aggregates, split votes (MON-107) |
 | GET | `/groups/{slug}` | 30 | Parliamentary group page data - members, dissidence, divided votes (ADR-026) |
 | GET | `/themes/{slug}` | 30 | Theme hub - per-theme stats, party positioning, vote list (MON-106) |
+| GET | `/agenda` | 30 | Upcoming séance publique items grouped by day, `from`/`to` window (MON-212, ADR-030) |
 
 ### CSV exports (MON-97)
 

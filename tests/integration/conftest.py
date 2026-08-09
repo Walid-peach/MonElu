@@ -39,6 +39,7 @@ MIGRATIONS = [
     Path(__file__).parents[2] / "data" / "migrations" / "001_init.sql",
     Path(__file__).parents[2] / "data" / "migrations" / "002_vote_summaries.sql",
     Path(__file__).parents[2] / "data" / "migrations" / "003_schema_cleanup.sql",
+    Path(__file__).parents[2] / "data" / "migrations" / "009_agenda.sql",
 ]
 
 # Minimal mart stub DDL — mirrors the columns read by api/routers/deputies.py
@@ -354,6 +355,7 @@ def db_conn():
         cur.execute("TRUNCATE analytics_marts.mart_deputy_scorecard CASCADE")
         cur.execute("TRUNCATE analytics_marts.mart_party_alignment CASCADE")
         cur.execute("TRUNCATE analytics_intermediate.int_party_vote_majority CASCADE")
+        cur.execute("TRUNCATE agenda_items CASCADE")
         cur.execute("TRUNCATE vote_positions CASCADE")
         cur.execute("TRUNCATE votes CASCADE")
         cur.execute("TRUNCATE deputies CASCADE")
