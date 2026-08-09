@@ -1,3 +1,14 @@
+# This is the single retry backstop for vote summaries: it sweeps every vote
+# with summary_plain IS NULL, independent of ingest_prod.yml's --since window
+# (MON-221). ingest_prod.yml (06:00 UTC) also runs generate_vote_summaries.py,
+# scoped to that run's ingestion window, so a summary generated same-day
+# doesn't wait a full day for this job — but this job, not that step, is what
+# guarantees a summary eventually lands regardless of when it first failed.
+#
+# The '2024-07-07' bound below is the legislature start date, not the current
+# Supabase free-tier horizon (2025-07-01, decision 7 in CLAUDE.md) — it is
+# intentionally earlier than any vote can exist, so a future backfill to an
+# earlier horizon does not silently leave older votes unsummarized here.
 name: MonÉlu — Daily Summary Backfill
 
 on:
@@ -38,7 +49,7 @@ jobs:
           import psycopg2, os
           conn = psycopg2.connect(os.environ['DATABASE_URL'])
           cur = conn.cursor()
-          cur.execute(\"SELECT COUNT(*) FROM votes WHERE summary_plain IS NULL AND voted_at >= '2025-07-01'\")
+          cur.execute(\"SELECT COUNT(*) FROM votes WHERE summary_plain IS NULL AND voted_at >= '2024-07-07'\")
           print(cur.fetchone()[0])
           conn.close()
           ")
@@ -53,7 +64,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          python -m scripts.generate_vote_summaries --since 2025-07-01 2>&1 | tee /tmp/summary_run.log
+          python -m scripts.generate_vote_summaries --since 2024-07-07 2>&1 | tee /tmp/summary_run.log
           generated=$(grep "Done —" /tmp/summary_run.log | grep -oP "generated: \K[0-9]+" || echo "0")
           errors=$(grep "Done —" /tmp/summary_run.log | grep -oP "errors: \K[0-9]+" || echo "0")
           echo "generated=$generated" >> "$GITHUB_OUTPUT"
