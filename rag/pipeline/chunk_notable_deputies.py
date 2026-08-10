@@ -12,6 +12,7 @@ import psycopg2.extras
 from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
+from psycopg2 import sql
 
 load_dotenv()
 
@@ -160,21 +161,25 @@ def build_chunk(deputy: dict, votes: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def get_already_indexed_ids() -> set:
+def get_already_indexed_ids(table: str = "document_chunks") -> set:
     """Fetch all deputy_ids that already have a notable_deputy chunk — single query."""
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT DISTINCT metadata->>'deputy_id'
-                FROM document_chunks
-                WHERE metadata->>'chunk_type' = 'notable_deputy'
-            """
+                sql.SQL(
+                    """
+                    SELECT DISTINCT metadata->>'deputy_id'
+                    FROM {}
+                    WHERE metadata->>'chunk_type' = 'notable_deputy'
+                    """
+                ).format(sql.Identifier(table))
             )
             return {row[0] for row in cur.fetchall()}
 
 
-def embed_and_store_chunk(content: str, metadata: dict, client: OpenAI) -> None:
+def embed_and_store_chunk(
+    content: str, metadata: dict, client: OpenAI, table: str = "document_chunks"
+) -> None:
     """Embed one chunk and insert into document_chunks."""
     response = client.embeddings.create(input=[content], model="text-embedding-3-small")
     embedding = np.array(response.data[0].embedding, dtype=np.float32)
@@ -183,20 +188,19 @@ def embed_and_store_chunk(content: str, metadata: dict, client: OpenAI) -> None:
         register_vector(conn)
         with conn.cursor() as cur:
             cur.execute(
-                """
-                INSERT INTO document_chunks (content, metadata, embedding)
-                VALUES (%s, %s, %s)
-            """,
+                sql.SQL("INSERT INTO {} (content, metadata, embedding) VALUES (%s, %s, %s)").format(
+                    sql.Identifier(table)
+                ),
                 (content, psycopg2.extras.Json(metadata), embedding),
             )
         conn.commit()
 
 
-def build_notable_deputy_index(n: int = 100) -> dict:
+def build_notable_deputy_index(n: int = 100, table: str = "document_chunks") -> dict:
     """Main function — build chunks for top N deputies."""
     client = OpenAI(api_key=OPENAI_API_KEY)
     deputies = get_top_deputies(n)
-    already_indexed = get_already_indexed_ids()
+    already_indexed = get_already_indexed_ids(table)
 
     # Prepend ALWAYS_INCLUDE deputies not already in the top-N list.
     existing_ids = {d["deputy_id"] for d in deputies}
@@ -256,7 +260,7 @@ def build_notable_deputy_index(n: int = 100) -> dict:
                 "party": dep.get("party"),
                 "department": dep.get("department"),
             }
-            embed_and_store_chunk(content, metadata, client)
+            embed_and_store_chunk(content, metadata, client, table=table)
             stats["new"] += 1
             print(f"[{i + 1}/{len(deputies)}] Embedded: {full_name}")
         except Exception as e:

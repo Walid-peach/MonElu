@@ -12,6 +12,7 @@ import psycopg2.extras
 from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg2 import register_vector
+from psycopg2 import sql
 
 from rag.constants import EMBEDDING_MODEL
 from rag.db_utils import connect_with_retry
@@ -90,23 +91,27 @@ def build_law_chunk(vote: dict, breakdown: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def already_indexed(vote_id: str) -> bool:
+def already_indexed(vote_id: str, table: str = "document_chunks") -> bool:
     """Check if a law_summary chunk already exists for this vote."""
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT 1 FROM document_chunks
-                WHERE metadata->>'vote_id' = %s
-                  AND metadata->>'chunk_type' = 'law_summary'
-                LIMIT 1
-                """,
+                sql.SQL(
+                    """
+                    SELECT 1 FROM {}
+                    WHERE metadata->>'vote_id' = %s
+                      AND metadata->>'chunk_type' = 'law_summary'
+                    LIMIT 1
+                    """
+                ).format(sql.Identifier(table)),
                 (vote_id,),
             )
             return cur.fetchone() is not None
 
 
-def embed_and_store(content: str, metadata: dict, client: OpenAI) -> None:
+def embed_and_store(
+    content: str, metadata: dict, client: OpenAI, table: str = "document_chunks"
+) -> None:
     """Embed one chunk and insert into document_chunks.
     Callers must check already_indexed() before calling — document_chunks
     has no unique constraint so duplicate prevention is the caller's job."""
@@ -119,10 +124,9 @@ def embed_and_store(content: str, metadata: dict, client: OpenAI) -> None:
             register_vector(plain_cur)
         with conn.cursor() as cur:
             cur.execute(
-                """
-                INSERT INTO document_chunks (content, metadata, embedding)
-                VALUES (%s, %s, %s)
-                """,
+                sql.SQL("INSERT INTO {} (content, metadata, embedding) VALUES (%s, %s, %s)").format(
+                    sql.Identifier(table)
+                ),
                 (content, psycopg2.extras.Json(metadata), embedding),
             )
         conn.commit()
@@ -130,7 +134,7 @@ def embed_and_store(content: str, metadata: dict, client: OpenAI) -> None:
         conn.close()
 
 
-def build_law_summary_index(n: int = 20) -> dict:
+def build_law_summary_index(n: int = 20, table: str = "document_chunks") -> dict:
     """Embed and store law summary chunks for the top-N votes by turnout."""
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     votes = get_top_votes(n)
@@ -140,7 +144,7 @@ def build_law_summary_index(n: int = 20) -> dict:
         vote_id = vote["vote_id"]
         title_short = vote["vote_title"][:60]
 
-        if already_indexed(vote_id):
+        if already_indexed(vote_id, table):
             stats["skipped"] += 1
             print(f"[{i + 1}/{n}] Skipped (already indexed): {title_short}...")
             continue
@@ -159,7 +163,7 @@ def build_law_summary_index(n: int = 20) -> dict:
                 "result": vote["result"],
                 "voted_at": str(vote["voted_at"])[:10],
             }
-            embed_and_store(content, metadata, client)
+            embed_and_store(content, metadata, client, table=table)
             stats["new"] += 1
             print(f"[{i + 1}/{n}] Embedded: {title_short}...")
             if i == 0:
