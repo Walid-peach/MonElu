@@ -51,7 +51,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 AGENDA_ZIP_PATH = "/static/openData/repository/17/vp/reunions/Agenda.json.zip"
 
 SEANCE_XSI_TYPE = "seance_type"
-CANCELLED_ETATS = {"Annulé", "Supprimé"}
 
 
 # ---------------------------------------------------------------------------

@@ -194,11 +194,6 @@ def _upsert_records(records: list[dict]) -> None:
         conn.close()
 
 
-def fetch_all_votes(since: str | None = None) -> list[dict]:
-    """Alias for fetch_all_scrutins — DAG-friendly name."""
-    return fetch_all_scrutins(since=since)
-
-
 def upsert_votes(raw_items: list[dict]) -> int:
     """Parse raw scrutin dicts and upsert into votes table. Returns count written."""
     records = [r for item in raw_items if (r := parse_vote(item)) is not None]
