@@ -833,6 +833,29 @@ The staging filter is unchanged: a vote with no date is not something the API, m
 
 ---
 
+## ADR-032 - One canonical group-majority definition; quiz's tie-skip is a deliberate divergence (MON-228)
+
+**Date:** 2026-08-10
+**Status:** Final
+
+**Decision:** "What did group X's majority vote on scrutin Y" is defined exactly one way, everywhere that a single majority position must be produced:
+
+- **Formula:** plurality of the group's expressed positions (`pour`/`contre`/`abstention`) on that scrutin.
+- **Tiebreak (MON-24):** when two or more positions tie for the top count, the tie resolves alphabetically — `abstention` < `contre` < `pour`. This is arbitrary but deterministic, which is the property that matters: the same tied scrutin must not resolve differently depending on which code path answers the question.
+
+**Where it lives:** `transform/models/intermediate/int_party_vote_majority.sql` is the reference implementation (`select distinct on (party, vote_id) ... order by party, vote_id, position_count desc, position`) — it feeds `mart_party_alignment`, dissident counts, and `/deputies/{id}/dissident-votes`.
+`api/routers/groups.py`'s `_majority_position` replicates the same formula and tiebreak in Python, over raw tables, rather than reading the mart — per ADR-026, group pages must keep working when the dbt marts are absent, and at current scale (~1,200 votes) a raw-table query plus in-Python sort is cheap enough that adding a mart dependency here isn't worth the Railway/dbt deploy-race risk (ADR-020).
+
+**Quiz is a deliberate exception, not a bug:** `api/routers/quiz.py`'s `compute_group_alignment` (MON-183/MON-228) skips scrutins where the group's top two positions tie, rather than picking one via the tiebreak. A quiz "you agree with group X on this vote" is a claim about a real stance; on a genuine tie there is no line to agree or disagree with, so asserting one via an arbitrary tiebreak would misrepresent the group's actual position. This means quiz agreement percentages and the group page's majority-line badges can legitimately disagree on a tied scrutin — that is intended, not the MON-228 bug (the bug was groups.py and dbt each using a *different, undocumented* tiebreak; quiz's skip was always intentional, just previously undocumented).
+
+**Reason:** the diagnostic (`api_diagnostic_2026-08-05.md`, Finding #1) found the group majority computed three different ways — dbt's alphabetical tiebreak, groups.py's old pour-first priority order (`pour >= contre >= abstention`, which silently favored `pour` on every tie), and quiz's skip-ties — so a tied scrutin could show a majority position on `/groupes/[slug]` that the mart-derived dissident stats on the same page contradicted, and that the quiz would have excluded entirely. Same shape as ADR-019 (MON-22, presence rate): one civic-credibility metric needs one definition, or the platform contradicts itself depending on which endpoint answered the question.
+
+**Rule:** any new consumer that must produce a single group-majority position either reads `int_party_vote_majority` / `mart_party_alignment` or copies `_majority_position`'s exact formula (max count, alphabetical tiebreak). A consumer that only needs "does the group have a clear line" (not asserting one on ties) may follow quiz's skip-ties pattern instead, but must say so explicitly in a docstring, the way `compute_group_alignment` does now. Do not invent a third behavior.
+
+**Trigger to revisit:** if `int_party_vote_majority` ever changes its tiebreak (e.g. to a non-alphabetical rule), `groups.py`'s `_majority_position` must change in the same PR — the two are required to stay byte-for-byte equivalent, not just similar.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -850,3 +873,4 @@ The staging filter is unchanged: a vote with no date is not something the API, m
 13. Sustainability funding is donations-first via HelloAsso, with the existing `api_keys.rate_limit_multiplier` (ADR-029, MON-116/MON-98) as the paid-tier mechanism — do not build Stripe/webhook billing until a real paying commercial API customer exists
 14. Agenda ingestion is séance publique only, upserted into one `agenda_items` table and never deleted (ADR-030, MON-110) - an item is visible only when it was seen in the latest ingestion run and is not cancelled; never generate a summary for a stub `objet`
 15. Null `voted_at` is a tolerated upstream quirk, not an ingestion failure (ADR-031, MON-232) - the source test is `severity: warn`, `stg_votes` keeps filtering the row out, and undated votes stay invisible past staging by design
+16. Group-majority position is one formula everywhere: plurality with an alphabetical tiebreak, defined in `int_party_vote_majority` and replicated exactly by `groups.py`'s `_majority_position` (ADR-032, MON-24, MON-228) - never invent a different tiebreak; quiz's skip-ties behavior in `compute_group_alignment` is a documented, deliberate exception, not a bug to "fix" into matching

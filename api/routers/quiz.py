@@ -390,7 +390,12 @@ def compute_group_alignment(
 
     A group's position on a scrutin is the strict plurality of its members'
     expressed positions; scrutins where the group's top two positions tie are
-    skipped for that group (no majority line to compare against).
+    skipped for that group (no majority line to compare against). This is a
+    deliberate divergence from the canonical tiebreak used by dbt's
+    `int_party_vote_majority` and `groups.py`'s `_majority_position` — see
+    decisions.md ADR-032. A quiz "agreement" is a claim about a real stance;
+    on a genuine tie there is no line to agree or disagree with, so the
+    scrutin is excluded rather than assigned an arbitrary winner.
     """
     # (party, vote_id) -> Counter of expressed positions
     votes_by_group: dict[tuple[str, str], Counter] = defaultdict(Counter)
