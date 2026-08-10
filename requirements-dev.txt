@@ -3,3 +3,4 @@ detect-secrets==1.5.0
 dbt-core>=1.9,<1.10
 dbt-postgres>=1.9,<1.10
 mlflow==3.11.1
+rank-bm25==0.2.2
