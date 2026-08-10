@@ -14,6 +14,7 @@ import os
 import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
+from psycopg2 import sql
 
 load_dotenv()
 
@@ -36,31 +37,16 @@ def _get_conn():
 def build_index(since: str | None = None) -> None:
     """Build or incrementally update the document_chunks index.
 
-    Without `since`: full rebuild (truncate + re-embed everything).
+    Without `since`: full rebuild. Chunks are embedded into a staging table
+    and swapped in atomically at the end (`ALTER TABLE ... RENAME`), so a
+    mid-run crash (OpenAI outage, Groq-dependent notable chunker error, the
+    job's timeout) leaves the live document_chunks untouched — /search keeps
+    serving the previous index until a build fully succeeds.
     With `since`: only embed new votes, refresh affected deputy chunks,
     and always refresh the small aggregate chunks (party/global).
     """
     if since is None:
-        print("Clearing existing index...")
-        clear_index()
-
-        print("Step 1/3: Building base chunks...")
-        chunks = chunk_all()
-        print(f"Starting embedding — {len(chunks)} chunks to process.\n")
-        embed_and_store(chunks)
-
-        print("\nStep 2/3: Building notable deputy chunks...")
-        from rag.pipeline.chunk_notable_deputies import build_notable_deputy_index
-
-        build_notable_deputy_index(100)
-
-        print("\nStep 3/3: Building law summary chunks...")
-        from rag.pipeline.chunk_law_summaries import build_law_summary_index
-
-        build_law_summary_index(20)
-
-        print("\nIndex build complete.")
-        get_index_stats()
+        _build_full_index_atomic()
         return
 
     # --- Incremental path ---
@@ -120,6 +106,96 @@ def build_index(since: str | None = None) -> None:
         embed_and_store(chunks)
     else:
         print("Nothing to embed.")
+
+
+_STAGING_TABLE = "document_chunks_staging"
+
+
+def _build_full_index_atomic() -> None:
+    """Build a full index into a staging table, then swap it in atomically.
+
+    document_chunks is never truncated or emptied while the build is in
+    flight. If any step raises (OpenAI outage, Groq-dependent notable
+    chunker error, a timeout), the staging table is dropped and the live
+    index is left exactly as it was.
+    """
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql.SQL("DROP TABLE IF EXISTS {}").format(sql.Identifier(_STAGING_TABLE)))
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE {} (
+                        id          BIGSERIAL PRIMARY KEY,
+                        content     TEXT NOT NULL,
+                        metadata    JSONB DEFAULT '{{}}',
+                        embedding   vector(1536),
+                        created_at  TIMESTAMPTZ DEFAULT NOW()
+                    )
+                    """
+                ).format(sql.Identifier(_STAGING_TABLE))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {} ENABLE ROW LEVEL SECURITY").format(
+                    sql.Identifier(_STAGING_TABLE)
+                )
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+    try:
+        print("Step 1/3: Building base chunks...")
+        chunks = chunk_all()
+        print(f"Starting embedding — {len(chunks)} chunks to process.\n")
+        embed_and_store(chunks, table=_STAGING_TABLE)
+
+        print("\nStep 2/3: Building notable deputy chunks...")
+        from rag.pipeline.chunk_notable_deputies import build_notable_deputy_index
+
+        build_notable_deputy_index(100, table=_STAGING_TABLE)
+
+        print("\nStep 3/3: Building law summary chunks...")
+        from rag.pipeline.chunk_law_summaries import build_law_summary_index
+
+        build_law_summary_index(20, table=_STAGING_TABLE)
+    except Exception:
+        print(f"\nBuild failed — dropping {_STAGING_TABLE}, live index untouched.")
+        _drop_staging_table()
+        raise
+
+    print("\nSwapping in the new index...")
+    _swap_in_staging_table()
+    print("Index build complete.")
+    get_index_stats()
+
+
+def _drop_staging_table() -> None:
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql.SQL("DROP TABLE IF EXISTS {}").format(sql.Identifier(_STAGING_TABLE)))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _swap_in_staging_table() -> None:
+    """Atomically replace document_chunks with the staging table's contents."""
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("ALTER TABLE document_chunks RENAME TO document_chunks_old")
+            cur.execute(
+                sql.SQL("ALTER TABLE {} RENAME TO document_chunks").format(
+                    sql.Identifier(_STAGING_TABLE)
+                )
+            )
+            cur.execute("DROP TABLE document_chunks_old")
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def _delete_chunks_by_ids(chunk_type: str, id_key: str, ids: set[str]) -> None:
