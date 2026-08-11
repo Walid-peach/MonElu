@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import uuid
@@ -6,7 +7,7 @@ from typing import Literal
 import groq
 from fastapi import APIRouter, HTTPException, Request
 from psycopg2.extras import Json
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
@@ -94,10 +95,37 @@ def search(request: Request, body: SearchRequest):
         ) from None
 
 
+# MON-225: a share row is an anonymous public write with no per-field size
+# limit before this - the JSONB `sources` column could carry megabytes of
+# arbitrary content on a single request. Chunk content stays well under 500
+# tokens (rag/pipeline/chunker.py TOKEN_WARN_THRESHOLD) and metadata is a flat
+# dict of scalars (see chunker.py chunk_* functions), so these bounds are
+# generous relative to real payloads, not a guess.
+_METADATA_MAX_KEYS = 20
+_METADATA_MAX_BYTES = 2000
+
+
+class ShareSourceItem(BaseModel):
+    content: str = Field(..., max_length=4000)
+    metadata: dict = Field(default_factory=dict)
+    similarity: float | None = Field(None, ge=0, le=1)
+
+    @field_validator("metadata")
+    @classmethod
+    def _bound_metadata(cls, v: dict) -> dict:
+        if len(v) > _METADATA_MAX_KEYS:
+            raise ValueError(f"metadata may not have more than {_METADATA_MAX_KEYS} keys")
+        if any(isinstance(val, (dict, list)) for val in v.values()):
+            raise ValueError("metadata values must be scalars")
+        if len(json.dumps(v, ensure_ascii=False)) > _METADATA_MAX_BYTES:
+            raise ValueError(f"metadata must serialize to under {_METADATA_MAX_BYTES} bytes")
+        return v
+
+
 class ShareRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=500)
     answer: str = Field(..., min_length=1, max_length=8000)
-    sources: list[dict] = Field(default_factory=list, max_length=20)
+    sources: list[ShareSourceItem] = Field(default_factory=list, max_length=20)
     confidence: str | None = Field(None, max_length=50)
     data_source: str | None = Field(None, max_length=50)
     caveat: str | None = Field(None, max_length=500)
@@ -151,7 +179,7 @@ def share_answer(request: Request, body: ShareRequest):
                     (
                         body.question,
                         body.answer,
-                        Json(body.sources),
+                        Json([s.model_dump() for s in body.sources]),
                         body.confidence,
                         body.data_source,
                         body.caveat,

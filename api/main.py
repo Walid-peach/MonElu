@@ -216,6 +216,8 @@ app.include_router(agenda.router, prefix="/agenda", tags=["Agenda"])
 # so /health reads one snapshot refreshed at most every 60s.
 # ---------------------------------------------------------------------------
 _STATS_TTL_SECONDS = 60.0
+# MON-225: Supabase free tier caps the DB at 500 MB; warn with headroom to act.
+_DB_SIZE_WARN_MB = 400
 _stats_lock = threading.Lock()
 _stats_cache: dict | None = None
 _stats_cached_at = 0.0
@@ -241,7 +243,8 @@ def _get_db_stats() -> dict:
                     (SELECT COUNT(*) FROM deputies)        AS deputies,
                     (SELECT COUNT(*) FROM votes)           AS votes,
                     (SELECT COUNT(*) FROM vote_positions)  AS positions,
-                    (SELECT MAX(voted_at) FROM votes)      AS last_vote
+                    (SELECT MAX(voted_at) FROM votes)      AS last_vote,
+                    pg_database_size(current_database())   AS db_size_bytes
                 """
             )
             row = cur.fetchone()
@@ -251,6 +254,8 @@ def _get_db_stats() -> dict:
                     "votes": row["votes"],
                     "positions": row["positions"],
                     "last_ingestion": row["last_vote"].isoformat() if row["last_vote"] else None,
+                    # MON-225: Supabase free tier caps the DB at 500 MB.
+                    "db_size_mb": round(row["db_size_bytes"] / (1024 * 1024), 1),
                 }
             )
         try:
@@ -312,6 +317,10 @@ def health() -> JSONResponse:
                 "deputies": stats["deputies"],
                 "votes": stats["votes"],
                 "positions": stats["positions"],
+                # MON-225: Supabase free tier caps the DB at 500 MB; the daily
+                # ingestion workflow polls this to alert before writes start failing.
+                "db_size_mb": stats["db_size_mb"],
+                "db_size_warning": stats["db_size_mb"] >= _DB_SIZE_WARN_MB,
             }
         )
     if services["dbt_marts"] == "ok":

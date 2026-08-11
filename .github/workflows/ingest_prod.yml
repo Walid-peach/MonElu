@@ -137,6 +137,44 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python scripts/check_quiz_votes.py
 
+      - name: Check database size (MON-225)
+        # Supabase free tier caps the DB at 500 MB; /health surfaces the live
+        # pg_database_size() reading (api/main.py). Polling the public prod
+        # endpoint mirrors "Validate quiz vote_ids" above (ci.yml does the same
+        # for check_quiz_votes.py) rather than opening a second DB connection here.
+        id: db_size
+        run: |
+          body=$(curl -sf https://monelu-production.up.railway.app/health)
+          size_mb=$(echo "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('db_size_mb', ''))")
+          warning=$(echo "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('db_size_warning', ''))")
+          echo "Database size: ${size_mb} MB"
+          echo "size_mb=$size_mb" >> "$GITHUB_OUTPUT"
+          if [ "$warning" = "True" ]; then
+            echo "::warning::Database size is ${size_mb} MB, approaching the Supabase free-tier 500 MB cap."
+            echo "## ⚠️ Database size warning" >> "$GITHUB_STEP_SUMMARY"
+            echo "Database is ${size_mb} MB, approaching the Supabase free-tier 500 MB cap. Writes will start failing at 500 MB." >> "$GITHUB_STEP_SUMMARY"
+            echo "warning=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Email database size alert
+        if: steps.db_size.outputs.warning == 'true' && env.MAIL_SERVER != '' && env.NOTIFY_EMAIL_TO != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "MonÉlu: database size approaching free-tier cap"
+          to: ${{ secrets.NOTIFY_EMAIL_TO }}
+          from: MonÉlu CI <${{ secrets.MAIL_USERNAME }}>
+          body: |
+            The production database is ${{ steps.db_size.outputs.size_mb }} MB,
+            approaching the Supabase free-tier 500 MB cap. Writes will start
+            failing once that limit is hit, which takes down the ingestion
+            pipeline as well as user-facing writes (shares, feedback, verifications).
+
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
 
