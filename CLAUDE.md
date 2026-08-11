@@ -200,7 +200,7 @@ Health check: `GET /health` — returns DB status, record counts, `last_ingestio
 
 Ruff is the single tool for lint and formatting (`ruff.toml`):
 - Line length: 100
-- `print()` allowed in `scripts/`, `rag/`, and `ingestion/` (T201 ignored there), blocked elsewhere
+- `print()` allowed in `scripts/` and `rag/` (T201 ignored there), blocked elsewhere
 - B008 ignored to allow FastAPI `Depends()` defaults
 - Pre-commit hooks run automatically on `git commit`
 

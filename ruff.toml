@@ -1,5 +1,6 @@
 line-length = 100
 target-version = "py311"
+extend-exclude = ["archive/"]
 
 [lint]
 select = [
@@ -17,4 +18,3 @@ ignore = [
 [lint.per-file-ignores]
 "scripts/*"   = ["T201"]   # scripts print freely
 "rag/*"       = ["T201"]
-"ingestion/*" = ["T201"]   # Airflow DAG path (Phase 5, deferred) — prints freely like scripts/

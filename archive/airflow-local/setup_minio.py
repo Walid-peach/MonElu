@@ -6,8 +6,8 @@ def setup_buckets():
     s3 = boto3.client(
         "s3",
         endpoint_url="http://localhost:9000",
-        aws_access_key_id="minioadmin",
-        aws_secret_access_key="minioadmin",
+        aws_access_key_id="minioadmin",  # pragma: allowlist secret
+        aws_secret_access_key="minioadmin",  # pragma: allowlist secret
     )
     buckets = ["monelu-bronze", "monelu-checkpoints"]
     for bucket in buckets:
