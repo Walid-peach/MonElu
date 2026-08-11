@@ -10,6 +10,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Each test does 1-2 full navigations against the live production API
+  // (frontend/src/lib/api.ts has no client-side retry); the default 30s
+  // budget is tight for that over CI's network, especially with parallel
+  // workers sharing the same endpoint.
+  timeout: process.env.CI ? 60_000 : 30_000,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://localhost:3000',
