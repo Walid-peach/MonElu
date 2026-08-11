@@ -52,11 +52,16 @@ def _rate(rates: dict[str, dict], deputy_id: str, key: str) -> float | None:
 
 
 def _majority_position(pour: int, contre: int, abstention: int) -> str:
-    if pour >= contre and pour >= abstention:
-        return "pour"
-    if contre >= pour and contre >= abstention:
-        return "contre"
-    return "abstention"
+    """Plurality position, tied at the count and tie-broken alphabetically.
+
+    Mirrors `int_party_vote_majority` (MON-24, MON-228): the canonical
+    definition lives in dbt, this replicates it over raw tables so the
+    group page works even when the mart is absent (ADR-026). Do not
+    diverge from this tiebreak — see decisions.md ADR-034.
+    """
+    counts = {"abstention": abstention, "contre": contre, "pour": pour}
+    top = max(counts.values())
+    return min(position for position, count in counts.items() if count == top)
 
 
 @router.get("/{slug}", response_model=GroupDetail)

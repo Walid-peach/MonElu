@@ -853,6 +853,19 @@ _GROUP_RATE_ROWS = [
 ]
 
 
+def test_majority_position_tiebreak_matches_dbt():
+    from api.routers.groups import _majority_position
+
+    # Clear plurality — no tie to break.
+    assert _majority_position(pour=3, contre=1, abstention=0) == "pour"
+    # Ties resolve alphabetically (abstention < contre < pour), mirroring
+    # int_party_vote_majority's `order by position_count desc, position` —
+    # MON-24, MON-228, ADR-034.
+    assert _majority_position(pour=1, contre=1, abstention=0) == "contre"
+    assert _majority_position(pour=1, contre=0, abstention=1) == "abstention"
+    assert _majority_position(pour=2, contre=2, abstention=2) == "abstention"
+
+
 def test_get_group(client, mock_cursor):
     mock_cursor.fetchall.side_effect = [_GROUP_MEMBER_ROWS, _GROUP_VOTE_ROWS, _GROUP_RATE_ROWS]
     resp = client.get("/groups/rassemblement-national")
@@ -865,7 +878,9 @@ def test_get_group(client, mock_cursor):
     assert data["avg_dissident_rate"] == 0.1
     assert data["most_dissident_members"][0]["deputy_id"] == "PA2"
     assert [v["vote_id"] for v in data["divided_votes"]] == ["VTANR5L17V1"]
-    assert data["divided_votes"][0]["majority_position"] == "pour"
+    # 1 pour / 1 contre is a tie — resolved alphabetically to match dbt's
+    # int_party_vote_majority tiebreak (MON-24, MON-228, ADR-034).
+    assert data["divided_votes"][0]["majority_position"] == "contre"
     assert [v["vote_id"] for v in data["recent_scrutins"]] == [
         "VTANR5L17V2",
         "VTANR5L17V1",
