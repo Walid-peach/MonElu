@@ -62,7 +62,13 @@ _POSITION = {
 
 def test_health_ok(client, mock_cursor):
     mock_cursor.fetchone.side_effect = [
-        {"deputies": 577, "votes": 821, "positions": 289_411, "last_vote": None},
+        {
+            "deputies": 577,
+            "votes": 821,
+            "positions": 289_411,
+            "last_vote": None,
+            "db_size_bytes": 150 * 1024 * 1024,
+        },
         {"count": 577},
         {"count": 821},
     ]
@@ -80,6 +86,31 @@ def test_health_ok(client, mock_cursor):
     assert data["deputies"] == 577
     assert data["votes"] == 821
     assert data["positions"] == 289_411
+    assert data["db_size_mb"] == 150.0
+    assert data["db_size_warning"] is False
+
+
+def test_health_db_size_warning_past_threshold(client, mock_cursor):
+    mock_cursor.fetchone.side_effect = [
+        {
+            "deputies": 577,
+            "votes": 821,
+            "positions": 289_411,
+            "last_vote": None,
+            "db_size_bytes": 420 * 1024 * 1024,
+        },
+        {"count": 577},
+        {"count": 821},
+    ]
+    with patch.dict(
+        "os.environ",
+        {"OPENAI_API_KEY": "sk-real", "GROQ_API_KEY": "gsk_real"},  # pragma: allowlist secret
+    ):
+        resp = client.get("/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["db_size_mb"] == 420.0
+    assert data["db_size_warning"] is True
 
 
 def test_health_db_unavailable(client):
@@ -535,7 +566,13 @@ def test_rate_limit_handler_includes_retry_after():
 def test_health_degraded_when_openai_key_is_placeholder(client, mock_cursor):
     """Health endpoint returns 207 and marks openai=degraded when key is a placeholder."""
     mock_cursor.fetchone.side_effect = [
-        {"deputies": 577, "votes": 821, "positions": 289_411, "last_vote": None},
+        {
+            "deputies": 577,
+            "votes": 821,
+            "positions": 289_411,
+            "last_vote": None,
+            "db_size_bytes": 150 * 1024 * 1024,
+        },
         {"count": 577},
         {"count": 821},
     ]
@@ -823,7 +860,7 @@ def test_majority_position_tiebreak_matches_dbt():
     assert _majority_position(pour=3, contre=1, abstention=0) == "pour"
     # Ties resolve alphabetically (abstention < contre < pour), mirroring
     # int_party_vote_majority's `order by position_count desc, position` —
-    # MON-24, MON-228, ADR-032.
+    # MON-24, MON-228, ADR-033.
     assert _majority_position(pour=1, contre=1, abstention=0) == "contre"
     assert _majority_position(pour=1, contre=0, abstention=1) == "abstention"
     assert _majority_position(pour=2, contre=2, abstention=2) == "abstention"
@@ -842,7 +879,7 @@ def test_get_group(client, mock_cursor):
     assert data["most_dissident_members"][0]["deputy_id"] == "PA2"
     assert [v["vote_id"] for v in data["divided_votes"]] == ["VTANR5L17V1"]
     # 1 pour / 1 contre is a tie — resolved alphabetically to match dbt's
-    # int_party_vote_majority tiebreak (MON-24, MON-228, ADR-032).
+    # int_party_vote_majority tiebreak (MON-24, MON-228, ADR-033).
     assert data["divided_votes"][0]["majority_position"] == "contre"
     assert [v["vote_id"] for v in data["recent_scrutins"]] == [
         "VTANR5L17V2",

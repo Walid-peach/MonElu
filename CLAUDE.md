@@ -100,7 +100,7 @@ Assemblée Nationale Open Data (ZIPs)
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
-| `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test; posts dbt results as PR comment |
+| `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test + frontend lint/typecheck/jest/build + Playwright smoke tier (MON-241: no-horizontal-overflow and nav-visibility checks on `/`, `/deputes`, `/deputes/[id]`, `/votes`, `/votes/[id]`, `/chat`, `/quiz` at 390px/1280px, light/dark, against a `next build`); posts dbt results as PR comment |
 | `deploy.yml` | Merge to `master` | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index |
 | `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window — the actual retry backstop (MON-221) |
@@ -128,7 +128,7 @@ Assemblée Nationale Open Data (ZIPs)
 **`rag/`** — Phase 2 semantic search
 - `pipeline/chunker.py`: Five chunk strategies: `vote` (one per scrutin), `deputy` (one per député), `party` (one per parliamentary group), `global_stats` (aggregate overview), `notable_deputy` (vote-by-vote for high-profile deputies). Uses tiktoken (cl100k_base) for token counting.
 - `pipeline/embedder.py`: Batched OpenAI embedding (100 chunks/batch), stores into `document_chunks`.
-- `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` always truncates before embedding (full rebuild, ~$0.006/run).
+- `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` (no `--since`) is a full rebuild (~$0.006/run) that re-embeds into a `document_chunks_staging` table and swaps it in atomically (`ALTER TABLE ... RENAME`) once every step succeeds (MON-233) — `document_chunks` is never truncated up front, so a mid-run failure leaves the previous index live. `build --since` is a separate incremental mode that only embeds new votes/affected deputies and refreshes aggregate chunks in place.
 - `chain/retriever.py`: Exact cosine similarity via pgvector `<=>`. Supports `chunk_type`, `deputy_id`, and auto-detected `result` filters (`adopté`/`rejeté`). Notable deputy names detected and their chunk pinned as first result. TTL-cached notable-deputy map (1h). Note: `register_vector` requires a plain psycopg2 cursor, not a `RealDictCursor`.
 - `chain/prompts.py`: TTL-cached system prompt (data horizon refreshed hourly) via `build_system_prompt()`. Call per request — do not cache the return value.
 - `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `llama-3.3-70b-versatile` (temperature=0.2). RAG-path answers to claim-shaped input carry `suggested_action: "verify"` (ADR-023): `detect_claim()` in `llm_router.py` (regex pre-filter + small classifier) only annotates the response for the UI nudge - it never calls the verify chain.

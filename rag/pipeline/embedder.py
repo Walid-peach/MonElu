@@ -14,6 +14,7 @@ import psycopg2.extras
 from dotenv import load_dotenv
 from openai import OpenAI, RateLimitError
 from pgvector.psycopg2 import register_vector
+from psycopg2 import sql
 
 from rag.constants import EMBEDDING_MODEL
 from rag.db_utils import connect_with_retry
@@ -41,12 +42,18 @@ def _embed_batch(client: OpenAI, texts: list[str], max_retries: int = 3):
                 raise
 
 
-def embed_and_store(chunks: list[dict], batch_size: int = 100) -> None:
+def embed_and_store(
+    chunks: list[dict], batch_size: int = 100, table: str = "document_chunks"
+) -> None:
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     total_batches = (len(chunks) + batch_size - 1) // batch_size
     grand_total_tokens = 0
     grand_total_stored = 0
+
+    insert_query = sql.SQL(
+        "INSERT INTO {} (content, metadata, embedding) VALUES (%s, %s, %s)"
+    ).format(sql.Identifier(table))
 
     for batch_idx in range(total_batches):
         start = batch_idx * batch_size
@@ -67,14 +74,7 @@ def embed_and_store(chunks: list[dict], batch_size: int = 100) -> None:
                     )
                     for chunk, embedding in zip(batch, embeddings, strict=False)
                 ]
-                psycopg2.extras.execute_batch(
-                    cur,
-                    """
-                    INSERT INTO document_chunks (content, metadata, embedding)
-                    VALUES (%s, %s, %s)
-                    """,
-                    records,
-                )
+                psycopg2.extras.execute_batch(cur, insert_query, records)
             conn.commit()
         finally:
             conn.close()

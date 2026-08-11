@@ -57,7 +57,7 @@ def _majority_position(pour: int, contre: int, abstention: int) -> str:
     Mirrors `int_party_vote_majority` (MON-24, MON-228): the canonical
     definition lives in dbt, this replicates it over raw tables so the
     group page works even when the mart is absent (ADR-026). Do not
-    diverge from this tiebreak — see decisions.md ADR-032.
+    diverge from this tiebreak — see decisions.md ADR-033.
     """
     counts = {"abstention": abstention, "contre": contre, "pour": pour}
     top = max(counts.values())

@@ -833,7 +833,7 @@ The staging filter is unchanged: a vote with no date is not something the API, m
 
 ---
 
-## ADR-032 - One canonical group-majority definition; quiz's tie-skip is a deliberate divergence (MON-228)
+## ADR-033 - One canonical group-majority definition; quiz's tie-skip is a deliberate divergence (MON-228)
 
 **Date:** 2026-08-10
 **Status:** Final
@@ -856,6 +856,26 @@ The staging filter is unchanged: a vote with no date is not something the API, m
 
 ---
 
+## ADR-032 - Snapshot table retention: purgeable past 12 months, purge job deferred until the size alert fires (MON-225)
+
+**Date:** 2026-08-11
+**Status:** Deferred - policy decided, automated purge not built
+
+**Decision:** `verifications`, `chat_shares`, `quiz_shares`, and `feedback` are immutable-by-design (never updated) but not immortal-by-design: rows older than 12 months are purgeable, since a share/verdict/feedback row's value is overwhelmingly in the weeks after it is created (viral share spikes, active triage), not a permanent archive obligation.
+`api_key_usage` is a rolling per-day-per-key counter, not a user-facing snapshot, so it is purgeable on a much shorter horizon (90 days) once it needs it - accounting only ever looks at the current billing period.
+No automated purge job is built in this change. `pg_database_size()` is now surfaced in `/health` (`db_size_mb`, `db_size_warning` at 400 MB) and polled by `ingest_prod.yml`, which emails an alert past that threshold - the purge job is built when that alert actually fires, not preemptively.
+
+**Reason:** These four tables accept anonymous public writes with no delete path, on a 500 MB Supabase free-tier database already dominated by `vote_positions` (~715k rows). Unbounded growth is a real risk (a scripted client could write ~14k rows/day/IP before the existing 10/min rate limit even engages), but at current traffic none of these tables are a meaningful fraction of the 500 MB budget - building a purge job now would be speculative engineering against a threat that hasn't materialized. Deciding the retention window now (rather than improvising it under pressure when the DB is actually full) is the part worth doing today; writing the `DELETE` job is not, per the project's usual "decide now, build on trigger" pattern (see ADR-002).
+A `DELETE`-based purge is also a real behavior change worth flagging explicitly: it breaks the "upsert-only, nothing is ever deleted" property these tables have had since launch, and it means old `/chat/s/<id>`, `/verifier/v/<id>`, and `/quiz/s/<id>` share links will eventually 404. That is an acceptable tradeoff for a 12-month horizon on links whose value is front-loaded, but it should not happen silently - the purge job's implementation should link back to this ADR when it's built.
+
+**Impact:**
+- `ChatShareRequest.sources` / `ChatFeedbackRequest.sources` now go through a bounded `ShareSourceItem` model (`api/routers/search.py`) instead of `list[dict]`: per-item `content` capped at 4000 chars, `metadata` capped at 20 keys / 2000 serialized bytes with scalar-only values, `similarity` bounded to `[0, 1]`. This closes the "megabytes of arbitrary JSONB in one request" gap independently of the retention question.
+- No migration, cron, or script is added by this ADR. A future purge job is a normal follow-up issue (`DELETE FROM <table> WHERE created_at < now() - interval '12 months'`, batched, run from a workflow step) - not urgent today.
+
+**Trigger to build the purge job:** `db_size_warning` in `/health` goes true (>= 400 MB) and the growth is attributable to these tables (check via `scripts/check_db_size.py`), or a scripted-abuse pattern is observed in `api_key_usage`/share row counts well before the size threshold.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -873,4 +893,5 @@ The staging filter is unchanged: a vote with no date is not something the API, m
 13. Sustainability funding is donations-first via HelloAsso, with the existing `api_keys.rate_limit_multiplier` (ADR-029, MON-116/MON-98) as the paid-tier mechanism — do not build Stripe/webhook billing until a real paying commercial API customer exists
 14. Agenda ingestion is séance publique only, upserted into one `agenda_items` table and never deleted (ADR-030, MON-110) - an item is visible only when it was seen in the latest ingestion run and is not cancelled; never generate a summary for a stub `objet`
 15. Null `voted_at` is a tolerated upstream quirk, not an ingestion failure (ADR-031, MON-232) - the source test is `severity: warn`, `stg_votes` keeps filtering the row out, and undated votes stay invisible past staging by design
-16. Group-majority position is one formula everywhere: plurality with an alphabetical tiebreak, defined in `int_party_vote_majority` and replicated exactly by `groups.py`'s `_majority_position` (ADR-032, MON-24, MON-228) - never invent a different tiebreak; quiz's skip-ties behavior in `compute_group_alignment` is a documented, deliberate exception, not a bug to "fix" into matching
+16. Snapshot tables (`verifications`, `chat_shares`, `quiz_shares`, `feedback`) are purgeable past 12 months and `api_key_usage` past 90 days, but no purge job exists yet (ADR-032, MON-225) - build it only once `/health`'s `db_size_warning` actually fires, not preemptively; do not add a `DELETE` job to these tables without linking back to this ADR
+17. Group-majority position is one formula everywhere: plurality with an alphabetical tiebreak, defined in `int_party_vote_majority` and replicated exactly by `groups.py`'s `_majority_position` (ADR-033, MON-24, MON-228) - never invent a different tiebreak; quiz's skip-ties behavior in `compute_group_alignment` is a documented, deliberate exception, not a bug to "fix" into matching

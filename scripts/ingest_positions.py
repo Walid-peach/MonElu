@@ -176,7 +176,7 @@ def main() -> None:
 
 
 def run(since: str | None = None, zip_path: str | None = None) -> None:
-    """Programmatic entry point for Airflow — skips argparse."""
+    """Programmatic entry point — skips argparse."""
     if not DATABASE_URL:
         raise EnvironmentError("DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
     if since:
