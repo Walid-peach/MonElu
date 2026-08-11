@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
+from api.routers.search import ShareSourceItem
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class ChatFeedbackRequest(BaseModel):
     vote: str = Field(..., pattern="^(up|down)$")
     question: str = Field(..., min_length=1, max_length=500)
     answer: str = Field(..., min_length=1, max_length=8000)
-    sources: list[dict] = Field(default_factory=list, max_length=10)
+    sources: list[ShareSourceItem] = Field(default_factory=list, max_length=10)
 
 
 class ErrorReportRequest(BaseModel):
@@ -43,7 +44,7 @@ def submit_chat_feedback(request: Request, body: ChatFeedbackRequest):
         "vote": body.vote,
         "question": body.question,
         "answer": body.answer,
-        "sources": body.sources,
+        "sources": [s.model_dump() for s in body.sources],
     }
     try:
         with get_conn() as conn:

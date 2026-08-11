@@ -317,8 +317,8 @@ export function VoteDetailClient(props: Props) {
       </div>
 
       {/* ── Body ── */}
-      <div style={{ padding: '52px 56px 80px' }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', gap: 56, alignItems: 'flex-start' }}>
+      <div className="px-5 py-10 sm:px-14 sm:py-[52px] sm:pb-20">
+        <div className="flex flex-col xl:flex-row xl:items-start" style={{ maxWidth: 1180, margin: '0 auto', gap: 56 }}>
 
           {/* Main column */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 52 }}>
@@ -490,7 +490,10 @@ export function VoteDetailClient(props: Props) {
           </div>
 
           {/* Sidebar */}
-          <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 24, position: 'sticky', top: 120 }}>
+          <div
+            className="w-full xl:w-[300px] xl:sticky"
+            style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 24, top: 120 }}
+          >
 
             {/* Related votes */}
             {related.length > 0 && (
