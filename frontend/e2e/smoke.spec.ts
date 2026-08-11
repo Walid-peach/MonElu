@@ -6,12 +6,13 @@ import { test, expect, type Page } from '@playwright/test'
 // hardcodes a deputy or vote id that could later 404.
 const STATIC_ROUTES = ['/', '/deputes', '/votes', '/chat', '/quiz']
 
-async function firstDetailHref(page: Page, listPath: string, hrefPrefix: string) {
+async function firstDetailHref(page: Page, listPath: string, hrefPrefix: string, exclude: string[] = []) {
   await page.goto(listPath)
-  const link = page.locator(`a[href^="${hrefPrefix}"]`).first()
-  await link.waitFor({ state: 'attached' })
-  const href = await link.getAttribute('href')
-  if (!href) throw new Error(`no link matching ${hrefPrefix} found on ${listPath}`)
+  const links = page.locator(`a[href^="${hrefPrefix}"]`)
+  await links.first().waitFor({ state: 'attached' })
+  const hrefs = await links.evaluateAll(els => els.map(el => el.getAttribute('href')))
+  const href = hrefs.find((h): h is string => !!h && !exclude.includes(h))
+  if (!href) throw new Error(`no link matching ${hrefPrefix} (excluding ${exclude.join(', ')}) found on ${listPath}`)
   return href
 }
 
@@ -31,7 +32,12 @@ test.describe('smoke: no horizontal overflow', () => {
   }
 
   test('/deputes/[id] fits the viewport', async ({ page }) => {
-    const href = await firstDetailHref(page, '/deputes', '/deputes/')
+    // /deputes/comparer and /deputes/tableau are static routes that also
+    // match the `/deputes/` prefix and render before the deputy row list.
+    const href = await firstDetailHref(page, '/deputes', '/deputes/', [
+      '/deputes/comparer',
+      '/deputes/tableau',
+    ])
     await page.goto(href)
     await assertNoHorizontalOverflow(page)
   })
