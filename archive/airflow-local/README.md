@@ -14,22 +14,26 @@ deployment target.
 
 ## What's here
 
-- `ingestion_dags/` — the two DAGs (`dag_deputies_incremental.py`,
-  `dag_votes_batch.py`), moved as-is from `ingestion/dags/`
-- `ingestion_utils/bronze_writer.py` — the MinIO/S3 Bronze-layer writer the
-  DAGs used for hash-based change detection, moved as-is from
-  `ingestion/utils/`
+Everything below keeps its original relative path from the repo root, so
+`docker-compose.airflow.yml`'s volume mounts and every `from ingestion...` /
+`from quality...` import between these files still line up correctly:
+
+- `ingestion/dags/` — the two DAGs (`dag_deputies_incremental.py`,
+  `dag_votes_batch.py`)
+- `ingestion/utils/bronze_writer.py` — the MinIO/S3 Bronze-layer writer the
+  DAGs used for hash-based change detection
 - `quality/expectations/` — the Great Expectations validation suites the DAGs
-  ran before upserting, moved as-is from the repo-root `quality/`
+  ran before upserting
 - `Dockerfile.airflow`, `docker-compose.airflow.yml`, `requirements-airflow.txt` —
   the container/orchestration definitions
-- `setup_minio.py` — one-time MinIO bucket bootstrap, moved from `scripts/`
+- `setup_minio.py` — one-time MinIO bucket bootstrap, originally at
+  `scripts/setup_minio.py`
 - `test_bronze_writer.py` — unit tests for `BronzeWriter` and the DAG task
-  functions, moved from `tests/`
+  functions, originally at `tests/test_bronze_writer.py`
 
 None of these files have been edited beyond the move (import paths are not
 rewritten, so nothing here runs without restoring it to its original
-location first).
+location first — see "Trigger to restore" below).
 
 ## What's salvageable
 
