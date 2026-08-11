@@ -1,7 +1,5 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# test_bronze_writer.py requires boto3 (requirements-airflow.txt, not installed in CI)
-addopts = "--ignore=tests/test_bronze_writer.py"
 markers = [
     "integration: marks tests that require a live Postgres 15 + pgvector instance",
 ]

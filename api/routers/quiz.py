@@ -393,7 +393,7 @@ def compute_group_alignment(
     skipped for that group (no majority line to compare against). This is a
     deliberate divergence from the canonical tiebreak used by dbt's
     `int_party_vote_majority` and `groups.py`'s `_majority_position` — see
-    decisions.md ADR-033. A quiz "agreement" is a claim about a real stance;
+    decisions.md ADR-034. A quiz "agreement" is a claim about a real stance;
     on a genuine tie there is no line to agree or disagree with, so the
     scrutin is excluded rather than assigned an arbitrary winner.
     """
