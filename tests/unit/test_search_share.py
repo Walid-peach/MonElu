@@ -25,6 +25,38 @@ def test_share_request_rejects_empty_answer():
         ShareRequest(question="Q", answer="", sources=[])
 
 
+def test_share_request_rejects_oversized_source_content():
+    with pytest.raises(ValidationError):
+        ShareRequest(question="Q", answer="A", sources=[{"content": "x" * 4001}])
+
+
+def test_share_request_rejects_nested_metadata():
+    with pytest.raises(ValidationError):
+        ShareRequest(
+            question="Q",
+            answer="A",
+            sources=[{"content": "c", "metadata": {"nested": {"a": 1}}}],
+        )
+
+
+def test_share_request_rejects_too_many_metadata_keys():
+    with pytest.raises(ValidationError):
+        ShareRequest(
+            question="Q",
+            answer="A",
+            sources=[{"content": "c", "metadata": {f"k{i}": i for i in range(21)}}],
+        )
+
+
+def test_share_request_rejects_oversized_metadata():
+    with pytest.raises(ValidationError):
+        ShareRequest(
+            question="Q",
+            answer="A",
+            sources=[{"content": "c", "metadata": {"blob": "x" * 2001}}],
+        )
+
+
 def test_share_answer_inserts_row_and_returns_share_url(client, mock_cursor):
     mock_cursor.fetchone.return_value = {
         "id": "11111111-1111-1111-1111-111111111111",

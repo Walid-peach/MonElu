@@ -62,7 +62,13 @@ _POSITION = {
 
 def test_health_ok(client, mock_cursor):
     mock_cursor.fetchone.side_effect = [
-        {"deputies": 577, "votes": 821, "positions": 289_411, "last_vote": None},
+        {
+            "deputies": 577,
+            "votes": 821,
+            "positions": 289_411,
+            "last_vote": None,
+            "db_size_bytes": 150 * 1024 * 1024,
+        },
         {"count": 577},
         {"count": 821},
     ]
@@ -80,6 +86,31 @@ def test_health_ok(client, mock_cursor):
     assert data["deputies"] == 577
     assert data["votes"] == 821
     assert data["positions"] == 289_411
+    assert data["db_size_mb"] == 150.0
+    assert data["db_size_warning"] is False
+
+
+def test_health_db_size_warning_past_threshold(client, mock_cursor):
+    mock_cursor.fetchone.side_effect = [
+        {
+            "deputies": 577,
+            "votes": 821,
+            "positions": 289_411,
+            "last_vote": None,
+            "db_size_bytes": 420 * 1024 * 1024,
+        },
+        {"count": 577},
+        {"count": 821},
+    ]
+    with patch.dict(
+        "os.environ",
+        {"OPENAI_API_KEY": "sk-real", "GROQ_API_KEY": "gsk_real"},  # pragma: allowlist secret
+    ):
+        resp = client.get("/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["db_size_mb"] == 420.0
+    assert data["db_size_warning"] is True
 
 
 def test_health_db_unavailable(client):
@@ -535,7 +566,13 @@ def test_rate_limit_handler_includes_retry_after():
 def test_health_degraded_when_openai_key_is_placeholder(client, mock_cursor):
     """Health endpoint returns 207 and marks openai=degraded when key is a placeholder."""
     mock_cursor.fetchone.side_effect = [
-        {"deputies": 577, "votes": 821, "positions": 289_411, "last_vote": None},
+        {
+            "deputies": 577,
+            "votes": 821,
+            "positions": 289_411,
+            "last_vote": None,
+            "db_size_bytes": 150 * 1024 * 1024,
+        },
         {"count": 577},
         {"count": 821},
     ]
