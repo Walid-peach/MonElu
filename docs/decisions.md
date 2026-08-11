@@ -853,6 +853,41 @@ A `DELETE`-based purge is also a real behavior change worth flagging explicitly:
 
 ---
 
+## ADR-033 — Local Airflow/MinIO stack archived (MON-239)
+
+**Date:** 2026-08-11
+**Status:** Final
+**Related:** ADR-021 (MON-46, the AWS half of the same dead architecture)
+
+**Decision:** The local Airflow/MinIO stack moves from the live tree to `archive/airflow-local/`, next to `archive/infra-aws/`. This covers `ingestion/dags/` (both DAGs), `ingestion/utils/bronze_writer.py`, `quality/expectations/` (the Great Expectations suites, used only by these DAGs), `Dockerfile.airflow`, `docker-compose.airflow.yml`, `requirements-airflow.txt`, `scripts/setup_minio.py`, and `tests/test_bronze_writer.py`. The nine Makefile targets that drive this stack (`setup-minio`, `airflow-up`, `airflow-down`, `airflow-logs`, `minio-up`, `airflow-ui`, `minio-ui`, `dag-deputies`, `dag-votes`) and the Airflow/MinIO block in `.env.example` are removed rather than archived, since they are pure orchestration with nothing to preserve as reference.
+
+**Reason:**
+
+ADR-021 archived the AWS/Terraform half of the Airflow+Spark architecture ADR-001 decided not to build. The local half survived because it runs (docker compose up works, the DAGs execute against real scripts), so nothing ever forced the question the AWS half faced. That made it look like live infrastructure rather than the other half of the same shelved design — same architecture, same verdict, just not yet applied to this half.
+
+Three concrete costs, all cited in the MON-239 issue and confirmed while implementing this ADR:
+
+- **It breaks under normal cleanup.** PR #145 deleted `requirements-airflow.txt` as apparently-dead and broke the Airflow image build; PR #146 restored it with a warning comment telling future readers not to repeat the mistake. A file that needs a comment to survive routine dead-code sweeps is a sign the architecture around it, not the comment, is the problem.
+- **It inflates the ingestion test surface with no production payoff.** `tests/test_bronze_writer.py` stubs the `airflow` package itself just to import the DAG modules, and is excluded from the default pytest run via a `pyproject.toml` `--ignore` addopt (`boto3` isn't installed in CI). The June tests diagnostic found this was the deepest-covered part of ingestion — coverage effort spent on a path nothing in production calls.
+- **It carries its own lint carve-out.** `ruff.toml` exempts `ingestion/*` from T201 (no-print) specifically because it's "the Airflow DAG path" — a standing exception whose only justification is that this code exists.
+
+**Why archive over keeping it as a documented sandbox:** the alternative this ADR considered — write down why a local Airflow sandbox stays, with an owner and a smoke test — was rejected because there is no real owner (solo project) and no smoke test would do anything a code read can't: the two DAGs are thin wrappers that hash the fetch, write to MinIO Bronze, run a Great Expectations suite, and call the exact same `scripts/ingest_deputies.py` / `scripts/ingest_votes.py` / `scripts/ingest_positions.py` functions the GitHub Actions cron already calls directly (ADR-006). Keeping it "for local orchestration experiments" (the stack's own docker-compose comment) with no experiment currently running is the deferred-but-never-triggered pattern ADR-002/ADR-014 already reject for other features. Nothing is lost by archiving: the scripts underneath are untouched and still ingest production data every weekday via `ingest_prod.yml`.
+
+**What's salvageable:** all of it, as reference. The DAGs demonstrate a working hash-based change-detection pattern (ADR-011 describes this exact design as "planned, not yet implemented" for a future promoted-to-production Airflow) and a Bronze-layer S3 writer — useful if Airflow is ever actually promoted per ADR-006's migration path (Local Docker → Astronomer → AWS EC2). Nothing here is rewritten or cleaned up before archiving; it moves as-is, same as ADR-021 archived Terraform as-is.
+
+**Impact:**
+- `archive/airflow-local/` holds the files listed above under their original relative paths, with its own `README.md` mirroring `archive/infra-aws/README.md`'s framing.
+- `ingestion/` and `quality/` are removed from the live tree (both existed solely to support this stack — confirmed no other production code imports either package).
+- `ruff.toml`'s `ingestion/*` T201 carve-out is removed along with the directory.
+- `pyproject.toml`'s `--ignore=tests/test_bronze_writer.py` addopts line is removed along with the test file.
+- `Makefile`, `docker-compose.yml`'s header comment, and `.env.example` lose their Airflow/MinIO references.
+- ADR-006 ("Airflow runs locally only") and ADR-011 (hash-based change detection, "planned — not yet implemented") are **not superseded** — they describe what a promoted-to-production Airflow would look like, and stay accurate as forward-looking design notes even with today's sandbox implementation archived.
+- Do NOT resurrect `ingestion/dags/`, `quality/`, or the Makefile Airflow/MinIO targets without a new ADR — the trigger below is the bar.
+
+**Trigger to revisit:** GitHub Actions cron scheduling becomes a real bottleneck (finer-than-cron scheduling, DAG-level retries/backfill, or multi-step dependency graphs GitHub Actions can't express) — at that point, restore from `archive/airflow-local/` and follow ADR-006's migration path (Local Docker → Astronomer free tier → AWS EC2) rather than rebuilding from scratch.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -871,3 +906,4 @@ A `DELETE`-based purge is also a real behavior change worth flagging explicitly:
 14. Agenda ingestion is séance publique only, upserted into one `agenda_items` table and never deleted (ADR-030, MON-110) - an item is visible only when it was seen in the latest ingestion run and is not cancelled; never generate a summary for a stub `objet`
 15. Null `voted_at` is a tolerated upstream quirk, not an ingestion failure (ADR-031, MON-232) - the source test is `severity: warn`, `stg_votes` keeps filtering the row out, and undated votes stay invisible past staging by design
 16. Snapshot tables (`verifications`, `chat_shares`, `quiz_shares`, `feedback`) are purgeable past 12 months and `api_key_usage` past 90 days, but no purge job exists yet (ADR-032, MON-225) - build it only once `/health`'s `db_size_warning` actually fires, not preemptively; do not add a `DELETE` job to these tables without linking back to this ADR
+17. The local Airflow/MinIO stack is archived, not live (ADR-033, MON-239) - do not resurrect `ingestion/dags/`, `quality/`, or the Makefile Airflow/MinIO targets without a new ADR; ADR-006 and ADR-011 still describe the design a promoted-to-production Airflow would use

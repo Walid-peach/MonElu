@@ -1,9 +1,6 @@
 # MonÉlu local infrastructure — Postgres 15 (pgvector) + pgAdmin 8 only.
 # Schema is applied by `make migrate` (scripts/migrate.py) — the same mechanism
 # production uses — not by the Postgres initdb hook.
-#
-# The experimental Airflow/MinIO stack lives in docker-compose.airflow.yml:
-#   docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
 
 services:
   postgres:
