@@ -142,7 +142,11 @@ jobs:
         # pg_database_size() reading (api/main.py). Polling the public prod
         # endpoint mirrors "Validate quiz vote_ids" above (ci.yml does the same
         # for check_quiz_votes.py) rather than opening a second DB connection here.
+        # continue-on-error: a transient /health hiccup is a monitoring gap,
+        # not an ingestion failure - it must not trip "Notify failure" below
+        # and send a false "ingestion failed" alert for a healthy run.
         id: db_size
+        continue-on-error: true
         run: |
           body=$(curl -sf https://monelu-production.up.railway.app/health)
           size_mb=$(echo "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('db_size_mb', ''))")
