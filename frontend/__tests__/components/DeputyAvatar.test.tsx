@@ -3,7 +3,7 @@ import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { AN_PORTRAIT_PREFIX } from '@/lib/portraits'
 
 // next/image resolves the relative proxy path against jsdom's origin.
-const PROXY = 'http://localhost/api/portraits/718942'
+const PROXY = 'http://localhost/api/portraits/718942.jpg'
 const AN_PHOTO = `${AN_PORTRAIT_PREFIX}718942.jpg`
 
 describe('DeputyAvatar', () => {

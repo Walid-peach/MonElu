@@ -39,8 +39,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return new Response('Not Found', { status: 404, headers: { 'Cache-Control': CACHE_MISS } })
 
   const headers = new Headers({ 'Content-Type': contentType, 'Cache-Control': CACHE_HIT })
-  const length = res.headers.get('content-length')
-  if (length) headers.set('Content-Length', length)
+  // Pass the upstream validators through so the CDN can revalidate with a 304
+  // instead of re-transferring the body once s-maxage lapses.
+  for (const h of ['content-length', 'etag', 'last-modified'] as const) {
+    const v = res.headers.get(h)
+    if (v) headers.set(h, v)
+  }
 
   return new Response(res.body, { status: 200, headers })
 }

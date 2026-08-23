@@ -27,7 +27,7 @@ describe('portraitId', () => {
 
 describe('portraitSrc', () => {
   it('rewrites an AN portrait to the same-origin proxy', () => {
-    expect(portraitSrc(AN('718942'))).toBe('/api/portraits/718942')
+    expect(portraitSrc(AN('718942'))).toBe('/api/portraits/718942.jpg')
   })
 
   it('returns null when there is no photo', () => {
@@ -39,6 +39,13 @@ describe('portraitSrc', () => {
     expect(portraitSrc('https://example.com/photo.png')).toBe('https://example.com/photo.png')
   })
 
+  it('keeps the .jpg suffix the service worker matches images by (MON-198)', () => {
+    // public/sw.js registers its StaleWhileRevalidate image rule by file
+    // extension *before* its NetworkFirst /api/* rule; dropping the suffix
+    // would sink avatars into the 16-entry `apis` cache.
+    expect(portraitSrc(AN('718942'))).toMatch(/\.jpg$/)
+  })
+
   it('is stable: one URL per deputy regardless of rendered size', () => {
     expect(portraitSrc(AN('1'))).toBe(portraitSrc(AN('1')))
     expect(portraitSrc(AN('1'))).not.toBe(portraitSrc(AN('2')))
@@ -46,13 +53,20 @@ describe('portraitSrc', () => {
 })
 
 describe('portraitUpstream', () => {
-  it('builds the AN URL for a valid id', () => {
+  it('accepts the <id>.jpg segment portraitSrc emits, and a bare id', () => {
+    expect(portraitUpstream('718942.jpg')).toBe(AN('718942'))
     expect(portraitUpstream('718942')).toBe(AN('718942'))
+  })
+
+  it('round-trips whatever portraitSrc produced', () => {
+    const segment = portraitSrc(AN('718942'))!.split('/').pop()!
+    expect(portraitUpstream(segment)).toBe(AN('718942'))
   })
 
   it('refuses anything that is not a plain numeric id', () => {
     expect(portraitUpstream('..')).toBeNull()
     expect(portraitUpstream('7189/../x')).toBeNull()
+    expect(portraitUpstream('718942.png')).toBeNull()
     expect(portraitUpstream('')).toBeNull()
     expect(portraitUpstream('1234567890')).toBeNull()
   })

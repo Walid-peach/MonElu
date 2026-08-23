@@ -123,9 +123,11 @@ Subfolders group page-specific pieces: `home/` (landing components such as `Asse
 Deputy portraits are hosted by the Assemblée Nationale, one JPEG per deputy.
 Pointing `next/image` straight at that host made the serving cost scale with runtime combinations - deputy x rendered width x format x DPR - which exhausted Vercel's free image-transformation quota (MON-197).
 
-Every consumer now calls `portraitSrc()` from `src/lib/portraits.ts`, which rewrites the stored `photo_url` to the same-origin route handler `src/app/api/portraits/[id]/route.ts`.
+Every consumer now calls `portraitSrc()` from `src/lib/portraits.ts`, which rewrites the stored `photo_url` to the same-origin route handler `src/app/api/portraits/[id]/route.ts` as `/api/portraits/<id>.jpg`.
 That route validates the id, fetches the upstream JPEG once, and returns it with a week-long `s-maxage`, so the address space is exactly one CDN-cacheable URL per deputy (~577) regardless of the size rendered.
 Anything that is not a recognised AN portrait URL passes through unchanged.
+
+The `.jpg` suffix is load-bearing: `public/sw.js` registers its StaleWhileRevalidate image rule (`static-image-assets`, 64 entries, 30 days) by file extension and *before* its `/api/*` rule, so an extensionless proxy path would fall into the 16-entry NetworkFirst `apis` cache instead - thrashing on any page rendering more than 16 avatars and breaking the offline deputy pages MON-115 exists to keep readable.
 
 Avatars stay `unoptimized`, so the optimizer is not involved at all today.
 `images.imageSizes` in `next.config.mjs` is narrowed to the four widths `DeputyAvatar` renders plus their 2x counterparts, so a future re-enable stays bounded by deputy count x that fixed set instead of the default width ladder.

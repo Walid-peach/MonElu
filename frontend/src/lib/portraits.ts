@@ -7,9 +7,16 @@
  * DPR), which exhausted Vercel's image-transformation quota (MON-197).
  *
  * Every consumer now goes through `portraitSrc()`, which rewrites the upstream
- * URL to a same-origin proxy (`/api/portraits/<id>`). That collapses the
+ * URL to a same-origin proxy (`/api/portraits/<id>.jpg`). That collapses the
  * address space to exactly one cacheable URL per deputy, so the served cost is
  * bounded by deputy count (~577) whatever the rendered size happens to be.
+ *
+ * The `.jpg` suffix is load-bearing: the service worker registers its
+ * StaleWhileRevalidate image rule (`static-image-assets`, 64 entries, 30 days)
+ * by file extension and *before* its `/api/*` rule, so an extensionless proxy
+ * path would fall into the 16-entry NetworkFirst `apis` cache instead - which
+ * thrashes on any page rendering more than 16 avatars and breaks the offline
+ * deputy pages MON-115 exists to keep readable.
  */
 
 /** Upstream prefix for 17th-legislature square portraits. */
@@ -21,7 +28,11 @@ const PORTRAIT_ID = /^\d{1,9}$/
 
 /**
  * Extract the AN portrait id from a stored `photo_url`.
- * Returns null for anything that is not an AN square-portrait URL.
+ *
+ * Returns null for anything that is not an AN square-portrait URL - including
+ * one carrying a query string or fragment. That is deliberate: such a URL
+ * falls through to `portraitSrc()`'s pass-through branch and keeps working,
+ * rather than being rewritten to a proxy path the route would then reject.
  */
 export function portraitId(photoUrl: string | null | undefined): string | null {
   if (!photoUrl || !photoUrl.startsWith(AN_PORTRAIT_PREFIX)) return null
@@ -39,10 +50,17 @@ export function portraitId(photoUrl: string | null | undefined): string | null {
 export function portraitSrc(photoUrl: string | null | undefined): string | null {
   if (!photoUrl) return null
   const id = portraitId(photoUrl)
-  return id ? `/api/portraits/${id}` : photoUrl
+  return id ? `/api/portraits/${id}.jpg` : photoUrl
 }
 
-/** Upstream URL the proxy fetches for a validated id. */
-export function portraitUpstream(id: string): string | null {
+/**
+ * Upstream URL the proxy fetches for a route segment.
+ *
+ * Accepts the `<id>.jpg` form `portraitSrc()` emits (and a bare id), and
+ * returns null for anything else, so the route can never be pointed at an
+ * arbitrary upstream path.
+ */
+export function portraitUpstream(segment: string): string | null {
+  const id = segment.replace(/\.jpg$/i, '')
   return PORTRAIT_ID.test(id) ? `${AN_PORTRAIT_PREFIX}${id}.jpg` : null
 }
