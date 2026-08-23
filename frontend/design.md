@@ -110,13 +110,25 @@ Reusable components live in `src/components/`.
 | `Nav` | Desktop header navigation (64px height) |
 | `BottomNav` | Mobile footer navigation |
 | `MonEluLogo` | Responsive logo with configurable size and variant |
-| `DeputyAvatar` | Avatar with four sizes (sm/lg/xl/2xl) and initials fallback |
+| `DeputyAvatar` | Avatar with four sizes (sm/lg/xl/2xl) and initials fallback; portraits go through the `/api/portraits/<id>` proxy (see below) |
 | `HeroSearch` | Search form with postal-code resolution |
 | `ChatRedirectInput` | Chat entry input |
 | `PageTransition` | Framer Motion page-transition wrapper |
 | `ShareButton` | Native share API with clipboard fallback |
 
 Subfolders group page-specific pieces: `home/` (landing components such as `AssemblyScrollExperience`, `LiveAssemblyPulse`, `TrustRow`) and `chat/` (chat UI).
+
+### Deputy portraits
+
+Deputy portraits are hosted by the Assemblée Nationale, one JPEG per deputy.
+Pointing `next/image` straight at that host made the serving cost scale with runtime combinations - deputy x rendered width x format x DPR - which exhausted Vercel's free image-transformation quota (MON-197).
+
+Every consumer now calls `portraitSrc()` from `src/lib/portraits.ts`, which rewrites the stored `photo_url` to the same-origin route handler `src/app/api/portraits/[id]/route.ts`.
+That route validates the id, fetches the upstream JPEG once, and returns it with a week-long `s-maxage`, so the address space is exactly one CDN-cacheable URL per deputy (~577) regardless of the size rendered.
+Anything that is not a recognised AN portrait URL passes through unchanged.
+
+Avatars stay `unoptimized`, so the optimizer is not involved at all today.
+`images.imageSizes` in `next.config.mjs` is narrowed to the four widths `DeputyAvatar` renders plus their 2x counterparts, so a future re-enable stays bounded by deputy count x that fixed set instead of the default width ladder.
 
 ### Server/client split
 

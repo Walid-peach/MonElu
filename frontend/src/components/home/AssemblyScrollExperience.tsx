@@ -11,6 +11,7 @@ import { LiveAssemblyPulse } from './LiveAssemblyPulse'
 import { HeroSearch } from '@/components/HeroSearch'
 import { TrustRow } from './TrustRow'
 import type { DeputyInfo } from '@/app/page'
+import { portraitSrc } from '@/lib/portraits'
 import { NAV_HEIGHT_PX } from '@/components/Nav'
 import { departmentLabel } from '@/lib/departments'
 
@@ -797,13 +798,14 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
               <div style={{ width: 100, height: 100, borderRadius: 999, padding: 3, background: 'linear-gradient(160deg,rgba(240,88,76,0.85),rgba(120,150,210,0.5))', boxShadow: '0 0 24px rgba(240,68,56,0.45)', overflow: 'hidden', flexShrink: 0 }}>
-                {deputyInfo?.photoUrl ? (
+                {portraitSrc(deputyInfo?.photoUrl) ? (
                   <Image
-                    src={deputyInfo.photoUrl}
+                    src={portraitSrc(deputyInfo?.photoUrl) as string}
                     alt=""
                     width={94}
                     height={94}
                     style={{ borderRadius: 999, objectFit: 'cover', width: 94, height: 94 }}
+                    unoptimized
                   />
                 ) : (
                   <div style={{ width: 94, height: 94, borderRadius: 999, background: 'rgba(13,31,60,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'rgba(150,185,240,0.7)' }}>⚖</div>

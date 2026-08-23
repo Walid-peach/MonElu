@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { getInitials } from '@/lib/utils'
+import { portraitSrc } from '@/lib/portraits'
 
 type Props = {
   name: string
@@ -23,16 +24,18 @@ const sizes = {
 export function DeputyAvatar({ name, photoUrl, size = 'sm', priority = false, decorative = false }: Props) {
   const [imgError, setImgError] = useState(false)
   const { w, h, className, rounded } = sizes[size]
+  // Same-origin proxy: one cacheable URL per deputy (MON-198).
+  const src = portraitSrc(photoUrl)
   const style = size === '2xl' ? { width: 210, height: 262, flexShrink: 0 } : undefined
 
-  if (photoUrl && !imgError) {
+  if (src && !imgError) {
     return (
       <div
         className={`${className} ${rounded} overflow-hidden flex-shrink-0 bg-navy-muted dark:bg-white/10`}
         style={style}
       >
         <Image
-          src={photoUrl}
+          src={src}
           alt={decorative ? '' : name}
           width={w}
           height={h}
