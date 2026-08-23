@@ -65,6 +65,37 @@ describe('GET /api/portraits/[id]', () => {
     await expect(GET(req, params('999999.jpg')).then(r => r.status)).resolves.toBe(404)
   })
 
+  it('forwards the caller validators upstream and passes a 304 straight back', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 304 }))
+
+    const conditional = new Request('http://localhost/api/portraits/718942.jpg', {
+      headers: { 'if-none-match': '"abc"', 'if-modified-since': 'Wed, 21 Oct 2026 07:28:00 GMT' },
+    })
+    const res = await GET(conditional, params('718942.jpg'))
+
+    const sent = fetchMock.mock.calls[0][1].headers as Headers
+    expect(sent.get('if-none-match')).toBe('"abc"')
+    expect(sent.get('if-modified-since')).toBe('Wed, 21 Oct 2026 07:28:00 GMT')
+    expect(res.status).toBe(304)
+    expect(res.headers.get('cache-control')).toContain('s-maxage=604800')
+  })
+
+  it('releases the upstream body when it rejects the response', async () => {
+    const cancel = jest.fn().mockResolvedValue(undefined)
+    const body = { cancel } as unknown as ReadableStream
+    fetchMock.mockResolvedValue({
+      status: 200,
+      ok: true,
+      body,
+      headers: new Headers({ 'content-type': 'text/html' }),
+    })
+
+    const res = await GET(req, params('999999.jpg'))
+
+    expect(res.status).toBe(404)
+    expect(cancel).toHaveBeenCalled()
+  })
+
   it('returns an uncached 502 when the upstream times out', async () => {
     fetchMock.mockRejectedValue(new Error('timeout'))
 
