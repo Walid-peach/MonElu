@@ -25,6 +25,15 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   images: {
+    // Deputy portraits are served through the same-origin proxy at
+    // /api/portraits/<id> and rendered `unoptimized`, so they cost nothing at
+    // the optimizer today (MON-198). This list caps what a future re-enable
+    // could cost: the optimizer may only emit these widths, so the worst case
+    // is deputy count x this fixed set, never one variant per runtime
+    // combination the way the default width ladder allowed (MON-197).
+    // 40/64/80/210 are the four widths DeputyAvatar renders; the rest are
+    // their 2x retina counterparts.
+    imageSizes: [40, 64, 80, 128, 160, 210, 420],
     remotePatterns: [
       {
         protocol: 'https',
