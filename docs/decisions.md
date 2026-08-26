@@ -911,6 +911,271 @@ Three concrete costs, all cited in the MON-239 issue and confirmed while impleme
 
 ---
 
+## ADR-035 - Bill timelines are built on the dossier acte parcours, not on scrutins (MON-242)
+
+**Date:** 2026-08-26
+**Status:** Final
+**Related:** ADR-030 (agenda storage, the pattern this follows and departs from), ADR-010 (AN publishes ZIPs, not an API), ADR-026 (no new mart for a page-shaped read)
+
+**Decision:** MON-105's `/lois/[dossier_id]` pages are built on the **legislative acte parcours** ingested from the AN `Dossiers_Legislatifs` export, with scrutins attached to it, rather than on a list of scrutins grouped by `votes.dossier_id` as the epic proposed.
+Two new tables (`dossiers`, `dossier_actes`) hold the parcours.
+All 2 854 legislature-17 dossiers are ingested; only dossiers carrying at least one scrutin get a public page.
+The page URL is `/lois/{dossier_uid}`.
+
+### 1. The scrutin-only timeline the epic proposed does not work
+
+MON-105 assumed `votes.dossier_id` is a usable grouping key across the legislature.
+It is not, and the reason is a hard cutover in the upstream feed rather than a data-quality defect that can be patched.
+
+Measured over the full `Scrutins.json.zip` export (8 434 scrutins, legislature 17):
+
+| Period | Scrutins | Carrying `objet.dossierLegislatif` |
+|---|---|---|
+| 2024-10 through 2026-02 | 5 828 | **0 %** (2 rows) |
+| 2026-03 through 2026-07 | 2 606 | **100 %** |
+
+The Assemblée began populating `objet.dossierLegislatif` in March 2026 and has populated it on every scrutin since.
+Nothing before that date carries it, and there is no evidence the AN intends to backfill.
+
+The consequence is that only **75 distinct dossiers** in the entire legislature have even one linkable scrutin, and **59 of those 75 (79 %) opened before the cutover**.
+Their scrutin history therefore begins months or years after the bill itself did.
+"Fin de vie" (`DLR5L17N51670`) opened on 2025-03-11; its first linkable scrutin is 2026-06-22, a fifteen-month hole at the front of the page.
+
+A page whose entire content is the post-March-2026 slice cannot answer "où en est cette loi ?" for four bills in five.
+It would answer "what did the Assemblée vote on this bill recently", while presenting itself as the bill's full parcours.
+On a civic-transparency site that is worse than not shipping the page.
+
+**Why title matching was rejected as a repair.** Matching untagged scrutin `objet.libelle` text against the 75 known short titles recovers 908 of the 5 826 untagged scrutins (16 %) with no ambiguous matches.
+That is a real but small gain, and it buys the wrong thing: it adds more amendment votes to pages that already have too many (see section 4), while doing nothing about the missing front half of the parcours, which is not made of scrutins at all.
+Fuzzy string matching that silently attributes a vote to the wrong bill is exactly the failure mode this project cannot absorb.
+
+**Why `voteRefs` was rejected as a better join.** The dossier export's decision actes carry a `voteRefs` field pointing at scrutin uids, which would be a cleaner join than `dossier_id`.
+It is populated on only 206 of 617 decision actes, and there are just 617 decision actes across all 2 854 dossiers.
+It is too sparse to replace the `dossier_id` join and is not ingested.
+
+### 2. The acte parcours is the spine, and it is complete
+
+`Dossiers_Legislatifs.json.zip` (10 MB, 2 854 `DLR5L17*` dossiers) carries, for every dossier, a nested `actesLegislatifs` tree of dated procedural steps from first deposit to promulgation.
+Unlike the scrutin tagging, this is complete from the start of the legislature.
+It is the only source that can say where a bill actually stands.
+
+Each acte carries `codeActe` (`AN1-DEPOT`, `AN1-COM-FOND-RAPPORT`, `AN1-DEBATS-DEC`, `SN1-...`, `CMP-DEC`, `PROM`), a `libelleActe`, a `dateActe`, and, on decision actes, a `statutConclusion`.
+That is enough to render a full vertical parcours with real dates, which is what the page's header question demands.
+
+Scrutins attach to this spine where they exist, by `votes.dossier_id`, and are simply absent where the AN never tagged them.
+The page then degrades honestly: the parcours is always complete, and the vote detail is richer for recent stages than for old ones.
+This is a visible, explainable gap rather than a silent truncation.
+
+### 3. Two tables, not one, and no JSONB parcours
+
+```sql
+CREATE TABLE IF NOT EXISTS dossiers (
+    dossier_uid     TEXT PRIMARY KEY,        -- titreDossier uid, e.g. DLR5L17N51670; joins votes.dossier_id
+    legislature     TEXT,                    -- carried through from the source; ingestion is scoped to L17, this is not a multi-legislature key
+    titre           TEXT NOT NULL,           -- titreDossier.titre; the readable short title, median 94 chars
+    titre_chemin    TEXT,                    -- titreDossier.titreChemin; stored for a future slug URL, not routed on
+    procedure_code  TEXT,                    -- procedureParlementaire.code
+    procedure_label TEXT,                    -- procedureParlementaire.libelle
+    initiateur      TEXT,
+    status          TEXT NOT NULL,           -- derived enum, section 5
+    status_label    TEXT,                    -- raw statutConclusion.libelle of the deciding acte, verbatim
+    current_stage   TEXT,                    -- codeActe of the last top-level acte, e.g. AN1, SN1, PROM
+    parcours_start  DATE,                    -- earliest dateActe in the tree
+    parcours_end    DATE,                    -- latest dateActe in the tree
+    has_scrutins    BOOLEAN NOT NULL DEFAULT FALSE,  -- drives page scope, section 6
+    last_seen_at    TIMESTAMPTZ NOT NULL,
+    ingested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS dossier_actes (
+    dossier_uid     TEXT NOT NULL REFERENCES dossiers(dossier_uid) ON DELETE CASCADE,
+    acte_uid        TEXT NOT NULL,           -- acteLegislatif uid, e.g. L17-VD223914DEC
+    parent_uid      TEXT,                    -- enclosing acte_uid within the same dossier; NULL at top level
+    depth           SMALLINT NOT NULL,       -- 0 for a top-level stage
+    ordinal         INTEGER NOT NULL,        -- document order within the parent, preserves sibling sequence
+    code_acte       TEXT NOT NULL,
+    acte_type       TEXT,                    -- @xsi:type, e.g. Decision_Type, Etape_Type
+    libelle         TEXT,                    -- libelleActe.nomCanonique
+    date_acte       DATE,
+    statut_label    TEXT,                    -- statutConclusion.libelle, verbatim
+    organe_ref      TEXT,
+    last_seen_at    TIMESTAMPTZ NOT NULL,
+    ingested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (dossier_uid, acte_uid)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dossiers_status ON dossiers (status);
+CREATE INDEX IF NOT EXISTS idx_dossiers_scrutin_pages ON dossiers (dossier_uid) WHERE has_scrutins;
+CREATE INDEX IF NOT EXISTS idx_dossier_actes_order ON dossier_actes (dossier_uid, ordinal);
+CREATE INDEX IF NOT EXISTS idx_dossier_actes_date ON dossier_actes (date_acte);
+```
+
+**The acte primary key is composite, and that is not a formality.**
+Measured over the export, the 2 854 legislature-17 dossiers flatten to **20 485 acte rows carrying 20 442 distinct uids**: every acte has a uid, but **43 uids appear in two different dossiers each** (never twice within one dossier).
+They are shared procedural events, typically where dossiers were merged: `L17-VD223530` is `AN21-DGVT` on `DLR5L17N51427` and `ANNLEC-DGVT` on `DLR5L17N50588`.
+`acte_uid` alone as the primary key would therefore fail on ingestion.
+`(dossier_uid, acte_uid)` is verified unique across the whole export and models the real relationship, which is that one procedural event can legitimately belong to two dossiers.
+
+**Why two tables rather than ADR-030's single denormalized one.** ADR-030 denormalized because every agenda read is a date window across many parents, so a join would be paid on every request to save a thousand duplicated sitting rows.
+The shape here is the opposite: the parent is always fixed (one dossier) and the children *are* the page content.
+The acte is the timeline node, the thing rendered and the thing a scrutin binds to by date.
+
+**Why not a JSONB `parcours` column on `dossiers`.** It would serve the one-dossier read in a single row, but it moves the acte-to-scrutin join out of SQL and into Python, makes the parcours untestable by dbt, and makes "which bills reached CMP" a JSONB scan instead of an index lookup.
+At 20 485 acte rows across 2 854 dossiers the normalized form costs nothing.
+The nesting is preserved by `parent_uid` / `depth` / `ordinal` rather than by document structure, so the tree can be rebuilt for rendering in one ordered pass.
+
+**Why no dbt mart.** As in ADR-026 (groups) and ADR-030 (agenda), the API reads these tables directly.
+The read is page-shaped, not analytical, and a mart would add a build step between ingestion and a page that needs no aggregation.
+
+**Upsert-only, as everywhere else.** Both tables are keyed on the AN's own uids, upserted with `ON CONFLICT DO UPDATE`, and stamped with `last_seen_at` on every run.
+Nothing is deleted, so CLAUDE.md decision 8 holds unchanged.
+`dossier_actes` rows that vanish from the export keep their stale `last_seen_at` and are filtered out on read, exactly as ADR-030 §2 does for agenda items.
+
+### 4. The timeline is headline-first; amendment scrutins collapse
+
+Of the 2 606 tagged scrutins, **87 % are amendment or article votes** (2 262 amendments, 239 articles) against just 71 "ensemble" votes, 19 motions and 17 others.
+The median dossier has **one** headline scrutin; `DLR5L17N54085` has 422 scrutins of which 395 are amendments.
+
+A literal "vertical timeline of every scrutin attached to the dossier", as MON-105 words it, is therefore 400 rows of amendment noise around four meaningful nodes.
+
+Rendering rule: a scrutin is a timeline node when it is a vote on the whole text, a motion, or otherwise not an amendment or single-article vote.
+Amendment and article scrutins are collapsed into a count on the acte they fall under, expandable on demand, never listed inline by default.
+This is the same judgment ADR-030's scope note made for `Suite de la discussion` on the agenda.
+
+Classification is done from `objet.libelle` at ingestion time and stored on `votes` as `scrutin_kind TEXT` (`ensemble` | `motion` | `amendement` | `article` | `autre`), added by the same migration as the two tables above.
+It is not recomputed per request, and it is not a `dossier_actes` column: it is a property of the scrutin, and `GET /votes` benefits from it independently of any bill page.
+
+### 5. Status is derived by ordered prefix rules over free text, and both forms are stored
+
+`statutConclusion.libelle` is **free text, not an enum**.
+Across 617 decision actes there are more than fifteen distinct values, including "adoptée", "adopté", "modifiée", "Accord", "adoptée sans modification", "rejeté", "considérée comme définitive en application de l'article 151-7 du Règlement", and "adopté, dans les conditions prévues à l'article 45, alinéa 3, de la Constitution".
+
+So status derivation must not match on equality.
+It is an ordered rule list resolving to one of seven values, written against `codeActe` structure rather than against prose.
+The thirteen top-level `codeActe` values observed in legislature 17 fall into three groups:
+
+- **Reading stages:** `AN1`, `AN2`, `AN20`, `AN21`, `ANNLEC`, `ANLUNI`, `ANLDEF`, `SN1`, `SN2`, `SNNLEC`, `CMP`
+- **Post-parliamentary:** `PROM` (promulgation), `CC` (Conseil constitutionnel)
+- **Sub-acte prefixes within a reading stage:** `-DEPOT` (deposit), `-COM` (commission), `-DEBATS` (séance), `-DEC` (decision)
+
+Rules are evaluated **top to bottom, first match wins**, over the dossier's flattened acte tree.
+`decisions` means the `Decision_Type` actes carrying a `dateActe`, sorted by that date; `latest` is the last of them.
+
+| # | `status` | Citizen-facing label | Condition |
+|---|---|---|---|
+| 1 | `promulguee` | Promulguée | a `PROM` top-level acte exists |
+| 2 | `conseil_constitutionnel` | Devant le Conseil constitutionnel | a `CC` top-level acte exists |
+| 3 | `rejetee` | Rejetée | `latest.statut_label` normalises to a first word starting `rejet` |
+| 4 | `adoptee_definitivement` | Adoptée définitivement | `latest.statut_label` first word starts `adopt`, `latest` sits in the only reading stage the dossier has, and that stage is the last in document order |
+| 5 | `deposee` | Déposée | there are no decisions and no `-COM` acte |
+| 6 | `en_commission` | En commission | there are no decisions and a `-COM` acte exists |
+| 7 | `en_navette` | En navette parlementaire | everything else |
+
+Rule 7 is a total fallback, so the rule set always resolves and never needs an "unknown" value.
+"Normalises" means lowercased and stripped of accents before the prefix test, so "rejeté", "rejetée" and "rejet du texte par la commission préalable" all satisfy rule 3, and the `article 45, alinéa 3` and `sans modification` variants all satisfy rule 4's first test.
+Match the **first word only**: the long constitutional labels always lead with the outcome word, and prefix-matching the whole string would need one rule per variant.
+
+Rule 4 is deliberately conservative: a text adopted at first reading with a second chamber still to come is genuinely in navette, not finished, so it falls to rule 7 rather than claiming a conclusion the parcours does not support.
+That is also where "Accord" (CMP), "modifiée", and "considérée comme définitive en application de l'article 151-7 du Règlement" land, each with its raw label displayed.
+
+These rules were run over all 2 854 dossiers before being written down, and over the 75 that actually get a page:
+
+| `status` | All 2 854 | The 75 with a page |
+|---|---|---|
+| `promulguee` | 107 | **36** |
+| `en_navette` | 175 | **32** |
+| `rejetee` | 20 | **3** |
+| `adoptee_definitivement` | 32 | **2** |
+| `deposee` | 428 | 1 |
+| `en_commission` | 2 090 | 1 |
+| `conseil_constitutionnel` | 2 | 0 |
+| unresolved | **0** | **0** |
+
+`en_commission` dominating the full set is expected and harmless: it is the 2 090 propositions de loi that were deposited, referred to committee, and never scheduled, none of which gets a page.
+Across the dossiers that do get one the field is well spread and carries real information, which is the test that mattered.
+
+MON-243 must implement these seven rules as written and assert the totality property in a unit test.
+
+### 6. Ingest all 2 854 dossiers, publish pages for the ones with scrutins
+
+Ingestion covers every `DLR5L17*` dossier.
+The export is 10 MB and parses in seconds, so filtering at ingestion time would save nothing and would make the `has_scrutins` flag impossible to maintain as new scrutins arrive.
+
+Pages are published only where `has_scrutins` is true, which is 75 dossiers today.
+The remaining 2 779 are propositions de loi that were deposited and never debated; a page for one would show a single "déposée" node and nothing else.
+Publishing 2 779 near-empty pages would be thin content on a site whose SEO case rests on being the one source that answers the question properly.
+
+`has_scrutins` is recomputed at the end of every ingestion run from `votes.dossier_id`, so a bill acquires its page automatically on its first scrutin.
+
+**`GET /lois` and the sitemap read the flag, not a hardcoded list.**
+No slug map is hardcoded here, unlike ADR-026's group slugs: group labels are a closed set of twelve political facts, whereas dossiers are an open, growing set.
+
+### 7. The URL is the dossier uid
+
+`/lois/{dossier_uid}`, for example `/lois/DLR5L17N51670`.
+
+`titreChemin` is unique across all 75 in-scope dossiers and near-unique across all 2 854 (one collision, 19 nulls), which makes it tempting as a readable slug.
+It is rejected as the route key: it is only empirically unique, it is up to 134 characters long, and it is an upstream string that can change under us and silently break every inbound link and share card.
+The uid is what `votes.dossier_id`, `agenda_items.dossier_id`, and MON-89's external link already carry, so routing on it means no translation layer anywhere.
+
+The SEO cost is small: descriptive words carry far more weight in the `<title>`, `<h1>` and body copy, all of which MON-247 sets from `titre`.
+`titre_chemin` is stored so a future `/lois/{slug}` alias that 301s to the canonical uid route is an additive follow-up, not a rewrite.
+
+### 8. No LLM for the header
+
+`titreDossier.titre` is already the short readable name, not a bureaucratic long form: "Fin de vie", "Projet de loi relatif à la protection des enfants".
+Median length is 94 characters, p90 is 171.
+It is identical to the short `dossierLegislatif.libelle` the scrutin feed carries.
+
+So the header uses the AN title verbatim, with no generation step.
+This is the same judgment as ADR-030 §5: do not send an LLM something that is already adequate, and do not invent specifics on a civic-transparency site.
+A Groq one-liner for the long-tail titles above p90 is a legitimate later idea and is explicitly **not** part of MON-105.
+
+The epic's premise that this could reuse existing work does not hold.
+`rag/pipeline/chunk_law_summaries.py` produces per-vote **party-breakdown** chunks for the top 20 votes by turnout, keyed on `vote_id`.
+They are named `law_summary` but they are not per-dossier summaries and cannot seed a bill header.
+
+### 9. Production `votes.dossier_id` is currently corrupt and must be backfilled
+
+`scripts/ingest_votes.py` stored the Python `repr()` of the `dossierLegislatif` dict instead of its `dossierRef` until commit `7e29131` (2026-07-13, MON-89 review).
+The AN began tagging in March 2026.
+Every scrutin ingested between those two dates was written with the broken form, and the daily cron's 30-day `--since` window has only healed rows from roughly 2026-06-13 onward.
+
+This is confirmed live in production today: `GET /votes/VTANR5L17V5994` returns
+
+```
+"{'libelle': 'Projet de loi relatif à la lutte contre les fraudes sociales et fiscales', ...}"
+```
+
+where `DLR5L17N52985` is expected.
+On the order of 1 700 of the 2 606 usable tagged scrutins are affected, which is the majority of the only data this feature can use.
+
+`frontend/src/app/votes/[id]/VoteDetailClient.tsx:141` masks this with a regex guard, which is why it has not been visible.
+
+This is tracked as **MON-258**, filed separately from the MON-105 epic because it is corrupting live data today and its fix does not depend on anything else here.
+It blocks MON-243: `has_scrutins` computed against the corrupt column lands at roughly 8 dossiers instead of 75, and `GET /lois` returns near-empty parcours until it runs.
+It must re-extract `dossierRef` from the stored repr where possible, re-ingest with a wide `--since` where not, and add a guard so a non-conforming `dossier_id` cannot ship silently again.
+
+**Reason (summary):**
+
+The epic was written from the shape of the data as it appears today on recent votes, where `dossier_id` is present and clean.
+Measuring the full export showed that appearance is four months old, that it covers a fifth of the relevant bills' actual history, and that the field is corrupt in production for most of the period where it exists at all.
+Building the page on the acte parcours instead costs one extra table and one extra ingestion step, and produces a page that is correct for every bill rather than for the sixteen that happen to postdate the cutover.
+
+**Impact:**
+
+- MON-243 implements exactly the two tables above, plus `votes.scrutin_kind`. The `votes.dossier_id` backfill is MON-258, which blocks it.
+- MON-244's `GET /lois/{dossier_uid}` returns the acte parcours as the primary array, with scrutins attached to actes, not a flat scrutin list. It must expose the amendment counts separately from headline scrutins.
+- MON-245 renders actes as the timeline spine and never lists amendment scrutins inline by default. It shows the raw `status_label` next to the derived badge.
+- MON-247's sitemap reads `has_scrutins`, so it emits on the order of 75 URLs, not 2 854. The 50 000-URL concern raised on that issue does not materialize.
+- The horizon caveat MON-242 was asked to decide is **not** about the Supabase 2025-07-01 limit, which is nearly irrelevant here (74 of 75 dossiers have a scrutin after it). It is about the AN's 2026-03 tagging cutover, and the acte spine is the answer to it rather than a disclaimer.
+- Do NOT group votes by `dossier_id` alone to build a bill page. Do NOT fuzzy-match scrutin titles to bills. Do NOT publish a page for a dossier with no scrutins. Do NOT route `/lois` on `titreChemin`. Do NOT discard `statutConclusion.libelle` in favour of the derived enum.
+- Out of scope, deliberately: RAG indexing of dossier chunks, "follow this law" (MON-91, still deferred by ADR-002), Sénat-side acte detail beyond what the export already carries, and generated plain-French bill summaries.
+
+**Trigger to revisit:** the Assemblée backfills `objet.dossierLegislatif` onto pre-March-2026 scrutins, which would make the scrutin timeline complete on its own and reduce the acte parcours to supporting context; the AN publishing a real dossier API, which would supersede ADR-010's ZIP-only constraint; or the in-scope dossier count growing past roughly a thousand, at which point the sitemap and the `GET /lois` pagination assumptions in MON-247 need re-checking.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -931,3 +1196,4 @@ Three concrete costs, all cited in the MON-239 issue and confirmed while impleme
 16. Snapshot tables (`verifications`, `chat_shares`, `quiz_shares`, `feedback`) are purgeable past 12 months and `api_key_usage` past 90 days, but no purge job exists yet (ADR-032, MON-225) - build it only once `/health`'s `db_size_warning` actually fires, not preemptively; do not add a `DELETE` job to these tables without linking back to this ADR
 17. The local Airflow/MinIO stack is archived, not live (ADR-033, MON-239) - do not resurrect `ingestion/dags/`, `quality/`, or the Makefile Airflow/MinIO targets without a new ADR; ADR-006 and ADR-011 still describe the design a promoted-to-production Airflow would use
 18. Group-majority position is one formula everywhere: plurality with an alphabetical tiebreak, defined in `int_party_vote_majority` and replicated exactly by `groups.py`'s `_majority_position` (ADR-034, MON-24, MON-228) - never invent a different tiebreak; quiz's skip-ties behavior in `compute_group_alignment` is a documented, deliberate exception, not a bug to "fix" into matching
+19. Bill timeline pages are built on the dossier acte parcours from `Dossiers_Legislatifs`, not on votes grouped by `dossier_id` (ADR-035, MON-105/MON-242) - the AN only began tagging scrutins with a dossier in March 2026, so a scrutin-only timeline misses the first four fifths of most bills; never fuzzy-match scrutin titles to bills, never publish a page for a dossier with no scrutins, and never list amendment scrutins inline by default
