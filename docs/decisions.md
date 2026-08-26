@@ -1152,9 +1152,9 @@ On the order of 1 700 of the 2 606 usable tagged scrutins are affected, which is
 
 `frontend/src/app/votes/[id]/VoteDetailClient.tsx:141` masks this with a regex guard, which is why it has not been visible.
 
-The backfill in MON-243 is therefore a **blocking prerequisite**, not cleanup.
-It must re-extract `dossierRef` from the stored repr where possible, and re-ingest with a wide `--since` where not.
-`GET /lois` will return near-empty timelines until it runs.
+This is tracked as **MON-258**, filed separately from the MON-105 epic because it is corrupting live data today and its fix does not depend on anything else here.
+It blocks MON-243: `has_scrutins` computed against the corrupt column lands at roughly 8 dossiers instead of 75, and `GET /lois` returns near-empty parcours until it runs.
+It must re-extract `dossierRef` from the stored repr where possible, re-ingest with a wide `--since` where not, and add a guard so a non-conforming `dossier_id` cannot ship silently again.
 
 **Reason (summary):**
 
@@ -1164,7 +1164,7 @@ Building the page on the acte parcours instead costs one extra table and one ext
 
 **Impact:**
 
-- MON-243 implements exactly the two tables above, plus the `votes.dossier_id` backfill, which is now on the critical path rather than incidental.
+- MON-243 implements exactly the two tables above, plus `votes.scrutin_kind`. The `votes.dossier_id` backfill is MON-258, which blocks it.
 - MON-244's `GET /lois/{dossier_uid}` returns the acte parcours as the primary array, with scrutins attached to actes, not a flat scrutin list. It must expose the amendment counts separately from headline scrutins.
 - MON-245 renders actes as the timeline spine and never lists amendment scrutins inline by default. It shows the raw `status_label` next to the derived badge.
 - MON-247's sitemap reads `has_scrutins`, so it emits on the order of 75 URLs, not 2 854. The 50 000-URL concern raised on that issue does not materialize.
