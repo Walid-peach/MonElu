@@ -931,7 +931,7 @@ Measured over the full `Scrutins.json.zip` export (8 434 scrutins, legislature 1
 
 | Period | Scrutins | Carrying `objet.dossierLegislatif` |
 |---|---|---|
-| 2024-10 through 2026-02 | 5 826 | **0 %** (2 rows) |
+| 2024-10 through 2026-02 | 5 828 | **0 %** (2 rows) |
 | 2026-03 through 2026-07 | 2 606 | **100 %** |
 
 The Assemblée began populating `objet.dossierLegislatif` in March 2026 and has populated it on every scrutin since.
@@ -988,9 +988,9 @@ CREATE TABLE IF NOT EXISTS dossiers (
 );
 
 CREATE TABLE IF NOT EXISTS dossier_actes (
-    acte_uid        TEXT PRIMARY KEY,        -- acteLegislatif uid, e.g. L17-VD223914DEC
     dossier_uid     TEXT NOT NULL REFERENCES dossiers(dossier_uid) ON DELETE CASCADE,
-    parent_uid      TEXT,                    -- enclosing acte uid; NULL for a top-level stage
+    acte_uid        TEXT NOT NULL,           -- acteLegislatif uid, e.g. L17-VD223914DEC
+    parent_uid      TEXT,                    -- enclosing acte_uid within the same dossier; NULL at top level
     depth           SMALLINT NOT NULL,       -- 0 for a top-level stage
     ordinal         INTEGER NOT NULL,        -- document order within the parent, preserves sibling sequence
     code_acte       TEXT NOT NULL,
@@ -1000,21 +1000,28 @@ CREATE TABLE IF NOT EXISTS dossier_actes (
     statut_label    TEXT,                    -- statutConclusion.libelle, verbatim
     organe_ref      TEXT,
     last_seen_at    TIMESTAMPTZ NOT NULL,
-    ingested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    ingested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (dossier_uid, acte_uid)
 );
 
 CREATE INDEX IF NOT EXISTS idx_dossiers_status ON dossiers (status);
-CREATE INDEX IF NOT EXISTS idx_dossiers_has_scrutins ON dossiers (has_scrutins) WHERE has_scrutins;
-CREATE INDEX IF NOT EXISTS idx_dossier_actes_dossier ON dossier_actes (dossier_uid, ordinal);
+CREATE INDEX IF NOT EXISTS idx_dossiers_scrutin_pages ON dossiers (dossier_uid) WHERE has_scrutins;
+CREATE INDEX IF NOT EXISTS idx_dossier_actes_order ON dossier_actes (dossier_uid, ordinal);
 CREATE INDEX IF NOT EXISTS idx_dossier_actes_date ON dossier_actes (date_acte);
 ```
+
+**The acte primary key is composite, and that is not a formality.**
+Measured over the export, the 2 854 legislature-17 dossiers flatten to **20 485 acte rows carrying 20 442 distinct uids**: every acte has a uid, but **43 uids appear in two different dossiers each** (never twice within one dossier).
+They are shared procedural events, typically where dossiers were merged: `L17-VD223530` is `AN21-DGVT` on `DLR5L17N51427` and `ANNLEC-DGVT` on `DLR5L17N50588`.
+`acte_uid` alone as the primary key would therefore fail on ingestion.
+`(dossier_uid, acte_uid)` is verified unique across the whole export and models the real relationship, which is that one procedural event can legitimately belong to two dossiers.
 
 **Why two tables rather than ADR-030's single denormalized one.** ADR-030 denormalized because every agenda read is a date window across many parents, so a join would be paid on every request to save a thousand duplicated sitting rows.
 The shape here is the opposite: the parent is always fixed (one dossier) and the children *are* the page content.
 The acte is the timeline node, the thing rendered and the thing a scrutin binds to by date.
 
 **Why not a JSONB `parcours` column on `dossiers`.** It would serve the one-dossier read in a single row, but it moves the acte-to-scrutin join out of SQL and into Python, makes the parcours untestable by dbt, and makes "which bills reached CMP" a JSONB scan instead of an index lookup.
-At roughly 57 000 acte rows across 2 854 dossiers the normalized form costs nothing.
+At 20 485 acte rows across 2 854 dossiers the normalized form costs nothing.
 The nesting is preserved by `parent_uid` / `depth` / `ordinal` rather than by document structure, so the tree can be rebuilt for rendering in one ordered pass.
 
 **Why no dbt mart.** As in ADR-026 (groups) and ADR-030 (agenda), the API reads these tables directly.
