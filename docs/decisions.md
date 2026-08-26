@@ -971,7 +971,7 @@ This is a visible, explainable gap rather than a silent truncation.
 ```sql
 CREATE TABLE IF NOT EXISTS dossiers (
     dossier_uid     TEXT PRIMARY KEY,        -- titreDossier uid, e.g. DLR5L17N51670; joins votes.dossier_id
-    legislature     TEXT,
+    legislature     TEXT,                    -- carried through from the source; ingestion is scoped to L17, this is not a multi-legislature key
     titre           TEXT NOT NULL,           -- titreDossier.titre; the readable short title, median 94 chars
     titre_chemin    TEXT,                    -- titreDossier.titreChemin; stored for a future slug URL, not routed on
     procedure_code  TEXT,                    -- procedureParlementaire.code
@@ -1042,7 +1042,8 @@ Rendering rule: a scrutin is a timeline node when it is a vote on the whole text
 Amendment and article scrutins are collapsed into a count on the acte they fall under, expandable on demand, never listed inline by default.
 This is the same judgment ADR-030's scope note made for `Suite de la discussion` on the agenda.
 
-Classification is done from `objet.libelle` at ingestion time and stored, not recomputed per request.
+Classification is done from `objet.libelle` at ingestion time and stored on `votes` as `scrutin_kind TEXT` (`ensemble` | `motion` | `amendement` | `article` | `autre`), added by the same migration as the two tables above.
+It is not recomputed per request, and it is not a `dossier_actes` column: it is a property of the scrutin, and `GET /votes` benefits from it independently of any bill page.
 
 ### 5. Status is derived by ordered prefix rules over free text, and both forms are stored
 
@@ -1050,23 +1051,50 @@ Classification is done from `objet.libelle` at ingestion time and stored, not re
 Across 617 decision actes there are more than fifteen distinct values, including "adoptée", "adopté", "modifiée", "Accord", "adoptée sans modification", "rejeté", "considérée comme définitive en application de l'article 151-7 du Règlement", and "adopté, dans les conditions prévues à l'article 45, alinéa 3, de la Constitution".
 
 So status derivation must not match on equality.
-It is an ordered rule list evaluated against the last top-level acte and its decision, resolving to one of seven values:
+It is an ordered rule list resolving to one of seven values, written against `codeActe` structure rather than against prose.
+The thirteen top-level `codeActe` values observed in legislature 17 fall into three groups:
 
-| `status` | Citizen-facing label | Condition |
+- **Reading stages:** `AN1`, `AN2`, `AN20`, `AN21`, `ANNLEC`, `ANLUNI`, `ANLDEF`, `SN1`, `SN2`, `SNNLEC`, `CMP`
+- **Post-parliamentary:** `PROM` (promulgation), `CC` (Conseil constitutionnel)
+- **Sub-acte prefixes within a reading stage:** `-DEPOT` (deposit), `-COM` (commission), `-DEBATS` (séance), `-DEC` (decision)
+
+Rules are evaluated **top to bottom, first match wins**, over the dossier's flattened acte tree.
+`decisions` means the `Decision_Type` actes carrying a `dateActe`, sorted by that date; `latest` is the last of them.
+
+| # | `status` | Citizen-facing label | Condition |
+|---|---|---|---|
+| 1 | `promulguee` | Promulguée | a `PROM` top-level acte exists |
+| 2 | `conseil_constitutionnel` | Devant le Conseil constitutionnel | a `CC` top-level acte exists |
+| 3 | `rejetee` | Rejetée | `latest.statut_label` normalises to a first word starting `rejet` |
+| 4 | `adoptee_definitivement` | Adoptée définitivement | `latest.statut_label` first word starts `adopt`, `latest` sits in the only reading stage the dossier has, and that stage is the last in document order |
+| 5 | `deposee` | Déposée | there are no decisions and no `-COM` acte |
+| 6 | `en_commission` | En commission | there are no decisions and a `-COM` acte exists |
+| 7 | `en_navette` | En navette parlementaire | everything else |
+
+Rule 7 is a total fallback, so the rule set always resolves and never needs an "unknown" value.
+"Normalises" means lowercased and stripped of accents before the prefix test, so "rejeté", "rejetée" and "rejet du texte par la commission préalable" all satisfy rule 3, and the `article 45, alinéa 3` and `sans modification` variants all satisfy rule 4's first test.
+Match the **first word only**: the long constitutional labels always lead with the outcome word, and prefix-matching the whole string would need one rule per variant.
+
+Rule 4 is deliberately conservative: a text adopted at first reading with a second chamber still to come is genuinely in navette, not finished, so it falls to rule 7 rather than claiming a conclusion the parcours does not support.
+That is also where "Accord" (CMP), "modifiée", and "considérée comme définitive en application de l'article 151-7 du Règlement" land, each with its raw label displayed.
+
+These rules were run over all 2 854 dossiers before being written down, and over the 75 that actually get a page:
+
+| `status` | All 2 854 | The 75 with a page |
 |---|---|---|
-| `promulguee` | Promulguée | a `PROM` top-level acte exists |
-| `conseil_constitutionnel` | Devant le Conseil constitutionnel | last top-level acte is `CC` |
-| `adoptee_definitivement` | Adoptée définitivement | last decision's label starts with "adopt" and no further reading follows |
-| `rejetee` | Rejetée | last decision's label starts with "rejet" or "rejeté" |
-| `en_navette` | En navette parlementaire | a reading stage is open at either chamber |
-| `en_commission` | En commission | latest acte is a commission acte with no séance decision yet |
-| `deposee` | Déposée | only deposit-stage actes exist |
+| `promulguee` | 107 | **36** |
+| `en_navette` | 175 | **32** |
+| `rejetee` | 20 | **3** |
+| `adoptee_definitivement` | 32 | **2** |
+| `deposee` | 428 | 1 |
+| `en_commission` | 2 090 | 1 |
+| `conseil_constitutionnel` | 2 | 0 |
+| unresolved | **0** | **0** |
 
-The raw `statutConclusion.libelle` is stored verbatim in `status_label` and shown next to the badge.
-The derived enum is for filtering and the badge; the raw label is what the page shows a reader who wants the precise procedural wording.
-Never discard the raw label in favour of the derived one: the constitutional-clause variants carry real meaning ("adopté dans les conditions prévues à l'article 45, alinéa 3" is not the same event as a plain adoption) that a seven-value enum cannot hold.
+`en_commission` dominating the full set is expected and harmless: it is the 2 090 propositions de loi that were deposited, referred to committee, and never scheduled, none of which gets a page.
+Across the dossiers that do get one the field is well spread and carries real information, which is the test that mattered.
 
-Any label not matching a rule resolves to `en_navette` with the raw label shown, never to a guess.
+MON-243 must implement these seven rules as written and assert the totality property in a unit test.
 
 ### 6. Ingest all 2 854 dossiers, publish pages for the ones with scrutins
 
