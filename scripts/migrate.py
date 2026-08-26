@@ -31,11 +31,28 @@ MIGRATIONS_DIR = os.path.join(PROJECT_ROOT, "data", "migrations")
 
 MIGRATION_PREFIX_RE = re.compile(r"^(\d{3})_")
 
+CREATE_TABLE_RE = re.compile(
+    r"\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)",
+    re.IGNORECASE,
+)
+ENABLE_RLS_RE = re.compile(
+    r"\bALTER\s+TABLE\s+([A-Za-z_][A-Za-z0-9_]*)\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY",
+    re.IGNORECASE,
+)
+SQL_COMMENT_RE = re.compile(r"--[^\n]*|/\*.*?\*/", re.DOTALL)
+
 # 005_feedback.sql / 005_verifications.sql were both already applied before this
 # check existed. Renaming applied files would re-run them under the filename-keyed
 # ledger, so they're grandfathered here rather than fixed (MON-226) - this set
 # must never gain new entries.
 GRANDFATHERED_DUPLICATE_PREFIXES = {"005"}
+
+
+def _strip_sql_comments(sql_text: str) -> str:
+    """Every migration opens with a `-- Idempotent: CREATE TABLE IF NOT EXISTS`
+    header comment. Matching statements without stripping comments first reads
+    those as real DDL."""
+    return SQL_COMMENT_RE.sub(" ", sql_text)
 
 
 def assert_unique_numeric_prefixes(migration_files: list[str]) -> None:
@@ -56,6 +73,40 @@ def assert_unique_numeric_prefixes(migration_files: list[str]) -> None:
     if duplicates:
         details = "; ".join(f"{prefix}: {names}" for prefix, names in sorted(duplicates.items()))
         raise AssertionError(f"Duplicate migration numeric prefixes found - {details}")
+
+
+def assert_rls_on_created_tables(migration_files: list[str]) -> None:
+    """Every table a migration creates in `public` must also have RLS enabled by
+    some migration (MON-248).
+
+    On Supabase, `public` is exposed through PostgREST and the anon role holds
+    default privileges there, so RLS is the only gate between an anon key and
+    the table. 001_init.sql established this; migrations 004-009 silently
+    dropped it and shipped seven unguarded tables, including `api_keys`.
+
+    The check is cumulative across all migration files, not per-file: enabling
+    RLS in a later backfill migration is a valid way to satisfy it.
+    """
+    created: dict[str, str] = {}
+    secured: set[str] = set()
+
+    for migration_file in migration_files:
+        filename = os.path.basename(migration_file)
+        with open(migration_file) as f:
+            sql_text = _strip_sql_comments(f.read())
+        for table in CREATE_TABLE_RE.findall(sql_text):
+            created.setdefault(table.lower(), filename)
+        secured.update(table.lower() for table in ENABLE_RLS_RE.findall(sql_text))
+
+    unguarded = {table: origin for table, origin in created.items() if table not in secured}
+    if unguarded:
+        details = "; ".join(
+            f"{table} (created in {origin})" for table, origin in sorted(unguarded.items())
+        )
+        raise AssertionError(
+            f"Tables created without ENABLE ROW LEVEL SECURITY - {details}. "
+            "Add it in the creating migration, or in a backfill migration."
+        )
 
 
 def _applied_migrations(conn) -> set[str]:
@@ -84,6 +135,7 @@ def main() -> None:
 
     try:
         assert_unique_numeric_prefixes(migration_files)
+        assert_rls_on_created_tables(migration_files)
     except AssertionError as exc:
         log.error(str(exc))
         sys.exit(1)

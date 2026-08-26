@@ -140,10 +140,12 @@ Assemblée Nationale Open Data (ZIPs)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
 - `networking`, `s3`, `rds` modules are the only parts worth salvaging if an AWS migration ever happens; `ec2` does not survive that design.
 
-**`data/migrations/`** — 10 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
+**`data/migrations/`** — 11 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
 - `001_init.sql`: `deputies`, `votes`, `vote_positions`, `document_chunks`
 - All `CREATE TABLE IF NOT EXISTS` — safe to re-run
 - `migrate.py` keeps a `schema_migrations` ledger: each file is applied once and skipped on later deploys
+- **Every new table in `public` must get `ENABLE ROW LEVEL SECURITY`** (MON-248). On Supabase, `public` is exposed through PostgREST and the anon role holds default privileges there, so RLS is the only gate — the app, ingestion and dbt all connect as the table owner and bypass it. `migrate.py`'s `assert_rls_on_created_tables` enforces this and exits 1 on a violation; `010_rls_backfill.sql` backfilled the seven tables that 004-009 missed. Add a `public_read` `FOR SELECT USING (true)` policy only for data meant to be readable by an anon key directly; the default is no policy at all.
+- Numeric prefixes must be unique (`assert_unique_numeric_prefixes`, MON-226) — the duplicate `005` pair is grandfathered and that set must never grow
 
 ### Database
 
