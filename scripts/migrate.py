@@ -119,6 +119,14 @@ def _applied_migrations(conn) -> set[str]:
                     applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """)
+            # The ledger lives in `public` too, so it needs the same gate as the
+            # migration-created tables (MON-248) — and assert_rls_on_created_tables
+            # cannot cover it, since it only reads the .sql files. The read side is
+            # dull (filenames and timestamps); the write side is not: an anon INSERT
+            # of a not-yet-applied filename would make migrate.py skip that
+            # migration forever. rag/pipeline/index_manager.py does the same for
+            # document_chunks_staging, the other Python-created public table.
+            cur.execute("ALTER TABLE schema_migrations ENABLE ROW LEVEL SECURITY")
             cur.execute("SELECT filename FROM schema_migrations")
             return {row["filename"] for row in cur.fetchall()}
 

@@ -42,3 +42,8 @@ ALTER TABLE verifications  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_shares    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quiz_shares    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agenda_items   ENABLE ROW LEVEL SECURITY;
+
+-- Note: `schema_migrations` also lives in `public`, but it is created by
+-- scripts/migrate.py rather than by a migration, so it is secured there
+-- (right after its CREATE TABLE) instead of here. `document_chunks_staging`
+-- is the same case and is secured in rag/pipeline/index_manager.py.

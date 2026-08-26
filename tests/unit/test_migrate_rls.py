@@ -7,9 +7,11 @@ privileges there, so RLS is the only gate. 001_init.sql set the pattern;
 
 import glob
 import os
+from pathlib import Path
 
 import pytest
 
+import scripts.migrate
 from scripts.migrate import (
     MIGRATIONS_DIR,
     assert_rls_on_created_tables,
@@ -125,3 +127,13 @@ def test_commented_out_rls_does_not_satisfy_the_check(tmp_path):
     )
     with pytest.raises(AssertionError, match="widgets"):
         assert_rls_on_created_tables([path])
+
+
+def test_ledger_table_is_secured_at_its_creation_site():
+    """`schema_migrations` is created from Python, not from a .sql file, so
+    assert_rls_on_created_tables structurally cannot cover it. Its CREATE and its
+    ENABLE ROW LEVEL SECURITY must therefore sit together in migrate.py."""
+    source = (Path(scripts.migrate.__file__)).read_text()
+    create_at = source.index("CREATE TABLE IF NOT EXISTS schema_migrations")
+    rls_at = source.index("ALTER TABLE schema_migrations ENABLE ROW LEVEL SECURITY")
+    assert rls_at > create_at, "RLS must be enabled after the ledger table is created"
