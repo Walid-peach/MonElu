@@ -25,9 +25,9 @@ import psycopg2.extras
 from dotenv import load_dotenv
 
 try:
-    from scripts._http import download_with_retry
+    from scripts._http import SKIP_RATE_THRESHOLD, download_with_retry
 except ImportError:  # running as a plain file: python scripts/ingest_votes.py
-    from _http import download_with_retry
+    from _http import SKIP_RATE_THRESHOLD, download_with_retry
 
 load_dotenv()
 
@@ -41,10 +41,6 @@ AN_BASE_URL = os.getenv("AN_API_BASE_URL", "https://data.assemblee-nationale.fr"
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 SCRUTINS_ZIP_PATH = "/static/openData/repository/17/loi/scrutins/Scrutins.json.zip"
-
-# Abort the run if more than this share of records fail to parse — a silent
-# AN format change should fail loudly, not ship a skeleton dataset (MON-220).
-SKIP_RATE_THRESHOLD = 0.05
 
 
 # ---------------------------------------------------------------------------

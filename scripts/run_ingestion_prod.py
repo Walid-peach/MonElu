@@ -171,6 +171,14 @@ def main() -> None:
             # Non-critical: the agenda export is a separate feed (MON-210,
             # ADR-030) from the scrutins/deputies ZIPs above, so a failure here
             # must not block core votes/deputies/positions ingestion.
+            #
+            # Deliberately still non-critical now that the step can exit 1 on a
+            # feed reshape (MON-249): a hard exit is not silent here — run_step
+            # emits an ::error:: annotation, the step name lands in the
+            # soft_failures GITHUB_OUTPUT, and ingest_prod.yml turns that into a
+            # step-summary warning plus a notification email. Promoting agenda to
+            # critical would let an upstream agenda-only change block the votes
+            # and positions ingestion that ADR-030 explicitly separated it from.
             t_agenda = run_step(
                 "Agenda", "ingest_agenda.py", ["--since", args.since], critical=False
             )

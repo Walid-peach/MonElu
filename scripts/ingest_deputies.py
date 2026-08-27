@@ -26,9 +26,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.departments_data import DEPT_NAMES  # noqa: E402
 
 try:
-    from scripts._http import download_with_retry
+    from scripts._http import SKIP_RATE_THRESHOLD, download_with_retry
 except ImportError:  # running as a plain file: python scripts/ingest_deputies.py
-    from _http import download_with_retry
+    from _http import SKIP_RATE_THRESHOLD, download_with_retry
 
 load_dotenv()
 
@@ -40,10 +40,6 @@ log = logging.getLogger(__name__)
 
 AN_API_BASE_URL = os.getenv("AN_API_BASE_URL", "https://data.assemblee-nationale.fr")
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-# Abort the run if more than this share of records fail to parse — a silent
-# AN format change should fail loudly, not ship a skeleton dataset (MON-220).
-SKIP_RATE_THRESHOLD = 0.05
 
 # Static export — one ZIP, one JSON file per deputy
 DEPUTIES_ZIP_PATH = (

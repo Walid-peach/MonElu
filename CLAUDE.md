@@ -116,6 +116,12 @@ Assemblée Nationale Open Data (ZIPs)
 
 **`scripts/`** — Data ingestion and maintenance
 - Scripts fetch ZIPs from the AN open data portal with exponential-backoff retry (5 attempts, 2 s base) and upsert via `ON CONFLICT ... DO UPDATE`
+- **Every parser must fail loudly on an upstream shape change** (MON-220, MON-249).
+`SKIP_RATE_THRESHOLD = 0.05` lives in `scripts/_http.py` and is shared by all four parsers - never re-declare it per script.
+`ingest_deputies.py` and `ingest_votes.py` exit 1 before upserting when more than 5% of records fail to parse.
+`ingest_positions.py` streams its batches, so `check_position_yield()` runs after the loop instead: it exits 1 when nothing was written while the votes table had rows to attach positions to, or when more than 5% of extracted positions name an unknown `deputy_id`.
+`ingest_agenda.py`'s `check_agenda_yield()` exits 1 when in-window séance publique ODJ points exist but none (or more than 5%) survive `parse_point`.
+A new parser without such a guard ships a skeleton dataset on a green run - the exact failure mode these guards exist to remove.
 - `migrate.py` doubles as the Railway start hook (runs before uvicorn in `railway.json`)
 - `run_ingestion_prod.py` orchestrates the full pipeline for production runs, including `ingest_agenda.py` (MON-210) as a non-critical step - an agenda-feed failure must not block core deputies/votes/positions ingestion
 - `create_dbt_profile.py` generates `transform/profiles.yml` from `DBT_*` env vars (used by CI and deploy workflows)

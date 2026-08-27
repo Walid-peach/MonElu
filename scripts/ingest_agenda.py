@@ -26,6 +26,7 @@ import io
 import json
 import logging
 import os
+import sys
 import zipfile
 from datetime import date, timedelta
 
@@ -33,9 +34,9 @@ import psycopg2.extras
 from dotenv import load_dotenv
 
 try:
-    from scripts._http import connect_with_retry, download_with_retry
+    from scripts._http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 except ImportError:  # running as a plain file: python scripts/ingest_agenda.py
-    from _http import connect_with_retry, download_with_retry
+    from _http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 
 load_dotenv()
 
@@ -172,7 +173,10 @@ def parse_point(reunion: dict, point: dict) -> dict | None:
             "objet_hash": hashlib.sha256(objet.encode("utf-8")).hexdigest() if objet else None,
         }
     except Exception as exc:
-        log.debug("Could not parse ODJ point %s — %s", point.get("uid"), exc)
+        # WARNING, not DEBUG: basicConfig(level=INFO) never emitted the debug
+        # line, so a feed reshape produced zero records with no visible signal
+        # anywhere in the run log (MON-249).
+        log.warning("Could not parse ODJ point %s — %s", point.get("uid"), exc)
         return None
 
 
@@ -181,6 +185,12 @@ def parse_reunions(reunions: list[dict], since: str | None = None) -> list[dict]
     records: list[dict] = []
     skipped_type = 0
     skipped_date = 0
+    points_seen = 0
+    # A séance whose sitting has already happened always has a published ODJ, so
+    # it is the signal that separates "the ODJ container was renamed" from "the
+    # window holds no sittings yet" — see check_agenda_yield (MON-249).
+    today = date.today().isoformat()
+    past_seance_in_window = 0
     for reunion in reunions:
         if reunion.get("@xsi:type") != SEANCE_XSI_TYPE:
             skipped_type += 1
@@ -189,19 +199,84 @@ def parse_reunions(reunions: list[dict], since: str | None = None) -> list[dict]
         if since and sitting_date and sitting_date < since:
             skipped_date += 1
             continue
+        if sitting_date and sitting_date < today:
+            past_seance_in_window += 1
         for point in _odj_points(reunion):
+            points_seen += 1
             record = parse_point(reunion, point)
             if record is not None:
                 records.append(record)
 
     log.info(
-        "Parsed %d ODJ points from séance publique réunions "
+        "Parsed %d/%d ODJ points in window (%d of the séance publique réunions are past) "
         "(skipped %d non-séance réunions, %d before --since).",
         len(records),
+        points_seen,
+        past_seance_in_window,
         skipped_type,
         skipped_date,
     )
+    check_agenda_yield(
+        parsed=len(records),
+        points_seen=points_seen,
+        past_seance_in_window=past_seance_in_window,
+    )
     return records
+
+
+def check_agenda_yield(parsed: int, points_seen: int, past_seance_in_window: int) -> None:
+    """Exit 1 when in-window séance points exist but do not survive parsing (MON-249).
+
+    An empty record list is a silent no-op downstream: ``upsert_agenda_items([])``
+    writes nothing, ``last_seen_at`` never advances, and ``GET /agenda`` keeps
+    serving the previous run's rows forever because its visibility filter is
+    ``last_seen_at = (SELECT MAX(last_seen_at) ...)``. Nothing in the run log or
+    the API says the feed stopped parsing.
+
+    Three shapes are separated, because ``points_seen == 0`` alone is ambiguous:
+
+    * the ODJ *container* was reshaped — ``_odj_points`` walks
+      ``ODJ.pointsODJ.pointODJ``, so renaming any level of that path yields no
+      points at all for every réunion. Caught via ``past_seance_in_window``: a
+      sitting that has already happened always has a published ODJ, so past
+      sittings with zero points between them is unambiguously a feed change.
+    * no sittings to parse — a recess, or a window whose only séance is still
+      ahead with its ODJ unpublished. ``past_seance_in_window == 0``, and the
+      run is correctly left alone.
+    * the point *fields* were reshaped — points are found but ``parse_point``
+      rejects them. Caught by the parsed-vs-seen ratio below.
+    """
+    if points_seen == 0:
+        if past_seance_in_window > 0:
+            log.error(
+                "No ODJ points found at all across %d past séance publique réunions "
+                "in the window. A past sitting always has a published ODJ, so the "
+                "ODJ.pointsODJ.pointODJ path in the AN agenda export has changed.",
+                past_seance_in_window,
+            )
+            sys.exit(1)
+        log.info("No in-window séance publique ODJ points in the feed — nothing to guard.")
+        return
+
+    if parsed == 0:
+        log.error(
+            "All %d in-window séance publique ODJ points failed to parse. "
+            "Check the AN agenda export for format changes.",
+            points_seen,
+        )
+        sys.exit(1)
+
+    unparsed = points_seen - parsed
+    skip_rate = unparsed / points_seen
+    if skip_rate > SKIP_RATE_THRESHOLD:
+        log.error(
+            "High parse failure rate: %d/%d ODJ points skipped (%.0f%%). "
+            "Check the AN agenda export for format changes.",
+            unparsed,
+            points_seen,
+            skip_rate * 100,
+        )
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
