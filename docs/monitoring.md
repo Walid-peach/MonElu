@@ -60,6 +60,9 @@ the same stale data every single day.
 The database-size probe stays outside the gate: a transient `/health` hiccup is
 a monitoring gap, not an ingestion failure, and must not send a false
 "ingestion failed" alert.
+A failed cache revalidation is likewise not fatal, but the gate now emits a
+`::warning::` and a step-summary note for it — pages keep serving the previous
+build until their `revalidate` window expires, which is worth seeing.
 
 ## 3. Uptime checker (UptimeRobot or Better Stack — either free tier works)
 

@@ -79,6 +79,20 @@ def test_every_gated_id_exists_and_is_non_blocking(steps):
         assert by_id[step_id].get("continue-on-error") is True
 
 
+def test_revalidation_failure_is_reported_but_not_fatal(steps):
+    """A failed purge leaves pages stale — a degraded run, not a bad one — but
+    it must not be the one step whose failure produces no signal at all."""
+    revalidate = steps[_index_of(steps, "Revalidate frontend cache")]
+    assert revalidate.get("id") == "revalidate"
+    assert revalidate.get("continue-on-error") is True
+    gate_run = steps[_index_of(steps, "Data-quality gate")]["run"]
+    assert "steps.revalidate.outcome" in gate_run
+    # Reported via ::warning::, never added to the list that exits 1.
+    warn_section, _, fail_section = gate_run.partition("failed=()")
+    assert "steps.revalidate.outcome" in warn_section
+    assert "steps.revalidate.outcome" not in fail_section
+
+
 def test_database_size_probe_is_not_gated(steps):
     """A transient /health hiccup is a monitoring gap, not an ingestion
     failure — it must not send a false 'ingestion failed' alert."""

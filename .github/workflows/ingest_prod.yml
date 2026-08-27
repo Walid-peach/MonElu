@@ -125,6 +125,7 @@ jobs:
         # Runs unconditionally so deputy/party profile fixes (update_party.py,
         # run inside run_ingestion_prod.py) also purge the cache, not just new-vote runs.
         if: ${{ !cancelled() }}
+        id: revalidate
         continue-on-error: true
         env:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
@@ -233,6 +234,16 @@ jobs:
         if: ${{ !cancelled() }}
         shell: bash
         run: |
+          # Reported, never fatal: a failed purge leaves pages stale for up to
+          # their revalidate window, which is a degraded run rather than a bad
+          # one - but it was the last step in this file whose failure produced
+          # no signal at all (MON-250).
+          if [ "${{ steps.revalidate.outcome }}" = "failure" ]; then
+            echo "::warning::Frontend cache revalidation failed - pages stay stale until their next revalidate window."
+            echo "## ⚠️ Frontend cache not revalidated" >> "$GITHUB_STEP_SUMMARY"
+            echo "The revalidation call failed. Pages keep serving the previous build until their \`revalidate\` window expires (up to 24h on deputy and vote detail pages)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
           failed=()
           if [ "${{ steps.dbt_snapshot.outcome }}" = "failure" ]; then failed+=("dbt snapshot"); fi
           if [ "${{ steps.dbt_test.outcome }}" = "failure" ]; then failed+=("dbt test"); fi
