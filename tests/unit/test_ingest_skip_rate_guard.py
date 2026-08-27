@@ -11,6 +11,7 @@ and all four share SKIP_RATE_THRESHOLD from scripts._http.
 import io
 import json
 import zipfile
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -109,20 +110,28 @@ class TestIngestPositionsYieldGuard:
 class TestIngestAgendaYieldGuard:
     def test_all_points_unparsed_exits(self):
         with pytest.raises(SystemExit) as exc_info:
-            check_agenda_yield(parsed=0, points_seen=40, unparsed=40)
+            check_agenda_yield(parsed=0, points_seen=40, past_seance_in_window=5)
         assert exc_info.value.code == 1
 
     def test_high_unparsed_rate_exits(self):
         with pytest.raises(SystemExit) as exc_info:
-            check_agenda_yield(parsed=90, points_seen=100, unparsed=10)
+            check_agenda_yield(parsed=90, points_seen=100, past_seance_in_window=12)
         assert exc_info.value.code == 1
 
     def test_low_unparsed_rate_passes(self):
-        check_agenda_yield(parsed=99, points_seen=100, unparsed=1)
+        check_agenda_yield(parsed=99, points_seen=100, past_seance_in_window=12)
 
     def test_no_points_in_window_is_not_a_failure(self):
-        # Recess, or a --since window with no séance publique sittings.
-        check_agenda_yield(parsed=0, points_seen=0, unparsed=0)
+        # Recess, or a --since window whose only séance is still ahead with no
+        # ODJ published yet — no past sitting to contradict the empty result.
+        check_agenda_yield(parsed=0, points_seen=0, past_seance_in_window=0)
+
+    def test_no_points_despite_past_sittings_exits(self):
+        # The ODJ container itself was renamed: _odj_points returns [] for every
+        # réunion, so points_seen is 0 even though past sittings are in window.
+        with pytest.raises(SystemExit) as exc_info:
+            check_agenda_yield(parsed=0, points_seen=0, past_seance_in_window=8)
+        assert exc_info.value.code == 1
 
     def test_parse_reunions_exits_when_every_point_fails_to_parse(self):
         # A séance réunion whose ODJ points no longer carry a uid — the exact
@@ -141,6 +150,32 @@ class TestIngestAgendaYieldGuard:
 
     def test_parse_reunions_does_not_exit_when_only_commissions_are_present(self):
         reunions = [{"@xsi:type": "commission_type", "uid": "RU2"}]
+        assert parse_reunions(reunions) == []
+
+    def test_parse_reunions_exits_when_the_odj_container_is_renamed(self):
+        # _odj_points walks ODJ.pointsODJ.pointODJ; renaming any level of that
+        # path yields no points at all, which the parsed-vs-seen ratio cannot
+        # see. Past sittings in the window are what make it detectable (MON-249).
+        past = (date.today() - timedelta(days=7)).isoformat()
+        reunions = [
+            {
+                "@xsi:type": "seance_type",
+                "uid": f"RU{i}",
+                "timeStampDebut": f"{past}T09:00:00",
+                "ODJ": {"pointsODJRenamed": {"pointODJ": [{"uid": f"P{i}"}]}},
+            }
+            for i in range(3)
+        ]
+        with pytest.raises(SystemExit) as exc_info:
+            parse_reunions(reunions)
+        assert exc_info.value.code == 1
+
+    def test_parse_reunions_tolerates_a_future_sitting_with_no_odj_yet(self):
+        # First sitting back after a recess, ODJ not published — must not exit.
+        future = (date.today() + timedelta(days=7)).isoformat()
+        reunions = [
+            {"@xsi:type": "seance_type", "uid": "RU1", "timeStampDebut": f"{future}T09:00:00"}
+        ]
         assert parse_reunions(reunions) == []
 
 
