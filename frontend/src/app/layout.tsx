@@ -16,6 +16,7 @@ import { MainFrame } from '@/components/MainFrame'
 import { JsonLd } from '@/components/JsonLd'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { buildWebsiteJsonLd } from '@/lib/seo'
+import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
 
 const serif = DM_Serif_Display({
@@ -42,7 +43,7 @@ const sans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://mon-elu.vercel.app'),
+  metadataBase: new URL(SITE_URL),
   title: 'MonÉlu — Suivez vos députés',
   description: "Données officielles de l'Assemblée Nationale. Suivez chaque vote de chaque député français.",
   manifest: '/manifest.json',
@@ -50,7 +51,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'MonÉlu — Suivez vos députés',
     description: "Données officielles de l'Assemblée Nationale",
-    url: 'https://mon-elu.vercel.app',
+    url: SITE_URL,
     siteName: 'MonÉlu',
     locale: 'fr_FR',
     type: 'website',

@@ -3,8 +3,8 @@ import { api, type Deputy, type Vote } from '@/lib/api'
 import { departmentCode } from '@/lib/departments'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { GROUP_ENTRIES } from '@/lib/groups'
+import { SITE_URL } from '@/lib/site'
 
-const SITE_URL = 'https://mon-elu.vercel.app'
 const PAGE_SIZE = 200
 const OFFSET_CAP = 2000 // api.votes.list() rejects offset beyond this — see api/routers/votes.py
 

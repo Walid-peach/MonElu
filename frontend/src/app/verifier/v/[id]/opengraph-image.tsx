@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og'
+import { SITE_HOST } from '@/lib/site'
 
 export const runtime = 'edge'
 export const alt = 'Vérification MonÉlu — verdict sur une affirmation'
@@ -117,7 +118,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
             ? `${citations} scrutin${citations > 1 ? 's' : ''} officiel${citations > 1 ? 's' : ''} cité${citations > 1 ? 's' : ''}`
             : 'Vérifié contre les scrutins officiels'}
           {horizon ? ` · données depuis le ${horizon}` : ''}
-          {' · mon-elu.vercel.app/verifier'}
+          {` · ${SITE_HOST}/verifier`}
         </div>
 
         <div

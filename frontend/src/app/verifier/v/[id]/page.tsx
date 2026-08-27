@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
 import { VerdictCard } from '@/components/VerdictCard'
+import { SITE_URL } from '@/lib/site'
 
 // Verdicts are immutable snapshots (ADR-022): this page reads the stored
 // verdict via GET /verify/{id} — it must never trigger a new verification.
@@ -31,7 +32,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    openGraph: { title, description, url: `https://mon-elu.vercel.app/verifier/v/${id}` },
+    openGraph: { title, description, url: `${SITE_URL}/verifier/v/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }
 }
