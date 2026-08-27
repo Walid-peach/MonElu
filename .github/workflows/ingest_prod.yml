@@ -90,29 +90,41 @@ jobs:
           DBT_DBNAME: ${{ secrets.DBT_DBNAME }}
         run: python3 scripts/create_dbt_profile.py
 
+      - name: Install dbt packages
+        run: cd transform && dbt deps --profiles-dir .
+
       - name: Run dbt transformations
         # Unconditional: a deputy switching groups or a corrected vote (delta
         # 0) must still rebuild mart_party_alignment/mart_deputy_scorecard,
         # not wait for the next new-vote day - weeks during recess (MON-218).
-        run: |
-          cd transform
-          dbt deps --profiles-dir .
-          dbt run --profiles-dir . --target prod
-          dbt test --profiles-dir . --target prod
+        # Still hard-fails: a broken `dbt run` is a pipeline fault, not a
+        # data-state signal, and the marts downstream of it are what the cache
+        # revalidation below would be publishing.
+        run: cd transform && dbt run --profiles-dir . --target prod
 
-      - name: dbt snapshot + source freshness
-        # Unconditional: captures party changes (which land without new votes)
-        # and fails loudly when ingestion has been silent past the freshness
-        # error windows in sources.yml.
-        run: |
-          cd transform
-          dbt deps --profiles-dir .
-          dbt snapshot --profiles-dir . --target prod
-          dbt source freshness --profiles-dir . --target prod
+      # ---------------------------------------------------------------------
+      # Operational tail (MON-250)
+      #
+      # Every step below runs on `!cancelled()` and records its own outcome
+      # instead of aborting the steps after it, and the "Data-quality gate"
+      # step at the end turns any recorded failure back into a red job with
+      # the existing failure email. GitHub skips all later steps once one
+      # fails, so before this split a failing `dbt test` or a `dbt source
+      # freshness` error silently removed cache revalidation, the MON-171 quiz
+      # gate and the MON-225 database-size probe for the whole day - and
+      # during a recess it did so every day until the Assemblée sat again,
+      # because freshness trips on the same stale data each run.
+      #
+      # `dbt test` here matches deploy.yml and ci.yml, where the same command
+      # is already non-blocking: a failure means production data is unhealthy,
+      # which is worth an alert but is not a reason to skip the operational
+      # work (MON-37).
+      # ---------------------------------------------------------------------
 
       - name: Revalidate frontend cache
         # Runs unconditionally so deputy/party profile fixes (update_party.py,
         # run inside run_ingestion_prod.py) also purge the cache, not just new-vote runs.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         env:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
@@ -127,12 +139,39 @@ jobs:
             echo "FRONTEND_URL or REVALIDATE_SECRET not set — skipping revalidation."
           fi
 
+      - name: dbt snapshot
+        # Captures party changes, which land without new votes.
+        if: ${{ !cancelled() }}
+        id: dbt_snapshot
+        continue-on-error: true
+        run: cd transform && dbt snapshot --profiles-dir . --target prod
+
+      - name: dbt test
+        # Split from `dbt run` and from source freshness so the gate summary
+        # can name which assertion tripped (MON-250).
+        if: ${{ !cancelled() }}
+        id: dbt_test
+        continue-on-error: true
+        run: cd transform && dbt test --profiles-dir . --target prod
+
+      - name: dbt source freshness
+        # Alarms on silence: errors once ingestion has been quiet past the
+        # error_after windows in transform/models/staging/_sources.yml
+        # (deputies 7 days, votes/vote_positions 30 days - widened for a
+        # recess in MON-231). Still fails the job, via the gate below.
+        if: ${{ !cancelled() }}
+        id: dbt_freshness
+        continue-on-error: true
+        run: cd transform && dbt source freshness --profiles-dir . --target prod
+
       - name: Validate quiz vote_ids (MON-171)
-        # Unconditional, and deliberately last among the pipeline steps: a
-        # curated scrutin corrected/renumbered upstream would silently skew
-        # every quiz agreement percentage, so fail the job loudly (the
-        # failure-notify steps below fire) — but a quiz-content problem must
-        # not abort the RAG/dbt/cache steps above and stale production data.
+        # A curated scrutin corrected/renumbered upstream would silently skew
+        # every quiz agreement percentage, so this must fail the job loudly -
+        # it does, through the gate below - without a quiz-content problem
+        # aborting the monitoring probes that follow it.
+        if: ${{ !cancelled() }}
+        id: quiz_votes
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python scripts/check_quiz_votes.py
@@ -142,9 +181,10 @@ jobs:
         # pg_database_size() reading (api/main.py). Polling the public prod
         # endpoint mirrors "Validate quiz vote_ids" above (ci.yml does the same
         # for check_quiz_votes.py) rather than opening a second DB connection here.
-        # continue-on-error: a transient /health hiccup is a monitoring gap,
-        # not an ingestion failure - it must not trip "Notify failure" below
-        # and send a false "ingestion failed" alert for a healthy run.
+        # continue-on-error and excluded from the gate below: a transient
+        # /health hiccup is a monitoring gap, not an ingestion failure - it
+        # must not send a false "ingestion failed" alert for a healthy run.
+        if: ${{ !cancelled() }}
         id: db_size
         continue-on-error: true
         run: |
@@ -161,7 +201,11 @@ jobs:
           fi
 
       - name: Email database size alert
-        if: steps.db_size.outputs.warning == 'true' && env.MAIL_SERVER != '' && env.NOTIFY_EMAIL_TO != ''
+        # continue-on-error: this sits before the data-quality gate, so an SMTP
+        # outage here would abort the run before the gate could report - a mail
+        # transport failure must not change the job's verdict about the data.
+        if: ${{ !cancelled() && steps.db_size.outputs.warning == 'true' && env.MAIL_SERVER != '' && env.NOTIFY_EMAIL_TO != '' }}
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.MAIL_SERVER }}
@@ -179,6 +223,37 @@ jobs:
 
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
+      - name: Data-quality gate (MON-250)
+        # The steps above are continue-on-error so that one failing assertion
+        # cannot skip the rest of the operational tail. This step puts the
+        # failure back: it turns any of their recorded outcomes into a red job,
+        # which is what fires "Notify failure" and "Email failure alert" below.
+        # The database-size probe is deliberately excluded - a transient
+        # /health hiccup is a monitoring gap, not an ingestion failure.
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          failed=()
+          if [ "${{ steps.dbt_snapshot.outcome }}" = "failure" ]; then failed+=("dbt snapshot"); fi
+          if [ "${{ steps.dbt_test.outcome }}" = "failure" ]; then failed+=("dbt test"); fi
+          if [ "${{ steps.dbt_freshness.outcome }}" = "failure" ]; then failed+=("dbt source freshness (stale data past the error_after windows)"); fi
+          if [ "${{ steps.quiz_votes.outcome }}" = "failure" ]; then failed+=("quiz vote_id validation (MON-171)"); fi
+          if [ ${#failed[@]} -eq 0 ]; then
+            echo "All data-quality checks passed."
+            exit 0
+          fi
+          printf -v joined '%s, ' "${failed[@]}"
+          joined=${joined%, }
+          echo "::error::Data-quality checks failed: ${joined}"
+          {
+            echo "## ❌ Data-quality checks failed"
+            echo ""
+            echo "Ingestion, dbt run, cache revalidation and the monitoring probes all completed - only the assertions below failed:"
+            echo ""
+            for item in "${failed[@]}"; do echo "- ${item}"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
       - name: Notify success
         run: echo "Ingestion completed at $(date)"
 
@@ -186,15 +261,21 @@ jobs:
         # Non-critical steps (party/department enrichment, vote summaries) can fail
         # without failing the job, so this run still shows green and the RAG/dbt
         # steps above still ran. Surface it anyway, or it goes unnoticed like the
-        # 2026-07 organeRef incident did.
-        if: steps.ingest.outputs.soft_failures != ''
+        # 2026-07 organeRef incident did. `!cancelled()` rather than the implicit
+        # success(): a red data-quality gate must not swallow this report as well
+        # (MON-250).
+        if: ${{ !cancelled() && steps.ingest.outputs.soft_failures != '' }}
         run: |
           echo "::warning::Non-critical ingestion steps failed: ${{ steps.ingest.outputs.soft_failures }}"
           echo "## ⚠️ Ingestion succeeded with warnings" >> "$GITHUB_STEP_SUMMARY"
           echo "Core data (deputies/votes/positions) ingested fine. These non-critical steps failed and should be checked: ${{ steps.ingest.outputs.soft_failures }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Email soft-failure alert
-        if: steps.ingest.outputs.soft_failures != '' && env.MAIL_SERVER != '' && env.NOTIFY_EMAIL_TO != ''
+        # continue-on-error: this fires on an otherwise-green run, so an SMTP
+        # outage must not turn it red - the ::warning:: and step summary above
+        # already carry the same information.
+        if: ${{ !cancelled() && steps.ingest.outputs.soft_failures != '' && env.MAIL_SERVER != '' && env.NOTIFY_EMAIL_TO != '' }}
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.MAIL_SERVER }}

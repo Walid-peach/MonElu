@@ -46,6 +46,21 @@ still fire either way. Once set, a failed ingestion step *or* a `dbt source
 freshness` failure (stale data past the thresholds in
 `transform/models/staging/_sources.yml`) both trigger an email.
 
+Since MON-250 the data-quality assertions no longer fail the job directly.
+`dbt snapshot`, `dbt test`, `dbt source freshness` and the quiz vote_id
+validation each run with `continue-on-error`, and a final `Data-quality gate`
+step re-fails the job when any of them reports `failure`, naming which one in
+the run summary.
+The alerting is unchanged — `Notify failure` and `Email failure alert` still
+fire, because the gate itself is what turns the job red.
+What changed is that a failing assertion no longer skips the steps after it:
+cache revalidation, the quiz gate and the database-size probe now run on every
+attempt, which matters most during a recess, when `source freshness` errors on
+the same stale data every single day.
+The database-size probe stays outside the gate: a transient `/health` hiccup is
+a monitoring gap, not an ingestion failure, and must not send a false
+"ingestion failed" alert.
+
 ## 3. Uptime checker (UptimeRobot or Better Stack — either free tier works)
 
 Create two monitors:
