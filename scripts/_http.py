@@ -20,6 +20,12 @@ log = logging.getLogger(__name__)
 MAX_RETRIES = 5
 BACKOFF_BASE = 2  # seconds
 
+# Abort an ingestion run when more than this share of records fail to parse — a
+# silent AN format change should fail loudly, not ship a skeleton dataset
+# (MON-220). Shared by all four parsers (deputies, votes, positions, agenda) so
+# the four guards can never drift apart (MON-249).
+SKIP_RATE_THRESHOLD = 0.05
+
 
 def download_with_retry(url: str, timeout: int = 60) -> bytes:
     """GET with exponential backoff on 429 / 5xx / network errors; returns raw bytes.

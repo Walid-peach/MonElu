@@ -26,6 +26,7 @@ import io
 import json
 import logging
 import os
+import sys
 import zipfile
 from datetime import date, timedelta
 
@@ -33,9 +34,9 @@ import psycopg2.extras
 from dotenv import load_dotenv
 
 try:
-    from scripts._http import connect_with_retry, download_with_retry
+    from scripts._http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 except ImportError:  # running as a plain file: python scripts/ingest_agenda.py
-    from _http import connect_with_retry, download_with_retry
+    from _http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 
 load_dotenv()
 
@@ -172,7 +173,10 @@ def parse_point(reunion: dict, point: dict) -> dict | None:
             "objet_hash": hashlib.sha256(objet.encode("utf-8")).hexdigest() if objet else None,
         }
     except Exception as exc:
-        log.debug("Could not parse ODJ point %s — %s", point.get("uid"), exc)
+        # WARNING, not DEBUG: basicConfig(level=INFO) never emitted the debug
+        # line, so a feed reshape produced zero records with no visible signal
+        # anywhere in the run log (MON-249).
+        log.warning("Could not parse ODJ point %s — %s", point.get("uid"), exc)
         return None
 
 
@@ -181,6 +185,7 @@ def parse_reunions(reunions: list[dict], since: str | None = None) -> list[dict]
     records: list[dict] = []
     skipped_type = 0
     skipped_date = 0
+    points_seen = 0
     for reunion in reunions:
         if reunion.get("@xsi:type") != SEANCE_XSI_TYPE:
             skipped_type += 1
@@ -190,18 +195,59 @@ def parse_reunions(reunions: list[dict], since: str | None = None) -> list[dict]
             skipped_date += 1
             continue
         for point in _odj_points(reunion):
+            points_seen += 1
             record = parse_point(reunion, point)
             if record is not None:
                 records.append(record)
 
+    unparsed = points_seen - len(records)
     log.info(
-        "Parsed %d ODJ points from séance publique réunions "
+        "Parsed %d/%d ODJ points from séance publique réunions "
         "(skipped %d non-séance réunions, %d before --since).",
         len(records),
+        points_seen,
         skipped_type,
         skipped_date,
     )
+    check_agenda_yield(parsed=len(records), points_seen=points_seen, unparsed=unparsed)
     return records
+
+
+def check_agenda_yield(parsed: int, points_seen: int, unparsed: int) -> None:
+    """Exit 1 when in-window séance points exist but do not survive parsing (MON-249).
+
+    An empty record list is a silent no-op downstream: ``upsert_agenda_items([])``
+    writes nothing, ``last_seen_at`` never advances, and ``GET /agenda`` keeps
+    serving the previous run's rows forever because its visibility filter is
+    ``last_seen_at = (SELECT MAX(last_seen_at) ...)``. Nothing in the run log or
+    the API says the feed stopped parsing.
+
+    ``points_seen`` counts only points from séance publique réunions inside the
+    ``--since`` window, so a recess (or a narrow window with no sittings) yields
+    ``points_seen == 0`` and is correctly not treated as a failure.
+    """
+    if points_seen == 0:
+        log.info("No in-window séance publique ODJ points in the feed — nothing to guard.")
+        return
+
+    if parsed == 0:
+        log.error(
+            "All %d in-window séance publique ODJ points failed to parse. "
+            "Check the AN agenda export for format changes.",
+            points_seen,
+        )
+        sys.exit(1)
+
+    skip_rate = unparsed / points_seen
+    if skip_rate > SKIP_RATE_THRESHOLD:
+        log.error(
+            "High parse failure rate: %d/%d ODJ points skipped (%.0f%%). "
+            "Check the AN agenda export for format changes.",
+            unparsed,
+            points_seen,
+            skip_rate * 100,
+        )
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
