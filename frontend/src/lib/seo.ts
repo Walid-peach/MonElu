@@ -1,7 +1,8 @@
 import type { Deputy, Vote } from '@/lib/api'
 import { departmentLabel } from '@/lib/departments'
+import { SITE_URL } from '@/lib/site'
 
-export const SITE_URL = 'https://mon-elu.vercel.app'
+export { SITE_URL } from '@/lib/site'
 export const SITE_NAME = 'MonÉlu'
 
 export type BreadcrumbItem = { name: string; url: string }
