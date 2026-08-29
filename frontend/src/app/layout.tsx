@@ -15,7 +15,7 @@ import { HideOnEmbed } from '@/components/HideOnEmbed'
 import { MainFrame } from '@/components/MainFrame'
 import { JsonLd } from '@/components/JsonLd'
 import { ThemeProvider } from '@/components/ThemeProvider'
-import { buildWebsiteJsonLd } from '@/lib/seo'
+import { buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
 
@@ -78,7 +78,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {`(function(){try{if(window.location.pathname==='/')return;var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`}
         </Script>
         <ThemeProvider>
-          <JsonLd data={buildWebsiteJsonLd()} />
+          {/* Organization first: WebSite.publisher references it by @id (MON-273). */}
+          <JsonLd data={[buildOrganizationJsonLd(), buildWebsiteJsonLd()]} />
           <Suspense fallback={null}>
             <Nav />
           </Suspense>
