@@ -35,6 +35,10 @@ from scripts._http import download_with_retry  # noqa: E402
 AN_PORTRAIT_PREFIX = "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/"
 PORTRAIT_URL = re.compile(re.escape(AN_PORTRAIT_PREFIX) + r"(\d{1,9})\.jpg$", re.IGNORECASE)
 
+# Sanity floor for a regeneration; see main(). The 17th legislature has seated
+# 648 deputies so far, all with a portrait.
+MIN_EXPECTED_IDS = 500
+
 OUTPUT_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "frontend",
@@ -85,10 +89,15 @@ def ids_from_api(base_url: str) -> list[str]:
     while True:
         raw = download_with_retry(f"{base_url.rstrip('/')}/deputies?limit={limit}&offset={offset}")
         page = json.loads(raw)
+        if "total" not in page:
+            # Without it the loop below cannot tell "last page" from "first page
+            # of a reshaped response", and would write a truncated allowlist -
+            # which 404s every portrait it dropped.
+            raise SystemExit(f"GET /deputies returned no `total` field: keys={sorted(page)}")
         items = page.get("items", [])
         photo_urls.extend(item["photo_url"] for item in items if item.get("photo_url"))
         offset += limit
-        if offset >= page.get("total", 0) or not items:
+        if offset >= page["total"] or not items:
             break
     return _extract(photo_urls)
 
@@ -123,9 +132,15 @@ def main() -> None:
             raise SystemExit("DATABASE_URL is not set (or pass --api to read from a live API).")
         ids = ids_from_db(database_url)
 
-    if not ids:
-        # Never write an empty allowlist: it would 404 every portrait on the site.
-        raise SystemExit("Refusing to write an empty allowlist — no portrait URLs found.")
+    # A short list is as damaging as an empty one and much easier to miss: every
+    # id it drops is a portrait that 404s. The Assemblée seats 577 deputies at
+    # any moment and the set only grows, so anything under 500 means a truncated
+    # fetch or a reshaped response, not a real shrink.
+    if len(ids) < MIN_EXPECTED_IDS:
+        raise SystemExit(
+            f"Refusing to write {len(ids)} portrait ids (expected at least "
+            f"{MIN_EXPECTED_IDS}) — the source looks truncated."
+        )
 
     rendered = render(ids)
     with open(OUTPUT_PATH, encoding="utf-8") as fh:
@@ -135,7 +150,7 @@ def main() -> None:
         if current != rendered:
             missing = sorted(set(ids) - set(re.findall(r"'(\d+)'", current)), key=int)
             extra = sorted(set(re.findall(r"'(\d+)'", current)) - set(ids), key=int)
-            print(f"::warning::{OUTPUT_PATH} is stale ({len(ids)} ids upstream).")
+            print(f"{OUTPUT_PATH} is stale ({len(ids)} ids upstream).")
             if missing:
                 print(f"  Portraits that would 404: {', '.join(missing)}")
             if extra:
