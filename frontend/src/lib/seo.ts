@@ -5,9 +5,17 @@ import { SITE_URL } from '@/lib/site'
 export { SITE_URL } from '@/lib/site'
 export const SITE_NAME = 'MonÉlu'
 
+/**
+ * The site's own description, in one place.
+ *
+ * Consumed by the root layout's `metadata.description` and by
+ * `Organization.description` below, so the `<meta name="description">` a
+ * crawler reads and the JSON-LD it parses on the same page cannot drift apart.
+ * The shorter OG/Twitter card variant in `layout.tsx` is deliberate — card
+ * descriptions are truncated by the platforms anyway.
+ */
 export const SITE_DESCRIPTION =
-  "Le dossier de vote complet de chaque député de l'Assemblée nationale (XVIIᵉ législature), " +
-  "à partir des données ouvertes officielles. Chaque vote, chaque député, en français clair."
+  "Données officielles de l'Assemblée Nationale. Suivez chaque vote de chaque député français."
 
 /**
  * Stable node id for the publisher (MON-273).

@@ -15,7 +15,7 @@ import { HideOnEmbed } from '@/components/HideOnEmbed'
 import { MainFrame } from '@/components/MainFrame'
 import { JsonLd } from '@/components/JsonLd'
 import { ThemeProvider } from '@/components/ThemeProvider'
-import { buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
+import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
 
@@ -45,7 +45,9 @@ const sans = DM_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: 'MonÉlu — Suivez vos députés',
-  description: "Données officielles de l'Assemblée Nationale. Suivez chaque vote de chaque député français.",
+  // Shared with Organization.description in the JSON-LD below (MON-273) so the
+  // meta description and the structured data cannot drift apart.
+  description: SITE_DESCRIPTION,
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'MonÉlu' },
   openGraph: {

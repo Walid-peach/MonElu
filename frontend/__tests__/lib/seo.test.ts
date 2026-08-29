@@ -1,5 +1,6 @@
 import {
   SITE_URL,
+  SITE_DESCRIPTION,
   ORGANIZATION_ID,
   buildOrganizationJsonLd,
   buildWebsiteJsonLd,
@@ -65,6 +66,12 @@ describe('buildOrganizationJsonLd', () => {
   it('lists only origins the project controls in sameAs', () => {
     const data = buildOrganizationJsonLd()
     expect(data.sameAs).toEqual(['https://github.com/Walid-peach/MonElu'])
+  })
+
+  it('describes the site with the same text as the page meta description', () => {
+    // The root layout feeds metadata.description from SITE_DESCRIPTION, so a
+    // crawler must never read one description in <meta> and another in JSON-LD.
+    expect(buildOrganizationJsonLd().description).toBe(SITE_DESCRIPTION)
   })
 })
 
