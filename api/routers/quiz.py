@@ -44,7 +44,6 @@ Denominator rules (consistent with ADR-019's presence framing):
 """
 
 import logging
-import os
 import re
 import threading
 import uuid
@@ -58,6 +57,7 @@ from psycopg2.extras import Json
 from pydantic import BaseModel, Field, field_validator
 from starlette.requests import Request
 
+from api.config import frontend_base_url
 from api.db import get_conn
 from api.departments_data import DEPT_NAMES, db_department_values, normalize_code
 from api.limiter import limiter, tiered_limit
@@ -66,8 +66,6 @@ from api.quiz_data import QUIZ_QUESTIONS, QUIZ_VERSION, QUIZ_VOTE_IDS
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "https://mon-elu.vercel.app").rstrip("/")
 
 EXPRESSED_POSITIONS = ("pour", "contre", "abstention")
 MIN_ANSWERS = 3
@@ -711,7 +709,7 @@ def _to_share_response(row: dict) -> QuizShareResponse:
         id=share_id,
         result=QuizShareResult(**row["result"]),
         shared_at=row["created_at"].isoformat(),
-        share_url=f"{FRONTEND_BASE_URL}/quiz/s/{share_id}",
+        share_url=f"{frontend_base_url()}/quiz/s/{share_id}",
     )
 
 

@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import uuid
 from typing import Literal
 
@@ -9,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from psycopg2.extras import Json
 from pydantic import BaseModel, Field, field_validator
 
+from api.config import frontend_base_url
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from rag.chain.rag_chain import ask
@@ -16,8 +16,6 @@ from rag.chain.rag_chain import ask
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "https://mon-elu.vercel.app").rstrip("/")
 
 
 class SearchRequest(BaseModel):
@@ -154,7 +152,7 @@ def _to_share_response(row: dict) -> ShareResponse:
         data_source=row["data_source"],
         caveat=row["caveat"],
         shared_at=row["created_at"].isoformat(),
-        share_url=f"{FRONTEND_BASE_URL}/chat/s/{share_id}",
+        share_url=f"{frontend_base_url()}/chat/s/{share_id}",
     )
 
 
