@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start
 
 start:
 	docker compose up -d
@@ -28,6 +28,15 @@ check-db:
 
 fix-deputies:
 	venv/bin/python3 scripts/update_party.py
+
+# Portrait-proxy allowlist (MON-251). Regenerate when a by-election seats a new
+# deputy; a stale list only costs that deputy their photo (the avatar falls
+# back to initials), never an outage.
+portrait-ids:
+	venv/bin/python3 scripts/generate_portrait_ids.py
+
+portrait-ids-check:
+	venv/bin/python3 scripts/generate_portrait_ids.py --check --api https://monelu-production.up.railway.app
 
 rag-index:
 	venv/bin/python3 -m rag.pipeline.index_manager build

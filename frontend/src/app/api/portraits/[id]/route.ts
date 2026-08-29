@@ -4,17 +4,28 @@ import { portraitUpstream } from '@/lib/portraits'
  * Deputy portrait proxy (MON-198).
  *
  * One URL per deputy, cached at the CDN for a week, so serving portraits costs
- * ~577 upstream fetches per cache generation instead of one transformation per
+ * ~648 upstream fetches per cache generation instead of one transformation per
  * (deputy x width x format x DPR) combination hit at runtime.
+ *
+ * The id is checked against the allowlist of real deputies before any I/O
+ * (MON-251), so the route acts on ~648 ids rather than on the billion the
+ * shape check alone would admit.
  */
 export const runtime = 'nodejs'
 
 /** Long enough that the edge absorbs essentially all traffic, short enough
  * that a replaced portrait (by-election, new photo) rolls in on its own. */
 const CACHE_HIT = 'public, max-age=3600, s-maxage=604800, stale-while-revalidate=86400'
-/** A missing portrait is normal (deputies without a photo); cache it briefly
- * so a 404 storm can't reach the AN, but re-check often enough to pick one up. */
+/** A missing portrait is normal (the AN has no photo for this deputy yet);
+ * cache it briefly so a 404 storm can't reach the AN, but re-check often
+ * enough to pick one up once it is published. */
 const CACHE_MISS = 'public, max-age=300, s-maxage=300'
+/** An id outside the allowlist is not a portrait that might appear later - it
+ * is not a deputy at all, and the answer only changes when we redeploy with a
+ * regenerated list. Cached for a day so a flood of invented ids is absorbed by
+ * the edge after the first hit of each, instead of costing a function
+ * invocation every 5 minutes (MON-251). */
+const CACHE_UNKNOWN_ID = 'public, max-age=86400, s-maxage=86400'
 
 const UPSTREAM_TIMEOUT_MS = 5_000
 
@@ -23,8 +34,12 @@ const CONDITIONAL = ['if-none-match', 'if-modified-since'] as const
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // Rejected before any I/O: not a real deputy's id, so nothing upstream to
+  // ask for and nothing for an attacker to amplify through (MON-251).
   const upstream = portraitUpstream(id)
-  if (!upstream) return new Response('Not Found', { status: 404, headers: { 'Cache-Control': CACHE_MISS } })
+  if (!upstream) {
+    return new Response('Not Found', { status: 404, headers: { 'Cache-Control': CACHE_UNKNOWN_ID } })
+  }
 
   // Forward the caller's validators so a CDN revalidation after s-maxage
   // lapses costs a 304 from the AN rather than a full body transfer.
