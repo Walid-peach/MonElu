@@ -124,8 +124,15 @@ Deputy portraits are hosted by the Assemblée Nationale, one JPEG per deputy.
 Pointing `next/image` straight at that host made the serving cost scale with runtime combinations - deputy x rendered width x format x DPR - which exhausted Vercel's free image-transformation quota (MON-197).
 
 Every consumer now calls `portraitSrc()` from `src/lib/portraits.ts`, which rewrites the stored `photo_url` to the same-origin route handler `src/app/api/portraits/[id]/route.ts` as `/api/portraits/<id>.jpg`.
-That route validates the id, fetches the upstream JPEG once, and returns it with a week-long `s-maxage`, so the address space is exactly one CDN-cacheable URL per deputy (~577) regardless of the size rendered.
+That route validates the id, fetches the upstream JPEG once, and returns it with a week-long `s-maxage`, so the address space is exactly one CDN-cacheable URL per deputy (~648) regardless of the size rendered.
 Anything that is not a recognised AN portrait URL passes through unchanged.
+
+The id must be a *real* deputy's, checked against the generated allowlist in `src/lib/portraitIds.ts` before any I/O (MON-251).
+The shape check alone (`/^\d{1,9}$/`) admits a billion ids, and the route acted on every one of them: one Vercel function invocation plus one outbound fetch to the Assemblée Nationale, uncapped - a quota-exhaustion vector for us and an amplification vector pointed at the AN from our own domain.
+Membership in the allowlist restores the "cost bounded by deputy count" property for abusive traffic, not just legitimate traffic, and an unknown id is cached as a 404 for a day rather than 5 minutes since the answer only changes on a redeploy.
+
+Regenerate the allowlist with `make portrait-ids` when a by-election seats a new deputy (`make portrait-ids-check` reports drift against the live API).
+A stale list is cosmetic, never an outage: `portraitSrc()` deliberately stays allowlist-independent, so an unknown deputy's avatar 404s and `DeputyAvatar` falls back to initials - rather than passing the raw AN URL through to `next/image`, which is the quota blowout MON-198 removed.
 
 The `.jpg` suffix is load-bearing: `public/sw.js` registers its StaleWhileRevalidate image rule (`static-image-assets`, 64 entries, 30 days) by file extension and *before* its `/api/*` rule, so an extensionless proxy path would fall into the 16-entry NetworkFirst `apis` cache instead - thrashing on any page rendering more than 16 avatars and breaking the offline deputy pages MON-115 exists to keep readable.
 

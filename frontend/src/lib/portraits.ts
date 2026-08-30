@@ -19,11 +19,20 @@
  * deputy pages MON-115 exists to keep readable.
  */
 
+// Server-only in practice: `portraitUpstream()` is the sole consumer and only
+// the route handler calls it, so tree-shaking keeps these ~8 KB out of every
+// client bundle (verified against .next/static after a build). Using
+// PORTRAIT_IDS from `portraitId()` or `portraitSrc()` - which client
+// components do import - would ship the whole list to the browser.
+import { PORTRAIT_IDS } from './portraitIds'
+
 /** Upstream prefix for 17th-legislature square portraits. */
 export const AN_PORTRAIT_PREFIX =
   'https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/'
 
-/** The only ids the proxy will fetch: the numeric part of an AN deputy id. */
+/** Shape pre-filter: the numeric part of an AN deputy id. Cheap, and it keeps
+ * `portraitId()` (which only parses a stored photo_url) independent of the
+ * allowlist below. */
 const PORTRAIT_ID = /^\d{1,9}$/
 
 /**
@@ -59,8 +68,16 @@ export function portraitSrc(photoUrl: string | null | undefined): string | null 
  * Accepts the `<id>.jpg` form `portraitSrc()` emits (and a bare id), and
  * returns null for anything else, so the route can never be pointed at an
  * arbitrary upstream path.
+ *
+ * The id must also be a *real* deputy's (MON-251). The shape check alone
+ * admits a billion ids, and the route acts on every one of them: one Vercel
+ * function invocation plus one outbound fetch to the Assemblée Nationale, with
+ * no ceiling. MON-198 bounded the legitimate serving cost by deputy count;
+ * membership in PORTRAIT_IDS bounds the abusive cost the same way, so a loop
+ * over invented ids gets a cheap 404 and the AN is never touched on its behalf.
  */
 export function portraitUpstream(segment: string): string | null {
   const id = segment.replace(/\.jpg$/i, '')
-  return PORTRAIT_ID.test(id) ? `${AN_PORTRAIT_PREFIX}${id}.jpg` : null
+  if (!PORTRAIT_ID.test(id) || !PORTRAIT_IDS.has(id)) return null
+  return `${AN_PORTRAIT_PREFIX}${id}.jpg`
 }
