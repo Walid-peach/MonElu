@@ -109,13 +109,45 @@ jobs:
       - name: Build
         # Prerenders all SSG pages against the production API; src/lib/api.ts
         # already retries through the rate limiter, so this can take a few
-        # minutes on a cold cache.
+        # minutes on a cold cache. This is the *only* build in the workflow -
+        # playwright-smoke consumes its output rather than repeating it
+        # (MON-252), so a PR costs production one full-site prerender.
         run: npm run build
+
+      - name: Publish the build output for the smoke tier
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          # .next/cache is the webpack/Next build cache - 637 MB of the 694 MB
+          # tree locally, and `next start` never reads it. Excluding it takes
+          # the artifact to ~57 MB. The `actions/cache` step above is what
+          # carries the cache between runs; this artifact only carries the
+          # built app between jobs.
+          path: |
+            frontend/.next
+            !frontend/.next/cache
+          # .next is a dotfile directory, and upload-artifact@v4 skips hidden
+          # paths unless told otherwise - without this the artifact is empty.
+          include-hidden-files: true
+          retention-days: 1
 
   playwright-smoke:
     # Renders real pages in a real browser so a `hidden md:flex` nav that's
     # actually still visible, or a mobile-width overflow, fails the PR
     # instead of shipping through jsdom-only tests (MON-241, MON-141/142).
+    #
+    # Depends on `frontend` for its build output rather than building again
+    # (MON-252). Both jobs used to run a full production prerender in
+    # parallel, so every PR pointed two concurrent full-site crawls at the
+    # production API - which caps anonymous callers at 30 req/min per IP
+    # (api/limiter.py) and already 429s under prerender load.
+    #
+    # Serialising the jobs does not cost wall-clock, because the build being
+    # removed was the *cold* one - this job never had the .next/cache restore
+    # the frontend job has. Measured across the two runs either side of the
+    # change: this job went 3m38s -> 1m7s, and the tier's wall-clock 3m38s ->
+    # 3m25s. Do not "restore parallelism" by adding a build back here.
+    needs: frontend
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -137,10 +169,18 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Build
-        # Same production-API build as the frontend job above — the smoke
-        # tier exercises the built app, not the dev server.
-        run: npm run build
+      - name: Download the frontend build
+        # `npm run start` needs .next; node_modules comes from `npm ci` above
+        # and public/ from the checkout, so this is the only artifact needed.
+        uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: frontend/.next
+
+      - name: Verify the build output arrived
+        # A silently empty or mis-rooted artifact would surface as a confusing
+        # `next start` failure several minutes later; fail here instead.
+        run: test -f .next/BUILD_ID && test -d .next/server && test -d .next/static
 
       - name: Run Playwright smoke tests
         run: npm run test:e2e
