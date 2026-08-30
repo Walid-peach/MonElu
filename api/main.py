@@ -73,6 +73,7 @@ _warn_if_placeholder("DATABASE_URL", os.getenv("DATABASE_URL"), context="the API
 from starlette.concurrency import run_in_threadpool  # noqa: E402
 
 from api.auth import API_KEY_HEADER, record_usage, resolve_api_key  # noqa: E402
+from api.config import frontend_base_url  # noqa: E402
 from api.db import close_pool, get_conn, init_pool  # noqa: E402
 from api.limiter import limiter  # noqa: E402
 from rag.chain.sql_router import warm_pool as _warm_sql_pool  # noqa: E402
@@ -278,7 +279,7 @@ def _get_db_stats() -> dict:
 
 @app.get("/", include_in_schema=False)
 def landing() -> RedirectResponse:
-    return RedirectResponse(url="https://mon-elu.vercel.app", status_code=307)
+    return RedirectResponse(url=frontend_base_url(), status_code=307)
 
 
 # ---------------------------------------------------------------------------

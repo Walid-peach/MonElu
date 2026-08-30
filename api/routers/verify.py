@@ -17,6 +17,7 @@ import groq
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from api.config import frontend_base_url
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from rag.chain.verify import verify_claim
@@ -24,8 +25,6 @@ from rag.chain.verify import verify_claim
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "https://mon-elu.vercel.app").rstrip("/")
 
 # Mirrors the startup check in api.main — the chain needs both providers.
 _PLACEHOLDER_PREFIXES = ("sk-...", "gsk_...", "your-", "changeme")
@@ -87,7 +86,7 @@ def _to_response(row: dict) -> VerifyResponse:
         confidence=row["confidence"],
         data_horizon=str(row["data_horizon"]) if row["data_horizon"] else None,
         verified_at=row["created_at"].isoformat(),
-        share_url=f"{FRONTEND_BASE_URL}/verifier/v/{verification_id}",
+        share_url=f"{frontend_base_url()}/verifier/v/{verification_id}",
     )
 
 
