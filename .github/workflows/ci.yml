@@ -120,7 +120,7 @@ jobs:
           name: next-build
           # .next/cache is the webpack/Next build cache - 637 MB of the 694 MB
           # tree locally, and `next start` never reads it. Excluding it takes
-          # the artifact to ~55 MB. The `actions/cache` step above is what
+          # the artifact to ~57 MB. The `actions/cache` step above is what
           # carries the cache between runs; this artifact only carries the
           # built app between jobs.
           path: |
@@ -140,10 +140,13 @@ jobs:
     # (MON-252). Both jobs used to run a full production prerender in
     # parallel, so every PR pointed two concurrent full-site crawls at the
     # production API - which caps anonymous callers at 30 req/min per IP
-    # (api/limiter.py) and already 429s under prerender load. The cost of
-    # this is wall-clock: the two jobs no longer overlap. The saving is one
-    # build's worth of CI minutes and, more importantly, half the prerender
-    # load on production.
+    # (api/limiter.py) and already 429s under prerender load.
+    #
+    # Serialising the jobs does not cost wall-clock, because the build being
+    # removed was the *cold* one - this job never had the .next/cache restore
+    # the frontend job has. Measured across the two runs either side of the
+    # change: this job went 3m38s -> 1m7s, and the tier's wall-clock 3m38s ->
+    # 3m25s. Do not "restore parallelism" by adding a build back here.
     needs: frontend
     runs-on: ubuntu-latest
     timeout-minutes: 20
