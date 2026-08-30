@@ -25,9 +25,9 @@ import psycopg2.extras
 from dotenv import load_dotenv
 
 try:
-    from scripts._http import SKIP_RATE_THRESHOLD, download_with_retry
+    from scripts._http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 except ImportError:  # running as a plain file: python scripts/ingest_votes.py
-    from _http import SKIP_RATE_THRESHOLD, download_with_retry
+    from _http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 
 load_dotenv()
 
@@ -180,7 +180,7 @@ ON CONFLICT (vote_id) DO UPDATE SET
 
 
 def _upsert_records(records: list[dict]) -> None:
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = connect_with_retry(DATABASE_URL)
     try:
         with conn:
             with conn.cursor() as cur:
