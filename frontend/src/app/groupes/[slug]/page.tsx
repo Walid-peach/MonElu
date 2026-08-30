@@ -24,8 +24,9 @@ export async function generateMetadata(
   const { slug } = await params
   const canonicalSlug = decodeURIComponent(slug).trim().toLowerCase()
   if (!groupName(canonicalSlug)) return {}
+  const alternates = { canonical: canonicalUrl(`/groupes/${canonicalSlug}`) }
   const data = await api.groups.get(canonicalSlug).catch(() => null)
-  if (!data) return {}
+  if (!data) return { alternates }
   const title = `${data.name} - MonÉlu`
   const description =
     `Les ${data.member_count} député${data.member_count !== 1 ? 's' : ''} du groupe ${data.name} ` +
@@ -33,7 +34,7 @@ export async function generateMetadata(
   return {
     title,
     description,
-    alternates: { canonical: canonicalUrl(`/groupes/${canonicalSlug}`) },
+    alternates,
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }

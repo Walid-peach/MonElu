@@ -29,10 +29,13 @@ export async function generateMetadata(
   { params }: { params: Promise<{ code: string }> }
 ): Promise<Metadata> {
   const { code } = await params
+  // `departmentCode` resolves a name, a padded code or the code itself onto
+  // one spelling, from a local map - so the canonical needs no API call.
   const canonicalCode = departmentCode(decodeURIComponent(code))
   if (!canonicalCode) return {}
+  const alternates = { canonical: canonicalUrl(`/departements/${canonicalCode}`) }
   const data = await api.departments.get(canonicalCode).catch(() => null)
-  if (!data) return {}
+  if (!data) return { alternates }
   const title = `${pageTitle(data.name, data.code)} - MonÉlu`
   const description =
     `Les ${data.deputy_count} députés du département ${data.name} à l'Assemblée nationale : ` +
@@ -40,9 +43,7 @@ export async function generateMetadata(
   return {
     title,
     description,
-    // `data.code` is the resolved department code, not whatever spelling the
-    // URL carried - a name, a padded code and the code itself all resolve here.
-    alternates: { canonical: canonicalUrl(`/departements/${data.code}`) },
+    alternates,
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }

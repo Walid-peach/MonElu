@@ -118,13 +118,16 @@ test.describe('smoke: every route declares a canonical URL', () => {
     expect(new URL(await canonicalHref(page)).pathname).toBe(href)
   })
 
-  // /votes/[id] is deliberately not covered here: generateStaticParams
-  // prerenders 100 vote pages at build time, and that burst regularly trips
-  // the API's rate limit, so a prerendered vote page can ship with the root
-  // layout's metadata and no canonical at all. That is a build-time flake,
-  // not a canonical bug - the jest guard in __tests__/app/canonical.test.ts
-  // covers the route's declaration, and /deputes/[id] renders on demand and
-  // so exercises the same generateMetadata path reliably.
+  // Worth its own test rather than folding into the loop above:
+  // generateStaticParams prerenders 100 vote pages at build time, and that
+  // burst regularly trips the API's rate limit, so a prerendered vote page can
+  // ship with none of its own metadata. The canonical is built from the URL
+  // before that fetch precisely so it survives.
+  test('/votes/[id] emits a canonical for its own id', async ({ page }) => {
+    const href = await firstDetailHref(page, '/votes', '/votes/')
+    await page.goto(href)
+    expect(new URL(await canonicalHref(page)).pathname).toBe(href)
+  })
 
   test('a query string does not fork the canonical', async ({ page }) => {
     await page.goto('/chat?q=test')

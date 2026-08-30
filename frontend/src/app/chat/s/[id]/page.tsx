@@ -17,14 +17,15 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
+  const alternates = { canonical: canonicalUrl(`/chat/s/${id}`) }
   const share = await api.chatShare(id).catch(() => null)
-  if (!share) return {}
+  if (!share) return { alternates }
   const title = `« ${share.question} » - MonÉlu`
   const description = share.answer.length > 160 ? share.answer.slice(0, 160) + '…' : share.answer
   return {
     title,
     description,
-    alternates: { canonical: canonicalUrl(`/chat/s/${id}`) },
+    alternates,
     openGraph: { title, description, url: `${SITE_URL}/chat/s/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }

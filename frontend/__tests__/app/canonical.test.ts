@@ -11,6 +11,13 @@ const APP = join(__dirname, '..', '..', 'src', 'app')
  */
 const NO_CANONICAL = ['~offline/page.tsx', 'embed/votes/[id]/page.tsx']
 
+/**
+ * `alternates: { canonical: ... }` inline, or the `const alternates = {
+ * canonical: ... }` form the dynamic routes use so the canonical survives a
+ * failed metadata fetch. The capture is the rest of that line.
+ */
+const CANONICAL = /(?:alternates:|const alternates =)\s*\{\s*canonical:(.*)/g
+
 function pageFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = join(dir, entry.name)
@@ -19,10 +26,14 @@ function pageFiles(dir: string): string[] {
   })
 }
 
-const pages = pageFiles(APP).map((file) => ({
-  route: relative(APP, file).split(sep).join('/'),
-  source: readFileSync(file, 'utf8'),
-}))
+const pages = pageFiles(APP).map((file) => {
+  const source = readFileSync(file, 'utf8')
+  return {
+    route: relative(APP, file).split(sep).join('/'),
+    source,
+    declarations: [...source.matchAll(CANONICAL)].map((m) => m[1]),
+  }
+})
 
 describe('canonical URLs (MON-269)', () => {
   it('finds the app router pages', () => {
@@ -33,18 +44,19 @@ describe('canonical URLs (MON-269)', () => {
   // mon-elu.vercel.app, on every per-deployment *.vercel.app host and on any
   // future custom domain, with none of them claiming to be the original.
   it.each(pages.filter((p) => !NO_CANONICAL.includes(p.route)))(
-    '$route declares alternates.canonical',
-    ({ source }) => {
-      expect(source).toMatch(/alternates:\s*\{\s*canonical:/)
+    '$route declares a canonical',
+    ({ declarations }) => {
+      expect(declarations.length).toBeGreaterThan(0)
     }
   )
 
   // Hardcoding the origin here would reintroduce MON-254 one page at a time.
-  it.each(pages)('$route builds its canonical from canonicalUrl()', ({ source }) => {
-    const declared = source.match(/alternates:\s*\{\s*canonical:([^}]*)\}/)
-    if (!declared) return
-    expect(declared[1]).toContain('canonicalUrl(')
-  })
+  it.each(pages.filter((p) => p.declarations.length > 0))(
+    '$route builds its canonical from canonicalUrl()',
+    ({ declarations }) => {
+      for (const declaration of declarations) expect(declaration).toContain('canonicalUrl(')
+    }
+  )
 
   it.each(NO_CANONICAL)('%s is still a real page, so the allowlist stays honest', (route) => {
     expect(pages.map((p) => p.route)).toContain(route)

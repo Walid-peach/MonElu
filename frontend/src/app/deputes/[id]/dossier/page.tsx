@@ -19,11 +19,12 @@ const RED  = 'var(--dp-red)'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
+  const alternates = { canonical: canonicalUrl(`/deputes/${id}/dossier`) }
   const deputy = await api.deputies.get(id).catch(() => null)
-  if (!deputy) return {}
+  if (!deputy) return { alternates }
   return {
     title: `Dossier PDF — ${deputy.full_name} - MonÉlu`,
-    alternates: { canonical: canonicalUrl(`/deputes/${deputy.deputy_id}/dossier`) },
+    alternates,
   }
 }
 

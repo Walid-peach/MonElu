@@ -28,15 +28,19 @@ const RED    = 'var(--dp-red)'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
+  // The canonical is derived from the URL alone, so it survives a failed
+  // metadata fetch - the build's prerender burst can trip the API's rate
+  // limit, and a page that renders anyway must still state its own identity.
+  const alternates = { canonical: canonicalUrl(`/deputes/${id}`) }
   const deputy = await api.deputies.get(id).catch(() => null)
-  if (!deputy) return {}
+  if (!deputy) return { alternates }
   const description = `Bilan de mandat, votes et présence de ${deputy.full_name}${
     deputy.party ? ` (${deputy.party})` : deputy.department ? ` - ${departmentLabel(deputy.department)}` : ''
   }.`
   return {
     title: `${deputy.full_name} - MonÉlu`,
     description,
-    alternates: { canonical: canonicalUrl(`/deputes/${deputy.deputy_id}`) },
+    alternates,
     openGraph: { title: `${deputy.full_name} - MonÉlu`, description },
     twitter:   { card: 'summary_large_image', title: `${deputy.full_name} - MonÉlu`, description },
   }

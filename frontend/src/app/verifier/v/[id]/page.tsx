@@ -23,8 +23,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
+  const alternates = { canonical: canonicalUrl(`/verifier/v/${id}`) }
   const v = await api.verification(id).catch(() => null)
-  if (!v) return {}
+  if (!v) return { alternates }
   const label = VERDICT_LABELS[v.verdict] ?? v.verdict
   const shortClaim = v.claim.length > 90 ? v.claim.slice(0, 90) + '…' : v.claim
   const title = `${label} - « ${shortClaim} » - MonÉlu Vérification`
@@ -32,7 +33,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: canonicalUrl(`/verifier/v/${id}`) },
+    alternates,
     openGraph: { title, description, url: `${SITE_URL}/verifier/v/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }
