@@ -1,5 +1,8 @@
 import {
   SITE_URL,
+  SITE_DESCRIPTION,
+  ORGANIZATION_ID,
+  buildOrganizationJsonLd,
   buildWebsiteJsonLd,
   buildPersonJsonLd,
   buildVoteJsonLd,
@@ -32,12 +35,58 @@ const vote: Vote = {
   theme: null,
 }
 
+describe('buildOrganizationJsonLd', () => {
+  it('is an Organization carrying the shared @id', () => {
+    const data = buildOrganizationJsonLd()
+    expect(data['@type']).toBe('Organization')
+    expect(data['@id']).toBe(ORGANIZATION_ID)
+    expect(ORGANIZATION_ID).toBe(`${SITE_URL}/#organization`)
+  })
+
+  it('derives every absolute URL from SITE_URL so a domain move carries (MON-254)', () => {
+    const data = buildOrganizationJsonLd()
+    expect(data.url).toBe(SITE_URL)
+    expect(data.logo.url).toBe(`${SITE_URL}/icon-512.png`)
+    // Nothing may hardcode an origin: every http(s) URL in the block is either
+    // SITE_URL-derived or an explicit external sameAs entry.
+    const urls = JSON.stringify(data).match(/https?:\/\/[^"]+/g) ?? []
+    const allowed = new Set<string>([...data.sameAs, 'https://schema.org'])
+    for (const url of urls) {
+      if (allowed.has(url)) continue
+      expect(url.startsWith(SITE_URL)).toBe(true)
+    }
+  })
+
+  it('omits contactPoint and foundingDate rather than inventing them', () => {
+    const data = buildOrganizationJsonLd()
+    expect(data).not.toHaveProperty('contactPoint')
+    expect(data).not.toHaveProperty('foundingDate')
+  })
+
+  it('lists only origins the project controls in sameAs', () => {
+    const data = buildOrganizationJsonLd()
+    expect(data.sameAs).toEqual(['https://github.com/Walid-peach/MonElu'])
+  })
+
+  it('describes the site with the same text as the page meta description', () => {
+    // The root layout feeds metadata.description from SITE_DESCRIPTION, so a
+    // crawler must never read one description in <meta> and another in JSON-LD.
+    expect(buildOrganizationJsonLd().description).toBe(SITE_DESCRIPTION)
+  })
+})
+
 describe('buildWebsiteJsonLd', () => {
   it('includes a SearchAction targeting /chat', () => {
     const data = buildWebsiteJsonLd()
     expect(data['@type']).toBe('WebSite')
     expect(data.url).toBe(SITE_URL)
     expect(data.potentialAction.target.urlTemplate).toBe(`${SITE_URL}/chat?q={search_term_string}`)
+  })
+
+  it('references the Organization by @id instead of re-declaring it', () => {
+    const data = buildWebsiteJsonLd()
+    expect(data.publisher).toEqual({ '@id': ORGANIZATION_ID })
+    expect(data.publisher).not.toHaveProperty('name')
   })
 })
 
