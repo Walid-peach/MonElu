@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: "Déclaration d'accessibilité - MonÉlu",
   description:
     "État de conformité RGAA de MonÉlu, méthode d'évaluation, non-conformités connues et contact pour signaler un problème d'accessibilité.",
+  alternates: { canonical: canonicalUrl('/accessibilite') },
 }
 
 const pStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }

@@ -2,11 +2,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { csvUrl } from '@/lib/api'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Données ouvertes - MonÉlu',
   description:
     'Téléchargez les données de vote des députés en CSV : positions par scrutin, historique par député, scorecards complètes. Format, fraîcheur et conditions de réutilisation.',
+  alternates: { canonical: canonicalUrl('/donnees') },
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://monelu-production.up.railway.app'

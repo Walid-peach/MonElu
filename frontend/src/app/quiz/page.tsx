@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 import { QuizClient } from './QuizClient'
 
 const TITLE = 'Quel député vote comme vous ? — MonÉlu'
@@ -12,7 +13,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: `${SITE_URL}/quiz` },
+  alternates: { canonical: canonicalUrl('/quiz') },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,

@@ -8,6 +8,7 @@ import { groupName } from '@/lib/groups'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 3600
@@ -32,6 +33,7 @@ export async function generateMetadata(
   return {
     title,
     description,
+    alternates: { canonical: canonicalUrl(`/groupes/${canonicalSlug}`) },
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }

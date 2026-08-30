@@ -15,6 +15,7 @@ import { FollowDeputyButton } from '@/components/FollowDeputyButton'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildPersonJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -35,6 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${deputy.full_name} - MonÉlu`,
     description,
+    alternates: { canonical: canonicalUrl(`/deputes/${deputy.deputy_id}`) },
     openGraph: { title: `${deputy.full_name} - MonÉlu`, description },
     twitter:   { card: 'summary_large_image', title: `${deputy.full_name} - MonÉlu`, description },
   }

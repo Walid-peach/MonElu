@@ -7,6 +7,7 @@ import { partyHex, normalizePartyShort, formatDate, themeColors } from '@/lib/ut
 import { themeName, themeSlug, THEME_ENTRIES } from '@/lib/themes'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 3600
@@ -35,6 +36,9 @@ export async function generateMetadata(
   return {
     title,
     description,
+    // The slug in the URL is not necessarily the canonical one - `themeSlug`
+    // re-derives it from the theme's own name, as the page body already does.
+    alternates: { canonical: canonicalUrl(`/themes/${themeSlug(data.name) ?? slug}`) },
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }

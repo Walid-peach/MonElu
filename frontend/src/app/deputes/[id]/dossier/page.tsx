@@ -6,6 +6,7 @@ import { partyHex, formatDate } from '@/lib/utils'
 import { departmentLabel } from '@/lib/departments'
 import { positionStyle } from '@/lib/vote-position'
 import { SITE_URL } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { PrintButton } from '@/components/PrintButton'
 
@@ -20,7 +21,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const deputy = await api.deputies.get(id).catch(() => null)
   if (!deputy) return {}
-  return { title: `Dossier PDF — ${deputy.full_name} - MonÉlu` }
+  return {
+    title: `Dossier PDF — ${deputy.full_name} - MonÉlu`,
+    alternates: { canonical: canonicalUrl(`/deputes/${deputy.deputy_id}/dossier`) },
+  }
 }
 
 export default async function DeputyDossierPage({ params }: { params: Promise<{ id: string }> }) {

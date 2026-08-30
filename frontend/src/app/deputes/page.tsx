@@ -1,7 +1,13 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { DeputiesClient } from './DeputiesClient'
 import { api } from '@/lib/api'
 import type { Deputy } from '@/lib/api'
+import { canonicalUrl } from '@/lib/site'
+
+export const metadata: Metadata = {
+  alternates: { canonical: canonicalUrl('/deputes') },
+}
 
 export const dynamic = 'force-dynamic'
 

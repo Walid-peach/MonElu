@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
 import { SITE_URL } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 import { QuizResultCard } from '../../QuizResultCard'
 import { QuizResultSections } from '../../QuizResultSections'
 
@@ -37,6 +38,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: { canonical: canonicalUrl(`/quiz/s/${id}`) },
     openGraph: { title, description, url: `${SITE_URL}/quiz/s/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }

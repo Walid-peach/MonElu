@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { VotesClient } from './VotesClient'
 import { api } from '@/lib/api'
+import { canonicalUrl } from '@/lib/site'
+
+export const metadata: Metadata = {
+  alternates: { canonical: canonicalUrl('/votes') },
+}
 
 export const revalidate = 900
 

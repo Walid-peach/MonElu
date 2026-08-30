@@ -6,6 +6,7 @@ import { getInitials, groupVotesByParty, normalizePartyShort, partyHex, partySho
 import { VoteDetailClient } from './VoteDetailClient'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildVoteJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -20,6 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${result} - ${shortTitle} - MonÉlu`,
     description,
+    alternates: { canonical: canonicalUrl(`/votes/${id}`) },
     openGraph: { title: `${result} - ${shortTitle} - MonÉlu`, description, url: `${SITE_URL}/votes/${id}` },
     twitter: { card: 'summary_large_image', title: `${result} - ${shortTitle} - MonÉlu`, description },
   }

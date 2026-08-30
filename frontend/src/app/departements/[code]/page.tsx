@@ -9,6 +9,7 @@ import { groupSlug } from '@/lib/groups'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 3600
@@ -28,9 +29,9 @@ export async function generateMetadata(
   { params }: { params: Promise<{ code: string }> }
 ): Promise<Metadata> {
   const { code } = await params
-  const canonical = departmentCode(decodeURIComponent(code))
-  if (!canonical) return {}
-  const data = await api.departments.get(canonical).catch(() => null)
+  const canonicalCode = departmentCode(decodeURIComponent(code))
+  if (!canonicalCode) return {}
+  const data = await api.departments.get(canonicalCode).catch(() => null)
   if (!data) return {}
   const title = `${pageTitle(data.name, data.code)} - MonÉlu`
   const description =
@@ -39,6 +40,9 @@ export async function generateMetadata(
   return {
     title,
     description,
+    // `data.code` is the resolved department code, not whatever spelling the
+    // URL carried - a name, a padded code and the code itself all resolve here.
+    alternates: { canonical: canonicalUrl(`/departements/${data.code}`) },
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }
