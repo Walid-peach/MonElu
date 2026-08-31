@@ -134,3 +134,44 @@ test.describe('smoke: every route declares a canonical URL', () => {
     expect(new URL(await canonicalHref(page)).pathname).toBe('/chat')
   })
 })
+
+test.describe('smoke: an unknown id is a real 404', () => {
+  // MON-275: `notFound()` used to render the 404 body with an HTTP 200,
+  // because a `loading.tsx` above the route flushed the status before the
+  // page body ran. Only a real browser round-trip proves the status, and only
+  // an end-to-end check catches a `loading.tsx` reintroduced anywhere above
+  // these routes - the jest guard in __tests__/app/not-found-status.test.ts
+  // covers the file layout, this covers what the server actually sends.
+  const MISSING = [
+    '/deputes/NOPE',
+    '/deputes/NOPE/dossier',
+    '/votes/DOESNOTEXIST',
+    '/groupes/nope',
+    '/themes/nope',
+    '/departements/999',
+    '/quiz/s/nonexistent',
+    '/chat/s/nonexistent',
+    '/verifier/v/nonexistent',
+  ]
+
+  test.beforeEach(({}, testInfo) => {
+    testInfo.skip(testInfo.project.name !== 'desktop-light', 'viewport-independent')
+  })
+
+  for (const route of MISSING) {
+    test(`${route} responds 404`, async ({ page }) => {
+      const response = await page.goto(route)
+      expect(response?.status()).toBe(404)
+      await expect(page.getByText('Page introuvable')).toBeVisible()
+    })
+  }
+
+  test('a route that does exist is untouched', async ({ page }) => {
+    const href = await firstDetailHref(page, '/deputes', '/deputes/', [
+      '/deputes/comparer',
+      '/deputes/tableau',
+    ])
+    const response = await page.goto(href)
+    expect(response?.status()).toBe(200)
+  })
+})

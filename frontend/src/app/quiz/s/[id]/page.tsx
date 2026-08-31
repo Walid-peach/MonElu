@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { SITE_URL } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 import { QuizResultCard } from '../../QuizResultCard'
@@ -47,7 +47,7 @@ export async function generateMetadata({
 
 export default async function QuizSharePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const share = await api.quiz.getShare(id).catch(() => null)
+  const share = await api.quiz.getShare(id).catch(nullIfMissing)
   if (!share) notFound()
 
   return (

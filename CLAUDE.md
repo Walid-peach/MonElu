@@ -100,7 +100,7 @@ Assemblée Nationale Open Data (ZIPs)
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
-| `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test + frontend lint/typecheck/jest/build + Playwright smoke tier (MON-241: no-horizontal-overflow and nav-visibility checks on `/`, `/deputes`, `/deputes/[id]`, `/votes`, `/votes/[id]`, `/chat`, `/quiz` at 390px/1280px, light/dark, against a `next build`, plus a canonical-link check on `desktop-light` only - MON-269); posts dbt results as PR comment |
+| `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test + frontend lint/typecheck/jest/build + Playwright smoke tier (MON-241: no-horizontal-overflow and nav-visibility checks on `/`, `/deputes`, `/deputes/[id]`, `/votes`, `/votes/[id]`, `/chat`, `/quiz` at 390px/1280px, light/dark, against a `next build`, plus canonical-link and 404-status checks on `desktop-light` only - MON-269, MON-275); posts dbt results as PR comment |
 | `deploy.yml` | Merge to `master` | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index, then `dbt run` → operational tail. Every step after `dbt run` is `continue-on-error` + `!cancelled()`, and a final **data-quality gate** re-fails the job on `dbt snapshot`/`dbt test`/`dbt source freshness`/quiz-validation outcomes (MON-250) — a failing assertion must never skip cache revalidation or the monitoring probes. The DB-size probe is deliberately outside the gate. |
 | `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window — the actual retry backstop (MON-221) |
@@ -142,6 +142,11 @@ A new parser without such a guard ships a skeleton dataset on a green run - the 
 - `chain/verify.py`: `verify_claim()` — claim verification (MON-126, ADR-022): deputy detection over all deputies, vote-chunk retrieval, positions join, structured JSON verdict (`vrai`/`faux`/`trompeur`/`inverifiable`). Cited vote_ids are validated against the votes table in code; low similarity, parse failure, or a factual verdict with no valid citation all force `inverifiable`.
 - `experiments/mlflow_eval.py`: 11 golden Q&A pairs split into router suite (live SQL ground truth) and retrieval suite (keyword scoring).
 - ~5,900 chunks in production (2026-07): 5,105 vote + 645 deputy + 12 party + 1 global_stats + 102 notable_deputy + 20 law_summary · party and global chunks count active mandates only
+
+**`frontend/`** - Next.js App Router
+- **Never put a `loading.tsx` at or above a route that calls `notFound()`** (MON-275). A `loading.tsx` wraps its whole segment subtree in a Suspense boundary, and streaming flushes HTTP 200 before the page body runs, so `notFound()` under one renders the 404 body with a 200 status - an indexable soft-404 that ISR then caches for `revalidate` seconds. `/deputes` and `/votes` keep their skeletons inside `(liste)` route groups, which scope the boundary to the list page and leave `/deputes/[id]` and `/votes/[id]` free to 404. `frontend/__tests__/app/not-found-status.test.ts` enforces both halves of this.
+- A detail page's *identity* fetch uses `.catch(nullIfMissing)` (`src/lib/api.ts`), never a bare `.catch(() => null)`: only a genuine 404/422 becomes `notFound()`, while a 429 or 5xx is rethrown and surfaces as a server error. The supporting fetches on the same page keep `.catch(() => null)` - each one degrades a section rather than deciding whether the page exists.
+- Every route declares `alternates.canonical` via `canonicalUrl()` (MON-269) - see the Deployment section.
 
 **`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.

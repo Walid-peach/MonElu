@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyShort } from '@/lib/utils'
 import { VoteDetailClient } from './VoteDetailClient'
 import { JsonLd } from '@/components/JsonLd'
@@ -40,7 +40,7 @@ export async function generateStaticParams() {
 
 export default async function VoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const vote = await api.votes.get(id).catch(() => null)
+  const vote = await api.votes.get(id).catch(nullIfMissing)
   if (!vote) notFound()
 
   const pourPct   = Math.round(vote.votes_for     / (vote.total_voters || 1) * 100)

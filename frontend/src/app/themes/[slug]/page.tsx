@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import type { ThemePartyPosition, ThemeVoteItem } from '@/lib/api'
 import { partyHex, normalizePartyShort, formatDate, themeColors } from '@/lib/utils'
 import { themeName, themeSlug, THEME_ENTRIES } from '@/lib/themes'
@@ -57,7 +57,7 @@ export default async function ThemePage(
   const name = themeName(decodeURIComponent(slug))
   if (!name) notFound()
 
-  const data = await api.themes.get(slug, { limit: 50 }).catch(() => null)
+  const data = await api.themes.get(slug, { limit: 50 }).catch(nullIfMissing)
   if (!data) notFound()
 
   const canonicalSlug = themeSlug(data.name) ?? slug

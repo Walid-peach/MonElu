@@ -392,6 +392,35 @@ export type QuizShareResult = {
   share_url: string
 }
 
+/**
+ * Carries the HTTP status through, so a caller can tell "this resource does
+ * not exist" apart from "the API is unwell" (MON-275). Before this, every
+ * detail page did `.catch(() => null)` and then `notFound()`, which turned a
+ * rate-limited or 5xx-ing API into a site-wide 404 - and, with ISR, a 404
+ * cached for up to `revalidate` seconds.
+ */
+export class ApiError extends Error {
+  constructor(readonly status: number, path: string) {
+    super(`API error: ${status} (${path})`)
+    this.name = 'ApiError'
+  }
+}
+
+/**
+ * `.catch(nullIfMissing)` on a detail page's primary fetch: the resource is
+ * genuinely absent, so the page should call `notFound()`. Anything else -
+ * 429 after the retries below, 5xx, a network failure - is rethrown and
+ * surfaces as a server error rather than masquerading as a missing page.
+ *
+ * 422 counts as missing: FastAPI rejects a path param that cannot name a real
+ * row (a non-UUID share id) before the handler runs, so `/quiz/s/garbage` is a
+ * missing page, not a bad request the visitor can act on.
+ */
+export function nullIfMissing(error: unknown): null {
+  if (error instanceof ApiError && (error.status === 404 || error.status === 422)) return null
+  throw error
+}
+
 // 5xx: transient upstream hiccups, short retries.
 // 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
 // where prerendering ~117 pages from one IP exceeds the budget and fails the
@@ -421,7 +450,7 @@ async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promis
     }
     break
   }
-  throw new Error(`API error: ${lastStatus}`)
+  throw new ApiError(lastStatus, path)
 }
 
 // Same retry policy as apiFetch, but a 404 means "nothing to show" rather
@@ -449,7 +478,7 @@ async function apiFetchOptional<T>(path: string, opts?: { revalidate?: number })
     }
     break
   }
-  throw new Error(`API error: ${lastStatus}`)
+  throw new ApiError(lastStatus, path)
 }
 
 async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 
-import DeputiesLoading from '@/app/deputes/loading'
+import DeputiesLoading from '@/app/deputes/(liste)/loading'
 import { PAGE_SIZE } from '@/app/deputes/DeputiesClient'
 
 describe('DeputiesLoading (route skeleton)', () => {

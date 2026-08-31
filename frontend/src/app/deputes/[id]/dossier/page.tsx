@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { departmentLabel } from '@/lib/departments'
 import { positionStyle } from '@/lib/vote-position'
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function DeputyDossierPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const [deputy, scorecard, alignment, dissidentVotes] = await Promise.all([
-    api.deputies.get(id).catch(() => null),
+    api.deputies.get(id).catch(nullIfMissing),
     api.deputies.scorecard(id).catch(() => null),
     api.deputies.alignment(id).catch(() => null),
     api.deputies.dissidentVotes(id, 3).catch(() => null),

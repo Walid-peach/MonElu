@@ -5,9 +5,11 @@ const API_BASE = 'https://monelu-production.up.railway.app'
 
 // Re-import after setting up env so NEXT_PUBLIC_API_URL falls back to the Railway base.
 let api: typeof import('@/lib/api').api
+let ApiError: typeof import('@/lib/api').ApiError
+let nullIfMissing: typeof import('@/lib/api').nullIfMissing
 
 beforeAll(async () => {
-  ;({ api } = await import('@/lib/api'))
+  ;({ api, ApiError, nullIfMissing } = await import('@/lib/api'))
 })
 
 function mockFetch(status: number, body: unknown) {
@@ -166,5 +168,35 @@ describe('apiFetch (via api.health)', () => {
     mockFetch(200, payload)
     const result = await api.health()
     expect(result.deputies).toBe(577)
+  })
+})
+
+// MON-275: the detail pages decide `notFound()` from this, so it is the line
+// between "no such deputy" (404) and "the API is unwell" (server error). A
+// bare `.catch(() => null)` conflated the two, which under ISR meant a
+// rate-limited API could get a 404 cached for up to `revalidate` seconds.
+describe('nullIfMissing', () => {
+  it('swallows a 404 so the caller can render notFound()', () => {
+    expect(nullIfMissing(new ApiError(404, '/deputies/NOPE/'))).toBeNull()
+  })
+
+  it('swallows a 422 - FastAPI rejects an unparseable path param before the handler', () => {
+    // /quiz/s/garbage: the share id is not a UUID, so there is no such page.
+    expect(nullIfMissing(new ApiError(422, '/quiz/share/garbage'))).toBeNull()
+  })
+
+  it.each([429, 500, 502, 503])('rethrows %i rather than reporting a missing page', (status) => {
+    expect(() => nullIfMissing(new ApiError(status, '/votes/X/'))).toThrow(ApiError)
+  })
+
+  it('rethrows a non-ApiError, such as a network failure', () => {
+    const boom = new TypeError('fetch failed')
+    expect(() => nullIfMissing(boom)).toThrow(boom)
+  })
+
+  it('carries the status and the path on the error itself', () => {
+    const error = new ApiError(503, '/deputies/PA1592/')
+    expect(error.status).toBe(503)
+    expect(error.message).toContain('/deputies/PA1592/')
   })
 })
