@@ -86,9 +86,14 @@ export const METHODOLOGIE_FAQ: FaqItem[] = [
  * costs, how often it refreshes.
  *
  * Unlike `/methodologie`, this page had no question-shaped copy to mark up, so
- * these pairs are rendered as a visible "Questions fréquentes" section. Every
- * answer restates a fact stated elsewhere on the same page (hero, sources,
- * freshness table, licence card, contact block).
+ * these pairs are rendered as a visible "Questions fréquentes" section.
+ *
+ * The provenance and refresh answers describe what the pipeline *actually*
+ * does - the Assemblée nationale open data portal, ingested every weekday at
+ * 06:00 UTC - rather than mirroring this page's own "sources" cards, which
+ * additionally list data.gouv.fr, Légifrance and the HATVP registry as active
+ * feeds. No ingestion script reads any of those three (see `scripts/ingest_*.py`),
+ * and structured data is the last place an unverified provenance claim belongs.
  */
 export const A_PROPOS_FAQ: FaqItem[] = [
   {
@@ -101,7 +106,7 @@ export const A_PROPOS_FAQ: FaqItem[] = [
     id: 'faq-sources',
     question: "D'où viennent les données ?",
     answer:
-      "Toutes les informations affichées proviennent de sources publiques officielles : les flux XML de l'Assemblée nationale, le portail open data data.gouv.fr, Légifrance pour les textes officiels et le registre des représentants d'intérêts de la HATVP. MonÉlu ne produit aucune donnée : la plateforme les structure, les horodate et les rend traçables jusqu'au document d'origine.",
+      "Toutes les données proviennent du portail open data de l'Assemblée nationale : les exports officiels des scrutins, des positions de vote de chaque député, des fiches d'acteurs et de l'agenda des séances publiques. MonÉlu ne produit aucune donnée : la plateforme les structure, les horodate et les rend traçables jusqu'au scrutin d'origine.",
   },
   {
     id: 'faq-qui',
@@ -119,6 +124,6 @@ export const A_PROPOS_FAQ: FaqItem[] = [
     id: 'faq-frequence',
     question: "À quelle fréquence les données sont-elles mises à jour ?",
     answer:
-      "Le pipeline s'exécute automatiquement chaque jour ouvré à 06h00 UTC via GitHub Actions. Les votes en séance, les fiches de députés et le corpus de recherche sont actualisés quotidiennement, les textes de loi à J+1 et les données patrimoniales chaque semaine.",
+      "Le pipeline s'exécute automatiquement chaque jour ouvré à 06h00 UTC via GitHub Actions : les nouveaux scrutins, les fiches de députés, l'agenda des séances et le corpus de recherche sémantique sont réingérés, puis les statistiques agrégées (présence, alignement, scorecards) sont recalculées.",
   },
 ]
