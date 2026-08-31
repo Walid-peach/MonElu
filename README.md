@@ -439,6 +439,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `src/lib/api.ts` | Typed API client for all backend endpoints |
 | `src/lib/seo.ts` · `src/app/sitemap.ts` | Canonical site URL, metadata helpers, generated sitemap |
 | `src/lib/an.ts` | Official assemblee-nationale.fr URLs built from stored ids - the deputy profile link behind `Person.sameAs` and the dossier link shared by vote cards and `Event.about` (MON-267) |
+| `src/lib/faq.ts` | Q&A copy for `/methodologie` and `/a-propos`, rendered as the visible text *and* published as `FAQPage` JSON-LD (MON-268) - edit the answers here, not in the pages; `__tests__/app/faq-jsonld.test.tsx` fails if the two diverge |
 | `src/components/home/` | Landing-page scenes, live pulse panel, trust strip |
 | `src/components/HeroSearch.tsx` · `GlobalSearch.tsx` | Search entry points wired to the API |
 
