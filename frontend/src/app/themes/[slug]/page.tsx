@@ -17,9 +17,15 @@ const CREAM = 'var(--dp-page-bg)'
 const LINE  = 'var(--dp-border)'
 const RED   = 'var(--dp-red)'
 
-export function generateStaticParams() {
-  return THEME_ENTRIES.map(({ slug }) => ({ slug }))
-}
+// No `generateStaticParams` (MON-275), for the same reason `/votes/[id]` has
+// none: prerendering these ten pages adds twenty API calls to a build that is
+// already over the API's budget, and the failures come back as 500s on
+// endpoints that answer in 200 ms on every manual request. `dynamicParams`
+// defaults to true and `revalidate = 3600` ISR-caches the result, so the cost
+// is one on-demand render per theme per hour.
+//
+// THEME_ENTRIES is still the source of truth for which slugs exist - `sitemap.ts`
+// enumerates them, and `themeName()` below rejects anything not in the list.
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
