@@ -31,12 +31,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-export async function generateStaticParams() {
-  try {
-    const data = await api.votes.list({ limit: 100 })
-    return data.items.map(v => ({ id: v.vote_id }))
-  } catch { return [] }
-}
+// No `generateStaticParams` (MON-275). It used to prerender the 100 most
+// recent votes, which meant ~200 API calls from one IP inside a build - enough
+// to exhaust the API's DB connections, and the failures came back as 500s on
+// votes that serve 200 on every manual request. Two CI builds in a row died on
+// a different vote each time, so retries alone do not survive the burst.
+//
+// It was worse before this branch: the page swallowed that 500 into
+// `notFound()`, so a transient failure baked a prerendered "Page introuvable"
+// into the build for a real vote - and `revalidate = 86400` served it for a
+// day. With `dynamicParams = true` the route renders on demand and ISR-caches
+// the result, so dropping the prerender costs the first visitor one render and
+// removes the burst, the flaky build and the false 404 together.
 
 export default async function VoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
