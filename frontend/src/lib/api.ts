@@ -421,10 +421,12 @@ export function nullIfMissing(error: unknown): null {
   throw error
 }
 
-// 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
-// where prerendering ~117 pages from one IP exceeds the budget and fails the
-// whole Vercel deploy. Long waits let the per-minute window reset; build time
-// is the only cost.
+// 429: the API rate limiter (30 req/min per IP) — hit during `next build`,
+// where prerendering from one IP exceeds the budget and fails the whole Vercel
+// deploy. Long waits let the per-minute window reset; build time is the only
+// cost. MON-275 cut the build's prerender set from 135 pages to 25 by dropping
+// `generateStaticParams` on `/votes/[id]` and `/themes/[slug]`, so the ladder
+// now mostly protects `sitemap.ts`, which is the remaining burst.
 //
 // 5xx: two causes, so the ladder covers both (MON-275). A one-off upstream
 // hiccup clears in milliseconds, which is what the first two delays are for.
