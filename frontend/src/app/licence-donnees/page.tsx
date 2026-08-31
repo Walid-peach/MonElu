@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Licence des données - MonÉlu',
   description: "Sous quelle licence sont publiées les données de MonÉlu, et à quelles conditions vous pouvez les réutiliser.",
+  alternates: { canonical: canonicalUrl('/licence-donnees') },
 }
 
 export default function LicenceDonneesPage() {

@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { canonicalUrl } from '@/lib/site'
 
 const API_BASE = 'https://monelu-production.up.railway.app'
 
 export const metadata: Metadata = {
   title: 'Développeurs - MonÉlu',
   description: "Documentation de l'API MonÉlu : endpoints, limites de débit, clés d'accès et licence des données.",
+  alternates: { canonical: canonicalUrl('/developpeurs') },
 }
 
 const textStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }

@@ -100,7 +100,7 @@ Assemblée Nationale Open Data (ZIPs)
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
-| `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test + frontend lint/typecheck/jest/build + Playwright smoke tier (MON-241: no-horizontal-overflow and nav-visibility checks on `/`, `/deputes`, `/deputes/[id]`, `/votes`, `/votes/[id]`, `/chat`, `/quiz` at 390px/1280px, light/dark, against a `next build`); posts dbt results as PR comment |
+| `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test + frontend lint/typecheck/jest/build + Playwright smoke tier (MON-241: no-horizontal-overflow and nav-visibility checks on `/`, `/deputes`, `/deputes/[id]`, `/votes`, `/votes/[id]`, `/chat`, `/quiz` at 390px/1280px, light/dark, against a `next build`, plus a canonical-link check on `desktop-light` only - MON-269); posts dbt results as PR comment |
 | `deploy.yml` | Merge to `master` | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index, then `dbt run` → operational tail. Every step after `dbt run` is `continue-on-error` + `!cancelled()`, and a final **data-quality gate** re-fails the job on `dbt snapshot`/`dbt test`/`dbt source freshness`/quiz-validation outcomes (MON-250) — a failing assertion must never skip cache revalidation or the monitoring probes. The DB-size probe is deliberately outside the gate. |
 | `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window — the actual retry backstop (MON-221) |
@@ -204,7 +204,7 @@ python scripts/migrate.py && uvicorn api.main:app --host 0.0.0.0 --port $PORT
 
 Health check: `GET /health` — returns DB status, record counts, `last_ingestion` timestamp, and dbt mart row counts (degrades gracefully if marts are absent).
 
-**Moving to a new domain** takes two environment variables, not one (MON-254, MON-274): `FRONTEND_BASE_URL` on Railway (backend — the `GET /` redirect and every share URL) and `NEXT_PUBLIC_SITE_URL` on Vercel (frontend — `metadataBase`, canonicals, sitemap, robots, OG cards). Same origin under two names; the Vercel one is inlined at build time, so it only takes effect on the next build.
+**Moving to a new domain** takes two environment variables, not one (MON-254, MON-274): `FRONTEND_BASE_URL` on Railway (backend — the `GET /` redirect and every share URL) and `NEXT_PUBLIC_SITE_URL` on Vercel (frontend — `metadataBase`, canonicals, sitemap, robots, OG cards). Same origin under two names; the Vercel one is inlined at build time, so it only takes effect on the next build. Every frontend route builds its `alternates.canonical` from `canonicalUrl()` in `frontend/src/lib/site.ts` (MON-269), so the move carries the canonicals with it; `frontend/__tests__/app/canonical.test.ts` fails if a new `page.tsx` ships without one or hardcodes the origin instead. The only allowlisted exceptions are `~offline` (service-worker fallback) and `embed/votes/[id]` (already `robots: noindex`).
 
 ---
 

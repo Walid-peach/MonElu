@@ -83,3 +83,54 @@ test.describe('smoke: nav visibility follows the md breakpoint', () => {
     }
   })
 })
+
+test.describe('smoke: every route declares a canonical URL', () => {
+  // MON-269: `alternates.canonical` in a page's metadata is only a claim until
+  // Next actually renders the <link>. A page that was a client component, or
+  // one whose generateMetadata bailed out early, silently emits nothing.
+  // Nothing here depends on viewport or color scheme, and every check costs a
+  // real navigation against the live API - one project is enough.
+  test.beforeEach(({}, testInfo) => {
+    testInfo.skip(testInfo.project.name !== 'desktop-light', 'viewport-independent')
+  })
+
+  async function canonicalHref(page: Page) {
+    const link = page.locator('link[rel="canonical"]')
+    await expect(link).toHaveCount(1)
+    return (await link.getAttribute('href')) ?? ''
+  }
+
+  for (const route of STATIC_ROUTES) {
+    test(`${route} emits one canonical`, async ({ page }) => {
+      await page.goto(route)
+      const href = await canonicalHref(page)
+      expect(href).toMatch(/^https?:\/\//)
+      expect(new URL(href).pathname).toBe(route)
+    })
+  }
+
+  test('/deputes/[id] emits a canonical for its own id', async ({ page }) => {
+    const href = await firstDetailHref(page, '/deputes', '/deputes/', [
+      '/deputes/comparer',
+      '/deputes/tableau',
+    ])
+    await page.goto(href)
+    expect(new URL(await canonicalHref(page)).pathname).toBe(href)
+  })
+
+  // Worth its own test rather than folding into the loop above:
+  // generateStaticParams prerenders 100 vote pages at build time, and that
+  // burst regularly trips the API's rate limit, so a prerendered vote page can
+  // ship with none of its own metadata. The canonical is built from the URL
+  // before that fetch precisely so it survives.
+  test('/votes/[id] emits a canonical for its own id', async ({ page }) => {
+    const href = await firstDetailHref(page, '/votes', '/votes/')
+    await page.goto(href)
+    expect(new URL(await canonicalHref(page)).pathname).toBe(href)
+  })
+
+  test('a query string does not fork the canonical', async ({ page }) => {
+    await page.goto('/chat?q=test')
+    expect(new URL(await canonicalHref(page)).pathname).toBe('/chat')
+  })
+})

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
 import { SITE_URL } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 import { QuizResultCard } from '../../QuizResultCard'
 import { QuizResultSections } from '../../QuizResultSections'
 
@@ -28,8 +29,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
+  const alternates = { canonical: canonicalUrl(`/quiz/s/${id}`) }
   const share = await api.quiz.getShare(id).catch(() => null)
-  if (!share) return {}
+  if (!share) return { alternates }
   const title = `${hookTitle(share)} — MonÉlu`
   const description =
     'Une dizaine de vrais scrutins de l’Assemblée nationale, comparés aux votes réels ' +
@@ -37,6 +39,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates,
     openGraph: { title, description, url: `${SITE_URL}/quiz/s/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }

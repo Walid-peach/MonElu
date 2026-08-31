@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'À propos — MonÉlu',
   description:
     "Comment MonÉlu collecte, transforme et publie les données de vote de l'Assemblée Nationale française.",
+  alternates: { canonical: canonicalUrl('/a-propos') },
 }
 
 const heroStats = [

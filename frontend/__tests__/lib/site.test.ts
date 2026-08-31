@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { SITE_URL, SITE_HOST } from '@/lib/site'
+import { SITE_URL, SITE_HOST, canonicalUrl } from '@/lib/site'
 
 const SRC = join(__dirname, '..', '..', 'src')
 const ALLOWED = join(SRC, 'lib', 'site.ts')
@@ -29,5 +29,30 @@ describe('site origin constants', () => {
       (file) => file !== ALLOWED && readFileSync(file, 'utf8').includes(LITERAL)
     )
     expect(offenders).toEqual([])
+  })
+})
+
+// MON-269: the canonical a page declares must match its sitemap entry
+// character for character, or the two signals disagree.
+describe('canonicalUrl', () => {
+  it('returns the bare origin for the homepage, as the sitemap lists it', () => {
+    expect(canonicalUrl('/')).toBe(SITE_URL)
+    expect(canonicalUrl()).toBe(SITE_URL)
+  })
+
+  it('appends the path without a trailing slash', () => {
+    expect(canonicalUrl('/deputes')).toBe(`${SITE_URL}/deputes`)
+    expect(canonicalUrl('/deputes/')).toBe(`${SITE_URL}/deputes`)
+    expect(canonicalUrl('/deputes/PA123')).toBe(`${SITE_URL}/deputes/PA123`)
+  })
+
+  it('tolerates a path given without its leading slash', () => {
+    expect(canonicalUrl('quiz')).toBe(`${SITE_URL}/quiz`)
+  })
+
+  it('never carries a query string through', () => {
+    // Callers pass the route, not the request URL - the whole point of the
+    // canonical is that /quiz?deputy=PA123 collapses onto /quiz.
+    expect(canonicalUrl('/quiz')).not.toContain('?')
   })
 })

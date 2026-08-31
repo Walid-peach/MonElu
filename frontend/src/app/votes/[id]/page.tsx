@@ -6,20 +6,26 @@ import { getInitials, groupVotesByParty, normalizePartyShort, partyHex, partySho
 import { VoteDetailClient } from './VoteDetailClient'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildVoteJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 86400
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
+  // The canonical is derived from the URL alone, so it survives a failed
+  // metadata fetch - the build's prerender burst can trip the API's rate
+  // limit, and a page that renders anyway must still state its own identity.
+  const alternates = { canonical: canonicalUrl(`/votes/${id}`) }
   const vote = await api.votes.get(id).catch(() => null)
-  if (!vote) return {}
+  if (!vote) return { alternates }
   const result = vote.result === 'adopté' ? 'Adopté' : 'Rejeté'
   const shortTitle = vote.vote_title.length > 80 ? vote.vote_title.slice(0, 80) + '…' : vote.vote_title
   const description = `${result} · ${vote.votes_for} pour · ${vote.votes_against} contre · ${vote.abstentions} abstentions.`
   return {
     title: `${result} - ${shortTitle} - MonÉlu`,
     description,
+    alternates,
     openGraph: { title: `${result} - ${shortTitle} - MonÉlu`, description, url: `${SITE_URL}/votes/${id}` },
     twitter: { card: 'summary_large_image', title: `${result} - ${shortTitle} - MonÉlu`, description },
   }

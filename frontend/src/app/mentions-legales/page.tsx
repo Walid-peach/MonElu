@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Mentions légales - MonÉlu',
   description: "Éditeur, hébergement et contact du site MonÉlu.",
+  alternates: { canonical: canonicalUrl('/mentions-legales') },
 }
 
 export default function MentionsLegalesPage() {

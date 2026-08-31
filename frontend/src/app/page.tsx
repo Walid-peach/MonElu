@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import * as Sentry from '@sentry/nextjs'
 import { api, Vote, Deputy, Scorecard } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
+import { canonicalUrl } from '@/lib/site'
+
+export const metadata: Metadata = {
+  alternates: { canonical: canonicalUrl('/') },
+}
 
 const FALLBACK_STATS = {
   deputies: 596,

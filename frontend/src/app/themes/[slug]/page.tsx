@@ -7,6 +7,7 @@ import { partyHex, normalizePartyShort, formatDate, themeColors } from '@/lib/ut
 import { themeName, themeSlug, THEME_ENTRIES } from '@/lib/themes'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 3600
@@ -26,8 +27,12 @@ export async function generateMetadata(
   const { slug } = await params
   const name = themeName(decodeURIComponent(slug))
   if (!name) return {}
+  // The slug in the URL is not necessarily the canonical one - `themeSlug`
+  // re-derives it from the theme's own name, as the page body already does.
+  // Both maps are local, so the canonical needs no API call.
+  const alternates = { canonical: canonicalUrl(`/themes/${themeSlug(name) ?? slug}`) }
   const data = await api.themes.get(slug).catch(() => null)
-  if (!data) return {}
+  if (!data) return { alternates }
   const title = `Votes sur le thème ${data.name} - MonÉlu`
   const description =
     `${data.vote_count} scrutin${data.vote_count !== 1 ? 's' : ''} de l'Assemblée nationale ` +
@@ -35,6 +40,7 @@ export async function generateMetadata(
   return {
     title,
     description,
+    alternates,
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }

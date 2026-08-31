@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { canonicalUrl } from '@/lib/site'
 
 const REPO_BASE = 'https://github.com/Walid-peach/MonElu/blob/master'
 const LINEAGE_DOCS = 'https://walid-peach.github.io/MonElu/dbt-docs/'
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
   title: 'Méthodologie - MonÉlu',
   description:
     "Comment MonÉlu calcule chaque chiffre affiché : présence, alignement de parti, majorité, et limites connues.",
+  alternates: { canonical: canonicalUrl('/methodologie') },
 }
 
 const textStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }

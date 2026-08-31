@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
-import ChatPage from '@/app/chat/page'
+import { ChatClient as ChatPage } from '@/app/chat/ChatClient'
 import type { SearchResult, VerifyResult } from '@/lib/api'
 
 jest.mock('@/lib/api', () => ({

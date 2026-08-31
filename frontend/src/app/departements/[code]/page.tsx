@@ -9,6 +9,7 @@ import { groupSlug } from '@/lib/groups'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 3600
@@ -28,10 +29,13 @@ export async function generateMetadata(
   { params }: { params: Promise<{ code: string }> }
 ): Promise<Metadata> {
   const { code } = await params
-  const canonical = departmentCode(decodeURIComponent(code))
-  if (!canonical) return {}
-  const data = await api.departments.get(canonical).catch(() => null)
-  if (!data) return {}
+  // `departmentCode` resolves a name, a padded code or the code itself onto
+  // one spelling, from a local map - so the canonical needs no API call.
+  const canonicalCode = departmentCode(decodeURIComponent(code))
+  if (!canonicalCode) return {}
+  const alternates = { canonical: canonicalUrl(`/departements/${canonicalCode}`) }
+  const data = await api.departments.get(canonicalCode).catch(() => null)
+  if (!data) return { alternates }
   const title = `${pageTitle(data.name, data.code)} - MonÉlu`
   const description =
     `Les ${data.deputy_count} députés du département ${data.name} à l'Assemblée nationale : ` +
@@ -39,6 +43,7 @@ export async function generateMetadata(
   return {
     title,
     description,
+    alternates,
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }

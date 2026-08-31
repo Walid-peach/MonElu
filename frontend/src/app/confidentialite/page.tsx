@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité - MonÉlu',
   description: 'Ce que MonÉlu collecte, pourquoi, et vos droits sur ces données (RGPD).',
+  alternates: { canonical: canonicalUrl('/confidentialite') },
 }
 
 export default function ConfidentialitePage() {
