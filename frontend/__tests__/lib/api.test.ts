@@ -158,9 +158,37 @@ describe('apiFetch 429 backoff (via api.health)', () => {
 })
 
 describe('apiFetch (via api.health)', () => {
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
   it('throws on a non-ok response', async () => {
+    jest.useFakeTimers()
     mockFetch(503, { detail: 'Service Unavailable' })
-    await expect(api.health()).rejects.toThrow('API error: 503')
+    const promise = api.health()
+    const assertion = expect(promise).rejects.toThrow('API error: 503')
+    await jest.runAllTimersAsync()
+    await assertion
+  })
+
+  // MON-275: the 5xx ladder used to stop after two ~sub-second retries, which
+  // is right for a one-off hiccup and useless against the prerender burst
+  // exhausting the API's DB connections. That case needs the same patient tail
+  // 429 gets - without it a transient 500 on one of the 100 prerendered vote
+  // pages fails the whole build.
+  it('retries a 500 patiently enough to outlast a burst', async () => {
+    jest.useFakeTimers()
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({}),
+    } as Response)
+    const promise = api.health()
+    const assertion = expect(promise).rejects.toThrow(ApiError)
+    await jest.runAllTimersAsync()
+    await assertion
+    // 1 initial attempt + 5 backoff retries
+    expect(global.fetch).toHaveBeenCalledTimes(6)
   })
 
   it('returns parsed JSON on success', async () => {

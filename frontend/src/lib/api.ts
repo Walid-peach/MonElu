@@ -421,12 +421,21 @@ export function nullIfMissing(error: unknown): null {
   throw error
 }
 
-// 5xx: transient upstream hiccups, short retries.
 // 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
 // where prerendering ~117 pages from one IP exceeds the budget and fails the
 // whole Vercel deploy. Long waits let the per-minute window reset; build time
 // is the only cost.
-const SERVER_ERROR_DELAYS_MS = [200, 400]
+//
+// 5xx: two causes, so the ladder covers both (MON-275). A one-off upstream
+// hiccup clears in milliseconds, which is what the first two delays are for.
+// But the same prerender burst that trips the 429 limiter also exhausts the
+// API's DB connections, and that surfaces as a 500 - observed on a CI build
+// as `API error: 500 (/votes/VTANR5L17V8374/)` on a vote that serves 200 on
+// every manual request. That case needs the patient tail, for the same reason
+// 429 does. Before MON-275 the pages swallowed it into a soft-404, so a
+// transient 500 shipped a prerendered "not found" page for a real vote; now
+// it propagates, and without the patient tail it would fail the build instead.
+const SERVER_ERROR_DELAYS_MS = [200, 400, 2_000, 15_000, 30_000]
 const RATE_LIMIT_DELAYS_MS = [2_000, 15_000, 30_000, 61_000]
 
 async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promise<T> {
