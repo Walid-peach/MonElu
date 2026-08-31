@@ -1,4 +1,5 @@
-import type { Deputy, Vote } from '@/lib/api'
+import { anDeputyUrl, anDossierUrl } from '@/lib/an'
+import type { Deputy, Vote, VoteDetail } from '@/lib/api'
 import { departmentLabel } from '@/lib/departments'
 import { SITE_URL } from '@/lib/site'
 
@@ -100,7 +101,20 @@ export function buildBreadcrumbJsonLd(items: BreadcrumbItem[]) {
   }
 }
 
+/**
+ * A deputy as an entity, not just a page (MON-267).
+ *
+ * `sameAs` is what lets a consumer confirm that this "Marie Dupont" is the same
+ * person as the one on the Assemblée nationale's own site - without it the 577
+ * deputy pages float unattached to the entity graph. The AN profile URL is
+ * derived from `deputy_id`, which is the AN acteur uid, so it needs no new data.
+ *
+ * Wikidata deliberately absent: it is the second-strongest link available, but
+ * it needs a one-off reconciliation and a `wikidata_id` column, scoped
+ * separately rather than guessed from a name match.
+ */
 export function buildPersonJsonLd(deputy: Deputy) {
+  const officialUrl = anDeputyUrl(deputy.deputy_id)
   return {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -109,6 +123,7 @@ export function buildPersonJsonLd(deputy: Deputy) {
     familyName: deputy.last_name,
     jobTitle: 'Député',
     url: `${SITE_URL}/deputes/${deputy.deputy_id}`,
+    ...(officialUrl ? { sameAs: [officialUrl] } : {}),
     ...(deputy.photo_url ? { image: deputy.photo_url } : {}),
     ...(deputy.party ? { memberOf: { '@type': 'Organization', name: deputy.party } } : {}),
     workLocation: {
@@ -124,7 +139,23 @@ export function buildPersonJsonLd(deputy: Deputy) {
   }
 }
 
-export function buildVoteJsonLd(vote: Vote) {
+/**
+ * A scrutin as an `Event` (MON-267).
+ *
+ * The event type carries the sitting - when it happened, where, who convened
+ * it. What the vote is *about* is the legislative text, so when the scrutin
+ * carries a usable `dossier_id` the block also points at the official dossier
+ * page, linking the vote into the same entity graph the deputy pages join
+ * through `Person.sameAs`.
+ *
+ * The `Legislation` node carries a url and no name on purpose: `vote_title` is
+ * the scrutin's own wording ("l'ensemble du projet de loi…", "amendement
+ * n°45"), not the name of the text, and naming the entity wrongly is worse than
+ * leaving a consumer to resolve it from the url. Most scrutins have no
+ * `dossier_id` at all (ADR-035), so `about` is absent far more often than not.
+ */
+export function buildVoteJsonLd(vote: Vote | VoteDetail) {
+  const dossierUrl = anDossierUrl('dossier_id' in vote ? vote.dossier_id : null)
   return {
     '@context': 'https://schema.org',
     '@type': 'Event',
@@ -147,6 +178,7 @@ export function buildVoteJsonLd(vote: Vote) {
       name: 'Assemblée nationale',
     },
     ...(vote.summary_plain ? { description: vote.summary_plain } : {}),
+    ...(dossierUrl ? { about: { '@type': 'Legislation', url: dossierUrl } } : {}),
     url: `${SITE_URL}/votes/${vote.vote_id}`,
   }
 }
