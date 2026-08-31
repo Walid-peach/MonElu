@@ -421,24 +421,31 @@ export function nullIfMissing(error: unknown): null {
   throw error
 }
 
-// 429: the API rate limiter (30 req/min per IP) — hit during `next build`,
-// where prerendering from one IP exceeds the budget and fails the whole Vercel
-// deploy. Long waits let the per-minute window reset; build time is the only
-// cost. MON-275 cut the build's prerender set from 135 pages to 25 by dropping
-// `generateStaticParams` on `/votes/[id]` and `/themes/[slug]`, so the ladder
-// now mostly protects `sitemap.ts`, which is the remaining burst.
-//
-// 5xx: two causes, so the ladder covers both (MON-275). A one-off upstream
-// hiccup clears in milliseconds, which is what the first two delays are for.
-// But the same prerender burst that trips the 429 limiter also exhausts the
-// API's DB connections, and that surfaces as a 500 - observed on a CI build
-// as `API error: 500 (/votes/VTANR5L17V8374/)` on a vote that serves 200 on
-// every manual request. That case needs the patient tail, for the same reason
-// 429 does. Before MON-275 the pages swallowed it into a soft-404, so a
-// transient 500 shipped a prerendered "not found" page for a real vote; now
-// it propagates, and without the patient tail it would fail the build instead.
-const SERVER_ERROR_DELAYS_MS = [200, 400, 2_000, 15_000, 30_000]
-const RATE_LIMIT_DELAYS_MS = [2_000, 15_000, 30_000, 61_000]
+/**
+ * Retry ladders, split by phase (MON-275).
+ *
+ * During `next build` nobody is waiting and a failed prerender is fatal, so
+ * the ladders are patient: long waits let the API's 30 req/min window reset
+ * and let its connection pool drain, and build time is the only cost.
+ *
+ * At request time a visitor is waiting, so both ladders are short. Two
+ * measurements drove that:
+ *
+ * 1. A 100-page cold sweep at concurrency 20 produced ten HTTP 500s that each
+ *    took **49 s** to surface - the patient ladder's full 47 s of sleeps in
+ *    front of a failure that was never going to clear.
+ * 2. Those ten paths hit the network exactly **twice** each, not six times.
+ *    Next dedupes identical `fetch` calls within a render pass, so the later
+ *    rungs are sleeps, not extra attempts. Waiting longer buys nothing here.
+ *
+ * Failing fast is also cheap: the route is ISR-backed, so nothing is cached
+ * and the next request re-renders. The same ten URLs served 200 in ~17 ms
+ * immediately afterwards.
+ */
+const IS_BUILD = process.env.NEXT_PHASE === 'phase-production-build'
+
+const SERVER_ERROR_DELAYS_MS = IS_BUILD ? [200, 400, 2_000, 15_000, 30_000] : [200, 400]
+const RATE_LIMIT_DELAYS_MS = IS_BUILD ? [2_000, 15_000, 30_000, 61_000] : [500, 2_000]
 
 async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promise<T> {
   let lastStatus = 0

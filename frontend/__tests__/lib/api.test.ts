@@ -152,8 +152,10 @@ describe('apiFetch 429 backoff (via api.health)', () => {
     const assertion = expect(promise).rejects.toThrow('API error: 429')
     await jest.runAllTimersAsync()
     await assertion
-    // 1 initial attempt + 4 backoff retries
-    expect(global.fetch).toHaveBeenCalledTimes(5)
+    // 1 initial attempt + 2 backoff retries. Jest runs with NEXT_PHASE unset,
+    // i.e. the request-time ladder - a visitor must not wait out the build's
+    // patient one (MON-275).
+    expect(global.fetch).toHaveBeenCalledTimes(3)
   })
 })
 
@@ -171,12 +173,12 @@ describe('apiFetch (via api.health)', () => {
     await assertion
   })
 
-  // MON-275: the 5xx ladder used to stop after two ~sub-second retries, which
-  // is right for a one-off hiccup and useless against the prerender burst
-  // exhausting the API's DB connections. That case needs the same patient tail
-  // 429 gets - without it a transient 500 on one of the 100 prerendered vote
-  // pages fails the whole build.
-  it('retries a 500 patiently enough to outlast a burst', async () => {
+  // MON-275: the ladders are phase-split. This is the request-time one - a
+  // visitor gets a fast failure and ISR re-renders on the next request, rather
+  // than waiting out 47 s of sleeps that Next's fetch dedup turns into no
+  // extra network attempts anyway. The build keeps the patient ladder, which
+  // this suite cannot exercise without NEXT_PHASE set.
+  it('retries a 500 briefly at request time, then gives up', async () => {
     jest.useFakeTimers()
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
@@ -187,8 +189,8 @@ describe('apiFetch (via api.health)', () => {
     const assertion = expect(promise).rejects.toThrow(ApiError)
     await jest.runAllTimersAsync()
     await assertion
-    // 1 initial attempt + 5 backoff retries
-    expect(global.fetch).toHaveBeenCalledTimes(6)
+    // 1 initial attempt + 2 backoff retries
+    expect(global.fetch).toHaveBeenCalledTimes(3)
   })
 
   it('returns parsed JSON on success', async () => {
