@@ -1,5 +1,6 @@
 import { anDeputyUrl, anDossierUrl } from '@/lib/an'
 import type { Deputy, Vote, VoteDetail } from '@/lib/api'
+import type { FaqItem } from '@/lib/faq'
 import { departmentLabel } from '@/lib/departments'
 import { SITE_URL } from '@/lib/site'
 
@@ -97,6 +98,35 @@ export function buildBreadcrumbJsonLd(items: BreadcrumbItem[]) {
       position: index + 1,
       name: item.name,
       item: item.url,
+    })),
+  }
+}
+
+/**
+ * Question/answer pairs as `FAQPage` (MON-268).
+ *
+ * The pairs come from `@/lib/faq`, which is also what renders the visible
+ * question and answer on the page - schema.org requires both to be visible to
+ * the reader, and a builder fed by separate copy would drift out of that
+ * requirement the first time someone edited the page.
+ *
+ * Q&A is the shape LLM crawlers lift most reliably, which is the point: the
+ * definitions a model gets wrong about French parliamentary data (non-votant
+ * versus abstention, what presence counts, why the Présidente shows 100 %) are
+ * already written on `/methodologie` - this makes them extractable.
+ */
+export function buildFaqJsonLd(items: FaqItem[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    inLanguage: 'fr',
+    mainEntity: items.map(item => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
     })),
   }
 }

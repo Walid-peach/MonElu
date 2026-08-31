@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
+import { JsonLd } from '@/components/JsonLd'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { METHODOLOGIE_FAQ } from '@/lib/faq'
+import { buildFaqJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 
 const REPO_BASE = 'https://github.com/Walid-peach/MonElu/blob/master'
@@ -16,9 +19,22 @@ const textStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-se
 const linkStyle = { color: 'var(--dp-text)', fontWeight: 600 }
 const sourceLineStyle = { fontSize: '13.5px', color: 'var(--dp-text-secondary)', margin: '10px 0 0' }
 
+/**
+ * Section heading for a question marked up in the page's `FAQPage` JSON-LD
+ * (MON-268). Reading the title from the same array the markup is built from is
+ * what makes "the question text is visible on the page" true by construction
+ * rather than by review.
+ */
+function faqTitle(id: string): string {
+  const item = METHODOLOGIE_FAQ.find(entry => entry.id === id)
+  if (!item) throw new Error(`No FAQ entry for section "${id}"`)
+  return item.question
+}
+
 export default function MethodologiePage() {
   return (
     <LegalPageLayout eyebrow="Vérifiabilité" title="Méthodologie">
+      <JsonLd data={buildFaqJsonLd(METHODOLOGIE_FAQ)} />
       <LegalSection id="intro" title="Pourquoi cette page">
         <p style={textStyle}>
           Un chiffre affiché sans méthode n&apos;est qu&apos;une affirmation. Cette page décrit, en français
@@ -29,7 +45,7 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="presence" title="Taux de présence">
+      <LegalSection id="presence" title={faqTitle('presence')}>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Le taux de présence d&apos;un député compte <strong>toute position enregistrée</strong> lors d&apos;un
           scrutin : pour, contre, abstention, <strong>et non-votant</strong>. Un député &laquo;&nbsp;non-votant&nbsp;&raquo;
@@ -60,7 +76,7 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="deputes-suivis" title="Pourquoi le nombre de députés varie">
+      <LegalSection id="deputes-suivis" title={faqTitle('deputes-suivis')}>
         <p style={textStyle}>
           L&apos;Assemblée nationale compte 577 sièges. Le compteur &laquo;&nbsp;députés suivis&nbsp;&raquo;
           affiché sur MonÉlu dénombre l&apos;ensemble des député·e·s ayant siégé au moins une fois depuis le
@@ -70,7 +86,7 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="alignement" title="Alignement de parti et votes dissidents">
+      <LegalSection id="alignement" title={faqTitle('alignement')}>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Pour chaque scrutin, MonÉlu calcule la <strong>position majoritaire</strong> du groupe parlementaire du
           député (pour, contre ou abstention - les non-votants ne comptent pas dans ce calcul). Un vote du député
@@ -99,7 +115,7 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="quiz" title="Le quiz « Quel député vote comme vous ? »">
+      <LegalSection id="quiz" title={faqTitle('quiz')}>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Le quiz compare vos réponses aux positions <strong>réellement enregistrées</strong> de chaque
           député sur les mêmes scrutins. Votre pourcentage d&apos;accord avec un député est simplement&nbsp;:
@@ -153,7 +169,7 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="adopte-rejete" title="Vote adopté ou rejeté">
+      <LegalSection id="adopte-rejete" title={faqTitle('adopte-rejete')}>
         <p style={textStyle}>
           Le résultat d&apos;un scrutin (adopté ou rejeté) n&apos;est jamais recalculé par MonÉlu : il est repris
           tel quel du champ officiel publié par l&apos;Assemblée nationale pour ce scrutin. La 17ᵉ législature
@@ -168,7 +184,7 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="horizon" title="Horizon des données et fréquence de mise à jour">
+      <LegalSection id="horizon" title={faqTitle('horizon')}>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           La base de production couvre les scrutins depuis le <strong>1er juillet 2025</strong> (limite de
           l&apos;offre gratuite de la base de données hébergée ; l&apos;historique complet depuis le début de la
@@ -181,7 +197,7 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="limites" title="Limites connues">
+      <LegalSection id="limites" title={faqTitle('limites')}>
         <ul style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--dp-text-secondary)', margin: 0, paddingLeft: '20px' }}>
           <li>
             <strong>Non-votant ≠ abstention</strong> : un non-votant était présent sans exprimer d&apos;opinion ;
@@ -205,7 +221,7 @@ export default function MethodologiePage() {
         </ul>
       </LegalSection>
 
-      <LegalSection id="code" title="Code source et traçabilité">
+      <LegalSection id="code" title={faqTitle('code')}>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           L&apos;intégralité du code de transformation des données (ingestion, agrégation, API) est publique. Le
           schéma de dépendances entre les modèles de données (lineage) est généré automatiquement à chaque
