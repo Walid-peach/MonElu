@@ -62,7 +62,7 @@ test.describe('smoke: /votes row columns are not clipped', () => {
   })
 })
 
-test.describe('smoke: the homepage has exactly one h1', () => {
+test.describe('smoke: the homepage is legible to a crawler', () => {
   // MON-270: `/` renders `MobileExperience` on every viewport and mounts
   // `CinematicExperience` on top of it once `useSyncExternalStore` confirms
   // desktop - so the desktop DOM is the union of both trees, and the two

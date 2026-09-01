@@ -35,7 +35,9 @@ const groupTitleStyle = {
   fontWeight: 700,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
-  color: 'var(--dp-text-muted)',
+  // Not --dp-text-muted: at 12.5px it is 2.31:1 on --dp-page-bg, and these
+  // are the outline this section exists to add.
+  color: 'var(--dp-text-secondary)',
   margin: '0 0 12px',
 } as const
 
@@ -64,7 +66,7 @@ function LinkList({ links }: { links: Array<{ href: string; label: string }> }) 
     >
       {links.map(({ href, label }) => (
         <li key={href}>
-          <Link href={href} style={{ color: 'var(--dp-text-secondary)' }}>
+          <Link href={href} style={{ color: 'var(--dp-text)' }}>
             {label}
           </Link>
         </li>
