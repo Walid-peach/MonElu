@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { api, csvUrl } from '@/lib/api'
+import { api, nullIfMissing, csvUrl } from '@/lib/api'
 import type { DissidentVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { departmentCode, departmentLabel } from '@/lib/departments'
@@ -48,8 +48,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function DeputyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // Two different catches on purpose (MON-275): the identity fetch uses
+  // `nullIfMissing`, so only a genuine 404 becomes `notFound()` and an unwell
+  // API surfaces as a server error instead of a cached 404. The supporting
+  // fetches stay `.catch(() => null)` - each one degrades a section of the
+  // page rather than deciding whether the page exists.
   const [deputy, scorecard, deputyStats, recentVotes, alignment, dissidentVotes] = await Promise.all([
-    api.deputies.get(id).catch(() => null),
+    api.deputies.get(id).catch(nullIfMissing),
     api.deputies.scorecard(id).catch(() => null),
     api.deputies.stats().catch(() => null),
     api.deputies.votes(id, 10).catch(() => null),

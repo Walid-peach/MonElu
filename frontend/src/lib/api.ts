@@ -392,13 +392,60 @@ export type QuizShareResult = {
   share_url: string
 }
 
-// 5xx: transient upstream hiccups, short retries.
-// 429: the API rate limiter (30 req/min per IP) — hit hard during `next build`,
-// where prerendering ~117 pages from one IP exceeds the budget and fails the
-// whole Vercel deploy. Long waits let the per-minute window reset; build time
-// is the only cost.
-const SERVER_ERROR_DELAYS_MS = [200, 400]
-const RATE_LIMIT_DELAYS_MS = [2_000, 15_000, 30_000, 61_000]
+/**
+ * Carries the HTTP status through, so a caller can tell "this resource does
+ * not exist" apart from "the API is unwell" (MON-275). Before this, every
+ * detail page did `.catch(() => null)` and then `notFound()`, which turned a
+ * rate-limited or 5xx-ing API into a site-wide 404 - and, with ISR, a 404
+ * cached for up to `revalidate` seconds.
+ */
+export class ApiError extends Error {
+  constructor(readonly status: number, path: string) {
+    super(`API error: ${status} (${path})`)
+    this.name = 'ApiError'
+  }
+}
+
+/**
+ * `.catch(nullIfMissing)` on a detail page's primary fetch: the resource is
+ * genuinely absent, so the page should call `notFound()`. Anything else -
+ * 429 after the retries below, 5xx, a network failure - is rethrown and
+ * surfaces as a server error rather than masquerading as a missing page.
+ *
+ * 422 counts as missing: FastAPI rejects a path param that cannot name a real
+ * row (a non-UUID share id) before the handler runs, so `/quiz/s/garbage` is a
+ * missing page, not a bad request the visitor can act on.
+ */
+export function nullIfMissing(error: unknown): null {
+  if (error instanceof ApiError && (error.status === 404 || error.status === 422)) return null
+  throw error
+}
+
+/**
+ * Retry ladders, split by phase (MON-275).
+ *
+ * During `next build` nobody is waiting and a failed prerender is fatal, so
+ * the ladders are patient: long waits let the API's 30 req/min window reset
+ * and let its connection pool drain, and build time is the only cost.
+ *
+ * At request time a visitor is waiting, so both ladders are short. Two
+ * measurements drove that:
+ *
+ * 1. A 100-page cold sweep at concurrency 20 produced ten HTTP 500s that each
+ *    took **49 s** to surface - the patient ladder's full 47 s of sleeps in
+ *    front of a failure that was never going to clear.
+ * 2. Those ten paths hit the network exactly **twice** each, not six times.
+ *    Next dedupes identical `fetch` calls within a render pass, so the later
+ *    rungs are sleeps, not extra attempts. Waiting longer buys nothing here.
+ *
+ * Failing fast is also cheap: the route is ISR-backed, so nothing is cached
+ * and the next request re-renders. The same ten URLs served 200 in ~17 ms
+ * immediately afterwards.
+ */
+const IS_BUILD = process.env.NEXT_PHASE === 'phase-production-build'
+
+const SERVER_ERROR_DELAYS_MS = IS_BUILD ? [200, 400, 2_000, 15_000, 30_000] : [200, 400]
+const RATE_LIMIT_DELAYS_MS = IS_BUILD ? [2_000, 15_000, 30_000, 61_000] : [500, 2_000]
 
 async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promise<T> {
   let lastStatus = 0
@@ -421,7 +468,7 @@ async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promis
     }
     break
   }
-  throw new Error(`API error: ${lastStatus}`)
+  throw new ApiError(lastStatus, path)
 }
 
 // Same retry policy as apiFetch, but a 404 means "nothing to show" rather
@@ -449,7 +496,7 @@ async function apiFetchOptional<T>(path: string, opts?: { revalidate?: number })
     }
     break
   }
-  throw new Error(`API error: ${lastStatus}`)
+  throw new ApiError(lastStatus, path)
 }
 
 async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {

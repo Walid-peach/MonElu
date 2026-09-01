@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { VerdictCard } from '@/components/VerdictCard'
 import { SITE_URL, canonicalUrl } from '@/lib/site'
 
@@ -41,7 +41,7 @@ export async function generateMetadata({
 
 export default async function VerificationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const result = await api.verification(id).catch(() => null)
+  const result = await api.verification(id).catch(nullIfMissing)
   if (!result) notFound()
 
   return (

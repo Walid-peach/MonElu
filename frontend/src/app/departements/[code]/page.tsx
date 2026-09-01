@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import type { DepartmentDeputy } from '@/lib/api'
 import { partyHex, partyShort, formatDate } from '@/lib/utils'
 import { departmentCode } from '@/lib/departments'
@@ -80,7 +80,7 @@ export default async function DepartmentPage(
   if (!canonical) notFound()
 
   const [data, nationalStats] = await Promise.all([
-    api.departments.get(canonical).catch(() => null),
+    api.departments.get(canonical).catch(nullIfMissing),
     api.deputies.stats().catch(() => null),
   ])
   if (!data) notFound()

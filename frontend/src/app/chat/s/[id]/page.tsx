@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { ChatAnswerCard } from '@/components/ChatAnswerCard'
 import { SITE_URL, canonicalUrl } from '@/lib/site'
 
@@ -33,7 +33,7 @@ export async function generateMetadata({
 
 export default async function ChatSharePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const result = await api.chatShare(id).catch(() => null)
+  const result = await api.chatShare(id).catch(nullIfMissing)
   if (!result) notFound()
 
   return (

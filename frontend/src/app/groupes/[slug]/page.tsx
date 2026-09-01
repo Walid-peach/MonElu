@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import type { GroupMember, GroupVoteBreakdown } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { groupName } from '@/lib/groups'
@@ -65,7 +65,7 @@ export default async function GroupPage(
   if (!name) notFound()
 
   const [data, nationalStats] = await Promise.all([
-    api.groups.get(canonicalSlug).catch(() => null),
+    api.groups.get(canonicalSlug).catch(nullIfMissing),
     api.deputies.stats().catch(() => null),
   ])
   if (!data) notFound()
