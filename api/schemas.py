@@ -107,7 +107,7 @@ class DeputyScorecard(_Base):
                 "full_name": "Mathilde Panot",
                 "total_votes": 446,
                 "present_votes": 407,
-                "presence_rate": 0.9126,
+                "presence_rate": 0.954,
                 "votes_for": 116,
                 "votes_against": 261,
                 "abstentions": 30,
@@ -125,11 +125,21 @@ class DeputyScorecard(_Base):
 
     deputy_id: str
     full_name: str
-    total_votes: int = Field(description="Votes the deputy was eligible to participate in")
-    present_votes: int = Field(
-        description="Votes where position is not 'nonVotant' (present in chamber but did not vote)"
+    total_votes: int = Field(
+        description="Scrutins the deputy has a recorded position on, nonVotant included. "
+        "This is presence_rate's numerator, not its denominator."
     )
-    presence_rate: float = Field(description="present_votes / total_votes, 0–1")
+    present_votes: int = Field(
+        description="Recorded positions excluding 'nonVotant' (in chamber but did not "
+        "vote). Deliberately the opposite convention to presence_rate — not its numerator."
+    )
+    presence_rate: float = Field(
+        description="Canonical presence (ADR-019), 0–1: recorded positions "
+        "(nonVotant included) over the scrutins held during this deputy's mandate "
+        "window. That denominator is not returned, so this is NOT present_votes / "
+        "total_votes — present_votes uses the opposite convention. 0 when the "
+        "mandate window contains no scrutins in the dataset."
+    )
     votes_for: int
     votes_against: int
     abstentions: int
@@ -169,7 +179,7 @@ class DeputyScorecardRow(DeputyScorecard):
                 "department": "Val-de-Marne",
                 "total_votes": 446,
                 "present_votes": 407,
-                "presence_rate": 0.9126,
+                "presence_rate": 0.954,
                 "votes_for": 116,
                 "votes_against": 261,
                 "abstentions": 30,
@@ -394,7 +404,7 @@ class DepartmentDeputy(DeputySummary):
                     "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
                     "carre/720892.jpg"
                 ),
-                "presence_rate": 0.9126,
+                "presence_rate": 0.954,
                 "solennel_participation_rate": 0.875,
                 "party_alignment_rate": 0.9126,
                 "dissident_rate": 0.0874,
@@ -520,7 +530,7 @@ class GroupMember(DeputySummary):
                     "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
                     "carre/720892.jpg"
                 ),
-                "presence_rate": 0.9126,
+                "presence_rate": 0.954,
                 "dissident_rate": 0.0874,
             }
         }

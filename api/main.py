@@ -109,14 +109,22 @@ deliberate abstention cast in the chamber. A `nonVotant` did not cast anything
 on that scrutin. Never report a `nonVotant` as an abstention, and never add the
 two together.
 
-**`presence_rate` counts `nonVotant` as present.** It is
-`(total_votes - nonVotant) / total_votes` over the scrutins held during the
-deputy's mandate - a measure of votes cast, not of attendance in the hemicycle.
-Two deputies with the same presence_rate can have very different attendance.
+**`presence_rate` counts `nonVotant` as present, and you cannot recompute it
+from the response.** Its numerator is every recorded position including
+`nonVotant`; its denominator is the number of scrutins held during that deputy's
+own mandate window, which is not returned by any endpoint. In particular it is
+*not* `present_votes / total_votes`: `present_votes` uses the opposite
+convention and excludes `nonVotant`. Quote `presence_rate` as published rather
+than deriving your own.
+
+A deputy whose mandate window falls entirely outside the data horizon has an
+empty denominator, and `presence_rate` is then `0` by convention rather than a
+real 0% - check `mandate_end` before reporting a zero as absenteeism. The
+Présidente de l'Assemblée sits at 100% by design; she appears on every scrutin.
+
 For participation in the votes that matter most politically, prefer
-`solennel_participation_rate`; for spread across sitting days, `voting_days_rate`.
-The Présidente de l'Assemblée shows 100% presence by design - she appears on
-every scrutin.
+`solennel_participation_rate`; for spread across sitting days,
+`voting_days_rate`.
 
 **Pagination.** `offset` is capped at 2000 on `/deputies` and `/votes` (not on
 `/themes/{slug}`). To walk past that ceiling on `/votes`, page with the opaque
@@ -125,7 +133,7 @@ limit; `/deputies` has no cursor, but 577 seats fit inside the ceiling anyway.
 
 **Rates are 0-1 floats, not percentages.** `0.87` means 87%.
 
-Methodology, definitions and known caveats: {frontend}/methodologie
+Methodology, definitions and known caveats: __FRONTEND__/methodologie
 Data licence: Licence Ouverte / Open Licence 2.0 (Etalab 2.0), attribution required.
 """
 
@@ -208,7 +216,9 @@ OPENAPI_TAGS = [
 
 app = FastAPI(
     title="MonÉlu API",
-    description=API_DESCRIPTION.format(frontend=frontend_base_url()),
+    # str.replace, not str.format: the text names paths like /themes/{slug},
+    # and format() would read those braces as placeholders and raise.
+    description=API_DESCRIPTION.replace("__FRONTEND__", frontend_base_url()),
     version="0.1.0",
     openapi_tags=OPENAPI_TAGS,
     docs_url="/docs",

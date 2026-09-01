@@ -402,20 +402,34 @@ def export_deputy_votes_csv(request: Request, deputy_id: str):
 def get_scorecard(request: Request, deputy_id: str):
     """Computed activity figures for a single deputy. All rates are 0-1 floats.
 
-    Read `presence_rate` carefully before quoting it: it is the share of scrutins
-    during the mandate on which the deputy cast *something*, counting a
-    `nonVotant` as absent from the tally. It is not hemicycle attendance, and a
-    low value is not by itself evidence of absenteeism - much of the Assemblée's
-    work happens in committee, and only a fraction of scrutins are politically
-    significant.
+    `presence_rate` is the platform's one canonical presence definition
+    (ADR-019): every recorded position counts toward the numerator, `nonVotant`
+    included, because a nonVotant deputy was in the chamber. The denominator is
+    the number of scrutins held during that deputy's own mandate window, so
+    someone elected mid-legislature is not penalised for votes held before they
+    took their seat.
 
-    `solennel_participation_rate` (scrutins solennels only) and `voting_days_rate`
-    (distinct sitting days with at least one vote cast) are the fairer measures
-    for most questions. Compare any of them against `/deputies/stats` rather than
-    presenting a bare number.
+    **That denominator is not in this response, so `presence_rate` cannot be
+    recomputed from these fields.** `total_votes` is the numerator, and
+    `present_votes` deliberately uses the opposite convention - it *excludes*
+    `nonVotant`. Do not divide one by the other and call it presence.
 
-    Denominators are scoped to the deputy's own mandate window, so a deputy who
-    took their seat mid-legislature is not penalised. 404 when the id is unknown.
+    When the mandate window contains no scrutins in the dataset, the rate is `0`
+    by convention rather than a measured 0%. That is common for deputies whose
+    mandate ended before the 2025-07-01 data horizon, so check `mandate_end` on
+    the profile before reporting a zero as absenteeism.
+
+    Even read correctly it is votes cast, not hemicycle attendance: much of the
+    Assemblée's work happens in committee, and only a fraction of scrutins are
+    politically significant. `solennel_participation_rate` (scrutins solennels
+    only) and `voting_days_rate` (distinct sitting days with at least one vote
+    cast) are the fairer measures for most questions, and `/deputies/stats` is
+    the baseline to read any of them against.
+
+    `votes_for_pct` and `abstention_pct` divide by expressed positions only
+    (`pour + contre + abstention`) - nonVotant is presence, not an opinion.
+
+    404 when the id is unknown.
     """
     try:
         with get_conn() as conn:
