@@ -1135,7 +1135,7 @@ The epic's premise that this could reuse existing work does not hold.
 `rag/pipeline/chunk_law_summaries.py` produces per-vote **party-breakdown** chunks for the top 20 votes by turnout, keyed on `vote_id`.
 They are named `law_summary` but they are not per-dossier summaries and cannot seed a bill header.
 
-### 9. Production `votes.dossier_id` is currently corrupt and must be backfilled
+### 9. Production `votes.dossier_id` was corrupt and has been backfilled (resolved, MON-258)
 
 `scripts/ingest_votes.py` stored the Python `repr()` of the `dossierLegislatif` dict instead of its `dossierRef` until commit `7e29131` (2026-07-13, MON-89 review).
 The AN began tagging in March 2026.
@@ -1155,6 +1155,13 @@ On the order of 1 700 of the 2 606 usable tagged scrutins are affected, which is
 This is tracked as **MON-258**, filed separately from the MON-105 epic because it is corrupting live data today and its fix does not depend on anything else here.
 It blocks MON-243: `has_scrutins` computed against the corrupt column lands at roughly 8 dossiers instead of 75, and `GET /lois` returns near-empty parcours until it runs.
 It must re-extract `dossierRef` from the stored repr where possible, re-ingest with a wide `--since` where not, and add a guard so a non-conforming `dossier_id` cannot ship silently again.
+
+**Resolved 2026-09-02 (MON-258).**
+`scripts/backfill_dossier_ids.py` extracted the reference from all 1 570 corrupt rows with a narrow regex anchored on the `'dossierRef':` key - none needed re-ingestion.
+Production now holds 2 607 well-formed refs over 74 distinct dossiers, and a second run of the script changes zero rows.
+`check_dossier_refs()` in `ingest_votes.py` is the guard: `parse_vote` drops a reference that fails `^DLR[A-Za-z0-9]+$` rather than storing it, and the run exits 1 when more than `SKIP_RATE_THRESHOLD` of the dossier-carrying scrutins are malformed.
+Scrutins with no dossier at all are excluded from that ratio - an all-null run is normal history for anything before 2026-03, not a regression.
+What remains is the sparsity in §1, which is upstream and permanent.
 
 **Reason (summary):**
 

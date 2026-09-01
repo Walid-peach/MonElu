@@ -180,7 +180,7 @@ Important data quirks:
 - `nonVotant` ≠ `abstention`: present in chamber but did not vote vs. formally abstained
 - Yaël Braun-Pivet shows 100% presence — Présidente de l'AN, appears on every scrutin by design
 - Production DB holds votes from `2025-07-01` (Supabase free tier); local dev can hold the full legislature from `2024-07-07`
-- `votes.dossier_id` is sparse and partly corrupt (ADR-035, MON-242). The AN only began populating `objet.dossierLegislatif` on scrutins in **March 2026** - it is absent on every scrutin before that, so only ~75 dossiers in the legislature have a linkable scrutin at all. Separately, rows ingested between 2026-03 and commit `7e29131` (2026-07-13) store the Python `repr()` of the dict rather than its `dossierRef`, and the daily cron's 30-day `--since` window has not healed them. Never group votes by `dossier_id` to reconstruct a bill's history - see ADR-035.
+- `votes.dossier_id` is sparse, and the sparsity is upstream and permanent (ADR-035, MON-242). The AN only began populating `objet.dossierLegislatif` on scrutins in **March 2026** - it is absent on every scrutin before that, so only ~74 dossiers in the legislature have a linkable scrutin at all. Never group votes by `dossier_id` to reconstruct a bill's history - see ADR-035. The separate *corruption* (1 570 rows holding the Python `repr()` of the dict rather than its `dossierRef`, written before commit `7e29131` and left unhealed by the cron's 30-day `--since` window) is fixed: `scripts/backfill_dossier_ids.py` repaired them in prod on 2026-09-02, and `check_dossier_refs()` in `ingest_votes.py` now exits 1 if a future run writes non-conforming refs (MON-258).
 
 ---
 
