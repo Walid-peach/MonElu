@@ -40,6 +40,11 @@ class FeedbackResponse(BaseModel):
 )
 @limiter.limit(tiered_limit(10))
 def submit_chat_feedback(request: Request, body: ChatFeedbackRequest):
+    """Record a thumbs up/down on a chat answer. Write-only.
+
+    Feeds a manual triage queue for tuning retrieval and prompts; nothing is
+    served back out and there is no read endpoint. Meant for the site's own UI.
+    """
     payload = {
         "vote": body.vote,
         "question": body.question,
@@ -70,6 +75,13 @@ def submit_chat_feedback(request: Request, body: ChatFeedbackRequest):
 )
 @limiter.limit(tiered_limit(10))
 def submit_error_report(request: Request, body: ErrorReportRequest):
+    """Report a data error on a deputy, vote or other entity page. Write-only.
+
+    Goes to the same manual triage queue as chat feedback; nothing is served back
+    out and there is no read endpoint. `email` is optional and only used to reply
+    about the report. Corrections are applied upstream, so a report does not
+    change what the API returns.
+    """
     payload = {
         "entity_type": body.entity_type,
         "entity_id": body.entity_id,

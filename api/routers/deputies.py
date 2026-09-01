@@ -89,18 +89,36 @@ def _fetch_scorecard_rows() -> list[dict]:
         raise MART_UNAVAILABLE from None
 
 
-@router.get("/", response_model=DeputyListResponse)
+@router.get(
+    "/",
+    response_model=DeputyListResponse,
+    summary="List deputies, with name / department / party filters",
+)
 @limiter.limit(tiered_limit(30))
 def list_deputies(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0, le=2_000),
     search: str = Query(None, description="Filter by name (case-insensitive)"),
-    department: str = Query(None),
+    department: str = Query(None, description="Exact match on the full department name"),
     party: str = Query(
         None, description="Exact match on party name (e.g. 'Rassemblement National')"
     ),
 ):
+    """The roster of the 17th legislature: 577 seats, past and present holders.
+
+    Use this to resolve a person's name to the `deputy_id` every other deputy
+    endpoint takes. `search` matches anywhere in the full name and is
+    accent-sensitive, so pass the name as the Assemblée spells it.
+
+    `department` and `party` want the full stored label, not a code or an
+    abbreviation: `"Rassemblement National"`, not `"RN"`; `"Nord"`, not `"59"`.
+    `party_short` in the response is the abbreviation.
+
+    Includes deputies whose mandate has ended (`mandate_end` is set); there is no
+    filter for current holders, so drop them client-side when you want today's
+    Assemblée. `offset` is capped at 2000.
+    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             conditions: list[sql.Composable] = []
@@ -143,7 +161,11 @@ def list_deputies(
     )
 
 
-@router.get("/stats", response_model=DeputyStats)
+@router.get(
+    "/stats",
+    response_model=DeputyStats,
+    summary="Chamber-wide (or single-party) averages, for putting one deputy in context",
+)
 @limiter.limit(tiered_limit(30))
 def get_deputy_stats(
     request: Request,
@@ -152,6 +174,17 @@ def get_deputy_stats(
         description="Scope the averages to one party (for deputy-vs-party comparison, MON-92)",
     ),
 ):
+    """Mean rates across all deputies, or across one group when `party` is set.
+
+    Exists so a single deputy's figures can be reported against a baseline
+    instead of in isolation - a presence_rate means little until you know where
+    the chamber as a whole sits.
+
+    Every field is a 0-1 float, or null when the scorecard mart is empty. `party`
+    takes the full group label, the same spelling `/deputies` filters on. These
+    are unweighted means over deputies, not chamber-wide totals: a deputy who sat
+    for two months counts as much as one who sat throughout.
+    """
     where = sql.SQL(" WHERE party = %s") if party else sql.SQL("")
     params = [party] if party else []
     try:
@@ -192,6 +225,15 @@ def get_deputy_stats(
 )
 @limiter.limit(tiered_limit(10))
 def list_scorecards(request: Request):
+    """Every deputy's scorecard in one unpaginated response, plus group and department.
+
+    The bulk alternative to calling `/deputies/{deputy_id}/scorecard` 577 times -
+    use this for rankings, distributions, or any cross-chamber comparison. Same
+    fields and same caveats as the single-deputy scorecard; read that one's notes
+    on what `presence_rate` does and does not measure before ranking on it.
+
+    Ordered by surname. Rate-limited harder than the list endpoints (10/min).
+    """
     rows = _fetch_scorecard_rows()
     return DeputyScorecardListResponse(
         total=len(rows),
@@ -205,13 +247,31 @@ def list_scorecards(request: Request):
 )
 @limiter.limit(tiered_limit(10))
 def export_scorecards_csv(request: Request):
+    """The same rows as `/deputies/scorecards`, as a CSV download.
+
+    For spreadsheets and notebooks. Programmatic callers should prefer the JSON
+    endpoint, which carries the field descriptions this format cannot.
+    """
     rows = _fetch_scorecard_rows()
     return csv_response(_SCORECARD_CSV_COLUMNS, rows, "monelu_scorecard_deputes.csv")
 
 
-@router.get("/{deputy_id}", response_model=DeputyDetail)
+@router.get(
+    "/{deputy_id}",
+    response_model=DeputyDetail,
+    summary="One deputy's profile",
+)
 @limiter.limit(tiered_limit(30))
 def get_deputy(request: Request, deputy_id: str):
+    """Identity and mandate for a single deputy - name, group, constituency, photo.
+
+    `party` is the deputy's **current** group, not the group they held at the
+    time of any given vote; deputies do change groups mid-legislature. A non-null
+    `mandate_end` means the seat has been vacated, so the profile is historical.
+
+    No voting figures here - see `/deputies/{deputy_id}/scorecard`. 404 when the
+    id is unknown.
+    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM deputies WHERE deputy_id = %s", (deputy_id,))
@@ -222,7 +282,11 @@ def get_deputy(request: Request, deputy_id: str):
     return DeputyDetail(**row)
 
 
-@router.get("/{deputy_id}/votes", response_model=DeputyVotesResponse)
+@router.get(
+    "/{deputy_id}/votes",
+    response_model=DeputyVotesResponse,
+    summary="How one deputy voted, most recent first",
+)
 @limiter.limit(tiered_limit(30))
 def get_deputy_votes(
     request: Request,
@@ -234,6 +298,20 @@ def get_deputy_votes(
         "surface what changed since a visitor's last visit.",
     ),
 ):
+    """One deputy's individual positions, newest first, with the vote's outcome.
+
+    `position` is one of `pour`, `contre`, `abstention`, `nonVotant`. The last two
+    are different things: an `abstention` was cast deliberately, a `nonVotant` was
+    not cast at all. Do not merge them.
+
+    `total` counts every scrutin the deputy has a recorded position on, ignoring
+    `since`; `items` is capped by `limit` (max 50) and is the only part `since`
+    filters. There is no offset here - narrow with `since` rather than paging, or
+    use the CSV export for the whole record.
+
+    `result` is the scrutin's outcome, not the deputy's: a deputy can vote
+    `contre` on a text that was adopted.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -277,6 +355,11 @@ def get_deputy_votes(
 )
 @limiter.limit(tiered_limit(10))
 def export_deputy_votes_csv(request: Request, deputy_id: str):
+    """One deputy's complete voting record as a CSV download - no limit, no paging.
+
+    The way to get the whole record in one request; the JSON endpoint caps at 50
+    items per call. 404 when the id is unknown.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -310,9 +393,30 @@ def export_deputy_votes_csv(request: Request, deputy_id: str):
     )
 
 
-@router.get("/{deputy_id}/scorecard", response_model=DeputyScorecard)
+@router.get(
+    "/{deputy_id}/scorecard",
+    response_model=DeputyScorecard,
+    summary="One deputy's participation and voting figures",
+)
 @limiter.limit(tiered_limit(10))
 def get_scorecard(request: Request, deputy_id: str):
+    """Computed activity figures for a single deputy. All rates are 0-1 floats.
+
+    Read `presence_rate` carefully before quoting it: it is the share of scrutins
+    during the mandate on which the deputy cast *something*, counting a
+    `nonVotant` as absent from the tally. It is not hemicycle attendance, and a
+    low value is not by itself evidence of absenteeism - much of the Assemblée's
+    work happens in committee, and only a fraction of scrutins are politically
+    significant.
+
+    `solennel_participation_rate` (scrutins solennels only) and `voting_days_rate`
+    (distinct sitting days with at least one vote cast) are the fairer measures
+    for most questions. Compare any of them against `/deputies/stats` rather than
+    presenting a bare number.
+
+    Denominators are scoped to the deputy's own mandate window, so a deputy who
+    took their seat mid-legislature is not penalised. 404 when the id is unknown.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -349,9 +453,28 @@ def get_scorecard(request: Request, deputy_id: str):
     return DeputyScorecard(**row)
 
 
-@router.get("/{deputy_id}/alignment", response_model=DeputyAlignment)
+@router.get(
+    "/{deputy_id}/alignment",
+    response_model=DeputyAlignment,
+    summary="How often one deputy votes with their own group",
+)
 @limiter.limit(tiered_limit(10))
 def get_alignment(request: Request, deputy_id: str):
+    """Party-line alignment for a single deputy, as 0-1 rates.
+
+    A vote counts as dissident when the deputy's expressed position differs from
+    the majority position of their group on that same scrutin. Only expressed
+    positions are counted on both sides - `nonVotant` never makes someone a
+    dissident, and never dilutes the rate either.
+
+    The group majority is a plurality with ties broken alphabetically
+    (abstention < contre < pour), so a genuinely three-way-split group still has
+    a defined majority. Alignment is computed against the deputy's *current*
+    group for every vote in the window, which distorts the figure for anyone who
+    changed groups mid-legislature.
+
+    404 when the id is unknown.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -381,13 +504,26 @@ def get_alignment(request: Request, deputy_id: str):
     return DeputyAlignment(**row)
 
 
-@router.get("/{deputy_id}/dissident-votes", response_model=DeputyDissidentVotesResponse)
+@router.get(
+    "/{deputy_id}/dissident-votes",
+    response_model=DeputyDissidentVotesResponse,
+    summary="The specific votes where one deputy broke with their group",
+)
 @limiter.limit(tiered_limit(10))
 def get_dissident_votes(
     request: Request,
     deputy_id: str,
     limit: int = Query(10, ge=1, le=50),
 ):
+    """The scrutins behind `/alignment`'s dissident_rate, most recent first.
+
+    Each item carries both `position` (the deputy's) and `majority_position`
+    (their group's), so the divergence is citable rather than asserted. `total`
+    is the full count of dissident votes; `items` is capped by `limit`.
+
+    Same definition as `/alignment`: expressed positions only, group majority
+    tie-broken alphabetically, current group applied across the whole window.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -437,6 +573,7 @@ def get_dissident_votes(
 @router.get(
     "/{deputy_id}/diverging-votes",
     response_model=DeputyDivergingVotesResponse,
+    summary="Head-to-head: the votes where two deputies disagreed",
 )
 @limiter.limit(tiered_limit(10))
 def get_diverging_votes(
@@ -445,6 +582,16 @@ def get_diverging_votes(
     other_deputy_id: str = Query(..., description="The other deputy to compare against (MON-92)"),
     limit: int = Query(10, ge=1, le=50),
 ):
+    """Scrutins where two named deputies cast different expressed positions.
+
+    `position_a` belongs to the path deputy, `position_b` to `other_deputy_id`.
+    Both sides must have expressed a position, so a scrutin where either was
+    `nonVotant` is not a disagreement and is excluded - `total` is therefore a
+    floor on how differently the two voted, not a complete difference count.
+
+    Restricted to scrutins both were eligible for, so comparing deputies whose
+    mandates barely overlap yields little. Most recent first.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:

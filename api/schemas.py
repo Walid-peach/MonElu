@@ -1,6 +1,20 @@
 """
 api/schemas.py
 Pydantic v2 models for all MonÉlu request/response types.
+
+Response models carry a `json_schema_extra` example (MON-260): /openapi.json is
+read by agents and code generators, and one realistic payload does more for
+tool-calling accuracy than any amount of field prose.
+
+Two things to know when editing an example:
+
+* **A `None` value is silently dropped.** FastAPI renders the schema through
+  `jsonable_encoder(..., exclude_none=True)`, so a nullable field given `None`
+  simply vanishes from the published example, which reads as "never returned".
+  Give it a realistic value instead, or leave it out deliberately.
+* **Examples are not inherited safely.** Pydantic carries a parent's
+  `model_config` down to a subclass, so a subclass that adds fields inherits an
+  example missing them. Every subclass that adds a field redeclares its own.
 """
 
 from datetime import date, datetime
@@ -25,6 +39,23 @@ class _Base(BaseModel):
 class DeputySummary(_Base):
     """Lightweight deputy — used in list responses."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "party_short": "LFI",
+                "department": "Val-de-Marne",
+                "circonscription": "10",
+                "photo_url": (
+                    "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
+                    "carre/720892.jpg"
+                ),
+            }
+        }
+    )
+
     deputy_id: str
     full_name: str
     party: Optional[str] = None
@@ -37,6 +68,28 @@ class DeputySummary(_Base):
 class DeputyDetail(DeputySummary):
     """Full deputy profile — used in GET /deputies/{deputy_id}."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "first_name": "Mathilde",
+                "last_name": "Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "party_short": "LFI",
+                "department": "Val-de-Marne",
+                "circonscription": "10",
+                "photo_url": (
+                    "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
+                    "carre/720892.jpg"
+                ),
+                "mandate_start": "2024-07-07",
+                "mandate_end": None,
+                "ingested_at": "2026-08-20T06:52:54Z",
+            }
+        }
+    )
+
     first_name: str
     last_name: str
     mandate_start: Optional[date] = None
@@ -46,6 +99,29 @@ class DeputyDetail(DeputySummary):
 
 class DeputyScorecard(_Base):
     """Computed voting stats for a single deputy."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "total_votes": 446,
+                "present_votes": 407,
+                "presence_rate": 0.9126,
+                "votes_for": 116,
+                "votes_against": 261,
+                "abstentions": 30,
+                "votes_for_pct": 0.2850,
+                "abstention_pct": 0.0737,
+                "eligible_solennels": 24,
+                "solennels_cast": 21,
+                "solennel_participation_rate": 0.875,
+                "eligible_voting_days": 62,
+                "voting_days_present": 41,
+                "voting_days_rate": 0.6613,
+            }
+        }
+    )
 
     deputy_id: str
     full_name: str
@@ -80,6 +156,35 @@ class DeputyScorecard(_Base):
 class DeputyScorecardRow(DeputyScorecard):
     """Scorecard plus party/department context — one row of the dense table (MON-97)."""
 
+    # Explicit rather than inherited: Pydantic would otherwise carry
+    # DeputyScorecard's example down here, and it has none of the three
+    # fields this model adds.
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "party_short": "LFI",
+                "department": "Val-de-Marne",
+                "total_votes": 446,
+                "present_votes": 407,
+                "presence_rate": 0.9126,
+                "votes_for": 116,
+                "votes_against": 261,
+                "abstentions": 30,
+                "votes_for_pct": 0.2850,
+                "abstention_pct": 0.0737,
+                "eligible_solennels": 24,
+                "solennels_cast": 21,
+                "solennel_participation_rate": 0.875,
+                "eligible_voting_days": 62,
+                "voting_days_present": 41,
+                "voting_days_rate": 0.6613,
+            }
+        }
+    )
+
     party: Optional[str] = None
     party_short: Optional[str] = None
     department: Optional[str] = None
@@ -92,6 +197,22 @@ class DeputyScorecardListResponse(_Base):
 
 class DeputyAlignment(_Base):
     """Party alignment / dissident rate for a single deputy (mart_party_alignment)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "total_votes": 446,
+                "aligned_votes": 407,
+                "dissident_votes": 39,
+                "party_alignment_rate": 0.9126,
+                "dissident_rate": 0.0874,
+                "updated_at": "2026-08-20T06:52:54Z",
+            }
+        }
+    )
 
     deputy_id: str
     full_name: str
@@ -141,6 +262,18 @@ class DeputyDivergingVotesResponse(_Base):
 
 
 class DeputyStats(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "avg_presence_rate": 0.2564,
+                "avg_solennel_participation_rate": 0.8447,
+                "avg_voting_days_rate": 0.5553,
+                "avg_votes_for_pct": 0.4209,
+                "avg_abstention_pct": 0.0554,
+            }
+        }
+    )
+
     avg_presence_rate: Optional[float] = Field(
         None,
         description="Average presence_rate across all deputies, 0–1; null when the mart is empty",
@@ -173,12 +306,61 @@ class DeputyVoteItem(_Base):
 
 
 class DeputyVotesResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "total": 446,
+                "items": [
+                    {
+                        "vote_id": "VTANR5L17V8433",
+                        "voted_at": "2026-07-21T00:00:00Z",
+                        "vote_title": (
+                            "l'ensemble du projet de loi visant à offrir des réponses "
+                            "immédiates aux phénomènes troublant l'ordre public "
+                            "(texte de la commission mixte paritaire)."
+                        ),
+                        "result": "adopté",
+                        "position": "contre",
+                        "summary_plain": (
+                            "Le texte issu de la commission mixte paritaire a été adopté."
+                        ),
+                    }
+                ],
+            }
+        }
+    )
+
     deputy_id: str
     total: int
     items: list[DeputyVoteItem]
 
 
 class DeputyListResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 1,
+                "limit": 50,
+                "offset": 0,
+                "items": [
+                    {
+                        "deputy_id": "PA720892",
+                        "full_name": "Mathilde Panot",
+                        "party": "La France insoumise - Nouveau Front Populaire",
+                        "party_short": "LFI",
+                        "department": "Val-de-Marne",
+                        "circonscription": "10",
+                        "photo_url": (
+                            "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
+                            "carre/720892.jpg"
+                        ),
+                    }
+                ],
+            }
+        }
+    )
+
     total: int
     limit: int
     offset: int
@@ -196,6 +378,29 @@ class DepartmentDeputy(DeputySummary):
     Mart-derived rates are None when the dbt marts are absent (the page
     degrades gracefully instead of failing).
     """
+
+    # Explicit rather than inherited from DeputySummary, which has none of
+    # the four rate fields below.
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "party_short": "LFI",
+                "department": "Val-de-Marne",
+                "circonscription": "10",
+                "photo_url": (
+                    "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
+                    "carre/720892.jpg"
+                ),
+                "presence_rate": 0.9126,
+                "solennel_participation_rate": 0.875,
+                "party_alignment_rate": 0.9126,
+                "dissident_rate": 0.0874,
+            }
+        }
+    )
 
     presence_rate: Optional[float] = None
     solennel_participation_rate: Optional[float] = None
@@ -300,6 +505,27 @@ class GroupMember(DeputySummary):
     degrades gracefully instead of failing), mirroring DepartmentDeputy.
     """
 
+    # Explicit rather than inherited from DeputySummary, which has neither
+    # of the two rate fields below.
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "party_short": "LFI",
+                "department": "Val-de-Marne",
+                "circonscription": "10",
+                "photo_url": (
+                    "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
+                    "carre/720892.jpg"
+                ),
+                "presence_rate": 0.9126,
+                "dissident_rate": 0.0874,
+            }
+        }
+    )
+
     presence_rate: Optional[float] = None
     dissident_rate: Optional[float] = None
 
@@ -358,6 +584,27 @@ class GroupDetail(_Base):
 class VoteSummary(_Base):
     """Lightweight vote — used in list responses."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "vote_id": "VTANR5L17V8433",
+                "voted_at": "2026-07-21T00:00:00Z",
+                "vote_title": (
+                    "l'ensemble du projet de loi visant à offrir des réponses "
+                    "immédiates aux phénomènes troublant l'ordre public "
+                    "(texte de la commission mixte paritaire)."
+                ),
+                "result": "adopté",
+                "votes_for": 351,
+                "votes_against": 179,
+                "abstentions": 7,
+                "total_voters": 537,
+                "summary_plain": ("Le texte issu de la commission mixte paritaire a été adopté."),
+                "theme": "Justice & Sécurité",
+            }
+        }
+    )
+
     vote_id: str
     voted_at: Optional[datetime] = None
     vote_title: str
@@ -382,6 +629,44 @@ class VotePosition(_Base):
 class VoteDetail(VoteSummary):
     """Full vote — used in GET /votes/{vote_id}."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "vote_id": "VTANR5L17V8433",
+                "voted_at": "2026-07-21T00:00:00Z",
+                "vote_title": (
+                    "l'ensemble du projet de loi visant à offrir des réponses "
+                    "immédiates aux phénomènes troublant l'ordre public "
+                    "(texte de la commission mixte paritaire)."
+                ),
+                "result": "adopté",
+                "votes_for": 351,
+                "votes_against": 179,
+                "abstentions": 7,
+                "total_voters": 537,
+                "summary_plain": ("Le texte issu de la commission mixte paritaire a été adopté."),
+                "theme": "Justice & Sécurité",
+                "vote_type": "sps",
+                "dossier_id": "DLR5L17N53980",
+                "ingested_at": "2026-07-22T06:12:03Z",
+                "positions": [
+                    {
+                        "deputy_id": "PA720892",
+                        "full_name": "Mathilde Panot",
+                        "party_short": "LFI",
+                        "position": "contre",
+                    },
+                    {
+                        "deputy_id": "PA793214",
+                        "full_name": "Audrey Abadie-Amiel",
+                        "party_short": "LIOT",
+                        "position": "abstention",
+                    },
+                ],
+            }
+        }
+    )
+
     vote_type: Optional[str] = None
     dossier_id: Optional[str] = None
     ingested_at: Optional[datetime] = None
@@ -389,6 +674,37 @@ class VoteDetail(VoteSummary):
 
 
 class VoteListResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 5561,
+                "limit": 50,
+                "offset": 0,
+                "items": [
+                    {
+                        "vote_id": "VTANR5L17V8433",
+                        "voted_at": "2026-07-21T00:00:00Z",
+                        "vote_title": (
+                            "l'ensemble du projet de loi visant à offrir des réponses "
+                            "immédiates aux phénomènes troublant l'ordre public "
+                            "(texte de la commission mixte paritaire)."
+                        ),
+                        "result": "adopté",
+                        "votes_for": 351,
+                        "votes_against": 179,
+                        "abstentions": 7,
+                        "total_voters": 537,
+                        "summary_plain": (
+                            "Le texte issu de la commission mixte paritaire a été adopté."
+                        ),
+                        "theme": "Justice & Sécurité",
+                    }
+                ],
+                "next_cursor": "MjAyNi0wNy0yMVQwMDowMDowMCswMDowMHxWVEFOUjVMMTdWODQzMw==",
+            }
+        }
+    )
+
     total: int
     limit: int
     offset: int
@@ -446,6 +762,41 @@ class AgendaDay(_Base):
 
 
 class AgendaResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "from_date": "2026-09-01",
+                "to_date": "2026-09-07",
+                "days": [
+                    {
+                        "sitting_date": "2026-09-02",
+                        "items": [
+                            {
+                                "point_uid": "PTOD17_123456",
+                                "sitting_start": "2026-09-02T15:00:00Z",
+                                "sitting_end": "2026-09-02T20:00:00Z",
+                                "objet": (
+                                    "Projet de loi relatif à la lutte contre les fraudes "
+                                    "sociales et fiscales (première lecture)"
+                                ),
+                                "point_type": "Discussion générale",
+                                "summary_plain": None,
+                                "theme": None,
+                                "dossier_id": "DLR5L17N52985",
+                                "dossier_url": (
+                                    "https://www.assemblee-nationale.fr/dyn/17/dossiers/"
+                                    "DLR5L17N52985"
+                                ),
+                                "vote_id": None,
+                                "result": None,
+                            }
+                        ],
+                    }
+                ],
+            }
+        }
+    )
+
     from_date: date
     to_date: date
     days: list[AgendaDay]

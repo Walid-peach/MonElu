@@ -28,14 +28,24 @@ export default function DeveloppeursPage() {
       <LegalSection title="L'API">
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           MonÉlu expose l&apos;intégralité des votes et des fiches de députés via une API REST publique.
-          La documentation interactive (OpenAPI/Swagger) liste tous les endpoints, leurs paramètres et
-          leurs schémas de réponse :
+          Chaque endpoint est décrit avec ses paramètres, ses schémas de réponse, un exemple de charge
+          utile et les mises en garde méthodologiques qui s&apos;y appliquent :
         </p>
-        <p style={textStyle}>
-          <a href={`${API_BASE}/docs`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text)', fontWeight: 600 }}>
-            {API_BASE}/docs
-          </a>
-        </p>
+        <ul style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--dp-text-secondary)', margin: '0 0 10px', paddingLeft: '20px' }}>
+          <li>
+            <a href={`${API_BASE}/openapi.json`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text)', fontWeight: 600 }}>
+              {API_BASE}/openapi.json
+            </a>
+            {' '}- la spécification OpenAPI brute. C&apos;est le format à donner à un agent, à un client
+            généré, ou à un pont MCP.
+          </li>
+          <li>
+            <a href={`${API_BASE}/docs`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text)', fontWeight: 600 }}>
+              {API_BASE}/docs
+            </a>
+            {' '}- la même spécification, en documentation interactive (Swagger UI), pour explorer à la main.
+          </li>
+        </ul>
       </LegalSection>
 
       <LegalSection title="Limites de débit">
@@ -64,7 +74,7 @@ export default function DeveloppeursPage() {
           Une fois la clé reçue, passez-la dans l&apos;en-tête <code>X-API-Key</code> de chaque requête :
         </p>
         <div style={codeBlockStyle}>
-          curl -H &quot;X-API-Key: votre_cle&quot; {API_BASE}/deputes/
+          curl -H &quot;X-API-Key: votre_cle&quot; {API_BASE}/deputies/
         </div>
       </LegalSection>
 
