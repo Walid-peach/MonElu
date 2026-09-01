@@ -29,7 +29,6 @@ Requires DATABASE_URL, OPENAI_API_KEY, GROQ_API_KEY. Costs a few cents at most
 verifications of the mixed-record claim).
 """
 
-import ast
 import os
 
 import mlflow
@@ -110,7 +109,9 @@ def _mixed_record_claim() -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT d.full_name, v.dossier_id
+                SELECT
+                    d.full_name,
+                    (array_agg(v.vote_title ORDER BY v.total_voters DESC))[1] AS bill_title
                 FROM vote_positions vp
                 JOIN deputies d ON d.deputy_id = vp.deputy_id
                 JOIN votes v ON v.vote_id = vp.vote_id
@@ -127,17 +128,16 @@ def _mixed_record_claim() -> dict | None:
             row = cur.fetchone()
     if not row:
         return None
-    full_name, dossier_id = row
-    # dossier_id is stored as the repr of the AN dict, e.g. "{'libelle': ...}".
-    try:
-        libelle = ast.literal_eval(dossier_id).get("libelle")
-    except (ValueError, SyntaxError):
-        libelle = None
-    if not libelle:
+    full_name, bill_title = row
+    # The bill label is the title of the dossier's best-attended scrutin - the
+    # vote on the whole text rather than on an amendment. It used to be read out
+    # of dossier_id, which held the repr of the AN dict; that corruption is fixed
+    # and dossier_id now holds the bare ref only (MON-258).
+    if not bill_title:
         return None
     return {
         "label": "mixed record (pour on some scrutins, contre on others)",
-        "claim": f"{full_name} a voté pour : {libelle}",
+        "claim": f"{full_name} a voté pour : {bill_title}",
         "expected": {"trompeur"},
         "expect_citation": None,
     }
