@@ -227,6 +227,19 @@ export const DATA_LICENSE_URL = 'https://www.etalab.gouv.fr/licence-ouverte-open
 /** The open-data portal every export ultimately derives from. */
 export const AN_OPEN_DATA_URL = 'https://data.assemblee-nationale.fr'
 
+/**
+ * The upstream source, as a node rather than a bare url.
+ *
+ * `isBasedOn` accepts a plain URL, but a consumer following provenance gets
+ * something it can name and attribute this way instead of a string to fetch.
+ */
+const AN_OPEN_DATA_SOURCE = {
+  '@type': 'Dataset',
+  name: "Open data de l'Assemblée nationale",
+  url: AN_OPEN_DATA_URL,
+  creator: { '@type': 'GovernmentOrganization', name: 'Assemblée nationale' },
+}
+
 /** Stable node id for the catalog, so `/licence-donnees` can point at it. */
 export const DATA_CATALOG_ID = `${SITE_URL}/donnees#catalog`
 
@@ -253,11 +266,11 @@ function buildDatasetJsonLd(entry: CsvExport) {
     creator: { '@id': ORGANIZATION_ID },
     publisher: { '@id': ORGANIZATION_ID },
     includedInDataCatalog: { '@id': DATA_CATALOG_ID },
-    isBasedOn: AN_OPEN_DATA_URL,
+    isBasedOn: AN_OPEN_DATA_SOURCE,
     temporalCoverage: DATA_TEMPORAL_COVERAGE,
     spatialCoverage: { '@type': 'Country', name: 'France' },
     keywords: entry.keywords,
-    variableMeasured: entry.columns.split(', ').map(name => ({
+    variableMeasured: entry.columns.map(name => ({
       '@type': 'PropertyValue',
       name,
     })),
@@ -314,7 +327,7 @@ export function buildDataCatalogJsonLd() {
     isAccessibleForFree: true,
     creator: { '@id': ORGANIZATION_ID },
     publisher: { '@id': ORGANIZATION_ID },
-    isBasedOn: AN_OPEN_DATA_URL,
+    isBasedOn: AN_OPEN_DATA_SOURCE,
     dataset: CSV_EXPORTS.map(buildDatasetJsonLd),
   }
 }

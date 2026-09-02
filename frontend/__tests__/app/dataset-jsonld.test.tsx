@@ -66,8 +66,21 @@ describe('buildDataCatalogJsonLd', () => {
   it('names every column of the export as a measured variable', () => {
     for (const [index, entry] of CSV_EXPORTS.entries()) {
       const measured = datasets[index].variableMeasured as { name: string }[]
-      expect(measured.map(v => v.name)).toEqual(entry.columns.split(', '))
+      expect(measured.map(v => v.name)).toEqual(entry.columns)
     }
+  })
+
+  it('publishes the header row the live scorecard export actually returns', () => {
+    // Asserted against a literal rather than against CSV_EXPORTS, so a column
+    // silently dropped from both the array and the markup still fails here.
+    // Matches `GET /deputies/scorecard.csv` as of 2026-09-03.
+    const scorecard = CSV_EXPORTS.find(entry => entry.id === 'scorecards')!
+    expect(scorecard.columns.join(',')).toBe(
+      'deputy_id,full_name,party,party_short,department,total_votes,present_votes,' +
+        'presence_rate,votes_for,votes_against,abstentions,votes_for_pct,abstention_pct,' +
+        'eligible_solennels,solennels_cast,solennel_participation_rate,' +
+        'eligible_voting_days,voting_days_present,voting_days_rate'
+    )
   })
 
   it('gives a downloadable export a contentUrl and a parameterized one a url template', () => {
@@ -111,6 +124,7 @@ describe('the pages built for machine reuse', () => {
     const visible = container.textContent ?? ''
     for (const entry of CSV_EXPORTS) {
       expect(visible).toContain(entry.name)
+      expect(visible).toContain(entry.columns.join(', '))
       expect(visible).toContain(`${API_BASE}${entry.pattern}`)
     }
   })

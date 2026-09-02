@@ -46,7 +46,7 @@ export default function DonneesPage() {
                 GET {API_BASE}{e.pattern}
               </div>
               <div style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--dp-text-muted)' }}>
-                Colonnes : {e.columns}
+                Colonnes : {e.columns.join(', ')}
               </div>
             </div>
           ))}
