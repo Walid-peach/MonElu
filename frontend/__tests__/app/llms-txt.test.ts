@@ -36,7 +36,8 @@ function routeExists(path: string): boolean {
 /** Every `SITE_URL`-rooted path the file links to. */
 function internalPaths(text: string): string[] {
   const paths = new Set<string>()
-  for (const match of text.matchAll(new RegExp(`${SITE_URL}(/[^)\\s\`]*)?`, 'g'))) {
+  const origin = SITE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  for (const match of text.matchAll(new RegExp(`${origin}(/[^)\\s\`]*)?`, 'g'))) {
     const path = (match[1] ?? '/').replace(/\/+$/, '')
     if (path) paths.add(path)
   }
@@ -70,8 +71,10 @@ describe('llms.txt (MON-261)', () => {
     ['llms.txt', short],
     ['llms-full.txt', full],
   ])('%s only links pages that exist', (_name, text) => {
+    // Route handlers, not pages - they have no page.tsx to resolve to.
+    const NOT_PAGES = ['/sitemap.xml', '/llms.txt', '/llms-full.txt']
     const broken = internalPaths(text).filter(
-      path => path !== '/sitemap.xml' && path !== '/llms-full.txt' && !routeExists(path)
+      path => !NOT_PAGES.includes(path) && !routeExists(path)
     )
     expect(broken).toEqual([])
   })

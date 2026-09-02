@@ -183,6 +183,7 @@ ${list([
 
   return [
     header(),
+    `*Version longue de [/llms.txt](${SITE_URL}/llms.txt) : le même fichier, avec les définitions de calcul de /methodologie inlinées.*`,
     caveats(),
     definitions,
     machineReadable(),
