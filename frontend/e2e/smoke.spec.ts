@@ -62,6 +62,44 @@ test.describe('smoke: /votes row columns are not clipped', () => {
   })
 })
 
+test.describe('smoke: the homepage is legible to a crawler', () => {
+  // MON-270: `/` renders `MobileExperience` on every viewport and mounts
+  // `CinematicExperience` on top of it once `useSyncExternalStore` confirms
+  // desktop - so the desktop DOM is the union of both trees, and the two
+  // scroll-panel titles used to make three competing `<h1>`s. jsdom never sees
+  // this: the cinematic half only mounts behind a real matchMedia. Both
+  // viewports matter (they render different trees); the color scheme does not.
+  test.beforeEach(({}, testInfo) => {
+    testInfo.skip(!testInfo.project.name.endsWith('-light'), 'color-scheme-independent')
+  })
+
+  test('one h1, and an h2 outline beneath it', async ({ page }) => {
+    await page.goto('/')
+    const viewport = page.viewportSize()
+    if (!viewport) throw new Error('no viewport configured for this project')
+
+    // The cinematic mounts in an effect after hydration, so counting too early
+    // would pass for the wrong reason. Wait for one of its own panels first.
+    if (viewport.width >= 768) {
+      await page.locator('[data-title="0"]').waitFor({ state: 'attached' })
+    }
+
+    await expect(page.locator('h1')).toHaveCount(1)
+    await expect(page.locator('h1')).toHaveText([/enfin lisible/])
+    // The prose summary contributes the outline the flat hero never had.
+    await expect(page.getByRole('heading', { level: 2, name: /relevé de vote complet/ })).toBeAttached()
+  })
+
+  test('the prose summary is in the server HTML, not injected by JS', async ({ request }) => {
+    // The whole point of the section: a crawler that never runs the client
+    // bundle must still be told what this site is.
+    const html = await (await request.get('/')).text()
+    expect(html).toContain('plateforme de transparence civique')
+    expect(html).toContain('href="/methodologie"')
+    expect(html).toContain('href="/groupes/rassemblement-national"')
+  })
+})
+
 test.describe('smoke: nav visibility follows the md breakpoint', () => {
   // MON-141: the desktop nav is `hidden md:flex` — jsdom can't tell an
   // inline display:flex apart from the Tailwind class losing the cascade,

@@ -100,7 +100,7 @@ Assemblée Nationale Open Data (ZIPs)
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
-| `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test + frontend lint/typecheck/jest/build + Playwright smoke tier (MON-241: no-horizontal-overflow and nav-visibility checks on `/`, `/deputes`, `/deputes/[id]`, `/votes`, `/votes/[id]`, `/chat`, `/quiz` at 390px/1280px, light/dark, against a `next build`, plus canonical-link and 404-status checks on `desktop-light` only - MON-269, MON-275); posts dbt results as PR comment |
+| `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test + frontend lint/typecheck/jest/build + Playwright smoke tier (MON-241: no-horizontal-overflow and nav-visibility checks on `/`, `/deputes`, `/deputes/[id]`, `/votes`, `/votes/[id]`, `/chat`, `/quiz` at 390px/1280px, light/dark, against a `next build`, plus canonical-link and 404-status checks on `desktop-light` only - MON-269, MON-275, and a single-`h1`/server-rendered-summary check on `/` at both viewports - MON-270); posts dbt results as PR comment |
 | `deploy.yml` | Merge to `master` | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index, then `dbt run` → operational tail. Every step after `dbt run` is `continue-on-error` + `!cancelled()`, and a final **data-quality gate** re-fails the job on `dbt snapshot`/`dbt test`/`dbt source freshness`/quiz-validation outcomes (MON-250) — a failing assertion must never skip cache revalidation or the monitoring probes. The DB-size probe is deliberately outside the gate. |
 | `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window — the actual retry backstop (MON-221) |
@@ -149,6 +149,11 @@ A new parser without such a guard ships a skeleton dataset on a green run - the 
 - A detail page's *identity* fetch uses `.catch(nullIfMissing)` (`src/lib/api.ts`), never a bare `.catch(() => null)`: only a genuine 404/422 becomes `notFound()`, while a 429 or 5xx is rethrown and surfaces as a server error. The supporting fetches on the same page keep `.catch(() => null)` - each one degrades a section rather than deciding whether the page exists.
 - `/votes/[id]` and `/themes/[slug]` deliberately have **no `generateStaticParams`** (MON-275). Prerendering the 100 most recent votes plus the 10 themes meant ~220 API calls from one IP inside a build, which exhausted the API's DB connections and came back as 500s on endpoints that answer in 200 ms on every manual request - three CI builds in a row died on a different page each. `dynamicParams` plus `revalidate` already cover both routes on demand, and static pages generated dropped from 135 to 25. Do not reintroduce either without a way to throttle the burst; `sitemap.ts` is the remaining build-time burst and is still build-fatal if the API fails.
 - Every route declares `alternates.canonical` via `canonicalUrl()` (MON-269) - see the Deployment section.
+- The homepage carries **exactly one `<h1>`**, and it lives in `AssemblyScrollExperience`'s server-rendered half (MON-270).
+`CinematicExperience` only mounts after `useSyncExternalStore` confirms a desktop viewport, so on desktop the DOM is the union of both trees - its two scroll-panel titles are `<h2>`, never `<h1>`.
+`HomeSummary` (`src/components/home/HomeSummary.tsx`) is the static prose block below the cinematic: it is what a crawler or an LLM actually reads about this site, since the scroll experience itself is ~1 KB of display strings inside animated panels.
+It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` from the homepage - keep it a server component with no interactivity.
+`e2e/smoke.spec.ts` asserts both halves at 390px and 1280px.
 
 **`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
