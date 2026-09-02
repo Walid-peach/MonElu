@@ -8,7 +8,7 @@
 
 MonÉlu is a civic transparency platform that makes the voting record of every deputy in the French Assemblée Nationale fully accessible — in plain language, in real time. Built for journalists, researchers, and engaged citizens who shouldn't need to dig through government ZIP exports to understand how their representatives vote.
 
-**Site:** https://mon-elu.vercel.app · **API:** https://monelu-production.up.railway.app · **API docs:** `/docs`
+**Site:** https://mon-elu.vercel.app · **API:** https://monelu-production.up.railway.app · **API docs:** `/docs` · **Machine-readable spec:** `/openapi.json`
 
 ---
 
@@ -57,7 +57,9 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 
 ## API Endpoints
 
-Full interactive reference at `/docs`. Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting).
+Full interactive reference at `/docs`; the raw spec agents and generated clients should read is at `/openapi.json`.
+Every route carries a summary and a description written for that reader - what it returns, in what units, and the domain caveat that applies (MON-260).
+Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting).
 
 ### Core data
 
@@ -507,6 +509,7 @@ cd frontend && npm test               # Jest + Testing Library
 Both suites run on every PR via `ci.yml` and block merge on failure.
 
 `tests/unit/test_readme_endpoints.py` checks the **API Endpoints** tables above against `app.openapi()` and the live slowapi limits: adding, removing, or re-limiting an endpoint without updating this file fails CI. Edit the table, don't loosen the test.
+The same file asserts every route in the spec has a non-empty `summary` and a description of real length, so a new endpoint cannot ship undocumented (MON-260). FastAPI reads `summary` off the `@router` decorator and `description` off the handler's docstring.
 
 ---
 

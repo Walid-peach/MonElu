@@ -23,7 +23,11 @@ from api.themes_data import SLUGS_BY_NAME, normalize_slug
 router = APIRouter()
 
 
-@router.get("/{slug}", response_model=ThemeDetail)
+@router.get(
+    "/{slug}",
+    response_model=ThemeDetail,
+    summary="Votes on one policy theme, with per-group positioning",
+)
 @limiter.limit(tiered_limit(30))
 def get_theme(
     request: Request,
@@ -31,6 +35,21 @@ def get_theme(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
+    """Every scrutin MonÉlu has filed under one theme, plus how each group voted on them.
+
+    **Themes are MonÉlu's classification, not the Assemblée's.** They are
+    assigned per scrutin during ingestion and are a reading aid, not an official
+    taxonomy - a vote's theme is one defensible label among several, and any
+    figure here inherits that judgement. Attribute it to MonÉlu when quoting it.
+
+    `party_positions` gives, per group, the pour/contre/abstention split summed
+    across the theme's scrutins, with `pour_rate` over expressed positions only.
+    `adoption_rate` is the share adopted among scrutins with a known result, and
+    is null when none has one yet. `most_divided_vote` is the narrowest
+    pour/contre margin in the theme.
+
+    404 on an unknown slug.
+    """
     name = normalize_slug(slug)
     if name is None:
         raise HTTPException(status_code=404, detail="Unknown theme")

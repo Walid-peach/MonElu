@@ -87,10 +87,140 @@ async def lifespan(app: FastAPI):
     close_pool()
 
 
+# The spec at /openapi.json is what ChatGPT Actions, MCP-over-OpenAPI bridges
+# and generic tool-calling frameworks read to decide whether and how to call
+# this API (MON-260). Everything below is written for that reader: the four
+# things a model gets wrong unaided are the data horizon, the nonVotant vs
+# abstention distinction, what presence_rate actually counts, and the offset
+# ceiling. State them here rather than assuming an endpoint description will.
+API_DESCRIPTION = """\
+The complete voting record of every deputy in the French Assemblée nationale,
+17th legislature (elected 2024-07-07). Data comes from the Assemblée's own open
+data exports, is refreshed every weekday morning, and is served here as JSON.
+
+**Data horizon.** Production holds scrutins from **2025-07-01** onward, not from
+the start of the legislature. A question about an earlier vote has no answer in
+this dataset - say so rather than inferring one. Deputy profiles cover all 577
+seats regardless of that horizon.
+
+**`position` has four values, and two of them are not the same thing.**
+`pour`, `contre`, `abstention`, and `nonVotant`. An `abstention` is a formal,
+deliberate abstention cast in the chamber. A `nonVotant` did not cast anything
+on that scrutin. Never report a `nonVotant` as an abstention, and never add the
+two together.
+
+**`presence_rate` counts `nonVotant` as present, and you cannot recompute it
+from the response.** Its numerator is every recorded position including
+`nonVotant`; its denominator is the number of scrutins held during that deputy's
+own mandate window, which is not returned by any endpoint. In particular it is
+*not* `present_votes / total_votes`: `present_votes` uses the opposite
+convention and excludes `nonVotant`. Quote `presence_rate` as published rather
+than deriving your own.
+
+A deputy whose mandate window falls entirely outside the data horizon has an
+empty denominator, and `presence_rate` is then `0` by convention rather than a
+real 0% - check `mandate_end` before reporting a zero as absenteeism. The
+Présidente de l'Assemblée sits at 100% by design; she appears on every scrutin.
+
+For participation in the votes that matter most politically, prefer
+`solennel_participation_rate`; for spread across sitting days,
+`voting_days_rate`.
+
+**Pagination.** `offset` is capped at 2000 on `/deputies` and `/votes` (not on
+`/themes/{slug}`). To walk past that ceiling on `/votes`, page with the opaque
+`next_cursor` returned by each response (`?before=<cursor>`), which has no depth
+limit; `/deputies` has no cursor, but 577 seats fit inside the ceiling anyway.
+
+**Rates are 0-1 floats, not percentages.** `0.87` means 87%.
+
+Methodology, definitions and known caveats: __FRONTEND__/methodologie
+Data licence: Licence Ouverte / Open Licence 2.0 (Etalab 2.0), attribution required.
+"""
+
+# One entry per include_router() tag below. Order here is the order the spec
+# renders in, so the endpoints an agent reaches for first come first.
+OPENAPI_TAGS = [
+    {
+        "name": "Deputies",
+        "description": (
+            "Deputy profiles, voting records and computed scorecards. Start here to "
+            "answer anything about one named person."
+        ),
+    },
+    {
+        "name": "Votes",
+        "description": (
+            "Scrutins (recorded votes): outcome, tallies, plain-French summary, and "
+            "the per-deputy breakdown. Start here to answer anything about one bill "
+            "or one vote."
+        ),
+    },
+    {
+        "name": "Groups",
+        "description": (
+            "Parliamentary groups: roster, cohesion, and the votes that split the "
+            "group hardest. Group membership is the deputy's current group only."
+        ),
+    },
+    {
+        "name": "Departments",
+        "description": "Deputies by département, with local aggregates and split votes.",
+    },
+    {
+        "name": "Themes",
+        "description": (
+            "Votes grouped by policy theme, with per-group positioning. Themes are "
+            "assigned by MonÉlu, not by the Assemblée."
+        ),
+    },
+    {
+        "name": "Agenda",
+        "description": (
+            "Upcoming séance publique sittings. Forward-looking and volatile - items "
+            "are cancelled and rescheduled routinely."
+        ),
+    },
+    {
+        "name": "Search",
+        "description": (
+            "Natural-language question answering over the corpus (RAG). Costs an LLM "
+            "call; prefer the structured endpoints when the question maps onto one."
+        ),
+    },
+    {
+        "name": "Verify",
+        "description": "Fact-check a claim about how a deputy voted, with citations.",
+    },
+    {
+        "name": "Quiz",
+        "description": (
+            'The "which deputy votes like you" questionnaire and its stateless '
+            "matching. Question content is curated, not derived from the database."
+        ),
+    },
+    {
+        "name": "API Keys",
+        "description": "Usage accounting for an issued API key.",
+    },
+    {
+        "name": "Feedback",
+        "description": "User-submitted feedback sinks. Write-only.",
+    },
+    {
+        "name": "Health",
+        "description": (
+            "Service status and data freshness. Check this before trusting a stale answer."
+        ),
+    },
+]
+
 app = FastAPI(
     title="MonÉlu API",
-    description="Civic data platform — French parliamentary votes and deputies.",
+    # str.replace, not str.format: the text names paths like /themes/{slug},
+    # and format() would read those braces as placeholders and raise.
+    description=API_DESCRIPTION.replace("__FRONTEND__", frontend_base_url()),
     version="0.1.0",
+    openapi_tags=OPENAPI_TAGS,
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
@@ -285,8 +415,25 @@ def landing() -> RedirectResponse:
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
-@app.get("/health", tags=["Health"])
+@app.get(
+    "/health",
+    tags=["Health"],
+    summary="Service health, record counts, and data freshness",
+)
 def health() -> JSONResponse:
+    """Liveness plus the numbers that say whether the data behind it is current.
+
+    `last_ingestion` is the timestamp of the most recent successful ingestion run
+    - the honest answer to "how fresh is this data". The pipeline runs on weekday
+    mornings, so a value from yesterday is normal and one from last week is not.
+
+    `services.dbt_marts` reports `degraded` when the analytics layer is missing.
+    The API stays up in that state, but the scorecard, alignment and vote-summary
+    endpoints return 503 and the group and department pages serve null rates.
+
+    Returns 200 when the database is reachable and 503 when it is not; the body
+    has the same shape either way.
+    """
     services: dict[str, str] = {}
     stats: dict = {}
     try:

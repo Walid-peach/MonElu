@@ -443,6 +443,19 @@ def compute_group_alignment(
 )
 @limiter.limit(tiered_limit(30))
 def get_questions(request: Request) -> QuizQuestionsResponse:
+    """The curated questionnaire behind "which deputy votes like you".
+
+    Each question is a real scrutin, hand-picked for being legible to a
+    non-specialist and genuinely divisive - one per theme. **The question text is
+    curated in the repository, not derived from the database**, so this is an
+    editorial selection and not a representative sample of the Assemblée's work.
+    Do not present agreement scores computed from it as a general measure of
+    alignment with a deputy.
+
+    Live tallies (`votes_for`, `votes_against`, `abstentions`, `result`,
+    `vote_date`) are joined in per request, so they stay current even though the
+    wording does not.
+    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -495,6 +508,18 @@ _weekly_cache_value: Optional[QuizWeeklyQuestion] = None
 )
 @limiter.limit(tiered_limit(30))
 def get_weekly(request: Request) -> QuizWeeklyQuestion:
+    """This week's featured scrutin, as a single ready-made question.
+
+    Picked by rule rather than curated: the most recent scrutin held **before**
+    the current week that clears the curation thresholds - a vote on a whole
+    text, enough voters, and a genuinely divided outcome - excluding anything
+    already in the `/quiz/questions` set. So it is a recent scrutin surfaced this
+    week, not necessarily one held this week.
+
+    Cached for the ISO week, so it is stable between calls and rotates on Monday.
+    404 when nothing in the recent window qualifies, which happens after a
+    recess; that is a normal response, not a failure.
+    """
     global _weekly_cache_key, _weekly_cache_value
     cutoff = week_start(date.today())
 
@@ -675,6 +700,19 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
 )
 @limiter.limit(tiered_limit(10))
 def match(request: Request, body: QuizMatchRequest) -> QuizMatchResponse:
+    """Score a set of quiz answers against every deputy and every group.
+
+    Stateless: nothing is persisted and nothing is logged. Send the answers, get
+    the agreement percentages back.
+
+    The scores are agreement over the handful of curated questions only - a
+    deputy at 90% agrees with you on those scrutins, not on their record. Treat
+    the ranking as a conversation starter, not as a measure of political
+    proximity.
+
+    `focus_deputy_id` adds one named deputy's match to the response even when
+    they fall below the ranking threshold; 422 when that id is unknown.
+    """
     return _compute_match(body)
 
 
@@ -738,6 +776,18 @@ def _strip_detail(data: dict) -> dict:
 )
 @limiter.limit(tiered_limit(10))
 def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
+    """Store a quiz result as an immutable snapshot, readable at `/quiz/s/<id>`.
+
+    Takes the same body as `/quiz/match` and **recomputes the result
+    server-side** - percentages supplied by the caller are never trusted or
+    stored.
+
+    Answers are excluded by default. `include_answers` opts into storing them so
+    a later visitor can compare their own result against the sharer's; the same
+    flag gates the `themes` summary, which with one question per theme would
+    otherwise re-encode the answers. Leave it off and the snapshot carries only
+    the aggregate scores.
+    """
     # Same input shape as /match: the result is recomputed here, never taken
     # from the client (ADR-025) — a share can only contain server-computed
     # numbers. Nothing else about the request is persisted.
@@ -787,6 +837,12 @@ def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
 # IPs, so the base per-IP limit was tripping during viral spikes.
 @limiter.limit(tiered_limit(300))
 def get_share(request: Request, share_id: uuid.UUID) -> QuizShareResponse:
+    """Read back a stored quiz result by id. Nothing is recomputed.
+
+    The snapshot is frozen as it was created, so scores reflect the deputies'
+    records at that moment rather than today's. `answers` and `themes` are
+    present only when the sharer opted in. 404 when the id is unknown.
+    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(

@@ -160,6 +160,45 @@ def _configured_rpm(handler) -> int | None:
     return int(match.group(1))
 
 
+def _schema_operations() -> dict[tuple[str, str], dict]:
+    """{(METHOD, path): operation object} straight out of the OpenAPI schema."""
+    return {
+        (method.upper(), path): operation
+        for path, operations in app.openapi()["paths"].items()
+        for method, operation in operations.items()
+        if method.upper() not in {"HEAD", "OPTIONS"}
+    }
+
+
+@pytest.mark.parametrize("key", sorted(_schema_operations()))
+def test_every_endpoint_is_described_in_the_spec(key):
+    """/openapi.json is the tool spec agents read — an undescribed route is unusable.
+
+    15 of 32 routes once shipped with neither a summary nor a docstring (MON-260),
+    which left an agent reading the spec with a function name and a response
+    schema it could not interpret. FastAPI takes `summary` from the decorator and
+    `description` from the handler's docstring, so both are cheap to keep and
+    invisible when they rot — hence this test rather than a review habit.
+
+    Fix a failure by writing the docstring, not by loosening the threshold: the
+    docstring is the agent-facing manual for that endpoint, so it should say what
+    the endpoint returns, in what units, and which domain caveat applies.
+    """
+    operation = _schema_operations()[key]
+    method, path = key
+
+    summary = (operation.get("summary") or "").strip()
+    description = (operation.get("description") or "").strip()
+
+    assert summary, f"{method} {path} has no summary — add summary=... to its @router decorator"
+    assert description, f"{method} {path} has no description — add a docstring to its handler"
+    # A bare restatement of the path helps nobody; require a real sentence.
+    assert len(description) >= 60, (
+        f"{method} {path} has a {len(description)}-character description, which is "
+        "too short to carry the units and caveats an agent needs"
+    )
+
+
 def test_router_prefixes_are_current():
     """Guards ROUTER_PREFIXES against drift in api/main.py."""
     reconstructed = set(_endpoint_functions())
