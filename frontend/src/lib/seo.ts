@@ -1,5 +1,6 @@
 import { anDeputyUrl, anDossierUrl } from '@/lib/an'
-import type { Deputy, Vote, VoteDetail } from '@/lib/api'
+import { API_BASE, type Deputy, type Vote, type VoteDetail } from '@/lib/api'
+import { CSV_EXPORTS, type CsvExport } from '@/lib/exports'
 import type { FaqItem } from '@/lib/faq'
 import { departmentLabel } from '@/lib/departments'
 import { SITE_URL } from '@/lib/site'
@@ -210,5 +211,134 @@ export function buildVoteJsonLd(vote: Vote | VoteDetail) {
     ...(vote.summary_plain ? { description: vote.summary_plain } : {}),
     ...(dossierUrl ? { about: { '@type': 'Legislation', url: dossierUrl } } : {}),
     url: `${SITE_URL}/votes/${vote.vote_id}`,
+  }
+}
+
+/**
+ * Licence the published data is under (MON-262).
+ *
+ * `/donnees` and `/licence-donnees` both say "Licence Ouverte 2.0 (Etalab)" in
+ * French prose. `license` as a URL is what makes the same statement legible to
+ * a crawler or an agent without parsing legal French, and it is one of the
+ * fields Google Dataset Search reads.
+ */
+export const DATA_LICENSE_URL = 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'
+
+/** The open-data portal every export ultimately derives from. */
+export const AN_OPEN_DATA_URL = 'https://data.assemblee-nationale.fr'
+
+/** Stable node id for the catalog, so `/licence-donnees` can point at it. */
+export const DATA_CATALOG_ID = `${SITE_URL}/donnees#catalog`
+
+/**
+ * Coverage of the production database, as an ISO 8601 open-ended interval.
+ *
+ * The horizon is 2025-07-01, not the start of the legislature (2024-07-07):
+ * production runs on a free database tier that cannot hold the full history
+ * (CLAUDE.md decision 7). Claiming the wider range would be a coverage promise
+ * the downloads do not keep, which is worse than advertising less.
+ */
+export const DATA_TEMPORAL_COVERAGE = '2025-07-01/..'
+
+function buildDatasetJsonLd(entry: CsvExport) {
+  return {
+    '@type': 'Dataset',
+    '@id': `${SITE_URL}/donnees#${entry.id}`,
+    name: entry.name,
+    description: entry.what,
+    url: `${SITE_URL}/donnees`,
+    inLanguage: 'fr',
+    license: DATA_LICENSE_URL,
+    isAccessibleForFree: true,
+    creator: { '@id': ORGANIZATION_ID },
+    publisher: { '@id': ORGANIZATION_ID },
+    includedInDataCatalog: { '@id': DATA_CATALOG_ID },
+    isBasedOn: AN_OPEN_DATA_URL,
+    temporalCoverage: DATA_TEMPORAL_COVERAGE,
+    spatialCoverage: { '@type': 'Country', name: 'France' },
+    keywords: entry.keywords,
+    variableMeasured: entry.columns.split(', ').map(name => ({
+      '@type': 'PropertyValue',
+      name,
+    })),
+    // A parameterized export has no single file to point at, so it is described
+    // by the url template a consumer fills in rather than by a `contentUrl`
+    // that would 404 on the braces.
+    ...(entry.href
+      ? {
+          distribution: {
+            '@type': 'DataDownload',
+            encodingFormat: 'text/csv',
+            contentUrl: entry.href,
+          },
+        }
+      : {
+          potentialAction: {
+            '@type': 'DownloadAction',
+            target: {
+              '@type': 'EntryPoint',
+              urlTemplate: `${API_BASE}${entry.pattern}`,
+              contentType: 'text/csv',
+              httpMethod: 'GET',
+            },
+          },
+        }),
+  }
+}
+
+/**
+ * The CSV exports as a `DataCatalog` of `Dataset` nodes (MON-262).
+ *
+ * `/donnees` documents three exports, their columns, their freshness and their
+ * reuse terms - all of it prose until now, on the one page whose entire purpose
+ * is machine consumption. `Dataset` is the vocabulary for that, and the type
+ * Google Dataset Search indexes on.
+ *
+ * Publisher and creator are `@id` references to the sitewide `Organization`
+ * (MON-273) rather than repeated inline: consumers merge the blocks into a
+ * single graph, and a dataset whose publisher resolves to a described entity
+ * counts for considerably more than one carrying a bare name.
+ */
+export function buildDataCatalogJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'DataCatalog',
+    '@id': DATA_CATALOG_ID,
+    name: `Données ouvertes ${SITE_NAME}`,
+    description:
+      "Exports CSV du relevé de vote de l'Assemblée nationale : bilans par député, historique de vote individuel et positions complètes par scrutin.",
+    url: `${SITE_URL}/donnees`,
+    inLanguage: 'fr',
+    license: DATA_LICENSE_URL,
+    usageInfo: `${SITE_URL}/licence-donnees`,
+    isAccessibleForFree: true,
+    creator: { '@id': ORGANIZATION_ID },
+    publisher: { '@id': ORGANIZATION_ID },
+    isBasedOn: AN_OPEN_DATA_URL,
+    dataset: CSV_EXPORTS.map(buildDatasetJsonLd),
+  }
+}
+
+/**
+ * The reuse terms page, as the licence node of the catalog (MON-262).
+ *
+ * `/licence-donnees` is the page an agent lands on when it asks "may I reuse
+ * this?". Answering in French prose alone leaves the answer to a parser; this
+ * states the licence as a URL, names the publisher, and points back at the
+ * catalog the terms govern.
+ */
+export function buildDataLicenseJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': `${SITE_URL}/licence-donnees#page`,
+    url: `${SITE_URL}/licence-donnees`,
+    name: 'Licence des données',
+    description:
+      "Conditions de réutilisation des données MonÉlu : Licence Ouverte 2.0 (Etalab), réutilisation commerciale autorisée, attribution obligatoire.",
+    inLanguage: 'fr',
+    license: DATA_LICENSE_URL,
+    publisher: { '@id': ORGANIZATION_ID },
+    about: { '@id': DATA_CATALOG_ID },
   }
 }

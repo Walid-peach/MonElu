@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
+import { JsonLd } from '@/components/JsonLd'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { buildDataLicenseJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
@@ -11,6 +13,7 @@ export const metadata: Metadata = {
 export default function LicenceDonneesPage() {
   return (
     <LegalPageLayout eyebrow="Réutilisation" title="Licence des données">
+      <JsonLd data={buildDataLicenseJsonLd()} />
 
       <LegalSection title="Origine des données">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
