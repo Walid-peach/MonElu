@@ -36,3 +36,13 @@ export function canonicalUrl(path = '/'): string {
   if (!trimmed) return SITE_URL
   return `${SITE_URL}${trimmed.startsWith('/') ? trimmed : `/${trimmed}`}`
 }
+
+/**
+ * Attribution line the Licence Ouverte 2.0 asks reusers to print (MON-261).
+ *
+ * Derived from `SITE_HOST` rather than written out, because `/donnees`,
+ * `/licence-donnees` and `/llms.txt` all publish it and a domain move that
+ * updated only some of them would leave the site telling reusers to credit a
+ * host it no longer answers on.
+ */
+export const DATA_ATTRIBUTION = `Données : Assemblée nationale, via ${SITE_HOST} - Licence Ouverte 2.0`

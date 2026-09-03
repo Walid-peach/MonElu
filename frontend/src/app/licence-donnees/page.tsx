@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { JsonLd } from '@/components/JsonLd'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { buildDataLicenseJsonLd } from '@/lib/seo'
-import { canonicalUrl } from '@/lib/site'
+import { canonicalUrl, DATA_ATTRIBUTION } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Licence des données - MonÉlu',
@@ -49,7 +49,7 @@ export default function LicenceDonneesPage() {
           suggérée :
         </p>
         <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', color: 'var(--dp-text)', fontFamily: 'monospace' }}>
-          Données : Assemblée nationale, via monelu.fr - Licence Ouverte 2.0
+          {DATA_ATTRIBUTION}
         </div>
       </LegalSection>
 

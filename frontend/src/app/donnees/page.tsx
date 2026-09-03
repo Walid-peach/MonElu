@@ -5,7 +5,7 @@ import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { API_BASE } from '@/lib/api'
 import { CSV_EXPORTS } from '@/lib/exports'
 import { buildDataCatalogJsonLd } from '@/lib/seo'
-import { canonicalUrl } from '@/lib/site'
+import { canonicalUrl, DATA_ATTRIBUTION } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Données ouvertes - MonÉlu',
@@ -78,7 +78,7 @@ export default function DonneesPage() {
           mentionner la source et la date. Attribution suggérée :
         </p>
         <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', color: 'var(--dp-text)', fontFamily: 'monospace' }}>
-          Données : Assemblée nationale, via monelu.fr - Licence Ouverte 2.0
+          {DATA_ATTRIBUTION}
         </div>
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: '10px 0 0' }}>
           Conditions détaillées sur la page <Link href="/licence-donnees" style={{ color: 'var(--dp-text)' }}>Licence des données</Link>.
