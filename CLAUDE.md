@@ -154,6 +154,12 @@ A new parser without such a guard ships a skeleton dataset on a green run - the 
 `HomeSummary` (`src/components/home/HomeSummary.tsx`) is the static prose block below the cinematic: it is what a crawler or an LLM actually reads about this site, since the scroll experience itself is ~1 KB of display strings inside animated panels.
 It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` from the homepage - keep it a server component with no interactivity.
 `e2e/smoke.spec.ts` asserts both halves at 390px and 1280px.
+- `/llms.txt` and `/llms-full.txt` are **route handlers**, not files in `public/` (MON-261).
+Every absolute URL in them derives from `SITE_URL`, and the section index is generated from `GROUP_ENTRIES`/`THEME_ENTRIES`, so a new group or theme cannot silently fall out of the file and a domain move carries them along.
+The body lives in `src/lib/llms.ts`; `__tests__/app/llms-txt.test.ts` fails if either file links a path with no matching `page.tsx` (`/verifier` is a 308 route handler, not a page - it is deliberately absent), drops a group or theme, or hardcodes a host.
+- `robots.ts` names GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-User, Claude-SearchBot, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot, Bytespider and meta-externalagent explicitly, all `allow: '/'` (MON-261).
+They are already covered by the `*` rule; listing them records the permissiveness as deliberate - this is Licence Ouverte 2.0 data whose purpose is reuse - so a later "tighten robots.txt" is a visible deletion rather than an inherited default.
+`Google-Extended` is the one entry with a distinct effect: it governs AI Overviews eligibility separately from Googlebot.
 
 **`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
@@ -216,7 +222,7 @@ python scripts/migrate.py && uvicorn api.main:app --host 0.0.0.0 --port $PORT
 
 Health check: `GET /health` — returns DB status, record counts, `last_ingestion` timestamp, and dbt mart row counts (degrades gracefully if marts are absent).
 
-**Moving to a new domain** takes two environment variables, not one (MON-254, MON-274): `FRONTEND_BASE_URL` on Railway (backend — the `GET /` redirect and every share URL) and `NEXT_PUBLIC_SITE_URL` on Vercel (frontend — `metadataBase`, canonicals, sitemap, robots, OG cards). Same origin under two names; the Vercel one is inlined at build time, so it only takes effect on the next build. Every frontend route builds its `alternates.canonical` from `canonicalUrl()` in `frontend/src/lib/site.ts` (MON-269), so the move carries the canonicals with it; `frontend/__tests__/app/canonical.test.ts` fails if a new `page.tsx` ships without one or hardcodes the origin instead. The only allowlisted exceptions are `~offline` (service-worker fallback) and `embed/votes/[id]` (already `robots: noindex`).
+**Moving to a new domain** takes two environment variables, not one (MON-254, MON-274): `FRONTEND_BASE_URL` on Railway (backend — the `GET /` redirect and every share URL) and `NEXT_PUBLIC_SITE_URL` on Vercel (frontend — `metadataBase`, canonicals, sitemap, robots, OG cards). Same origin under two names; the Vercel one is inlined at build time, so it only takes effect on the next build. Every frontend route builds its `alternates.canonical` from `canonicalUrl()` in `frontend/src/lib/site.ts` (MON-269), so the move carries the canonicals with it; `frontend/__tests__/app/canonical.test.ts` fails if a new `page.tsx` ships without one or hardcodes the origin instead. The only allowlisted exceptions are `~offline` (service-worker fallback) and `embed/votes/[id]` (already `robots: noindex`). The reuse-attribution line that `/donnees`, `/licence-donnees` and `/llms.txt` all print is `DATA_ATTRIBUTION` in the same file (MON-261) - it is built from `SITE_HOST`, so the move cannot leave the site asking reusers to credit a host it no longer answers on.
 
 ---
 
