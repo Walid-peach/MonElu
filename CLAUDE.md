@@ -271,9 +271,18 @@ Key architectural choices made during the build and why. Consult this before pro
 
 ### 4. Groq for RAG inference, OpenAI for embeddings
 
-**Decision:** Embeddings use OpenAI `text-embedding-3-small`; inference uses Groq `openai/gpt-oss-120b`.
+**Decision (revised 2026-09-04):** Embeddings use OpenAI `text-embedding-3-small`; inference uses Groq `openai/gpt-oss-120b`, with `openai/gpt-oss-20b` for routing and claim detection.
 
-**Why:** OpenAI embeddings are the quality baseline for French text and are cheap at this corpus size ($0.006 per full re-index). Groq inference is free-tier, significantly faster than OpenAI Chat, and produces adequate quality for civic Q&A at temperature=0.2. Separating the embedding and inference providers gives independent cost and quality control over each.
+**Original decision:** inference used Groq `llama-3.3-70b-versatile`, with `llama-3.1-8b-instant` as the classifier.
+
+**Why the provider split stands:** OpenAI embeddings are the quality baseline for French text and are cheap at this corpus size ($0.006 per full re-index). Groq inference is free-tier, significantly faster than OpenAI Chat, and adequate for civic Q&A at temperature=0.2. Separating the embedding and inference providers gives independent cost and quality control over each.
+
+**Why the models changed:** Groq decommissioned both Llama models. There was no deprecation window visible to us - `/search`, `/verify` and the nightly summary backfill simply began returning 500s, and `/health` kept reporting `groq: ok` because it only checks that the API key is not a placeholder string. `tests/live/test_groq_contract.py` now asserts the configured models still exist; it is the only check in the repo that spends a real token.
+
+**The constraint this introduced:** gpt-oss are *reasoning* models, and Groq bills reasoning tokens against `max_tokens` **before** any content or tool call is emitted. Every token budget in the codebase was written against a non-reasoning model and is therefore suspect:
+- Classifier calls set `reasoning_effort="low"` and a 512-token floor. At the inherited 32/64 the model spent the whole allowance thinking and returned no tool call, which Groq rejects as `tool_use_failed`.
+- `LLM_MAX_TOKENS` (2048) is a *shared* ceiling for reasoning plus answer on the generation paths, not an answer-length budget. Measured spend on a realistic 5-chunk verify prompt is ~220 tokens.
+- Tool calling is avoided for binary classification. `detect_claim` asks for one word of plain text: with a tool schema, gpt-oss-20b emitted enum values as parameter names and the call failed, which `detect_claim` swallows into `False` - a silent loss of the ADR-023 nudge. Reserve tool calls for genuinely structured output (`classify_intent`), not for one bit.
 
 ### 5. IVFFlat dropped; notable-deputy retrieval pin removed (MON-76)
 

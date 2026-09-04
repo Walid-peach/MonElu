@@ -30,7 +30,7 @@ import pytest
 from groq import Groq
 
 from rag.chain.llm_router import CLASSIFIER_MODEL
-from rag.constants import LLM_MODEL
+from rag.constants import LLM_MAX_TOKENS, LLM_MODEL
 
 pytestmark = [
     pytest.mark.live,
@@ -139,11 +139,13 @@ def test_verify_json_mode_returns_parseable_json(client: Groq):
             },
         ],
         temperature=0.0,
-        max_tokens=1024,
+        max_tokens=LLM_MAX_TOKENS,
         response_format={"type": "json_object"},
     )
     choice = resp.choices[0]
-    assert choice.finish_reason != "length", "1024 tokens was not enough for JSON + reasoning"
+    assert choice.finish_reason != "length", (
+        f"{LLM_MAX_TOKENS} tokens was not enough for JSON + reasoning"
+    )
     parsed = json.loads(choice.message.content)
     assert "verdict" in parsed
 
@@ -180,3 +182,92 @@ def test_summary_fits_its_token_budget():
     )
     content = (choice.message.content or "").strip()
     assert len(content) > 40, f"summary implausibly short: {content!r}"
+
+
+# The short synthetic fixtures above under-represent production: verify formats
+# up to 5 retrieved chunks into the prompt, and a harder claim buys more
+# reasoning. These use a realistic context so LLM_MAX_TOKENS is exercised
+# against something close to what the endpoint actually sends.
+
+_CANDIDATE_CHUNKS = "\n\n".join(
+    f"Scrutin {1200 + i} du 2026-0{i + 1}-15 - Titre: Projet de loi de finances "
+    f"rectificative pour 2026, article {i + 3}, relatif au financement des "
+    f"collectivités territoriales et à la répartition de la dotation globale de "
+    f"fonctionnement. Résultat: {'adopté' if i % 2 else 'rejeté'}. "
+    f"Pour: {289 - i * 7}, Contre: {241 + i * 5}, Abstentions: {12 + i}. "
+    f"Position de Gabriel Attal: {'pour' if i % 2 else 'contre'}."
+    for i in range(5)
+)
+
+
+def test_verify_survives_a_realistic_context(client: Groq):
+    """
+    A truncated verify body fails _parse_llm_verdict and is forced to
+    "inverifiable" - a plausible-looking wrong verdict rather than an error - so
+    running out of budget here is silent in production. This is the regression
+    test for that.
+    """
+    resp = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Tu vérifies des affirmations sur les votes de l'Assemblée "
+                    "nationale. Analyse chaque scrutin candidat, puis réponds "
+                    "UNIQUEMENT en JSON avec les clés verdict "
+                    "(vrai|faux|trompeur|inverifiable), explication (2-4 phrases, "
+                    "en français), vote_ids (liste des scrutins cités)."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Affirmation: Gabriel Attal a systématiquement voté pour le "
+                    f"budget 2026.\n\nScrutins candidats:\n{_CANDIDATE_CHUNKS}"
+                ),
+            },
+        ],
+        temperature=0.0,
+        max_tokens=LLM_MAX_TOKENS,
+        response_format={"type": "json_object"},
+    )
+    choice = resp.choices[0]
+    assert choice.finish_reason != "length", (
+        f"verify truncated at LLM_MAX_TOKENS={LLM_MAX_TOKENS} on a 5-chunk "
+        f"context; _parse_llm_verdict would force 'inverifiable'"
+    )
+    assert "verdict" in json.loads(choice.message.content)
+
+
+def test_rag_answer_survives_a_realistic_context(client: Groq):
+    """ask()'s shape at production context size - a truncated answer is user-visible."""
+    resp = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Tu réponds en français clair sur les votes de l'Assemblée "
+                    "nationale, en te basant uniquement sur le contexte fourni. "
+                    "Termine par une ligne 'Confiance: haute|moyenne|faible'."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Contexte:\n{_CANDIDATE_CHUNKS}\n\nQuestion: Quels votes sur "
+                    "le budget ont eu lieu, comment Gabriel Attal s'est-il "
+                    "positionné, et quel en a été le résultat ?"
+                ),
+            },
+        ],
+        temperature=0.2,
+        max_tokens=LLM_MAX_TOKENS,
+    )
+    choice = resp.choices[0]
+    assert choice.finish_reason != "length", (
+        f"RAG answer truncated at LLM_MAX_TOKENS={LLM_MAX_TOKENS}"
+    )
+    # extract_confidence() parses this trailer; a truncated answer loses it.
+    assert "Confiance" in (choice.message.content or "")

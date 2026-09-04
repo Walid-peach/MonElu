@@ -12,11 +12,11 @@
 # gate: an upstream decommission is not a property of a pull request, and a
 # third-party outage must not block merges. Weekly plus manual dispatch is
 # enough to turn a silent breakage into a red job.
-name: MonÉlu — LLM Contract
+name: MonÉlu - LLM Contract
 
 on:
   schedule:
-    - cron: '0 8 * * 1'   # 08:00 UTC Mondays — after the daily jobs, before the week
+    - cron: '0 8 * * 1'   # 08:00 UTC Mondays - after the daily jobs, before the week
   workflow_dispatch:
   push:
     branches: [master]
@@ -52,7 +52,11 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        # requirements-dev.txt is what carries pytest - requirements.txt alone
+        # leaves the run step with no test runner at all.
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Run live LLM contract tests
         env:

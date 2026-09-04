@@ -17,7 +17,7 @@ from rag.chain.llm_router import detect_claim, llm_route  # noqa: E402
 from rag.chain.prompts import RAG_TEMPLATE, build_system_prompt  # noqa: E402
 from rag.chain.retriever import retrieve  # noqa: E402
 from rag.chain.sql_router import route as sql_route  # noqa: E402
-from rag.constants import LLM_MODEL  # noqa: E402
+from rag.constants import LLM_MAX_TOKENS, LLM_MODEL  # noqa: E402
 
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
 
@@ -91,7 +91,7 @@ def ask(
             {"role": "user", "content": user_message},
         ],
         temperature=0.2,
-        max_tokens=1024,
+        max_tokens=LLM_MAX_TOKENS,
     )
 
     clean_answer, _llm_confidence = extract_confidence(response.choices[0].message.content)
