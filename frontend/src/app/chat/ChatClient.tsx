@@ -1,6 +1,7 @@
 'use client'
 // Typography exception: this page uses inline styles throughout because all colors and
-// sizes are computed dynamically from JS dark/light mode state (dk, txt1, txt2, bg0, …).
+// sizes are computed dynamically from the site theme (dk, txt1, txt2, bg0, …), which this
+// page reads from the shared ThemeProvider rather than from state of its own (MON-168).
 // Converting to Tailwind classes would require a full theme rewrite.
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -11,6 +12,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { VerdictCard } from '@/components/VerdictCard'
 import { AsyncStatus } from '@/components/ui/AsyncStatus'
 import { mdToHtml, mapSource, CONFIDENCE_META, CONFIDENCE_EXPLANATION } from '@/lib/chatFormat'
+import { useTheme } from '@/components/ThemeProvider'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -139,9 +141,10 @@ function ChatInner() {
   // frozen at whatever it was on first mount.
   const [syncedUrlMode, setSyncedUrlMode] = useState<ChatMode>(initialMode)
   const [loading, setLoading]     = useState(false)
-  const [darkMode, setDarkMode]   = useState<boolean>(() => {
-    try { return localStorage.getItem('monelu-dark') === '1' } catch { return false }
-  })
+  // Theme comes from the site-wide ThemeProvider (MON-168): this page used to
+  // keep its own `monelu-dark` flag, so the nav toggle darkened the chrome and
+  // left the conversation panel white.
+  const { theme, toggleTheme } = useTheme()
   const [conversations, setConversations] = useState<StoredConv[]>(() => {
     try { return loadConversations() } catch { return [] }
   })
@@ -177,13 +180,6 @@ function ChatInner() {
       if (claim) setInputVal(claim.slice(0, VERIFY_MAX_LENGTH))
     }
   }
-
-  const toggleDark = useCallback(() => {
-    setDarkMode(d => {
-      try { localStorage.setItem('monelu-dark', d ? '0' : '1') } catch {}
-      return !d
-    })
-  }, [])
 
   // Auto-scroll
   useEffect(() => {
@@ -467,13 +463,16 @@ function ChatInner() {
   const hasMessages = messages.length > 0
   const tooShortForVerify = mode === 'verify' && inputVal.trim().length < VERIFY_MIN_LENGTH
   const canSend = inputVal.trim().length > 0 && !loading && !tooShortForVerify
-  const dk = darkMode
+  const dk = theme === 'dark'
   const bg0  = dk ? '#0B1525' : '#fff'
   const bg1  = dk ? '#111C35' : '#F7F8FA'
   const bdr  = dk ? 'rgba(255,255,255,0.07)' : '#F0F0F2'
   const txt1 = dk ? 'rgba(255,255,255,0.90)' : '#1B2B50'
   const txt2 = dk ? 'rgba(255,255,255,0.45)' : '#6B7280'
   const txt3 = dk ? 'rgba(255,255,255,0.26)' : '#9CA3AF'
+  // Mirrors --dp-red from globals.css: #DC2626 scores 3.8:1 on the dark chat
+  // surface, below the 4.5:1 AA floor MON-159 set for body text.
+  const red1 = dk ? '#FF6B60' : '#DC2626'
 
   const SUGGESTIONS = [
     { q: 'Quels groupes ont voté contre la réforme des retraites ?', iconBg: '#EFF3FB',
@@ -567,7 +566,7 @@ function ChatInner() {
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.36)' }}>Plan gratuit</div>
             </div>
             <button
-              onClick={toggleDark}
+              onClick={toggleTheme}
               title={dk ? 'Mode clair' : 'Mode sombre'}
               style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.35)', transition: 'color 140ms' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.70)')}
@@ -714,7 +713,7 @@ function ChatInner() {
                     {/* AsyncStatus's text has no color of its own — it inherits, so the
                         error red from the pre-MON-216 plain-text rendering is preserved
                         here rather than added to the shared component. */}
-                    <div style={{ flex: 1, marginTop: 4, fontSize: 15, lineHeight: 1.75, color: '#DC2626' }}>
+                    <div style={{ flex: 1, marginTop: 4, fontSize: 15, lineHeight: 1.75, color: red1 }}>
                       <AsyncStatus
                         status={msg.text}
                         error={msg.text}
@@ -936,7 +935,7 @@ function ChatInner() {
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                 {mode === 'verify' ? (
-                  <span style={{ fontSize: 11.5, color: tooShortForVerify && inputVal.length > 0 ? '#DC2626' : txt3 }}>
+                  <span style={{ fontSize: 11.5, color: tooShortForVerify && inputVal.length > 0 ? red1 : txt3 }}>
                     {inputVal.length}/{VERIFY_MAX_LENGTH}
                   </span>
                 ) : (
