@@ -2,4 +2,5 @@
 testpaths = ["tests"]
 markers = [
     "integration: marks tests that require a live Postgres 15 + pgvector instance",
+    "live: marks tests that call a paid third-party API (Groq); needs --run-live",
 ]
