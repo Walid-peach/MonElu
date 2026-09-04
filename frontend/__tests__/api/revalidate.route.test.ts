@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+import { NextRequest } from 'next/server'
+
 import { HEALTH_TAG } from '@/lib/cacheTags'
 
 const revalidatePath = jest.fn()
@@ -22,11 +24,10 @@ beforeAll(async () => {
 afterEach(() => jest.clearAllMocks())
 
 const request = (secret: string | null) =>
-  new Request('http://localhost/api/revalidate', {
+  new NextRequest('http://localhost/api/revalidate', {
     method: 'POST',
     headers: secret === null ? {} : { 'x-revalidate-secret': secret },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as any
+  })
 
 describe('POST /api/revalidate', () => {
   // GH #354: the health fetch behind the root-layout freshness badge is on a
