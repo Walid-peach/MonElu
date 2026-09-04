@@ -1,4 +1,12 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL
+/**
+ * Origin of the MonÉlu REST API.
+ *
+ * Exported because `/donnees` prints the full `GET <base><path>` line for each
+ * CSV export and `@/lib/seo` builds the matching JSON-LD url templates from the
+ * same value - a second copy of the origin is a second thing to change on a
+ * host move.
+ */
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL
   || 'https://monelu-production.up.railway.app'
 
 export type Deputy = {
