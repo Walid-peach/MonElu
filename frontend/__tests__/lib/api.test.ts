@@ -1,6 +1,8 @@
 // Tests for the api client — focused on error handling fixes from PR review.
 // fetch is patched globally by jest-environment-jsdom; we override it per-test.
 
+import { HEALTH_REVALIDATE_SECONDS, HEALTH_TAG } from '@/lib/cacheTags'
+
 const API_BASE = 'https://monelu-production.up.railway.app'
 
 // Re-import after setting up env so NEXT_PUBLIC_API_URL falls back to the Railway base.
@@ -228,5 +230,37 @@ describe('nullIfMissing', () => {
     const error = new ApiError(503, '/deputies/PA1592/')
     expect(error.status).toBe(503)
     expect(error.message).toContain('/deputies/PA1592/')
+  })
+})
+
+// GH #354: `FreshnessBadge` renders from the root layout, and Next.js takes the
+// lowest `revalidate` across a route and its layouts - so a 300 s health fetch
+// made every otherwise-static route regenerate every five minutes and blew past
+// the Vercel Hobby ISR write allowance. The badge is refreshed by tag from
+// `/api/revalidate` after ingestion instead, with a bounded time fallback.
+describe('api.health cache contract', () => {
+  it('tags the fetch so /api/revalidate can invalidate it on demand', async () => {
+    mockFetch(200, { last_ingestion: '2026-09-04T06:00:00Z' })
+    await api.health()
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${API_BASE}/health/`,
+      expect.objectContaining({
+        next: expect.objectContaining({ tags: [HEALTH_TAG] }),
+      })
+    )
+  })
+
+  it('falls back to a bounded interval well above five minutes', async () => {
+    mockFetch(200, { last_ingestion: '2026-09-04T06:00:00Z' })
+    await api.health()
+    const init = (global.fetch as jest.Mock).mock.calls[0][1] as RequestInit & {
+      next: { revalidate: number }
+    }
+    expect(init.next.revalidate).toBe(HEALTH_REVALIDATE_SECONDS)
+    // 6-24 h: long enough that the layout cannot recreate the write volume,
+    // short enough that the badge still recovers on its own if the ingestion
+    // revalidate call never fires.
+    expect(HEALTH_REVALIDATE_SECONDS).toBeGreaterThanOrEqual(6 * 60 * 60)
+    expect(HEALTH_REVALIDATE_SECONDS).toBeLessThanOrEqual(24 * 60 * 60)
   })
 })
