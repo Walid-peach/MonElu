@@ -37,7 +37,7 @@ Production API: https://monelu-production.up.railway.app
 | API framework | FastAPI + uvicorn | Direct psycopg2, no ORM |
 | Transform layer | dbt (staging → intermediate → marts) | Runs against prod Supabase on merge to `master` |
 | RAG embeddings | OpenAI `text-embedding-3-small` | 1 536 dimensions, ~$0.006 per full re-index |
-| RAG inference | Groq `llama-3.3-70b-versatile` | temperature=0.2; free tier, faster than OpenAI |
+| RAG inference | Groq `openai/gpt-oss-120b` | temperature=0.2; free tier. Routing/claim detection use `openai/gpt-oss-20b`. Both are reasoning models - reasoning tokens count against `max_tokens` |
 | Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
 | CI/CD | GitHub Actions (4 workflows) | See Workflows section |
 | Experiment tracking | MLflow (local) | router suite + retrieval suite eval (11 questions total) |
@@ -102,6 +102,7 @@ Assemblée Nationale Open Data (ZIPs)
 | `deploy.yml` | Merge to `master` | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index |
 | `dbt_docs.yml` | Push to `master` touching `transform/` | Generate + deploy lineage docs to GitHub Pages |
+| `llm_contract.yml` | Weekly Mon 08:00 UTC + on changes to the LLM call sites | Runs `tests/live` against the real Groq API: asserts the configured models still exist and still satisfy the call shapes (tool call, JSON mode, token budgets). The PR gate mocks Groq and `/health` never calls it, so this is the only check that catches an upstream model decommission - the 2026-09 outage was invisible to both. Deliberately off the PR gate: a third-party outage must not block merges. |
 
 ### Key Layers
 
@@ -128,7 +129,7 @@ Assemblée Nationale Open Data (ZIPs)
 - `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` always truncates before embedding (full rebuild, ~$0.006/run).
 - `chain/retriever.py`: Exact cosine similarity via pgvector `<=>`. Supports `chunk_type`, `deputy_id`, and auto-detected `result` filters (`adopté`/`rejeté`). Notable deputy names detected and their chunk pinned as first result. TTL-cached notable-deputy map (1h). Note: `register_vector` requires a plain psycopg2 cursor, not a `RealDictCursor`.
 - `chain/prompts.py`: TTL-cached system prompt (data horizon refreshed hourly) via `build_system_prompt()`. Call per request — do not cache the return value.
-- `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `llama-3.3-70b-versatile` (temperature=0.2)
+- `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `openai/gpt-oss-120b` (temperature=0.2)
 - `experiments/mlflow_eval.py`: 11 golden Q&A pairs split into router suite (live SQL ground truth) and retrieval suite (keyword scoring).
 - 3,741 chunks in production: 3,149 vote + 577 deputy + 12 party + 1 global_stats + 2 notable_deputy · avg 87 tokens · $0.0065 to embed
 
@@ -219,7 +220,7 @@ Key architectural choices made during the build and why. Consult this before pro
 
 ### 4. Groq for RAG inference, OpenAI for embeddings
 
-**Decision:** Embeddings use OpenAI `text-embedding-3-small`; inference uses Groq `llama-3.3-70b-versatile`.
+**Decision:** Embeddings use OpenAI `text-embedding-3-small`; inference uses Groq `openai/gpt-oss-120b`.
 
 **Why:** OpenAI embeddings are the quality baseline for French text and are cheap at this corpus size ($0.006 per full re-index). Groq inference is free-tier, significantly faster than OpenAI Chat, and produces adequate quality for civic Q&A at temperature=0.2. Separating the embedding and inference providers gives independent cost and quality control over each.
 

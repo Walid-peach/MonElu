@@ -2,7 +2,7 @@
 rag/chain/rag_chain.py
 
 RAG pipeline: retrieve relevant chunks from pgvector, then answer with
-Groq llama-3.3-70b-versatile.
+Groq openai/gpt-oss-120b.
 """
 
 import os

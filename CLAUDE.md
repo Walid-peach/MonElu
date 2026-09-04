@@ -37,9 +37,9 @@ Production API: https://monelu-production.up.railway.app
 | API framework | FastAPI + uvicorn | Direct psycopg2, no ORM |
 | Transform layer | dbt (staging → intermediate → marts) | Runs against prod Supabase on merge to `master` |
 | RAG embeddings | OpenAI `text-embedding-3-small` | 1 536 dimensions, ~$0.006 per full re-index |
-| RAG inference | Groq `llama-3.3-70b-versatile` | temperature=0.2; free tier, faster than OpenAI |
+| RAG inference | Groq `openai/gpt-oss-120b` | temperature=0.2; free tier. Routing/claim detection use `openai/gpt-oss-20b`. Both are reasoning models - reasoning tokens count against `max_tokens` |
 | Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
-| CI/CD | GitHub Actions (5 workflows) | See Workflows section |
+| CI/CD | GitHub Actions (6 workflows) | See Workflows section |
 | Error tracking | Sentry (API + frontend) | Opt-in via `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` — no-ops when unset. See `docs/monitoring.md` |
 | Experiment tracking | MLflow (local) | router suite + retrieval suite eval (11 questions total) |
 | IaC | Terraform ~> 5.0 (AWS, archived) | `archive/infra-aws/` — not applied, kept as reference |
@@ -105,6 +105,7 @@ Assemblée Nationale Open Data (ZIPs)
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index, then `dbt run` → operational tail. Every step after `dbt run` is `continue-on-error` + `!cancelled()`, and a final **data-quality gate** re-fails the job on `dbt snapshot`/`dbt test`/`dbt source freshness`/quiz-validation outcomes (MON-250) — a failing assertion must never skip cache revalidation or the monitoring probes. The DB-size probe is deliberately outside the gate. |
 | `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window — the actual retry backstop (MON-221) |
 | `dbt_docs.yml` | Push to `master` touching `transform/` | Generate + deploy lineage docs to GitHub Pages |
+| `llm_contract.yml` | Weekly Mon 08:00 UTC + on changes to the LLM call sites | Runs `tests/live` against the real Groq API: asserts the configured models still exist and still satisfy the call shapes (tool call, JSON mode, token budgets). The PR gate mocks Groq and `/health` never calls it, so this is the only check that catches an upstream model decommission - the 2026-09 outage was invisible to both. Deliberately off the PR gate: a third-party outage must not block merges. |
 
 ### Key Layers
 
@@ -139,7 +140,7 @@ A new parser without such a guard ships a skeleton dataset on a green run - the 
 - `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` (no `--since`) is a full rebuild (~$0.006/run) that re-embeds into a `document_chunks_staging` table and swaps it in atomically (`ALTER TABLE ... RENAME`) once every step succeeds (MON-233) — `document_chunks` is never truncated up front, so a mid-run failure leaves the previous index live. `build --since` is a separate incremental mode that only embeds new votes/affected deputies and refreshes aggregate chunks in place.
 - `chain/retriever.py`: Exact cosine similarity via pgvector `<=>`. Supports `chunk_type`, `deputy_id`, and auto-detected `result` filters (`adopté`/`rejeté`). Notable deputy names detected and their chunk pinned as first result. TTL-cached notable-deputy map (1h). Note: `register_vector` requires a plain psycopg2 cursor, not a `RealDictCursor`.
 - `chain/prompts.py`: TTL-cached system prompt (data horizon refreshed hourly) via `build_system_prompt()`. Call per request — do not cache the return value.
-- `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `llama-3.3-70b-versatile` (temperature=0.2). RAG-path answers to claim-shaped input carry `suggested_action: "verify"` (ADR-023): `detect_claim()` in `llm_router.py` (regex pre-filter + small classifier) only annotates the response for the UI nudge - it never calls the verify chain.
+- `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `openai/gpt-oss-120b` (temperature=0.2). RAG-path answers to claim-shaped input carry `suggested_action: "verify"` (ADR-023): `detect_claim()` in `llm_router.py` (regex pre-filter + small classifier) only annotates the response for the UI nudge - it never calls the verify chain.
 - `chain/verify.py`: `verify_claim()` — claim verification (MON-126, ADR-022): deputy detection over all deputies, vote-chunk retrieval, positions join, structured JSON verdict (`vrai`/`faux`/`trompeur`/`inverifiable`). Cited vote_ids are validated against the votes table in code; low similarity, parse failure, or a factual verdict with no valid citation all force `inverifiable`.
 - `experiments/mlflow_eval.py`: 11 golden Q&A pairs split into router suite (live SQL ground truth) and retrieval suite (keyword scoring).
 - ~5,900 chunks in production (2026-07): 5,105 vote + 645 deputy + 12 party + 1 global_stats + 102 notable_deputy + 20 law_summary · party and global chunks count active mandates only
@@ -270,7 +271,7 @@ Key architectural choices made during the build and why. Consult this before pro
 
 ### 4. Groq for RAG inference, OpenAI for embeddings
 
-**Decision:** Embeddings use OpenAI `text-embedding-3-small`; inference uses Groq `llama-3.3-70b-versatile`.
+**Decision:** Embeddings use OpenAI `text-embedding-3-small`; inference uses Groq `openai/gpt-oss-120b`.
 
 **Why:** OpenAI embeddings are the quality baseline for French text and are cheap at this corpus size ($0.006 per full re-index). Groq inference is free-tier, significantly faster than OpenAI Chat, and produces adequate quality for civic Q&A at temperature=0.2. Separating the embedding and inference providers gives independent cost and quality control over each.
 

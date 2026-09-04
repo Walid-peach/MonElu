@@ -784,7 +784,7 @@ Where a dossier has several scrutins, bind to the earliest one on or after the s
 Where no scrutin exists yet, the link falls back to the official AN dossier page, the construction MON-89 already uses on vote cards.
 
 **5. Summaries are generated only where there is something to summarize.**
-Groq `llama-3.3-70b-versatile` at temperature 0.1, reusing the prompt and the `VALID_THEMES` set from `scripts/generate_vote_summaries.py`.
+Groq `openai/gpt-oss-120b` at temperature 0.1, reusing the prompt and the `VALID_THEMES` set from `scripts/generate_vote_summaries.py`.
 Items whose `objet` is a stub get **no LLM call and no summary**; the UI renders `point_type` instead.
 A summary is regenerated when `objet_hash` changes.
 

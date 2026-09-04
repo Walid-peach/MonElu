@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 EMBEDDING_MODEL = "text-embedding-3-small"
-LLM_MODEL = "llama-3.3-70b-versatile"
+LLM_MODEL = "openai/gpt-oss-120b"
 
 # Notable deputies: {deputy_id: {name, bio, keywords}}
 # Edit notable_deputies.json to add/remove entries — no code change needed.

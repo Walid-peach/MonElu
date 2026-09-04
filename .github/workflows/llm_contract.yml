@@ -1,0 +1,63 @@
+# Live contract check against the Groq API (tests/live/test_groq_contract.py).
+#
+# Exists because of the 2026-09 outage: Groq decommissioned
+# llama-3.3-70b-versatile and llama-3.1-8b-instant, and /search, /verify and the
+# nightly summary backfill all started returning 500s with nothing to catch it.
+# The PR gate mocks Groq, so it asserts how the code handles a well-formed
+# response and never that the model still exists or still fills the schema;
+# /health reports groq "ok" from the presence of a key string, without calling
+# the API, so production looked green for the whole outage.
+#
+# This is the one job that spends real tokens. It is deliberately NOT on the PR
+# gate: an upstream decommission is not a property of a pull request, and a
+# third-party outage must not block merges. Weekly plus manual dispatch is
+# enough to turn a silent breakage into a red job.
+name: MonÉlu — LLM Contract
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'   # 08:00 UTC Mondays — after the daily jobs, before the week
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      # Any change to what model is called, or how, re-runs the contract.
+      - 'rag/constants.py'
+      - 'rag/chain/llm_router.py'
+      - 'rag/chain/verify.py'
+      - 'rag/chain/rag_chain.py'
+      - 'scripts/generate_vote_summaries.py'
+      - 'tests/live/**'
+      - '.github/workflows/llm_contract.yml'
+
+concurrency:
+  group: llm-contract
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run live LLM contract tests
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # Not used by these tests, but rag.chain imports construct the client
+          # at module scope and raise without a value present.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: pytest tests/live -m live --run-live -v
