@@ -160,6 +160,11 @@ Any new server fetch added to the root layout must use the same shape; a short `
 `HomeSummary` (`src/components/home/HomeSummary.tsx`) is the static prose block below the cinematic: it is what a crawler or an LLM actually reads about this site, since the scroll experience itself is ~1 KB of display strings inside animated panels.
 It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` from the homepage - keep it a server component with no interactivity.
 `e2e/smoke.spec.ts` asserts both halves at 390px and 1280px.
+- **A page never keeps its own theme state** (MON-168).
+`ThemeProvider` (`src/components/ThemeProvider.tsx`) is the single source, stored under `THEME_STORAGE_KEY = 'monelu-theme'` and applied as the `dark` class on `<html>`; every consumer reads it through `useTheme()`.
+`/chat` shipped with a private `monelu-dark` localStorage flag instead, so the nav toggle darkened the chrome and left the whole conversation panel white - the two systems shared no state and no key, and neither toggle moved the other half.
+The chat page still computes its colors as inline styles rather than Tailwind classes (it is the largest file in the app), which is fine: what matters is that the `dk` boolean feeding them comes from `useTheme()`.
+`__tests__/app/chat-theme.test.tsx` fails if `'monelu-dark'` reappears in `ChatClient.tsx` or if the panel background stops tracking the stored site theme.
 - `/llms.txt` and `/llms-full.txt` are **route handlers**, not files in `public/` (MON-261).
 Every absolute URL in them derives from `SITE_URL`, and the section index is generated from `GROUP_ENTRIES`/`THEME_ENTRIES`, so a new group or theme cannot silently fall out of the file and a domain move carries them along.
 The body lives in `src/lib/llms.ts`; `__tests__/app/llms-txt.test.ts` fails if either file links a path with no matching `page.tsx` (`/verifier` is a 308 route handler, not a page - it is deliberately absent), drops a group or theme, or hardcodes a host.
