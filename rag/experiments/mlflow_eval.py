@@ -20,6 +20,7 @@ import mlflow
 import psycopg2
 
 import rag.chain.rag_chain as _rag_chain
+from rag.constants import LLM_MODEL
 
 
 def _get_live_counts() -> dict:
@@ -239,7 +240,7 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
         mlflow.set_experiment("monelu-rag-eval")
         with mlflow.start_run(run_name=f"monelu-rag-{label}"):
             mlflow.log_param("k", k)
-            mlflow.log_param("llm", "llama-3.3-70b-versatile")
+            mlflow.log_param("llm", LLM_MODEL)
             mlflow.log_param("embedding_model", "text-embedding-3-small")
             mlflow.log_param("sql_router", "enabled" if use_sql_router else "disabled")
             mlflow.log_param("citation_prompt", "enabled")

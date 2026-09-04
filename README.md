@@ -147,7 +147,7 @@ On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}`
 
 **Monitoring:** Sentry (API + frontend), opt-in via `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`
 
-**Phase 2 — RAG:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
+**Phase 2 — RAG:** OpenAI `text-embedding-3-small` · Groq `openai/gpt-oss-120b` · tiktoken · MLflow
 
 **Phase 4 — Transform:** dbt 1.12 · dbt_utils · `analytics_staging` + `analytics_marts` schemas
 
