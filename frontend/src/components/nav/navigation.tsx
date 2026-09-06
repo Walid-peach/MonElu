@@ -55,6 +55,10 @@ const VoteIcon = (
   <svg {...iconProps}><path d="M3 12h4l3 8 4-16 3 8h4" /></svg>
 )
 
+const AgendaIcon = (
+  <svg {...iconProps}><rect x="3" y="5" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="16" y1="3" x2="16" y2="7" /></svg>
+)
+
 const SearchIcon = (
   <svg {...iconProps}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></svg>
 )
@@ -83,6 +87,7 @@ export const exploreSections: NavSection[] = [
       { kind: 'link', href: '/deputes', label: 'Députés', description: 'Annuaire des 577 élus', icon: DeputyIcon },
       { kind: 'link', href: '/deputes/comparer', label: 'Comparer', description: 'Deux élus, vote par vote', icon: CompareIcon },
       { kind: 'link', href: '/votes', label: 'Votes', description: 'Chaque scrutin, décrypté et sourcé', icon: VoteIcon },
+      { kind: 'link', href: '/agenda', label: 'Ordre du jour', description: 'Ce qui arrive en séance cette semaine', icon: AgendaIcon },
     ],
   },
   {

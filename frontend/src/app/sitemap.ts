@@ -83,6 +83,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/deputes/tableau`, changeFrequency: 'daily', priority: 0.6 },
     { url: `${SITE_URL}/donnees`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/votes`, changeFrequency: 'daily', priority: 0.9 },
+    // The forward view (MON-213) - rewritten daily, like /votes.
+    { url: `${SITE_URL}/agenda`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/mon-depute`, changeFrequency: 'monthly', priority: 0.6 },
     ...THEME_ENTRIES.map(({ slug }) => ({
       url: `${SITE_URL}/themes/${slug}`,

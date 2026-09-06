@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
   // a client component that fetches the API directly, with no ISR cache to invalidate.
   revalidatePath('/')
   revalidatePath('/votes')
+  // Refreshed by `ingest_agenda.py` in the same nightly run (MON-210, MON-213).
+  revalidatePath('/agenda')
   revalidatePath('/deputes')
   revalidatePath('/deputes/[id]', 'page')
   revalidatePath('/votes/[id]', 'page')
