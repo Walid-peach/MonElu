@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
-import { canonicalUrl } from '@/lib/site'
+import { SITE_URL, canonicalUrl } from '@/lib/site'
 
 const API_BASE = 'https://monelu-production.up.railway.app'
 
@@ -86,6 +86,30 @@ export default function DeveloppeursPage() {
         <div style={codeBlockStyle}>
           curl -H &quot;X-API-Key: votre_cle&quot; {API_BASE}/keys/usage
         </div>
+      </LegalSection>
+
+      <LegalSection title="Intégrer un vote (oEmbed)">
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          Chaque page de scrutin expose un encart embarquable et déclare un point d&apos;accès{' '}
+          <a href="https://oembed.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text)' }}>oEmbed</a>.
+          Sur Notion, Slack, Substack, Ghost, WordPress ou Discourse, coller l&apos;URL de la page suffit :
+          l&apos;encart s&apos;affiche à la place du lien.
+        </p>
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          Pour les intégrations sur mesure, le point d&apos;accès répond directement :
+        </p>
+        <div style={codeBlockStyle}>
+          curl &quot;{SITE_URL}/api/oembed?url={SITE_URL}/votes/VTANR5L17V1234&amp;format=json&quot;
+        </div>
+        <p style={{ ...textStyle, margin: '10px 0 0' }}>
+          La réponse est une charge utile oEmbed <code>rich</code> standard (<code>version</code>,{' '}
+          <code>type</code>, <code>title</code>, <code>width</code>, <code>height</code>, <code>html</code>).
+          Les paramètres <code>maxwidth</code> et <code>maxheight</code> sont pris en compte,{' '}
+          <code>format</code> n&apos;accepte que <code>json</code> (le XML renvoie 501). Une URL qui ne
+          désigne pas un scrutin de MonÉlu renvoie 404. Le bouton &laquo;&nbsp;Intégrer&nbsp;&raquo; d&apos;une
+          page de scrutin donne le même encart sous forme d&apos;<code>&lt;iframe&gt;</code> à copier, pour les
+          plateformes qui ne parlent pas oEmbed.
+        </p>
       </LegalSection>
 
       <LegalSection title="Licence des données">

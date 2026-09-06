@@ -433,6 +433,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `/embed/votes/[id]` | Embeddable vote widget |
 | `/partager` | Web Share Target endpoint (MON-115) - normalises an OS share payload into a claim and redirects to `/chat?mode=verify` |
 | `/donnees` · `/developpeurs` · `/methodologie` | Open data, API usage guide, methodology |
+| `/api/oembed` | oEmbed provider (MON-266) - resolves a `/votes/<id>` URL to the `rich` payload that makes Notion, Slack, Substack, Ghost, WordPress and Discourse unfurl the pasted link into the embed widget |
 | `/api/revalidate` | Internal ISR revalidation webhook, guarded by a shared secret - not a public route |
 | `/a-propos` · `/accessibilite` · `/mentions-legales` · `/confidentialite` · `/licence-donnees` | Institutional pages |
 
@@ -442,6 +443,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `src/lib/seo.ts` · `src/app/sitemap.ts` | Canonical site URL, metadata helpers, generated sitemap |
 | `src/lib/an.ts` | Official assemblee-nationale.fr URLs built from stored ids - the deputy profile link behind `Person.sameAs` and the dossier link shared by vote cards and `Event.about` (MON-267) |
 | `src/lib/faq.ts` | Q&A copy for `/methodologie` and `/a-propos`, rendered as the visible text *and* published as `FAQPage` JSON-LD (MON-268) - edit the answers here, not in the pages; `__tests__/app/faq-jsonld.test.tsx` fails if the two diverge |
+| `src/lib/oembed.ts` | The oEmbed contract in one place (MON-266): which URLs the provider answers for, the discovery-link href every embeddable page must emit, and the iframe markup - all derived from `SITE_URL` |
 | `src/lib/exports.ts` | The three published CSV exports, described once - `/donnees` renders the cards from this array and `buildDataCatalogJsonLd()` marks the same entries up as `DataCatalog`/`Dataset` JSON-LD (MON-262); `__tests__/app/dataset-jsonld.test.tsx` fails if the page and the markup diverge |
 | `src/components/home/` | Landing-page scenes, live pulse panel, trust strip |
 | `src/components/HeroSearch.tsx` · `GlobalSearch.tsx` | Search entry points wired to the API |

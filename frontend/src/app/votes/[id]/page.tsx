@@ -7,6 +7,7 @@ import { VoteDetailClient } from './VoteDetailClient'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildVoteJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
+import { oembedDiscoveryUrl } from '@/lib/oembed'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -16,7 +17,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // The canonical is derived from the URL alone, so it survives a failed
   // metadata fetch - the build's prerender burst can trip the API's rate
   // limit, and a page that renders anyway must still state its own identity.
-  const alternates = { canonical: canonicalUrl(`/votes/${id}`) }
+  // `types` emits the oEmbed discovery link (MON-266):
+  // `<link rel="alternate" type="application/json+oembed" href="...">`. That
+  // tag is the entire discovery mechanism - Notion, Slack, Substack, Ghost and
+  // WordPress look for it on the page before they will call the endpoint - and
+  // like the canonical it is derived from the URL alone, so it survives a
+  // failed metadata fetch.
+  const alternates = {
+    canonical: canonicalUrl(`/votes/${id}`),
+    types: { 'application/json+oembed': oembedDiscoveryUrl(`/votes/${id}`) },
+  }
   const vote = await api.votes.get(id).catch(() => null)
   if (!vote) return { alternates }
   const result = vote.result === 'adopté' ? 'Adopté' : 'Rejeté'
