@@ -4,7 +4,7 @@ import { test, expect, type Page } from '@playwright/test'
 // resolved at runtime from the live listing page (frontend/src/lib/api.ts
 // hits production for both build and this server), so the suite never
 // hardcodes a deputy or vote id that could later 404.
-const STATIC_ROUTES = ['/', '/deputes', '/votes', '/chat', '/quiz']
+const STATIC_ROUTES = ['/', '/deputes', '/votes', '/agenda', '/chat', '/quiz']
 
 async function firstDetailHref(page: Page, listPath: string, hrefPrefix: string, exclude: string[] = []) {
   await page.goto(listPath)

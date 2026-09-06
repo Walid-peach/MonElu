@@ -3,6 +3,8 @@ import * as Sentry from '@sentry/nextjs'
 import { api, Vote, Deputy, Scorecard } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
 import { HomeSummary } from '@/components/home/HomeSummary'
+import { UpcomingAgenda } from '@/components/home/UpcomingAgenda'
+import { addDays, parisToday } from '@/lib/agenda'
 import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
@@ -132,8 +134,25 @@ function formatVoteDate(value: string | null | undefined) {
   }).format(date).toUpperCase()
 }
 
+/**
+ * The next seven days, not the current ISO week: on a Friday, "cette semaine"
+ * from the API is mostly sittings that already happened. Fetched separately
+ * from `getStats()` so an agenda outage cannot take the hero's stats with it -
+ * the teaser renders nothing on null (MON-213).
+ */
+async function getUpcomingAgenda() {
+  const today = parisToday()
+  return api.agenda.get({ from: today, to: addDays(today, 7) }).catch(err => {
+    Sentry.captureException(err)
+    return null
+  })
+}
+
 export default async function Home() {
-  const { health, featuredVote, deputyInfo } = await getStats()
+  const [{ health, featuredVote, deputyInfo }, agenda] = await Promise.all([
+    getStats(),
+    getUpcomingAgenda(),
+  ])
   const lastUpdated = formatFreshness(
     health ? health.last_ingestion ?? health.last_ingestion_at ?? health.updated_at : null
   )
@@ -161,6 +180,7 @@ export default async function Home() {
   return (
     <div className="overflow-x-clip bg-[#070b14]">
       <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} deputyInfo={deputyInfo} />
+      <UpcomingAgenda agenda={agenda} />
       <HomeSummary stats={homeStats} />
     </div>
   )
