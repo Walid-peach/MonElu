@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { api, nullIfMissing } from '@/lib/api'
 import { VerdictCard } from '@/components/VerdictCard'
 import { SITE_URL, canonicalUrl } from '@/lib/site'
+import { SNAPSHOT_ROBOTS } from '@/lib/seo'
 
 // Verdicts are immutable snapshots (ADR-022): this page reads the stored
 // verdict via GET /verify/{id} — it must never trigger a new verification.
@@ -16,11 +17,6 @@ const VERDICT_LABELS: Record<string, string> = {
   trompeur: 'Trompeur',
   inverifiable: 'Invérifiable',
 }
-
-// Snapshot pages are noindex (ADR-036, MON-264): the corpus is user-submitted
-// and unmoderated, so it stays out of the index, not merely out of the sitemap.
-// `follow: true` - the outbound links here point at pages that should be crawled.
-const SNAPSHOT_ROBOTS = { index: false, follow: true } as const
 
 export async function generateMetadata({
   params,

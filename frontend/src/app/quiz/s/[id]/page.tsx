@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api, nullIfMissing } from '@/lib/api'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SNAPSHOT_ROBOTS } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 import { QuizResultCard } from '../../QuizResultCard'
 import { QuizResultSections } from '../../QuizResultSections'
@@ -22,11 +22,6 @@ function hookTitle(share: Awaited<ReturnType<typeof api.quiz.getShare>>): string
     ? `Je vote à ${best.agreement_pct}% comme ${best.full_name}`
     : 'Quel député vote comme vous ?'
 }
-
-// Snapshot pages are noindex (ADR-036, MON-264): the corpus is user-submitted
-// and unmoderated, so it stays out of the index, not merely out of the sitemap.
-// `follow: true` - the outbound links here point at pages that should be crawled.
-const SNAPSHOT_ROBOTS = { index: false, follow: true } as const
 
 export async function generateMetadata({
   params,

@@ -4,17 +4,13 @@ import { notFound } from 'next/navigation'
 import { api, nullIfMissing } from '@/lib/api'
 import { ChatAnswerCard } from '@/components/ChatAnswerCard'
 import { SITE_URL, canonicalUrl } from '@/lib/site'
+import { SNAPSHOT_ROBOTS } from '@/lib/seo'
 
 // Chat shares are immutable snapshots (ADR-024, mirrors ADR-022 for
 // verifications): this page reads the stored answer via GET /search/share/{id}
 // — it must never re-run the RAG chain.
 export const dynamicParams = true
 export const revalidate = 86400
-
-// Snapshot pages are noindex (ADR-036, MON-264): the corpus is user-submitted
-// and unmoderated, so it stays out of the index, not merely out of the sitemap.
-// `follow: true` - the outbound links here point at pages that should be crawled.
-const SNAPSHOT_ROBOTS = { index: false, follow: true } as const
 
 export async function generateMetadata({
   params,

@@ -1208,7 +1208,9 @@ The state this replaces was not a decision. `sitemap.ts` omitted the three snaps
 **What is given up:** this is genuinely the only content MonÉlu produces that is natively in the question→grounded-answer-with-citations shape LLM search rewards, and it grows for free as users share. That upside is real and is being declined, deliberately, because it is inseparable from putting unmoderated text under the site's name.
 
 **Impact:**
-- The three snapshot pages set `robots: { index: false, follow: true }` in `generateMetadata`, including on the early-return path taken when the snapshot fetch fails - a `noindex` that disappears when the API is down is not a policy.
+- `SNAPSHOT_ROBOTS` is defined once in `frontend/src/lib/seo.ts` and imported by the three routes, the same single-definition rule `frontend_base_url()` follows on the backend. It is a policy that must be identical everywhere it appears, so it must not be re-declared per route.
+- The three snapshot pages apply it in `generateMetadata`, including on the early-return path taken when the snapshot fetch fails - a `noindex` that disappears when the API is down is not a policy.
+- **Social sharing is unaffected.** `noindex` is a search-engine directive; link unfurlers do not honor it, and the `openGraph`/`twitter` metadata and the `opengraph-image` routes are untouched. A shared link still renders its preview card exactly as before - which is the entire point of these pages. The `opengraph-image.tsx` routes need no directive of their own: image routes carry no robots meta, and image indexing follows the parent page's.
 - `follow: true`, not `false`: the outbound links on these pages point at `/chat`, `/quiz` and vote pages that *should* be crawled. Only the snapshot document itself is withheld.
 - Canonicals stay. A `noindex` page still benefits from claiming its own URL across preview hosts (MON-269), and `canonical.test.ts` continues to require one.
 - `frontend/__tests__/app/snapshot-noindex.test.ts` enforces this: each of the three routes must declare `index: false`, and the list is checked against the real filesystem so a renamed route cannot silently drop out.

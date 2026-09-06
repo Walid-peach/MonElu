@@ -31,6 +31,29 @@ export const SITE_DESCRIPTION =
  */
 export const ORGANIZATION_ID = `${SITE_URL}/#organization`
 
+/**
+ * Robots directive for the share-snapshot routes: `/chat/s/[id]`,
+ * `/verifier/v/[id]` and `/quiz/s/[id]` (ADR-036, MON-264).
+ *
+ * That corpus is user-submitted and unmoderated - anyone can POST a question
+ * or a claim and get a permanent MonElu-branded URL - and `/quiz/s/*` can
+ * additionally carry the sharer's own answers via the ADR-028 opt-in. It stays
+ * out of the index, not merely out of the sitemap: `robots.ts` allows every
+ * crawler on `/`, so one external link to a share URL is otherwise enough to
+ * make the page indexable.
+ *
+ * `follow: true`, not `false` - the outbound links on these pages point at
+ * `/chat`, `/quiz` and vote pages that should be crawled. Only the snapshot
+ * document itself is withheld.
+ *
+ * Defined once here, like `frontend_base_url()` on the backend: it must be
+ * identical on all three routes, so it must not be re-declared per route.
+ * Apply it on EVERY `generateMetadata` return path, including the early return
+ * taken when the snapshot fetch fails - a noindex that vanishes when the API
+ * is down is not a policy.
+ */
+export const SNAPSHOT_ROBOTS = { index: false, follow: true } as const
+
 export type BreadcrumbItem = { name: string; url: string }
 
 /**
