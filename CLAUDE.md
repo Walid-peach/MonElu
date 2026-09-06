@@ -174,6 +174,14 @@ The body lives in `src/lib/llms.ts`; `__tests__/app/llms-txt.test.ts` fails if e
 - `robots.ts` names GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-User, Claude-SearchBot, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot, Bytespider and meta-externalagent explicitly, all `allow: '/'` (MON-261).
 They are already covered by the `*` rule; listing them records the permissiveness as deliberate - this is Licence Ouverte 2.0 data whose purpose is reuse - so a later "tighten robots.txt" is a visible deletion rather than an inherited default.
 `Google-Extended` is the one entry with a distinct effect: it governs AI Overviews eligibility separately from Googlebot.
+- The share-snapshot routes `/chat/s/[id]`, `/verifier/v/[id]` and `/quiz/s/[id]` are **`noindex`, not merely absent from the sitemap** (ADR-036, MON-264).
+The corpus is user-submitted and unmoderated - anyone can POST a claim or a question and get a permanent MonÉlu-branded URL - and `/quiz/s/*` can additionally carry the sharer's own answers via the ADR-028 `include_answers` opt-in.
+Since `robots.ts` allows every crawler on `/`, sitemap omission is only a discovery hint: one external link makes the page indexable, so each page applies `SNAPSHOT_ROBOTS` (`{ index: false, follow: true }`) on **every** `generateMetadata` return path, including the early return taken when the snapshot fetch fails.
+`SNAPSHOT_ROBOTS` is defined once in `frontend/src/lib/seo.ts` - never re-declare it per route, the same rule `frontend_base_url()` follows on the backend.
+Social sharing is unaffected: unfurlers ignore `noindex`, and the `openGraph`/`twitter` metadata and `opengraph-image` routes are untouched.
+Canonicals stay (a `noindex` page still claims its own URL across preview hosts).
+Never add these routes to `sitemap.ts`, and never add `ClaimReview`/`QAPage` or other rich-result markup to them - that is a request to be surfaced, which is what the ADR declines; MON-263 is closed as won't-do on those grounds.
+`frontend/__tests__/app/snapshot-noindex.test.ts` enforces all of it.
 
 **`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
