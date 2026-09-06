@@ -1183,6 +1183,42 @@ Building the page on the acte parcours instead costs one extra table and one ext
 
 ---
 
+## ADR-036 - The share-snapshot corpus is noindex, not merely unlisted (MON-264)
+
+**Date:** 2026-09-06
+**Status:** Final
+**Related:** ADR-022 (verification snapshots), ADR-024 (chat snapshots), ADR-025/ADR-028 (quiz snapshots and the `include_answers` opt-in), ADR-032 (snapshot retention)
+
+**Decision:** `/chat/s/[id]`, `/verifier/v/[id]` and `/quiz/s/[id]` declare `robots: { index: false, follow: true }`.
+They stay out of the sitemap, as they already were, and they are now out of the index as well.
+Share links keep working exactly as before - they are unguessable UUIDs meant to be sent to a person, not documents meant to be found by a stranger through a search engine.
+
+This closes MON-263 (`ClaimReview` JSON-LD on verdict pages) as won't-do: `ClaimReview` on a `noindex` page is inert, since Google's Fact Check ingestion needs a crawlable, indexable URL, and emitting it would in any case be MonÉlu formally publishing a fact-check rating over an unmoderated corpus.
+
+**Reason:**
+
+The state this replaces was not a decision. `sitemap.ts` omitted the three snapshot routes with an explanatory comment, but `robots.ts` allows every crawler on `/` with only `/partager` and `/~offline` disallowed, and none of the three pages set `noindex`. Absence from a sitemap is a discovery hint, not a directive: the moment anyone posts a share link on a forum or a social account, the page is fully indexable. So the corpus was already one external link away from being indexed, under a policy nobody had chosen. Writing the intent into the pages makes it enforced rather than merely documented.
+
+**Why not curate a subset** (the option MON-264 itself recommended): curation needs an editorial flag on `verifications`/`chat_shares`, someone to set it, and a `/questions` index page. This project has no admin surface at all - no auth, no CMS, no moderation queue - so the promotion step has no operator. A quality gate that nobody runs is a guarantee on paper only, which is the same objection ADR-033 raised against keeping a sandbox with no real owner, and the deferred-but-never-triggered pattern ADR-002 and ADR-014 already reject elsewhere. If a curation workflow ever acquires a real operator, lifting a `noindex` is a one-line change per route; building the flag now against a process that does not exist is not.
+
+**Why not index chat and verify wholesale:** the corpus is user-submitted questions and claims answered by a RAG chain that can be wrong. Indexing it means MonÉlu's domain hosts and ranks arbitrary third-party text under MonÉlu's authority - anyone can POST a defamatory claim to `/verify/` and get a permanent, MonÉlu-branded, search-visible URL for it. For a product whose entire premise is trustworthiness, a wrong answer ranking as MonÉlu's is worse than not ranking at all. The unbounded, thin, near-duplicate page count is a textbook index-bloat pattern on top of that.
+
+`/quiz/s/*` has an additional, independent reason: per ADR-028 its stored `result` can carry the sharer's own answers when they opt into friend comparison. That is personal political opinion, and it must not be search-indexable regardless of what is decided for the other two.
+
+**What is given up:** this is genuinely the only content MonÉlu produces that is natively in the question→grounded-answer-with-citations shape LLM search rewards, and it grows for free as users share. That upside is real and is being declined, deliberately, because it is inseparable from putting unmoderated text under the site's name.
+
+**Impact:**
+- The three snapshot pages set `robots: { index: false, follow: true }` in `generateMetadata`, including on the early-return path taken when the snapshot fetch fails - a `noindex` that disappears when the API is down is not a policy.
+- `follow: true`, not `false`: the outbound links on these pages point at `/chat`, `/quiz` and vote pages that *should* be crawled. Only the snapshot document itself is withheld.
+- Canonicals stay. A `noindex` page still benefits from claiming its own URL across preview hosts (MON-269), and `canonical.test.ts` continues to require one.
+- `frontend/__tests__/app/snapshot-noindex.test.ts` enforces this: each of the three routes must declare `index: false`, and the list is checked against the real filesystem so a renamed route cannot silently drop out.
+- Do NOT add these routes to `sitemap.ts`, and do NOT add `ClaimReview`, `QAPage` or any other rich-result markup to them - markup is a request to be surfaced, which is exactly what this ADR declines.
+- MON-263 is closed as won't-do under this ADR rather than deferred, since it is not waiting on a date or a threshold - it is waiting on a different answer to this question.
+
+**Trigger to revisit:** a real moderation operator exists for the snapshot corpus - a person or an automated gate that actually reviews a verdict before it is promoted - at which point option 2 (a curated `/questions` index carrying `QAPage`, and `ClaimReview` on promoted verdicts only) becomes buildable as filed, and this ADR is superseded rather than amended. Absent that, growth in share volume is not a trigger: more unmoderated pages is an argument for this decision, not against it.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1204,3 +1240,4 @@ Building the page on the acte parcours instead costs one extra table and one ext
 17. The local Airflow/MinIO stack is archived, not live (ADR-033, MON-239) - do not resurrect `ingestion/dags/`, `quality/`, or the Makefile Airflow/MinIO targets without a new ADR; ADR-006 and ADR-011 still describe the design a promoted-to-production Airflow would use
 18. Group-majority position is one formula everywhere: plurality with an alphabetical tiebreak, defined in `int_party_vote_majority` and replicated exactly by `groups.py`'s `_majority_position` (ADR-034, MON-24, MON-228) - never invent a different tiebreak; quiz's skip-ties behavior in `compute_group_alignment` is a documented, deliberate exception, not a bug to "fix" into matching
 19. Bill timeline pages are built on the dossier acte parcours from `Dossiers_Legislatifs`, not on votes grouped by `dossier_id` (ADR-035, MON-105/MON-242) - the AN only began tagging scrutins with a dossier in March 2026, so a scrutin-only timeline misses the first four fifths of most bills; never fuzzy-match scrutin titles to bills, never publish a page for a dossier with no scrutins, and never list amendment scrutins inline by default
+20. The share-snapshot pages `/chat/s/*`, `/verifier/v/*` and `/quiz/s/*` are `noindex`, not merely absent from the sitemap (ADR-036, MON-264) - never add them to `sitemap.ts`, never drop the `robots: { index: false }` from their `generateMetadata` (including its early-return path), and never add `ClaimReview`/`QAPage` or other rich-result markup to them; MON-263 is closed as won't-do under this ADR, and the trigger to reopen is a real moderation operator, not share volume

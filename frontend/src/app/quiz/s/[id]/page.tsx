@@ -23,6 +23,11 @@ function hookTitle(share: Awaited<ReturnType<typeof api.quiz.getShare>>): string
     : 'Quel député vote comme vous ?'
 }
 
+// Snapshot pages are noindex (ADR-036, MON-264): the corpus is user-submitted
+// and unmoderated, so it stays out of the index, not merely out of the sitemap.
+// `follow: true` - the outbound links here point at pages that should be crawled.
+const SNAPSHOT_ROBOTS = { index: false, follow: true } as const
+
 export async function generateMetadata({
   params,
 }: {
@@ -31,7 +36,7 @@ export async function generateMetadata({
   const { id } = await params
   const alternates = { canonical: canonicalUrl(`/quiz/s/${id}`) }
   const share = await api.quiz.getShare(id).catch(() => null)
-  if (!share) return { alternates }
+  if (!share) return { alternates, robots: SNAPSHOT_ROBOTS }
   const title = `${hookTitle(share)} — MonÉlu`
   const description =
     'Une dizaine de vrais scrutins de l’Assemblée nationale, comparés aux votes réels ' +
@@ -40,6 +45,7 @@ export async function generateMetadata({
     title,
     description,
     alternates,
+    robots: SNAPSHOT_ROBOTS,
     openGraph: { title, description, url: `${SITE_URL}/quiz/s/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }

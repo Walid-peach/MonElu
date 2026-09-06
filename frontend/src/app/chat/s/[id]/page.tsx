@@ -11,6 +11,11 @@ import { SITE_URL, canonicalUrl } from '@/lib/site'
 export const dynamicParams = true
 export const revalidate = 86400
 
+// Snapshot pages are noindex (ADR-036, MON-264): the corpus is user-submitted
+// and unmoderated, so it stays out of the index, not merely out of the sitemap.
+// `follow: true` - the outbound links here point at pages that should be crawled.
+const SNAPSHOT_ROBOTS = { index: false, follow: true } as const
+
 export async function generateMetadata({
   params,
 }: {
@@ -19,13 +24,14 @@ export async function generateMetadata({
   const { id } = await params
   const alternates = { canonical: canonicalUrl(`/chat/s/${id}`) }
   const share = await api.chatShare(id).catch(() => null)
-  if (!share) return { alternates }
+  if (!share) return { alternates, robots: SNAPSHOT_ROBOTS }
   const title = `« ${share.question} » - MonÉlu`
   const description = share.answer.length > 160 ? share.answer.slice(0, 160) + '…' : share.answer
   return {
     title,
     description,
     alternates,
+    robots: SNAPSHOT_ROBOTS,
     openGraph: { title, description, url: `${SITE_URL}/chat/s/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }

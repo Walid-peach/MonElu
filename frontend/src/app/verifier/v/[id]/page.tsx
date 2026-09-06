@@ -17,6 +17,11 @@ const VERDICT_LABELS: Record<string, string> = {
   inverifiable: 'Invérifiable',
 }
 
+// Snapshot pages are noindex (ADR-036, MON-264): the corpus is user-submitted
+// and unmoderated, so it stays out of the index, not merely out of the sitemap.
+// `follow: true` - the outbound links here point at pages that should be crawled.
+const SNAPSHOT_ROBOTS = { index: false, follow: true } as const
+
 export async function generateMetadata({
   params,
 }: {
@@ -25,7 +30,7 @@ export async function generateMetadata({
   const { id } = await params
   const alternates = { canonical: canonicalUrl(`/verifier/v/${id}`) }
   const v = await api.verification(id).catch(() => null)
-  if (!v) return { alternates }
+  if (!v) return { alternates, robots: SNAPSHOT_ROBOTS }
   const label = VERDICT_LABELS[v.verdict] ?? v.verdict
   const shortClaim = v.claim.length > 90 ? v.claim.slice(0, 90) + '…' : v.claim
   const title = `${label} - « ${shortClaim} » - MonÉlu Vérification`
@@ -34,6 +39,7 @@ export async function generateMetadata({
     title,
     description,
     alternates,
+    robots: SNAPSHOT_ROBOTS,
     openGraph: { title, description, url: `${SITE_URL}/verifier/v/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }
