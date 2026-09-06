@@ -614,14 +614,17 @@ export const api = {
     },
   },
   agenda: {
-    // Volatile by nature — the ordre du jour is rewritten constantly (ADR-030),
-    // so this caches for minutes, not the hours the settled surfaces use.
+    // The ordre du jour is rewritten constantly upstream (ADR-030), but this
+    // table only moves when `ingest_agenda.py` runs - and that run POSTs
+    // /api/revalidate, which invalidates `/agenda`. So an hour is the fallback
+    // for a run whose revalidate call never fired, not the refresh mechanism;
+    // a shorter window would only re-create the ISR write volume GH #354 cut.
     get: (params?: { from?: string; to?: string }) => {
       const q = new URLSearchParams()
       if (params?.from) q.set('from', params.from)
       if (params?.to) q.set('to', params.to)
       const qs = q.toString()
-      return apiFetch<AgendaResponse>(`/agenda${qs ? `?${qs}` : ''}`, { revalidate: 900 })
+      return apiFetch<AgendaResponse>(`/agenda${qs ? `?${qs}` : ''}`, { revalidate: 3600 })
     },
   },
   votes: {

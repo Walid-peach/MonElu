@@ -16,11 +16,11 @@ import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 
-// The ordre du jour is rewritten constantly (ADR-030): a point can be added,
-// reordered or cancelled between two sittings, so this page is worth far less
-// staleness than the settled surfaces. No `generateStaticParams` to worry
-// about - it is a single static route.
-export const revalidate = 900
+// The agenda table only changes when `ingest_agenda.py` runs, and that run
+// POSTs /api/revalidate, which invalidates this path. An hour is therefore the
+// fallback for a run whose revalidate call never fired - a shorter window would
+// only re-create the ISR write volume GH #354 cut, for no extra freshness.
+export const revalidate = 3600
 
 const NAVY = 'var(--dp-text)'
 const CREAM = 'var(--dp-page-bg)'
