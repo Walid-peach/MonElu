@@ -1,12 +1,16 @@
 import { ImageResponse } from 'next/og'
 import { SITE_HOST } from '@/lib/site'
 
+// The card's copy is deliberately apostrophe-free. Satori breaks a word on
+// the apostrophe and lays the halves out with a gap, so "l'Assemblée examine"
+// rendered with a visible hole after it - straight quote and typographic quote
+// alike, and inside a JS string as much as in JSX text.
 export const runtime = 'edge'
-export const alt = "À l'ordre du jour de l'Assemblée nationale — MonÉlu"
+export const alt = "À l'ordre du jour de l'Assemblée nationale - MonÉlu"
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-// Static card, no data fetch — the agenda itself changes daily, but a card
+// Static card, no data fetch - the agenda itself changes daily, but a card
 // naming a specific sitting would be stale the moment it is shared.
 export const revalidate = 86400
 
@@ -49,7 +53,7 @@ export default function OGImage() {
             marginBottom: 28,
           }}
         >
-          Ce que l&apos;Assemblée examine cette semaine
+          Ce que les députés examinent cette semaine
         </div>
 
         <div
@@ -62,7 +66,7 @@ export default function OGImage() {
             maxWidth: 1000,
           }}
         >
-          L&apos;ordre du jour de la séance publique, jour par jour
+          Le calendrier de la séance publique, jour par jour
         </div>
 
         <div

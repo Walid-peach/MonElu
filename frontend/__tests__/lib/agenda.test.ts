@@ -72,7 +72,7 @@ describe('formatSittingTime', () => {
 
 describe('agendaHeadline', () => {
   // MON-211 has not shipped, and even once it has, `summary_plain` stays NULL
-  // for stub objets — so the official wording has to be the lead, never an
+  // for stub objets - so the official wording has to be the lead, never an
   // empty slot above it.
   it('falls back to the official objet when there is no one-liner', () => {
     const { lead, official } = agendaHeadline(item())

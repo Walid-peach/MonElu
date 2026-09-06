@@ -51,7 +51,9 @@ export const metadata: Metadata = {
  */
 async function loadAgenda(): Promise<{ week: AgendaResponse | null; nextDay: string | null }> {
   const week = await api.agenda.get().catch(() => null)
-  if (week && week.days.length > 0) return { week, nextDay: null }
+  // Nothing to look ahead for: either the week already has content, or the API
+  // is unwell and a second call against it would only be a second failure.
+  if (week === null || week.days.length > 0) return { week, nextDay: null }
 
   const today = parisToday()
   const ahead = await api.agenda
