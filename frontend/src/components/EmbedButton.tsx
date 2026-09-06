@@ -1,13 +1,18 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 
+import { OEMBED_HEIGHT, OEMBED_WIDTH } from '@/lib/oembed'
+
 interface EmbedButtonProps {
   path: string
   width?: number
   height?: number
 }
 
-export function EmbedButton({ path, width = 560, height = 220 }: EmbedButtonProps) {
+// The defaults come from `lib/oembed.ts` rather than being written out again:
+// the oEmbed payload and this hand-pasted snippet must describe the same box,
+// and two independent literals would drift with nothing failing (MON-266).
+export function EmbedButton({ path, width = OEMBED_WIDTH, height = OEMBED_HEIGHT }: EmbedButtonProps) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)

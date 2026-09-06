@@ -77,6 +77,14 @@ describe('GET /api/oembed', () => {
     expect(res.headers.get('cache-control')).toContain('s-maxage=86400')
   })
 
+  // Server-side unfurlers do not need this, but browser-side oEmbed libraries
+  // and CMS preview panes fetch the endpoint from the page. The payload is
+  // public data behind a credential-less GET.
+  it('is readable cross-origin, on success and on rejection alike', async () => {
+    expect((await GET(request(forVote()))).headers.get('access-control-allow-origin')).toBe('*')
+    expect((await GET(request('url=nope'))).headers.get('access-control-allow-origin')).toBe('*')
+  })
+
   it.each([
     ['a foreign origin', `url=${encodeURIComponent('https://evil.example/votes/' + VOTE_ID)}`],
     ['an unsupported path', `url=${encodeURIComponent(`${SITE_URL}/deputes/PA1`)}`],
@@ -89,9 +97,17 @@ describe('GET /api/oembed', () => {
     expect(get).not.toHaveBeenCalled()
   })
 
-  it('404s on a vote the API does not know', async () => {
+  // An unknown vote can become known at the next ingestion, unlike a URL shape
+  // this provider does not support - so it must not inherit the day-long
+  // rejection TTL, or the edge keeps serving a stale 404 for a real scrutin.
+  it('404s on a vote the API does not know, without caching it for a day', async () => {
     get.mockRejectedValue(new ApiError(404, '/votes/x/'))
-    expect((await GET(request(forVote()))).status).toBe(404)
+    const unknownVote = await GET(request(forVote()))
+    expect(unknownVote.status).toBe(404)
+    expect(unknownVote.headers.get('cache-control')).toBe('public, max-age=300, s-maxage=300')
+
+    const unsupportedShape = await GET(request(`url=${encodeURIComponent(`${SITE_URL}/deputes/PA1`)}`))
+    expect(unsupportedShape.headers.get('cache-control')).toContain('s-maxage=86400')
   })
 
   // A rate limit or a 5xx is our failure, not a permanent "not embeddable" -
@@ -103,8 +119,10 @@ describe('GET /api/oembed', () => {
     expect(res.headers.get('cache-control')).toBe('no-store')
   })
 
-  it('501s on a format it does not emit', async () => {
+  it('501s on a format it does not emit, whatever the case', async () => {
     expect((await GET(request(`${forVote()}&format=xml`))).status).toBe(501)
+    expect((await GET(request(`${forVote()}&format=XML`))).status).toBe(501)
+    expect((await GET(request(`${forVote()}&format=JSON`))).status).toBe(200)
   })
 })
 

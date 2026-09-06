@@ -30,11 +30,26 @@ const CACHE_HIT = 'public, max-age=300, s-maxage=86400, stale-while-revalidate=8
 /** An unsupported URL is a permanent answer for this deploy - nothing about it
  * becomes embeddable without a redeploy - so absorb repeats at the edge. */
 const CACHE_REJECT = 'public, max-age=3600, s-maxage=86400'
+/** A vote id the API does not know *yet* is a different fact: the next
+ * ingestion can make it real. Cached briefly so a retry storm still lands on
+ * the edge, but not long enough to keep serving a stale 404 for a scrutin that
+ * has since appeared - the same split `lib/portraits.ts` draws between a
+ * missing portrait and an id that is not a deputy at all. */
+const CACHE_UNKNOWN = 'public, max-age=300, s-maxage=300'
+
+/**
+ * Consumers that unfurl server-side (Slack, Notion, WordPress) never need
+ * this, but browser-side oEmbed libraries and several CMS preview panes fetch
+ * the endpoint from the page. The payload is public Licence Ouverte data
+ * behind a credential-less GET, so there is nothing for an origin check to
+ * protect and blocking them would narrow the feature for no gain.
+ */
+const CORS = { 'Access-Control-Allow-Origin': '*' }
 
 function error(status: number, message: string, cache = CACHE_REJECT) {
   return new Response(message, {
     status,
-    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': cache },
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': cache, ...CORS },
   })
 }
 
@@ -43,8 +58,8 @@ export async function GET(req: Request) {
 
   // XML is the other format the spec defines. We do not emit it; the spec's
   // answer for that is 501, not a JSON body the consumer did not ask for.
-  const format = params.get('format')
-  if (format !== null && format !== 'json') return error(501, 'Not Implemented')
+  const format = params.get('format')?.toLowerCase()
+  if (format !== undefined && format !== 'json') return error(501, 'Not Implemented')
 
   const resource = parseEmbeddableUrl(params.get('url'), new URL(req.url).origin)
   if (!resource) return error(404, 'Not Found')
@@ -57,7 +72,7 @@ export async function GET(req: Request) {
     // for. Anything else - rate limit, 5xx, network - is our failure, and must
     // not be cached as a permanent "not embeddable".
     if (err instanceof ApiError && (err.status === 404 || err.status === 422)) {
-      return error(404, 'Not Found')
+      return error(404, 'Not Found', CACHE_UNKNOWN)
     }
     return error(502, 'Bad Gateway', 'no-store')
   }
@@ -79,6 +94,6 @@ export async function GET(req: Request) {
       height,
       html: oembedIframe(resource, vote.vote_title, width, height),
     },
-    { headers: { 'Cache-Control': CACHE_HIT } },
+    { headers: { 'Cache-Control': CACHE_HIT, ...CORS } },
   )
 }

@@ -21,9 +21,9 @@ export const OEMBED_ENDPOINT = `${SITE_URL}/api/oembed`
 export const OEMBED_PROVIDER_NAME = 'MonÉlu'
 
 /**
- * Default widget box, matching the iframe snippet `EmbedButton` copies
- * (`src/components/EmbedButton.tsx`) so the oEmbed card and the hand-pasted
- * iframe render identically.
+ * Default widget box. `EmbedButton` (`src/components/EmbedButton.tsx`) imports
+ * these for its own prop defaults rather than repeating the numbers, so the
+ * oEmbed card and the hand-pasted iframe cannot drift apart.
  */
 export const OEMBED_WIDTH = 560
 export const OEMBED_HEIGHT = 220
