@@ -1,40 +1,52 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyShort } from '@/lib/utils'
 import { VoteDetailClient } from './VoteDetailClient'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildVoteJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 86400
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
+  // The canonical is derived from the URL alone, so it survives a failed
+  // metadata fetch - the build's prerender burst can trip the API's rate
+  // limit, and a page that renders anyway must still state its own identity.
+  const alternates = { canonical: canonicalUrl(`/votes/${id}`) }
   const vote = await api.votes.get(id).catch(() => null)
-  if (!vote) return {}
+  if (!vote) return { alternates }
   const result = vote.result === 'adopté' ? 'Adopté' : 'Rejeté'
   const shortTitle = vote.vote_title.length > 80 ? vote.vote_title.slice(0, 80) + '…' : vote.vote_title
   const description = `${result} · ${vote.votes_for} pour · ${vote.votes_against} contre · ${vote.abstentions} abstentions.`
   return {
     title: `${result} - ${shortTitle} - MonÉlu`,
     description,
+    alternates,
     openGraph: { title: `${result} - ${shortTitle} - MonÉlu`, description, url: `${SITE_URL}/votes/${id}` },
     twitter: { card: 'summary_large_image', title: `${result} - ${shortTitle} - MonÉlu`, description },
   }
 }
 
-export async function generateStaticParams() {
-  try {
-    const data = await api.votes.list({ limit: 100 })
-    return data.items.map(v => ({ id: v.vote_id }))
-  } catch { return [] }
-}
+// No `generateStaticParams` (MON-275). It used to prerender the 100 most
+// recent votes, which meant ~200 API calls from one IP inside a build - enough
+// to exhaust the API's DB connections, and the failures came back as 500s on
+// votes that serve 200 on every manual request. Two CI builds in a row died on
+// a different vote each time, so retries alone do not survive the burst.
+//
+// It was worse before this branch: the page swallowed that 500 into
+// `notFound()`, so a transient failure baked a prerendered "Page introuvable"
+// into the build for a real vote - and `revalidate = 86400` served it for a
+// day. With `dynamicParams = true` the route renders on demand and ISR-caches
+// the result, so dropping the prerender costs the first visitor one render and
+// removes the burst, the flaky build and the false 404 together.
 
 export default async function VoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const vote = await api.votes.get(id).catch(() => null)
+  const vote = await api.votes.get(id).catch(nullIfMissing)
   if (!vote) notFound()
 
   const pourPct   = Math.round(vote.votes_for     / (vote.total_voters || 1) * 100)

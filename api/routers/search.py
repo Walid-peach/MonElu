@@ -58,6 +58,25 @@ class SearchResponse(BaseModel):
 )
 @limiter.limit(tiered_limit(10))
 def search(request: Request, body: SearchRequest):
+    """Ask a question in natural French and get an answer grounded in the corpus.
+
+    Retrieval-augmented: the question is routed either to a SQL query over the
+    tables or to a vector search over ~5 900 embedded chunks, then answered by an
+    LLM over what was retrieved. `sources` carries what the answer was built
+    from - surface them, because the answer is generated text and can be wrong
+    where the retrieval was thin. `confidence` and `chunks_retrieved` are the
+    signals for how much to trust it.
+
+    **Prefer the structured endpoints whenever the question maps onto one.** For
+    "how did X vote on Y", `/deputies` then `/deputies/{id}/votes` gives an exact
+    answer; this endpoint gives a plausible one. It costs an LLM call, is limited
+    to 10/min, and can take several seconds.
+
+    A `suggested_action` of `verify` means the question reads as a factual claim
+    rather than a question - `POST /verify/` is the endpoint that checks claims
+    against the record. Nothing is verified here. 503 when the server has no LLM
+    credentials configured.
+    """
     # Plain `def` on purpose: ask() does blocking psycopg2 + Groq I/O, so FastAPI
     # must run it in the threadpool, not on the event loop.
     try:
@@ -163,6 +182,13 @@ def _to_share_response(row: dict) -> ShareResponse:
 )
 @limiter.limit(tiered_limit(30))
 def share_answer(request: Request, body: ShareRequest):
+    """Persist an answer already returned by `POST /search/` as a public snapshot.
+
+    Stores exactly what the caller passes, verbatim and immutable, and returns an
+    id readable at `/chat/s/<id>` on the site. No LLM call, no re-checking: this
+    is a save button, not a second opinion, and it will faithfully store a
+    doctored answer. Only pass back a payload this API produced.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -204,6 +230,12 @@ def share_answer(request: Request, body: ShareRequest):
 # IPs, so the base per-IP limit was tripping during viral spikes.
 @limiter.limit(tiered_limit(300))
 def get_share(request: Request, share_id: uuid.UUID):
+    """Read back a stored chat answer by id. No LLM call.
+
+    Snapshots are immutable and frozen at their creation time, so an answer may
+    no longer reflect current data - `created_at` is how far back it goes. 404
+    when the id is unknown.
+    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(

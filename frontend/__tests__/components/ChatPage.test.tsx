@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
-import ChatPage from '@/app/chat/page'
+import { ChatClient } from '@/app/chat/ChatClient'
+import { ThemeProvider } from '@/components/ThemeProvider'
 import type { SearchResult, VerifyResult } from '@/lib/api'
 
 jest.mock('@/lib/api', () => ({
@@ -44,6 +45,16 @@ const verifyResult: VerifyResult = {
 // Mimics fetch's real abort behavior: rejects with a DOMException named
 // AbortError once the passed signal fires, otherwise resolves/rejects on
 // the caller's command via the returned controls.
+// MON-168: the chat page reads the theme from the site-wide ThemeProvider
+// instead of page-local state, so it must be rendered inside one.
+function ChatPage() {
+  return (
+    <ThemeProvider>
+      <ChatClient />
+    </ThemeProvider>
+  )
+}
+
 function deferredWithAbort<T>(signal?: AbortSignal) {
   let resolve!: (v: T) => void
   let reject!: (e: unknown) => void

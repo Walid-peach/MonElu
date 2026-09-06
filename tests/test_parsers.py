@@ -11,8 +11,9 @@ from pathlib import Path
 import pytest
 
 from rag.chain.sql_router import detect_department, detect_intent, normalize_text
+from scripts.backfill_dossier_ids import compute_repairs, extract_embedded_ref
 from scripts.ingest_positions import _votants, extract_positions
-from scripts.ingest_votes import _to_int, parse_vote
+from scripts.ingest_votes import _to_int, check_dossier_refs, parse_vote
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -103,6 +104,95 @@ def test_parse_vote_dossier_legislatif_dict_extracts_ref():
     result = parse_vote(item)
     assert result is not None
     assert result["dossier_id"] == "DLR5L17N53980"
+
+
+def _scrutin_with_dossier(uid: str, dossier) -> dict:
+    """Minimal well-formed scrutin carrying an arbitrary dossierLegislatif value."""
+    return {
+        "uid": uid,
+        "dateScrutin": "2026-04-01",
+        "titre": "Amendement",
+        "sort": {"code": "rejeté"},
+        "syntheseVote": {
+            "nombreVotants": "100",
+            "decompte": {"pour": "40", "contre": "60", "abstentions": "0"},
+        },
+        "typeVote": {"codeTypeVote": "SFS"},
+        "objet": {"dossierLegislatif": dossier},
+    }
+
+
+def test_parse_vote_drops_a_stringified_dossier_dict():
+    """A dossierLegislatif that arrives already stringified must never reach the
+    DB: a NULL is recoverable by re-ingestion, a corrupt string is not, and the
+    frontend rejects it either way (MON-258)."""
+    item = _scrutin_with_dossier(
+        "VTANR5L17V5280",
+        "{'libelle': 'L’intérêt des enfants', 'dossierRef': 'DLR5L17N51655'}",
+    )
+    result = parse_vote(item)
+    assert result is not None
+    assert result["dossier_id"] is None
+
+
+def test_check_dossier_refs_exits_on_malformed_majority():
+    """The guard aborts the run rather than upserting NULLs that read downstream
+    as 'this scrutin has no bill' (MON-258)."""
+    corrupt = "{'libelle': 'X', 'dossierRef': 'DLR5L17N51655'}"
+    items = [_scrutin_with_dossier(f"VT{i}", corrupt) for i in range(10)]
+    with pytest.raises(SystemExit) as exc:
+        check_dossier_refs(items)
+    assert exc.value.code == 1
+
+
+def test_check_dossier_refs_passes_on_well_formed_and_on_dossierless_runs():
+    """Scrutins with no dossier at all are normal history (none before 2026-03),
+    so an all-null run must not trip the guard."""
+    check_dossier_refs(
+        [_scrutin_with_dossier("VT1", {"libelle": "X", "dossierRef": "DLR5L17N53980"})]
+    )
+    check_dossier_refs([{"uid": "VT2", "dateScrutin": "2025-01-01", "titre": "X"}])
+    check_dossier_refs([])
+
+
+# ---------------------------------------------------------------------------
+# MON-258 - backfill of already-corrupt rows
+# ---------------------------------------------------------------------------
+
+
+def test_extract_embedded_ref_reads_the_ref_out_of_a_stored_repr():
+    stored = "{'libelle': 'L’intérêt des enfants', 'dossierRef': 'DLR5L17N51655'}"
+    assert extract_embedded_ref(stored) == "DLR5L17N51655"
+
+
+def test_extract_embedded_ref_handles_a_libelle_with_embedded_quotes():
+    stored = (
+        "{'libelle': \"Création du cadre d'emploi des personnels de santé\", "
+        "'dossierRef': 'DLR5L17N51346'}"
+    )
+    assert extract_embedded_ref(stored) == "DLR5L17N51346"
+
+
+def test_extract_embedded_ref_ignores_a_ref_shaped_libelle():
+    """Only the value keyed by dossierRef counts - a libelle mentioning a ref
+    must not be promoted into dossier_id."""
+    stored = "{'libelle': 'Rapport sur DLR5L17N99999', 'dossierRef': 'DLR5L17N51655'}"
+    assert extract_embedded_ref(stored) == "DLR5L17N51655"
+
+
+def test_extract_embedded_ref_returns_none_when_nothing_is_recoverable():
+    assert extract_embedded_ref("{'libelle': 'X'}") is None
+
+
+def test_compute_repairs_splits_recoverable_from_unrepairable():
+    repairs, unrepairable = compute_repairs(
+        [
+            ("VT1", "{'libelle': 'A', 'dossierRef': 'DLR5L17N1'}"),
+            ("VT2", "{'libelle': 'B'}"),
+        ]
+    )
+    assert repairs == [("VT1", "DLR5L17N1")]
+    assert unrepairable == [("VT2", "{'libelle': 'B'}")]
 
 
 def test_parse_vote_missing_uid_returns_none():

@@ -1,11 +1,16 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { JsonLd } from '@/components/JsonLd'
+import { A_PROPOS_FAQ } from '@/lib/faq'
+import { buildFaqJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'À propos — MonÉlu',
   description:
     "Comment MonÉlu collecte, transforme et publie les données de vote de l'Assemblée Nationale française.",
+  alternates: { canonical: canonicalUrl('/a-propos') },
 }
 
 const heroStats = [
@@ -138,6 +143,7 @@ const apiFeatures = [
 export default function AProposPage() {
   return (
     <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
+      <JsonLd data={buildFaqJsonLd(A_PROPOS_FAQ)} />
 
       {/* ====== HERO ====== */}
       <div style={{ padding: '72px 56px 64px', background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
@@ -391,6 +397,35 @@ export default function AProposPage() {
               </div>
               <div style={{ color: '#9CA3AF' }}>{'}'}</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ====== FAQ ====== */}
+      {/* Visible question/answer copy, and the source of this page's FAQPage
+          JSON-LD (MON-268) - schema.org requires both halves to be readable
+          here, so the markup and the section below cannot disagree. */}
+      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
+        <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '80px', alignItems: 'start' }}>
+          <div>
+            <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Questions fréquentes</div>
+            <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px', marginBottom: '20px' }} />
+            <p style={{ fontSize: '15px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
+              L&apos;essentiel sur la plateforme, ses sources et ses conditions de réutilisation.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            {A_PROPOS_FAQ.map((item) => (
+              <div key={item.id} id={item.id} style={{ scrollMarginTop: '96px' }}>
+                <h3 className="font-newsreader" style={{ fontWeight: 600, fontSize: '20px', color: 'var(--dp-text)', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
+                  {item.question}
+                </h3>
+                <p style={{ fontSize: '15.5px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
+                  {item.answer}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

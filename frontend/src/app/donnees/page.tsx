@@ -1,50 +1,23 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { JsonLd } from '@/components/JsonLd'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
-import { csvUrl } from '@/lib/api'
+import { API_BASE } from '@/lib/api'
+import { CSV_EXPORTS } from '@/lib/exports'
+import { buildDataCatalogJsonLd } from '@/lib/seo'
+import { canonicalUrl, DATA_ATTRIBUTION } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Données ouvertes - MonÉlu',
   description:
     'Téléchargez les données de vote des députés en CSV : positions par scrutin, historique par député, scorecards complètes. Format, fraîcheur et conditions de réutilisation.',
+  alternates: { canonical: canonicalUrl('/donnees') },
 }
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://monelu-production.up.railway.app'
-
-const EXPORTS: Array<{
-  name: string
-  href: string | null
-  pattern: string
-  what: string
-  columns: string
-}> = [
-  {
-    name: 'Scorecard de tous les députés',
-    href: csvUrl.scorecard(),
-    pattern: '/deputies/scorecard.csv',
-    what: "Une ligne par député : groupe, département, votes exprimés, taux de présence aux scrutins, participation aux scrutins solennels et aux jours de vote.",
-    columns:
-      'deputy_id, full_name, party, party_short, department, total_votes, present_votes, presence_rate, votes_for, votes_against, abstentions, votes_for_pct, abstention_pct, eligible_solennels, solennels_cast, solennel_participation_rate, eligible_voting_days, voting_days_present, voting_days_rate',
-  },
-  {
-    name: "Historique de vote d'un député",
-    href: null,
-    pattern: '/deputies/{deputy_id}/votes.csv',
-    what: "Tous les scrutins auxquels un député pouvait participer, avec sa position sur chacun. Le bouton « CSV » de chaque fiche député pointe vers cet export.",
-    columns: 'deputy_id, vote_id, voted_at, vote_title, theme, result, position',
-  },
-  {
-    name: "Positions complètes d'un scrutin",
-    href: null,
-    pattern: '/votes/{vote_id}/positions.csv',
-    what: "La position des 577 députés sur un scrutin donné. Le bouton « CSV » de chaque page de vote pointe vers cet export.",
-    columns: 'vote_id, deputy_id, full_name, party, party_short, department, position',
-  },
-]
 
 export default function DonneesPage() {
   return (
     <LegalPageLayout eyebrow="Open data" title="Données à emporter">
+      <JsonLd data={buildDataCatalogJsonLd()} />
 
       <LegalSection title="Exports CSV disponibles">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: '0 0 18px' }}>
@@ -54,7 +27,7 @@ export default function DonneesPage() {
           affiche toutes les scorecards triables sur un écran.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {EXPORTS.map(e => (
+          {CSV_EXPORTS.map(e => (
             <div key={e.pattern} style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '10px', padding: '16px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--dp-text)' }}>{e.name}</span>
@@ -73,7 +46,7 @@ export default function DonneesPage() {
                 GET {API_BASE}{e.pattern}
               </div>
               <div style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--dp-text-muted)' }}>
-                Colonnes : {e.columns}
+                Colonnes : {e.columns.join(', ')}
               </div>
             </div>
           ))}
@@ -105,7 +78,7 @@ export default function DonneesPage() {
           mentionner la source et la date. Attribution suggérée :
         </p>
         <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', color: 'var(--dp-text)', fontFamily: 'monospace' }}>
-          Données : Assemblée nationale, via monelu.fr - Licence Ouverte 2.0
+          {DATA_ATTRIBUTION}
         </div>
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: '10px 0 0' }}>
           Conditions détaillées sur la page <Link href="/licence-donnees" style={{ color: 'var(--dp-text)' }}>Licence des données</Link>.

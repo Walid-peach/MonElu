@@ -16,6 +16,7 @@ import io
 import json
 import logging
 import os
+import re
 import sys
 import zipfile
 from datetime import date, timedelta
@@ -41,6 +42,11 @@ AN_BASE_URL = os.getenv("AN_API_BASE_URL", "https://data.assemblee-nationale.fr"
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 SCRUTINS_ZIP_PATH = "/static/openData/repository/17/loi/scrutins/Scrutins.json.zip"
+
+# Shape of an AN dossier législatif reference, e.g. "DLR5L17N52985". Mirrored by
+# frontend/src/lib/an.ts::DOSSIER_REF, which refuses to build the "Voir le dossier
+# officiel" link for anything else (MON-258).
+DOSSIER_REF_RE = re.compile(r"^DLR[A-Za-z0-9]+$")
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +103,29 @@ def _to_int(val) -> int | None:
         return None
 
 
+def extract_dossier_ref(item: dict) -> str | None:
+    """Dossier reference carried by a scrutin, exactly as published.
+
+    Returned unvalidated on purpose: ``parse_vote`` drops a non-conforming value
+    and ``check_dossier_refs`` reports it, so the two callers see the same raw
+    string rather than one silently repairing what the other is meant to detect.
+    """
+    dossier_ref = item.get("dossierRef") or None
+    if isinstance(dossier_ref, dict):
+        dossier_ref = dossier_ref.get("#text") or dossier_ref.get("ref")
+    # Also check objet.dossierLegislatif - the only populated location since 2026-03.
+    if not dossier_ref:
+        obj = item.get("objet") or {}
+        dossier_ref = obj.get("dossierLegislatif") or None
+        if isinstance(dossier_ref, dict):
+            dossier_ref = dossier_ref.get("dossierRef") or dossier_ref.get("#text")
+    return str(dossier_ref) if dossier_ref else None
+
+
+def is_dossier_ref(value: str | None) -> bool:
+    return bool(value) and DOSSIER_REF_RE.match(value) is not None
+
+
 def parse_vote(item: dict) -> dict | None:
     try:
         uid = item.get("uid") or ""
@@ -124,15 +153,7 @@ def parse_vote(item: dict) -> dict | None:
         abstentions = _to_int(decompte.get("abstentions"))
         total_voters = _to_int(syn.get("nombreVotants"))
 
-        dossier_ref = item.get("dossierRef") or None
-        if isinstance(dossier_ref, dict):
-            dossier_ref = dossier_ref.get("#text") or dossier_ref.get("ref")
-        # Also check objet.dossierLegislatif
-        if not dossier_ref:
-            obj = item.get("objet") or {}
-            dossier_ref = obj.get("dossierLegislatif") or None
-            if isinstance(dossier_ref, dict):
-                dossier_ref = dossier_ref.get("dossierRef") or dossier_ref.get("#text")
+        dossier_ref = extract_dossier_ref(item)
 
         return {
             "vote_id": uid,
@@ -144,7 +165,7 @@ def parse_vote(item: dict) -> dict | None:
             "votes_against": votes_against,
             "abstentions": abstentions,
             "total_voters": total_voters,
-            "dossier_id": str(dossier_ref) if dossier_ref else None,
+            "dossier_id": dossier_ref if is_dossier_ref(dossier_ref) else None,
         }
     except Exception as exc:
         log.debug("Could not parse scrutin %s — %s", item.get("uid"), exc)
@@ -190,6 +211,52 @@ def _upsert_records(records: list[dict]) -> None:
         conn.close()
 
 
+def check_dossier_refs(raw_items: list[dict]) -> None:
+    """Exit 1 when the dossier reference stops looking like a dossier reference.
+
+    ``objet.dossierLegislatif`` is a ``{libelle, dossierRef}`` dict, and until
+    commit 7e29131 the parser stringified the whole dict instead of reading
+    ``dossierRef``. Nothing failed: the corrupt value was upserted, the frontend
+    regex in ``an.ts`` rejected it, and the "Voir le dossier officiel" link was
+    simply not rendered on 1 570 production votes for four months (MON-258).
+
+    A shape change on that subtree fails the same silent way, so the check is on
+    the *share* of dossier-carrying scrutins whose reference is malformed rather
+    than on the parse succeeding at all. Scrutins with no dossier are not counted:
+    the AN published none before 2026-03 (ADR-035), so an all-null run is normal
+    history, not a regression.
+    """
+    seen = 0
+    malformed: list[tuple[str, str]] = []
+    for item in raw_items:
+        raw = extract_dossier_ref(item)
+        if raw is None:
+            continue
+        seen += 1
+        if not is_dossier_ref(raw):
+            malformed.append((str(item.get("uid") or "?"), raw))
+
+    if not malformed:
+        log.info(
+            "Dossier references: %d/%d scrutins carry one, all well-formed.", seen, len(raw_items)
+        )
+        return
+
+    rate = len(malformed) / seen
+    log.error(
+        "Malformed dossier references: %d/%d (%.0f%%). First offenders: %s",
+        len(malformed),
+        seen,
+        rate * 100,
+        "; ".join(f"{uid}={raw[:80]!r}" for uid, raw in malformed[:3]),
+    )
+    if rate > SKIP_RATE_THRESHOLD:
+        # Abort before upserting: these rows would be written with a NULL
+        # dossier_id, which reads downstream as "this scrutin has no bill"
+        # rather than as a broken feed.
+        sys.exit(1)
+
+
 def upsert_votes(raw_items: list[dict]) -> int:
     """Parse raw scrutin dicts and upsert into votes table. Returns count written."""
     records = [r for item in raw_items if (r := parse_vote(item)) is not None]
@@ -208,6 +275,7 @@ def upsert_votes(raw_items: list[dict]) -> int:
         # stamp them with a fresh ingested_at, masking the failure from dbt
         # source freshness checks (MON-220).
         sys.exit(1)
+    check_dossier_refs(raw_items)
     _upsert_records(records)
     return len(records)
 

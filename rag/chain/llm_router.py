@@ -32,8 +32,16 @@ load_dotenv()
 
 log = logging.getLogger(__name__)
 
-# Fast/cheap model — this is a classification call, not generation.
-CLASSIFIER_MODEL = "llama-3.1-8b-instant"
+# Fast/cheap model - this is a classification call, not generation.
+CLASSIFIER_MODEL = "openai/gpt-oss-20b"
+# gpt-oss models are reasoning models: reasoning tokens are billed against
+# max_tokens *before* any tool call is emitted. At the old 32/64 budgets the
+# model spent the whole allowance thinking and returned no tool call at all,
+# which Groq rejects with tool_use_failed. "low" effort settles at ~36
+# completion tokens; the headroom below is slack for variance, not expected
+# spend.
+_CLASSIFIER_REASONING_EFFORT = "low"
+_CLASSIFIER_MAX_TOKENS = 512
 _CLASSIFIER_TIMEOUT = 5.0
 
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=_CLASSIFIER_TIMEOUT)
@@ -118,7 +126,8 @@ def classify_intent(question: str) -> str | None:
             tools=[_TOOL],
             tool_choice={"type": "function", "function": {"name": "route_question"}},
             temperature=0.0,
-            max_tokens=64,
+            max_tokens=_CLASSIFIER_MAX_TOKENS,
+            reasoning_effort=_CLASSIFIER_REASONING_EFFORT,
         )
         calls = response.choices[0].message.tool_calls
         if not calls:
@@ -149,40 +158,22 @@ _CLAIM_PREFILTER = re.compile(
     r"|\b(?:s'|se\s+)(?:est|sont|etait|était|étaient)\s+abstenu"
 )
 
-_CLAIM_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "classify_claim",
-        "description": (
-            "Decide whether a French input about the Assemblée Nationale is an "
-            "assertion (claim) that a specific deputy or group voted a certain "
-            "way, or a question asking how someone voted."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "classification": {
-                    "type": "string",
-                    "enum": ["claim", "question"],
-                    "description": (
-                        "- claim: a statement presented as fact, e.g. « Le député X "
-                        "a voté contre l'augmentation du SMIC »\n"
-                        "- question: an interrogative, e.g. « Comment X a-t-elle "
-                        "voté sur le SMIC ? »"
-                    ),
-                },
-            },
-            "required": ["classification"],
-        },
-    },
-}
-
+# Claim detection is a *binary* label, so it asks for one word of plain text
+# rather than a tool call. The tool-call form was tried first and is not viable
+# on gpt-oss-20b: the model repeatedly emitted the enum values as parameter
+# names ({"assertion": "..."}) instead of as the value of `classification`,
+# which Groq rejects with tool_use_failed. Renaming the tool and the enum away
+# from the colliding word "claim" reduced but did not remove it. Since the
+# whole answer is one bit, a constrained text reply removes the schema-
+# adherence failure mode entirely: 8/8 on the fixtures in
+# tests/live/test_groq_contract.py, where the tool-call form scored 2/4.
 _CLAIM_SYSTEM = (
-    "You classify French inputs about the Assemblée Nationale. Decide whether "
-    "the input asserts as fact that a specific deputy or group voted a certain "
-    "way (claim), or asks how someone voted (question). Interrogative form, "
-    "question marks, or asking words (comment, est-ce que, qui, quel) mean "
-    "'question'. Always call the tool."
+    "You classify French inputs about the Assemblée Nationale. If the input "
+    "asserts as fact that a specific deputy or group voted a certain way, "
+    "answer ASSERTION. If it asks how someone voted, answer QUESTION. "
+    "Interrogative form, question marks, or asking words (comment, est-ce que, "
+    "qui, quel) mean QUESTION. Answer with exactly one word: ASSERTION or "
+    "QUESTION."
 )
 
 
@@ -202,19 +193,17 @@ def detect_claim(question: str) -> bool:
                 {"role": "system", "content": _CLAIM_SYSTEM},
                 {"role": "user", "content": question},
             ],
-            tools=[_CLAIM_TOOL],
-            tool_choice={"type": "function", "function": {"name": "classify_claim"}},
             temperature=0.0,
-            max_tokens=32,
+            max_tokens=_CLASSIFIER_MAX_TOKENS,
+            reasoning_effort=_CLASSIFIER_REASONING_EFFORT,
         )
-        calls = response.choices[0].message.tool_calls
-        if not calls:
-            return False
-        classification = json.loads(calls[0].function.arguments).get("classification")
+        answer = (response.choices[0].message.content or "").strip().upper()
     except Exception as exc:
         log.warning("claim detection failed: %s", exc)
         return False
-    return classification == "claim"
+    # Anything that is not a clean ASSERTION - including an empty reply from a
+    # truncated response - falls through to False, i.e. no nudge.
+    return answer.startswith("ASSERTION")
 
 
 def _mentions_notable_deputy(question: str) -> bool:

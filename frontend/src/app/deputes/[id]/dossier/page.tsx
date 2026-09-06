@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { departmentLabel } from '@/lib/departments'
 import { positionStyle } from '@/lib/vote-position'
 import { SITE_URL } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { PrintButton } from '@/components/PrintButton'
 
@@ -18,15 +19,19 @@ const RED  = 'var(--dp-red)'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
+  const alternates = { canonical: canonicalUrl(`/deputes/${id}/dossier`) }
   const deputy = await api.deputies.get(id).catch(() => null)
-  if (!deputy) return {}
-  return { title: `Dossier PDF — ${deputy.full_name} - MonÉlu` }
+  if (!deputy) return { alternates }
+  return {
+    title: `Dossier PDF — ${deputy.full_name} - MonÉlu`,
+    alternates,
+  }
 }
 
 export default async function DeputyDossierPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const [deputy, scorecard, alignment, dissidentVotes] = await Promise.all([
-    api.deputies.get(id).catch(() => null),
+    api.deputies.get(id).catch(nullIfMissing),
     api.deputies.scorecard(id).catch(() => null),
     api.deputies.alignment(id).catch(() => null),
     api.deputies.dissidentVotes(id, 3).catch(() => null),

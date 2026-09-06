@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { ChatAnswerCard } from '@/components/ChatAnswerCard'
-import { SITE_URL } from '@/lib/site'
+import { SITE_URL, canonicalUrl } from '@/lib/site'
 
 // Chat shares are immutable snapshots (ADR-024, mirrors ADR-022 for
 // verifications): this page reads the stored answer via GET /search/share/{id}
@@ -17,13 +17,15 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
+  const alternates = { canonical: canonicalUrl(`/chat/s/${id}`) }
   const share = await api.chatShare(id).catch(() => null)
-  if (!share) return {}
+  if (!share) return { alternates }
   const title = `« ${share.question} » - MonÉlu`
   const description = share.answer.length > 160 ? share.answer.slice(0, 160) + '…' : share.answer
   return {
     title,
     description,
+    alternates,
     openGraph: { title, description, url: `${SITE_URL}/chat/s/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }
@@ -31,7 +33,7 @@ export async function generateMetadata({
 
 export default async function ChatSharePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const result = await api.chatShare(id).catch(() => null)
+  const result = await api.chatShare(id).catch(nullIfMissing)
   if (!result) notFound()
 
   return (

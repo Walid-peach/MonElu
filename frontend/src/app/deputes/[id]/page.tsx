@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { api, csvUrl } from '@/lib/api'
+import { api, nullIfMissing, csvUrl } from '@/lib/api'
 import type { DissidentVoteItem } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { departmentCode, departmentLabel } from '@/lib/departments'
@@ -15,6 +15,7 @@ import { FollowDeputyButton } from '@/components/FollowDeputyButton'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildPersonJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -27,14 +28,19 @@ const RED    = 'var(--dp-red)'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
+  // The canonical is derived from the URL alone, so it survives a failed
+  // metadata fetch - the build's prerender burst can trip the API's rate
+  // limit, and a page that renders anyway must still state its own identity.
+  const alternates = { canonical: canonicalUrl(`/deputes/${id}`) }
   const deputy = await api.deputies.get(id).catch(() => null)
-  if (!deputy) return {}
+  if (!deputy) return { alternates }
   const description = `Bilan de mandat, votes et présence de ${deputy.full_name}${
     deputy.party ? ` (${deputy.party})` : deputy.department ? ` - ${departmentLabel(deputy.department)}` : ''
   }.`
   return {
     title: `${deputy.full_name} - MonÉlu`,
     description,
+    alternates,
     openGraph: { title: `${deputy.full_name} - MonÉlu`, description },
     twitter:   { card: 'summary_large_image', title: `${deputy.full_name} - MonÉlu`, description },
   }
@@ -42,8 +48,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function DeputyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // Two different catches on purpose (MON-275): the identity fetch uses
+  // `nullIfMissing`, so only a genuine 404 becomes `notFound()` and an unwell
+  // API surfaces as a server error instead of a cached 404. The supporting
+  // fetches stay `.catch(() => null)` - each one degrades a section of the
+  // page rather than deciding whether the page exists.
   const [deputy, scorecard, deputyStats, recentVotes, alignment, dissidentVotes] = await Promise.all([
-    api.deputies.get(id).catch(() => null),
+    api.deputies.get(id).catch(nullIfMissing),
     api.deputies.scorecard(id).catch(() => null),
     api.deputies.stats().catch(() => null),
     api.deputies.votes(id, 10).catch(() => null),

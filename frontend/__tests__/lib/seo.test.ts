@@ -104,6 +104,16 @@ describe('buildPersonJsonLd', () => {
     expect(data).not.toHaveProperty('memberOf')
     expect(data).not.toHaveProperty('image')
   })
+
+  it('links the deputy to their official AN profile via sameAs (MON-267)', () => {
+    const data = buildPersonJsonLd(deputy)
+    expect(data.sameAs).toEqual(['https://www.assemblee-nationale.fr/dyn/deputes/PA123'])
+  })
+
+  it('omits sameAs rather than guessing a URL from an unrecognised id', () => {
+    const data = buildPersonJsonLd({ ...deputy, deputy_id: "{'uid': 'PA123'}" })
+    expect(data).not.toHaveProperty('sameAs')
+  })
 })
 
 describe('buildVoteJsonLd', () => {
@@ -118,6 +128,22 @@ describe('buildVoteJsonLd', () => {
   it('omits description when summary_plain is missing', () => {
     const data = buildVoteJsonLd({ ...vote, summary_plain: null })
     expect(data).not.toHaveProperty('description')
+  })
+
+  it('points at the official dossier when dossier_id is present (MON-267)', () => {
+    const data = buildVoteJsonLd({ ...vote, dossier_id: 'DLR5L17N53980' })
+    expect(data.about).toEqual({
+      '@type': 'Legislation',
+      url: 'https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N53980',
+    })
+  })
+
+  it('omits about when dossier_id is missing or corrupted', () => {
+    expect(buildVoteJsonLd(vote)).not.toHaveProperty('about')
+    // The stringified-dict shape some legacy rows carry (ADR-035).
+    expect(
+      buildVoteJsonLd({ ...vote, dossier_id: "{'@xsi:type': 'DossierRef'}" })
+    ).not.toHaveProperty('about')
   })
 })
 

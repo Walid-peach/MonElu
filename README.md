@@ -8,7 +8,7 @@
 
 MonÉlu is a civic transparency platform that makes the voting record of every deputy in the French Assemblée Nationale fully accessible — in plain language, in real time. Built for journalists, researchers, and engaged citizens who shouldn't need to dig through government ZIP exports to understand how their representatives vote.
 
-**Site:** https://mon-elu.vercel.app · **API:** https://monelu-production.up.railway.app · **API docs:** `/docs`
+**Site:** https://mon-elu.vercel.app · **API:** https://monelu-production.up.railway.app · **API docs:** `/docs` · **Machine-readable spec:** `/openapi.json`
 
 ---
 
@@ -57,7 +57,9 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 
 ## API Endpoints
 
-Full interactive reference at `/docs`. Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting).
+Full interactive reference at `/docs`; the raw spec agents and generated clients should read is at `/openapi.json`.
+Every route carries a summary and a description written for that reader - what it returns, in what units, and the domain caveat that applies (MON-260).
+Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting).
 
 ### Core data
 
@@ -145,7 +147,7 @@ On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}`
 
 **Monitoring:** Sentry (API + frontend), opt-in via `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`
 
-**Phase 2 — RAG:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
+**Phase 2 — RAG:** OpenAI `text-embedding-3-small` · Groq `openai/gpt-oss-120b` · tiktoken · MLflow
 
 **Phase 4 — Transform:** dbt 1.12 · dbt_utils · `analytics_staging` + `analytics_marts` schemas
 
@@ -438,6 +440,9 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 |---|---|
 | `src/lib/api.ts` | Typed API client for all backend endpoints |
 | `src/lib/seo.ts` · `src/app/sitemap.ts` | Canonical site URL, metadata helpers, generated sitemap |
+| `src/lib/an.ts` | Official assemblee-nationale.fr URLs built from stored ids - the deputy profile link behind `Person.sameAs` and the dossier link shared by vote cards and `Event.about` (MON-267) |
+| `src/lib/faq.ts` | Q&A copy for `/methodologie` and `/a-propos`, rendered as the visible text *and* published as `FAQPage` JSON-LD (MON-268) - edit the answers here, not in the pages; `__tests__/app/faq-jsonld.test.tsx` fails if the two diverge |
+| `src/lib/exports.ts` | The three published CSV exports, described once - `/donnees` renders the cards from this array and `buildDataCatalogJsonLd()` marks the same entries up as `DataCatalog`/`Dataset` JSON-LD (MON-262); `__tests__/app/dataset-jsonld.test.tsx` fails if the page and the markup diverge |
 | `src/components/home/` | Landing-page scenes, live pulse panel, trust strip |
 | `src/components/HeroSearch.tsx` · `GlobalSearch.tsx` | Search entry points wired to the API |
 
@@ -505,6 +510,7 @@ cd frontend && npm test               # Jest + Testing Library
 Both suites run on every PR via `ci.yml` and block merge on failure.
 
 `tests/unit/test_readme_endpoints.py` checks the **API Endpoints** tables above against `app.openapi()` and the live slowapi limits: adding, removing, or re-limiting an endpoint without updating this file fails CI. Edit the table, don't loosen the test.
+The same file asserts every route in the spec has a non-empty `summary` and a description of real length, so a new endpoint cannot ship undocumented (MON-260). FastAPI reads `summary` off the `@router` decorator and `description` off the handler's docstring.
 
 ---
 

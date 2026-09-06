@@ -1,6 +1,13 @@
+import type { Metadata } from 'next'
 import * as Sentry from '@sentry/nextjs'
 import { api, Vote, Deputy, Scorecard } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
+import { HomeSummary } from '@/components/home/HomeSummary'
+import { canonicalUrl } from '@/lib/site'
+
+export const metadata: Metadata = {
+  alternates: { canonical: canonicalUrl('/') },
+}
 
 const FALLBACK_STATS = {
   deputies: 596,
@@ -154,6 +161,7 @@ export default async function Home() {
   return (
     <div className="overflow-x-clip bg-[#070b14]">
       <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} deputyInfo={deputyInfo} />
+      <HomeSummary stats={homeStats} />
     </div>
   )
 }

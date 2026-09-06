@@ -62,6 +62,44 @@ test.describe('smoke: /votes row columns are not clipped', () => {
   })
 })
 
+test.describe('smoke: the homepage is legible to a crawler', () => {
+  // MON-270: `/` renders `MobileExperience` on every viewport and mounts
+  // `CinematicExperience` on top of it once `useSyncExternalStore` confirms
+  // desktop - so the desktop DOM is the union of both trees, and the two
+  // scroll-panel titles used to make three competing `<h1>`s. jsdom never sees
+  // this: the cinematic half only mounts behind a real matchMedia. Both
+  // viewports matter (they render different trees); the color scheme does not.
+  test.beforeEach(({}, testInfo) => {
+    testInfo.skip(!testInfo.project.name.endsWith('-light'), 'color-scheme-independent')
+  })
+
+  test('one h1, and an h2 outline beneath it', async ({ page }) => {
+    await page.goto('/')
+    const viewport = page.viewportSize()
+    if (!viewport) throw new Error('no viewport configured for this project')
+
+    // The cinematic mounts in an effect after hydration, so counting too early
+    // would pass for the wrong reason. Wait for one of its own panels first.
+    if (viewport.width >= 768) {
+      await page.locator('[data-title="0"]').waitFor({ state: 'attached' })
+    }
+
+    await expect(page.locator('h1')).toHaveCount(1)
+    await expect(page.locator('h1')).toHaveText([/enfin lisible/])
+    // The prose summary contributes the outline the flat hero never had.
+    await expect(page.getByRole('heading', { level: 2, name: /relevé de vote complet/ })).toBeAttached()
+  })
+
+  test('the prose summary is in the server HTML, not injected by JS', async ({ request }) => {
+    // The whole point of the section: a crawler that never runs the client
+    // bundle must still be told what this site is.
+    const html = await (await request.get('/')).text()
+    expect(html).toContain('plateforme de transparence civique')
+    expect(html).toContain('href="/methodologie"')
+    expect(html).toContain('href="/groupes/rassemblement-national"')
+  })
+})
+
 test.describe('smoke: nav visibility follows the md breakpoint', () => {
   // MON-141: the desktop nav is `hidden md:flex` — jsdom can't tell an
   // inline display:flex apart from the Tailwind class losing the cascade,
@@ -81,5 +119,97 @@ test.describe('smoke: nav visibility follows the md breakpoint', () => {
       await expect(desktopNavToggle).toBeVisible()
       await expect(mobileMenuButton).toBeHidden()
     }
+  })
+})
+
+test.describe('smoke: every route declares a canonical URL', () => {
+  // MON-269: `alternates.canonical` in a page's metadata is only a claim until
+  // Next actually renders the <link>. A page that was a client component, or
+  // one whose generateMetadata bailed out early, silently emits nothing.
+  // Nothing here depends on viewport or color scheme, and every check costs a
+  // real navigation against the live API - one project is enough.
+  test.beforeEach(({}, testInfo) => {
+    testInfo.skip(testInfo.project.name !== 'desktop-light', 'viewport-independent')
+  })
+
+  async function canonicalHref(page: Page) {
+    const link = page.locator('link[rel="canonical"]')
+    await expect(link).toHaveCount(1)
+    return (await link.getAttribute('href')) ?? ''
+  }
+
+  for (const route of STATIC_ROUTES) {
+    test(`${route} emits one canonical`, async ({ page }) => {
+      await page.goto(route)
+      const href = await canonicalHref(page)
+      expect(href).toMatch(/^https?:\/\//)
+      expect(new URL(href).pathname).toBe(route)
+    })
+  }
+
+  test('/deputes/[id] emits a canonical for its own id', async ({ page }) => {
+    const href = await firstDetailHref(page, '/deputes', '/deputes/', [
+      '/deputes/comparer',
+      '/deputes/tableau',
+    ])
+    await page.goto(href)
+    expect(new URL(await canonicalHref(page)).pathname).toBe(href)
+  })
+
+  // Worth its own test rather than folding into the loop above:
+  // generateStaticParams prerenders 100 vote pages at build time, and that
+  // burst regularly trips the API's rate limit, so a prerendered vote page can
+  // ship with none of its own metadata. The canonical is built from the URL
+  // before that fetch precisely so it survives.
+  test('/votes/[id] emits a canonical for its own id', async ({ page }) => {
+    const href = await firstDetailHref(page, '/votes', '/votes/')
+    await page.goto(href)
+    expect(new URL(await canonicalHref(page)).pathname).toBe(href)
+  })
+
+  test('a query string does not fork the canonical', async ({ page }) => {
+    await page.goto('/chat?q=test')
+    expect(new URL(await canonicalHref(page)).pathname).toBe('/chat')
+  })
+})
+
+test.describe('smoke: an unknown id is a real 404', () => {
+  // MON-275: `notFound()` used to render the 404 body with an HTTP 200,
+  // because a `loading.tsx` above the route flushed the status before the
+  // page body ran. Only a real browser round-trip proves the status, and only
+  // an end-to-end check catches a `loading.tsx` reintroduced anywhere above
+  // these routes - the jest guard in __tests__/app/not-found-status.test.ts
+  // covers the file layout, this covers what the server actually sends.
+  const MISSING = [
+    '/deputes/NOPE',
+    '/deputes/NOPE/dossier',
+    '/votes/DOESNOTEXIST',
+    '/groupes/nope',
+    '/themes/nope',
+    '/departements/999',
+    '/quiz/s/nonexistent',
+    '/chat/s/nonexistent',
+    '/verifier/v/nonexistent',
+  ]
+
+  test.beforeEach(({}, testInfo) => {
+    testInfo.skip(testInfo.project.name !== 'desktop-light', 'viewport-independent')
+  })
+
+  for (const route of MISSING) {
+    test(`${route} responds 404`, async ({ page }) => {
+      const response = await page.goto(route)
+      expect(response?.status()).toBe(404)
+      await expect(page.getByText('Page introuvable')).toBeVisible()
+    })
+  }
+
+  test('a route that does exist is untouched', async ({ page }) => {
+    const href = await firstDetailHref(page, '/deputes', '/deputes/', [
+      '/deputes/comparer',
+      '/deputes/tableau',
+    ])
+    const response = await page.goto(href)
+    expect(response?.status()).toBe(200)
   })
 })

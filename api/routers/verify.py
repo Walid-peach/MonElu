@@ -97,6 +97,27 @@ def _to_response(row: dict) -> VerifyResponse:
 )
 @limiter.limit(tiered_limit(10))
 def verify(request: Request, body: VerifyRequest):
+    """Check a factual claim about how a deputy voted, and store the verdict.
+
+    Give it a claim, not a question ("X a voté pour la loi Y"). It resolves the
+    named deputy, retrieves the relevant scrutins, joins their recorded
+    positions, and returns one of four verdicts: `vrai`, `faux`, `trompeur`, or
+    `inverifiable`.
+
+    `inverifiable` is the deliberate fallback and is common: it is returned
+    whenever the deputy cannot be resolved, retrieval similarity is too low, or
+    the model produced a factual verdict without a citation that survives
+    validation against the votes table. Read it as "this API declines to rule",
+    never as evidence the claim is false.
+
+    `trompeur` is the mixed-record case - true of some scrutins on the bill and
+    false of others, which a blanket claim obscures.
+
+    Every cited `vote_id` is checked against the database before the response is
+    returned, so citations point at real scrutins. Verdicts are stored immutably
+    and readable at `/verifier/v/<id>`. Costs an LLM call; 10/min; 503 when the
+    server has no LLM credentials.
+    """
     # Plain `def` on purpose: the chain does blocking psycopg2 + OpenAI + Groq
     # I/O, so FastAPI must run it in the threadpool, not on the event loop.
     if _is_placeholder(os.getenv("GROQ_API_KEY")) or _is_placeholder(os.getenv("OPENAI_API_KEY")):
@@ -156,6 +177,12 @@ def verify(request: Request, body: VerifyRequest):
 # IPs, so the base per-IP limit was tripping during viral spikes.
 @limiter.limit(tiered_limit(300))
 def get_verification(request: Request, verification_id: uuid.UUID):
+    """Read back a stored verdict by id. No LLM call, no re-verification.
+
+    The verdict is frozen as it was issued; `data_horizon` records the window it
+    was judged against, which may be narrower than today's data. 404 when the id
+    is unknown.
+    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
