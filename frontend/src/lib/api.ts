@@ -1,3 +1,5 @@
+import { HEALTH_REVALIDATE_SECONDS, HEALTH_TAG } from '@/lib/cacheTags'
+
 /**
  * Origin of the MonÉlu REST API.
  *
@@ -461,6 +463,8 @@ export function nullIfMissing(error: unknown): null {
   throw error
 }
 
+type FetchOpts = { revalidate?: number; tags?: string[] }
+
 /**
  * Retry ladders, split by phase (MON-275).
  *
@@ -487,14 +491,14 @@ const IS_BUILD = process.env.NEXT_PHASE === 'phase-production-build'
 const SERVER_ERROR_DELAYS_MS = IS_BUILD ? [200, 400, 2_000, 15_000, 30_000] : [200, 400]
 const RATE_LIMIT_DELAYS_MS = IS_BUILD ? [2_000, 15_000, 30_000, 61_000] : [500, 2_000]
 
-async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promise<T> {
+async function apiFetch<T>(path: string, opts?: FetchOpts): Promise<T> {
   let lastStatus = 0
   let serverErrorAttempt = 0
   let rateLimitAttempt = 0
   for (;;) {
     const res = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
-      next: { revalidate: opts?.revalidate ?? 300 },
+      next: { revalidate: opts?.revalidate ?? 300, tags: opts?.tags },
     })
     if (res.ok) return res.json()
     lastStatus = res.status
@@ -514,14 +518,14 @@ async function apiFetch<T>(path: string, opts?: { revalidate?: number }): Promis
 // Same retry policy as apiFetch, but a 404 means "nothing to show" rather
 // than an error — used by endpoints with a genuine empty state, like
 // /quiz/weekly on a recess week with no qualifying scrutin (MON-185).
-async function apiFetchOptional<T>(path: string, opts?: { revalidate?: number }): Promise<T | null> {
+async function apiFetchOptional<T>(path: string, opts?: FetchOpts): Promise<T | null> {
   let lastStatus = 0
   let serverErrorAttempt = 0
   let rateLimitAttempt = 0
   for (;;) {
     const res = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
-      next: { revalidate: opts?.revalidate ?? 300 },
+      next: { revalidate: opts?.revalidate ?? 300, tags: opts?.tags },
     })
     if (res.ok) return res.json()
     if (res.status === 404) return null
@@ -700,7 +704,11 @@ export const api = {
       email?: string | null
     }) => apiPost<{ status: string }>('/feedback/report', report),
   },
-  health: () => apiFetch<Record<string, unknown>>('/health/', { revalidate: 300 }),
+  health: () =>
+    apiFetch<Record<string, unknown>>('/health/', {
+      revalidate: HEALTH_REVALIDATE_SECONDS,
+      tags: [HEALTH_TAG],
+    }),
 }
 
 // CSV export download URLs (MON-97) — plain hrefs, the browser downloads
