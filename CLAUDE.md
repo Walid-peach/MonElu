@@ -171,6 +171,10 @@ The body lives in `src/lib/llms.ts`; `__tests__/app/llms-txt.test.ts` fails if e
 - `robots.ts` names GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-User, Claude-SearchBot, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot, Bytespider and meta-externalagent explicitly, all `allow: '/'` (MON-261).
 They are already covered by the `*` rule; listing them records the permissiveness as deliberate - this is Licence Ouverte 2.0 data whose purpose is reuse - so a later "tighten robots.txt" is a visible deletion rather than an inherited default.
 `Google-Extended` is the one entry with a distinct effect: it governs AI Overviews eligibility separately from Googlebot.
+- The oEmbed provider (MON-266) is two halves that only work together: the endpoint `src/app/api/oembed/route.ts` and the discovery `<link rel="alternate" type="application/json+oembed">` a page emits via `alternates.types` in its `generateMetadata`.
+Notion, Slack, Substack, Ghost, WordPress and Discourse read the link tag off the page before they will ever call the endpoint, so an embeddable route that ships without it unfurls as a blue link and nothing reports an error.
+Making a new route embeddable therefore takes three edits, not one: an `/embed/...` page, an entry in `EMBEDDABLE_PATHS` in `src/lib/oembed.ts`, and the discovery link on the canonical page.
+The endpoint validates the caller's `url` against that allowlist before building an iframe `src` out of it - the same discipline `src/lib/portraits.ts` applies to the portrait proxy - and rebuilds every URL it emits from `SITE_URL`, so a domain move carries the provider with it.
 
 **`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
