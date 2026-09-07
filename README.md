@@ -426,6 +426,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `/deputes` · `/deputes/[id]` · `/deputes/tableau` · `/deputes/comparer` | Deputy directory, profile, dense sortable table, side-by-side comparison |
 | `/votes` · `/votes/[id]` | Vote list and vote detail with per-deputy positions |
 | `/groupes/[slug]` · `/departements/[code]` · `/themes/[slug]` | Group, department, and theme hub pages |
+| `/agenda` | Ordre du jour of the séance publique, grouped by sitting day (MON-213); renders an explicit empty state during recess |
 | `/chat` · `/chat/s/[id]` | RAG chat (the fact-check UI lives here, ADR-023) and shared answer snapshots |
 | `/verifier` · `/verifier/v/[id]` | Redirect to the chat · shared fact-check verdicts |
 | `/quiz` · `/quiz/s/[id]` | Vote-matching quiz and shared results |
@@ -441,6 +442,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 |---|---|
 | `src/lib/api.ts` | Typed API client for all backend endpoints |
 | `src/lib/seo.ts` · `src/app/sitemap.ts` | Canonical site URL, metadata helpers, generated sitemap |
+| `src/lib/agenda.ts` | Paris-timezone window arithmetic and the summary/`objet` fallback shared by `/agenda` and the homepage teaser - `summary_plain` is NULL until MON-211 ships, so the official wording is the lead whenever there is no one-liner |
 | `src/lib/an.ts` | Official assemblee-nationale.fr URLs built from stored ids - the deputy profile link behind `Person.sameAs` and the dossier link shared by vote cards and `Event.about` (MON-267) |
 | `src/lib/faq.ts` | Q&A copy for `/methodologie` and `/a-propos`, rendered as the visible text *and* published as `FAQPage` JSON-LD (MON-268) - edit the answers here, not in the pages; `__tests__/app/faq-jsonld.test.tsx` fails if the two diverge |
 | `src/lib/oembed.ts` | The oEmbed contract in one place (MON-266): which URLs the provider answers for, the discovery-link href every embeddable page must emit, and the iframe markup - all derived from `SITE_URL` |

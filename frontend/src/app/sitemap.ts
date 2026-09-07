@@ -83,6 +83,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/deputes/tableau`, changeFrequency: 'daily', priority: 0.6 },
     { url: `${SITE_URL}/donnees`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/votes`, changeFrequency: 'daily', priority: 0.9 },
+    // The forward view (MON-213) - rewritten daily, like /votes.
+    { url: `${SITE_URL}/agenda`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/mon-depute`, changeFrequency: 'monthly', priority: 0.6 },
     ...THEME_ENTRIES.map(({ slug }) => ({
       url: `${SITE_URL}/themes/${slug}`,
@@ -95,8 +97,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
     { url: `${SITE_URL}/chat`, changeFrequency: 'monthly', priority: 0.5 },
-    // /quiz only — /quiz/s/* share snapshots stay out of the sitemap, like
-    // the /chat/s/* and /verifier/v/* snapshot URLs.
+    // /quiz only. The /quiz/s/*, /chat/s/* and /verifier/v/* share snapshots
+    // stay out of the sitemap AND out of the index (ADR-036, MON-264): they
+    // are an unmoderated, user-submitted corpus, so each page declares
+    // `robots: { index: false }` rather than relying on this omission alone.
     { url: `${SITE_URL}/quiz`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/a-propos`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/developpeurs`, changeFrequency: 'monthly', priority: 0.4 },

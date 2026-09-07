@@ -41,6 +41,7 @@ const SECTIONS: Array<{ path: string; what: string }> = [
   { path: '/deputes/tableau', what: 'Toutes les scorecards dans un tableau triable, sur un écran.' },
   { path: '/deputes/comparer', what: 'Comparaison de deux députés scrutin par scrutin.' },
   { path: '/votes', what: 'Tous les scrutins, filtrables par thème et par résultat ; chaque fiche liste les 577 positions.' },
+  { path: '/agenda', what: 'Ordre du jour prévisionnel de la séance publique, jour par jour. Prévisionnel : un point peut être reporté ou retiré.' },
   { path: '/mon-depute', what: 'Trouver son député à partir de son code postal.' },
   { path: '/quiz', what: 'Quiz de positionnement : vos réponses comparées aux votes réellement enregistrés.' },
   { path: '/chat', what: 'Recherche sémantique (RAG) sur le corpus législatif, réponses sourcées par scrutin.' },
