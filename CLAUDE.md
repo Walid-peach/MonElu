@@ -119,6 +119,9 @@ Assemblée Nationale Open Data (ZIPs)
 
 **`scripts/`** — Data ingestion and maintenance
 - Scripts fetch ZIPs from the AN open data portal with exponential-backoff retry (5 attempts, 2 s base) and upsert via `ON CONFLICT ... DO UPDATE`
+- **Every ingest script opens its DB connection through `connect_with_retry()`** (`scripts/_http.py`), never `psycopg2.connect()` directly (MON-255).
+Supabase sits behind PgBouncer, and `ingest_deputies.py`/`ingest_votes.py` are `critical=True` steps in `run_ingestion_prod.py` - an unretried proxy drop there aborts the whole daily run, RAG rebuild and monitoring probes included.
+`tests/unit/test_http_retry.py` asserts on the source of all four ingest modules so a new script cannot drift back to a bare connect.
 - **Every parser must fail loudly on an upstream shape change** (MON-220, MON-249).
 `SKIP_RATE_THRESHOLD = 0.05` lives in `scripts/_http.py` and is shared by all four parsers - never re-declare it per script.
 `ingest_deputies.py` and `ingest_votes.py` exit 1 before upserting when more than 5% of records fail to parse.

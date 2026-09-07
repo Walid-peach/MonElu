@@ -26,9 +26,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.departments_data import DEPT_NAMES  # noqa: E402
 
 try:
-    from scripts._http import SKIP_RATE_THRESHOLD, download_with_retry
+    from scripts._http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 except ImportError:  # running as a plain file: python scripts/ingest_deputies.py
-    from _http import SKIP_RATE_THRESHOLD, download_with_retry
+    from _http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 
 load_dotenv()
 
@@ -194,7 +194,7 @@ ON CONFLICT (deputy_id) DO UPDATE SET
 
 
 def _upsert_records(records: list[dict]) -> None:
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = connect_with_retry(DATABASE_URL)
     try:
         with conn:
             with conn.cursor() as cur:
