@@ -72,7 +72,8 @@ describe('llms.txt (MON-261)', () => {
     ['llms-full.txt', full],
   ])('%s only links pages that exist', (_name, text) => {
     // Route handlers, not pages - they have no page.tsx to resolve to.
-    const NOT_PAGES = ['/sitemap.xml', '/llms.txt', '/llms-full.txt']
+    // The `.md` twins (MON-271) are rewrites onto `app/md/**/route.ts`.
+    const NOT_PAGES = ['/sitemap.xml', '/llms.txt', '/llms-full.txt', '/methodologie.md']
     const broken = internalPaths(text).filter(
       path => !NOT_PAGES.includes(path) && !routeExists(path)
     )

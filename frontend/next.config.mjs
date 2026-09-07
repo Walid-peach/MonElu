@@ -51,7 +51,15 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    return []
+    // Explicit `.md` URLs (MON-271) rather than `Accept`-header negotiation:
+    // trivially cacheable and carries no `Vary` risk on a heavily ISR-cached
+    // site. `:id` is greedy up to the literal `.md` suffix (path-to-regexp
+    // default), so `/deputes/PA720892.md` rewrites to `id=PA720892`.
+    return [
+      { source: '/deputes/:id.md', destination: '/md/deputes/:id' },
+      { source: '/votes/:id.md', destination: '/md/votes/:id' },
+      { source: '/methodologie.md', destination: '/md/methodologie' },
+    ]
   },
   // /embed/* pages (MON-96) are meant to be iframed on external sites; every
   // other route stays framing-denied by default.
