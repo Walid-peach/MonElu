@@ -182,6 +182,10 @@ Social sharing is unaffected: unfurlers ignore `noindex`, and the `openGraph`/`t
 Canonicals stay (a `noindex` page still claims its own URL across preview hosts).
 Never add these routes to `sitemap.ts`, and never add `ClaimReview`/`QAPage` or other rich-result markup to them - that is a request to be surfaced, which is what the ADR declines; MON-263 is closed as won't-do on those grounds.
 `frontend/__tests__/app/snapshot-noindex.test.ts` enforces all of it.
+- The oEmbed provider (MON-266) is two halves that only work together: the endpoint `src/app/api/oembed/route.ts` and the discovery `<link rel="alternate" type="application/json+oembed">` a page emits via `alternates.types` in its `generateMetadata`.
+Notion, Slack, Substack, Ghost, WordPress and Discourse read the link tag off the page before they will ever call the endpoint, so an embeddable route that ships without it unfurls as a blue link and nothing reports an error.
+Making a new route embeddable therefore takes three edits, not one: an `/embed/...` page, an entry in `EMBEDDABLE_PATHS` in `src/lib/oembed.ts`, and the discovery link on the canonical page.
+The endpoint validates the caller's `url` against that allowlist before building an iframe `src` out of it - the same discipline `src/lib/portraits.ts` applies to the portrait proxy - and rebuilds every URL it emits from `SITE_URL`, so a domain move carries the provider with it.
 
 **`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.

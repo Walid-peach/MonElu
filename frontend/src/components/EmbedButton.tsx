@@ -1,13 +1,18 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 
+import { OEMBED_HEIGHT, OEMBED_WIDTH } from '@/lib/oembed'
+
 interface EmbedButtonProps {
   path: string
   width?: number
   height?: number
 }
 
-export function EmbedButton({ path, width = 560, height = 220 }: EmbedButtonProps) {
+// The defaults come from `lib/oembed.ts` rather than being written out again:
+// the oEmbed payload and this hand-pasted snippet must describe the same box,
+// and two independent literals would drift with nothing failing (MON-266).
+export function EmbedButton({ path, width = OEMBED_WIDTH, height = OEMBED_HEIGHT }: EmbedButtonProps) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -58,6 +63,13 @@ export function EmbedButton({ path, width = 560, height = 220 }: EmbedButtonProp
         >
           <p style={{ fontSize: 12.5, color: '#4B5563', marginBottom: 8 }}>
             Collez ce code dans votre page pour afficher ce vote en direct.
+          </p>
+          {/* oEmbed (MON-266) means the plain link already unfurls into this
+              same widget on Notion, Slack, Substack, Ghost, WordPress and
+              Discourse. The iframe stays here for everything else. */}
+          <p style={{ fontSize: 11.5, color: '#6B7280', marginBottom: 8 }}>
+            Sur Notion, Slack, Substack, Ghost ou WordPress, il suffit de coller le lien de la page :
+            l&apos;encart s&apos;affiche automatiquement (oEmbed).
           </p>
           <code style={{ display: 'block', fontSize: 11, color: '#1B2B50', background: '#F7F4ED', borderRadius: 6, padding: 8, wordBreak: 'break-all', marginBottom: 10 }}>
             {snippet}
