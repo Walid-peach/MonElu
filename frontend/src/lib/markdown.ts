@@ -28,6 +28,25 @@ function inlineCaveats(): string {
 ${list(CAVEATS)}`
 }
 
+/**
+ * The mandate line, built from whichever of the two dates is actually present.
+ *
+ * Every date here goes through `formatDate`, which is `new Date(s)` - and
+ * `new Date('')` is `Invalid Date`, so coercing a null date to `''` would
+ * print the literal string "Invalid Date" into a document whose whole purpose
+ * is to be quoted verbatim by a model. `mandate_start` and `mandate_end` are
+ * both `string | null` (every `schemas.py` field is Optional to match DB
+ * NULLs), so the null case is skipped rather than formatted.
+ */
+function mandateLine(deputy: Deputy): string {
+  const start = deputy.mandate_start ? `depuis le ${formatDate(deputy.mandate_start)}` : null
+  const end = deputy.mandate_end
+    ? `jusqu'au ${formatDate(deputy.mandate_end)} (mandat terminé)`
+    : null
+  const parts = [start, end].filter(Boolean)
+  return `- **Mandat :** ${parts.length > 0 ? parts.join(', ') : 'dates non renseignées'}`
+}
+
 export function buildDeputyMarkdown(params: {
   deputy: Deputy
   scorecard: Scorecard | null
@@ -42,9 +61,7 @@ export function buildDeputyMarkdown(params: {
   const identityLines = [
     `- **Groupe :** ${deputy.party ? (slug ? `[${deputy.party}](${SITE_URL}/groupes/${slug})` : deputy.party) : 'Non inscrit'}`,
     `- **Département :** ${deptLabel ?? 'Inconnu'}`,
-    `- **Mandat :** depuis le ${formatDate(deputy.mandate_start ?? '')}${
-      deputy.mandate_end ? `, jusqu'au ${formatDate(deputy.mandate_end)} (mandat terminé)` : ''
-    }`,
+    mandateLine(deputy),
   ]
 
   const presencePct = scorecard ? Math.round((scorecard.presence_rate ?? 0) * 100) : null

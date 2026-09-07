@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 import type { Alignment, Deputy, DeputyVotesResponse, Scorecard, VoteDetail } from '@/lib/api'
+import { canonicalUrl } from '@/lib/site'
 
 const deputiesGet = jest.fn()
 const deputiesScorecard = jest.fn()
@@ -109,6 +110,22 @@ describe('GET /md/deputes/[id] (MON-271)', () => {
     expect(body.startsWith('# Mathilde Panot')).toBe(true)
   })
 
+  // One extra crawlable URL per deputy carrying the same content as a page we
+  // actively SEO-tune. The canonical header consolidates ranking onto the HTML
+  // page instead of letting the twin compete with it.
+  it('points search engines back at the HTML page via a canonical Link header', async () => {
+    deputiesGet.mockResolvedValue(deputy)
+    deputiesScorecard.mockResolvedValue(scorecard)
+    deputiesAlignment.mockResolvedValue(alignment)
+    deputiesVotes.mockResolvedValue(votesResponse)
+
+    const res = await getDeputyMd(new Request('http://localhost/md/deputes/PA720892'), {
+      params: Promise.resolve({ id: 'PA720892' }),
+    })
+
+    expect(res.headers.get('Link')).toBe(`<${canonicalUrl('/deputes/PA720892')}>; rel="canonical"`)
+  })
+
   it('404s a genuinely unknown deputy rather than rendering an empty page', async () => {
     const { ApiError } = jest.requireActual('@/lib/api')
     deputiesGet.mockRejectedValue(new ApiError(404, 'Not found'))
@@ -131,6 +148,9 @@ describe('GET /md/votes/[id] (MON-271)', () => {
 
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toBe('text/markdown; charset=utf-8')
+    expect(res.headers.get('Link')).toBe(
+      `<${canonicalUrl('/votes/VTANR5L17V1234')}>; rel="canonical"`
+    )
     const body = await res.text()
     expect(body.startsWith('# Projet de loi de finances')).toBe(true)
   })
@@ -151,6 +171,7 @@ describe('GET /md/methodologie (MON-271)', () => {
   it('serves the static methodology Markdown', async () => {
     const res = getMethodologieMd()
     expect(res.headers.get('Content-Type')).toBe('text/markdown; charset=utf-8')
+    expect(res.headers.get('Link')).toBe(`<${canonicalUrl('/methodologie')}>; rel="canonical"`)
     const body = await res.text()
     expect(body.startsWith('# Méthodologie')).toBe(true)
   })

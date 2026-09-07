@@ -1,9 +1,11 @@
 import { api, nullIfMissing } from '@/lib/api'
 import { buildVoteMarkdown } from '@/lib/markdown'
+import { canonicalUrl } from '@/lib/site'
 
 /**
  * Backs the public `/votes/{id}.md` URL - see `md/deputes/[id]/route.ts` for
- * why this is an explicit rewrite rather than `Accept` negotiation (MON-271).
+ * why this is an explicit rewrite rather than `Accept` negotiation (MON-271),
+ * and why the response carries a `Link: rel="canonical"` back to the HTML page.
  */
 export const dynamicParams = true
 export const revalidate = 86400
@@ -20,6 +22,7 @@ export async function GET(
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
       'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+      Link: `<${canonicalUrl(`/votes/${id}`)}>; rel="canonical"`,
     },
   })
 }

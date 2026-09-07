@@ -1,3 +1,11 @@
+/**
+ * @jest-environment node
+ *
+ * Node rather than the default jsdom: this suite imports `next.config.mjs` to
+ * resolve the `.md` rewrites (MON-271), and `next-pwa` reaches for
+ * `createRequire`, which jsdom's module runtime does not provide. Nothing here
+ * touches the DOM.
+ */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import robots from '@/app/robots'
@@ -5,6 +13,7 @@ import { buildLlmsTxt, buildLlmsFullTxt } from '@/lib/llms'
 import { GROUP_ENTRIES } from '@/lib/groups'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { SITE_URL, DATA_ATTRIBUTION } from '@/lib/site'
+import nextConfig from '../../next.config.mjs'
 
 const APP = join(__dirname, '..', '..', 'src', 'app')
 
@@ -31,6 +40,31 @@ function routeExists(path: string): boolean {
   }
 
   return walk(APP, segments)
+}
+
+/**
+ * A predicate matching any path served through a `next.config.mjs` rewrite
+ * (`:param` matches one segment), so a URL with no `page.tsx` still counts as
+ * real when the rewrite table says it resolves.
+ */
+async function rewriteSources(): Promise<(path: string) => boolean> {
+  const configured = await nextConfig.rewrites!()
+  const rules = Array.isArray(configured)
+    ? configured
+    : [
+        ...(configured.beforeFiles ?? []),
+        ...(configured.afterFiles ?? []),
+        ...(configured.fallback ?? []),
+      ]
+  const patterns = rules.map(
+    rule =>
+      new RegExp(
+        `^${rule.source
+          .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          .replace(/:[A-Za-z0-9_]+/g, '[^/]+')}$`
+      )
+  )
+  return (path: string) => patterns.some(pattern => pattern.test(path))
 }
 
 /** Every `SITE_URL`-rooted path the file links to. */
@@ -70,12 +104,17 @@ describe('llms.txt (MON-261)', () => {
   it.each([
     ['llms.txt', short],
     ['llms-full.txt', full],
-  ])('%s only links pages that exist', (_name, text) => {
+  ])('%s only links pages that exist', async (_name, text) => {
     // Route handlers, not pages - they have no page.tsx to resolve to.
-    // The `.md` twins (MON-271) are rewrites onto `app/md/**/route.ts`.
-    const NOT_PAGES = ['/sitemap.xml', '/llms.txt', '/llms-full.txt', '/methodologie.md']
+    const NOT_PAGES = ['/sitemap.xml', '/llms.txt', '/llms-full.txt']
+    // The `.md` twins (MON-271) have no page.tsx either: they are rewrites
+    // onto `app/md/**/route.ts`. Resolving them through the real rewrite table
+    // rather than bypassing them keeps this test's promise intact - llms.txt
+    // must not advertise a URL that 404s, and a deleted rewrite is exactly how
+    // that would happen.
+    const rewritten = await rewriteSources()
     const broken = internalPaths(text).filter(
-      path => !NOT_PAGES.includes(path) && !routeExists(path)
+      path => !NOT_PAGES.includes(path) && !routeExists(path) && !rewritten(path)
     )
     expect(broken).toEqual([])
   })

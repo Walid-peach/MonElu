@@ -99,6 +99,48 @@ describe('buildDeputyMarkdown (MON-271)', () => {
     expect(partial).toContain('Scorecard indisponible')
     expect(partial).not.toContain('Alignement avec son groupe')
   })
+
+  // `formatDate` is `new Date(s)`, and `new Date('')` is `Invalid Date` - so a
+  // null mandate date coerced to `''` would print the literal string
+  // "Invalid Date" into a document built to be quoted verbatim by a model.
+  // Every schema field is Optional to match DB NULLs, so this path is real.
+  it('never prints "Invalid Date" when a mandate date is missing', () => {
+    for (const dates of [
+      { mandate_start: null, mandate_end: null },
+      { mandate_start: null, mandate_end: '2026-01-15' },
+      { mandate_start: '2024-07-07', mandate_end: null },
+    ]) {
+      const md = buildDeputyMarkdown({
+        deputy: { ...deputy, ...dates },
+        scorecard,
+        alignment,
+        recentVotes,
+      })
+      expect(md).not.toContain('Invalid Date')
+      expect(md).toContain('- **Mandat :**')
+    }
+  })
+
+  it('states when both mandate dates are missing rather than inventing one', () => {
+    const md = buildDeputyMarkdown({
+      deputy: { ...deputy, mandate_start: null, mandate_end: null },
+      scorecard,
+      alignment,
+      recentVotes,
+    })
+    expect(md).toContain('dates non renseignées')
+  })
+
+  it('marks a finished mandate as terminated', () => {
+    const md = buildDeputyMarkdown({
+      deputy: { ...deputy, mandate_end: '2026-01-15' },
+      scorecard,
+      alignment,
+      recentVotes,
+    })
+    expect(md).toContain('mandat terminé')
+    expect(md).toContain('15 janvier 2026')
+  })
 })
 
 describe('buildVoteMarkdown (MON-271)', () => {
