@@ -7,6 +7,7 @@ import { VoteDetailClient } from './VoteDetailClient'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildVoteJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
+import { oembedDiscoveryUrl } from '@/lib/oembed'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -16,11 +17,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // The canonical is derived from the URL alone, so it survives a failed
   // metadata fetch - the build's prerender burst can trip the API's rate
   // limit, and a page that renders anyway must still state its own identity.
-  // `types` advertises the Markdown twin (MON-271) - a static rewrite, so it
-  // exists regardless of whether this fetch succeeds.
+  // `types` carries two independent discovery links, both derived from the
+  // URL alone so they survive a failed metadata fetch: the oEmbed link
+  // (MON-266) Notion/Slack/Substack/Ghost/WordPress read before calling the
+  // embed endpoint, and the Markdown twin (MON-271) at `/votes/{id}.md`.
   const alternates = {
     canonical: canonicalUrl(`/votes/${id}`),
-    types: { 'text/markdown': canonicalUrl(`/votes/${id}.md`) },
+    types: {
+      'application/json+oembed': oembedDiscoveryUrl(`/votes/${id}`),
+      'text/markdown': canonicalUrl(`/votes/${id}.md`),
+    },
   }
   const vote = await api.votes.get(id).catch(() => null)
   if (!vote) return { alternates }

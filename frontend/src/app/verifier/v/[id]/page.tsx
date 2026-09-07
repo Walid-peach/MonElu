@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { api, nullIfMissing } from '@/lib/api'
 import { VerdictCard } from '@/components/VerdictCard'
 import { SITE_URL, canonicalUrl } from '@/lib/site'
+import { SNAPSHOT_ROBOTS } from '@/lib/seo'
 
 // Verdicts are immutable snapshots (ADR-022): this page reads the stored
 // verdict via GET /verify/{id} — it must never trigger a new verification.
@@ -25,7 +26,7 @@ export async function generateMetadata({
   const { id } = await params
   const alternates = { canonical: canonicalUrl(`/verifier/v/${id}`) }
   const v = await api.verification(id).catch(() => null)
-  if (!v) return { alternates }
+  if (!v) return { alternates, robots: SNAPSHOT_ROBOTS }
   const label = VERDICT_LABELS[v.verdict] ?? v.verdict
   const shortClaim = v.claim.length > 90 ? v.claim.slice(0, 90) + '…' : v.claim
   const title = `${label} - « ${shortClaim} » - MonÉlu Vérification`
@@ -34,6 +35,7 @@ export async function generateMetadata({
     title,
     description,
     alternates,
+    robots: SNAPSHOT_ROBOTS,
     openGraph: { title, description, url: `${SITE_URL}/verifier/v/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }
