@@ -31,7 +31,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // The canonical is derived from the URL alone, so it survives a failed
   // metadata fetch - the build's prerender burst can trip the API's rate
   // limit, and a page that renders anyway must still state its own identity.
-  const alternates = { canonical: canonicalUrl(`/deputes/${id}`) }
+  // `types` advertises the Markdown twin (MON-271) - a static rewrite, so it
+  // exists regardless of whether this fetch succeeds.
+  const alternates = {
+    canonical: canonicalUrl(`/deputes/${id}`),
+    types: { 'text/markdown': canonicalUrl(`/deputes/${id}.md`) },
+  }
   const deputy = await api.deputies.get(id).catch(() => null)
   if (!deputy) return { alternates }
   const description = `Bilan de mandat, votes et présence de ${deputy.full_name}${

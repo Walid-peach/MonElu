@@ -12,7 +12,12 @@ export const metadata: Metadata = {
   title: 'Méthodologie - MonÉlu',
   description:
     "Comment MonÉlu calcule chaque chiffre affiché : présence, alignement de parti, majorité, et limites connues.",
-  alternates: { canonical: canonicalUrl('/methodologie') },
+  alternates: {
+    canonical: canonicalUrl('/methodologie'),
+    // Markdown twin (MON-271) - the calculation definitions, which are the
+    // thing an agent citing this site most needs and most often gets wrong.
+    types: { 'text/markdown': canonicalUrl('/methodologie.md') },
+  },
 }
 
 const textStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }

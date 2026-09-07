@@ -17,15 +17,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // The canonical is derived from the URL alone, so it survives a failed
   // metadata fetch - the build's prerender burst can trip the API's rate
   // limit, and a page that renders anyway must still state its own identity.
-  // `types` emits the oEmbed discovery link (MON-266):
-  // `<link rel="alternate" type="application/json+oembed" href="...">`. That
-  // tag is the entire discovery mechanism - Notion, Slack, Substack, Ghost and
-  // WordPress look for it on the page before they will call the endpoint - and
-  // like the canonical it is derived from the URL alone, so it survives a
-  // failed metadata fetch.
+  // `types` carries two independent discovery links, both derived from the
+  // URL alone so they survive a failed metadata fetch: the oEmbed link
+  // (MON-266) Notion/Slack/Substack/Ghost/WordPress read before calling the
+  // embed endpoint, and the Markdown twin (MON-271) at `/votes/{id}.md`.
   const alternates = {
     canonical: canonicalUrl(`/votes/${id}`),
-    types: { 'application/json+oembed': oembedDiscoveryUrl(`/votes/${id}`) },
+    types: {
+      'application/json+oembed': oembedDiscoveryUrl(`/votes/${id}`),
+      'text/markdown': canonicalUrl(`/votes/${id}.md`),
+    },
   }
   const vote = await api.votes.get(id).catch(() => null)
   if (!vote) return { alternates }
