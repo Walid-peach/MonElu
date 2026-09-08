@@ -3,7 +3,7 @@ import { API_BASE, type Deputy, type Vote, type VoteDetail } from '@/lib/api'
 import { CSV_EXPORTS, type CsvExport } from '@/lib/exports'
 import type { FaqItem } from '@/lib/faq'
 import { departmentLabel } from '@/lib/departments'
-import { SITE_URL } from '@/lib/site'
+import { CONTACT_EMAIL, SITE_URL } from '@/lib/site'
 
 export { SITE_URL } from '@/lib/site'
 export const SITE_NAME = 'MonÉlu'
@@ -64,12 +64,14 @@ export type BreadcrumbItem = { name: string; url: string }
  * block — a dataset with no resolvable publisher, or a fact-check with no
  * identifiable author, carries far less weight.
  *
- * Deliberately omitted rather than guessed:
- * - `contactPoint` — waits on the /contact page (MON-272). The only address on
- *   the site today is a personal inbox, which is not a publisher contact point.
- * - `foundingDate` — no verifiable date to hand; an invented one is worse than
- *   an absent field.
- * `sameAs` lists only origins the project actually controls.
+ * `contactPoint` points at `/contact` (MON-272) rather than at the raw inbox:
+ * the page is what states who is behind the project and what each kind of
+ * request needs, and it survives a move off the current address. `email` is
+ * carried alongside it because a `ContactPoint` with only a URL is thin.
+ *
+ * `foundingDate` stays deliberately omitted: no verifiable date to hand, and an
+ * invented one is worse than an absent field. `sameAs` lists only origins the
+ * project actually controls.
  */
 export function buildOrganizationJsonLd() {
   return {
@@ -90,6 +92,13 @@ export function buildOrganizationJsonLd() {
       name: 'France',
     },
     knowsLanguage: 'fr',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      url: `${SITE_URL}/contact`,
+      email: CONTACT_EMAIL,
+      availableLanguage: ['fr'],
+    },
     sameAs: ['https://github.com/Walid-peach/MonElu'],
   }
 }

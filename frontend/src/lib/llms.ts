@@ -50,6 +50,7 @@ const SECTIONS: Array<{ path: string; what: string }> = [
   { path: '/developpeurs', what: 'Documentation de l\'API REST.' },
   { path: '/licence-donnees', what: 'Conditions de réutilisation.' },
   { path: '/a-propos', what: 'Le projet, ses sources et ses partis pris.' },
+  { path: '/contact', what: 'Qui édite le site et comment le joindre : erreur de données, clé d\'API, presse et recherche.' },
 ]
 
 function list(lines: string[]): string {

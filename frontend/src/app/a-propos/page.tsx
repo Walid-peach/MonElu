@@ -437,7 +437,7 @@ export default function AProposPage() {
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Contact</div>
             <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px', marginBottom: '20px' }} />
             <p style={{ fontSize: '15px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
-              Une question, un bug, une proposition de partenariat ? Contactez directement la personne responsable de la plateforme.
+              Une question, un bug, une proposition de partenariat ? La page contact indique quoi écrire selon le cas, et à qui.
             </p>
           </div>
 
@@ -453,16 +453,16 @@ export default function AProposPage() {
               <div style={{ fontWeight: 700, fontSize: '19px', color: 'var(--dp-text)', marginBottom: '4px' }}>Walid Elkhoukh</div>
               <div style={{ fontSize: '14px', color: 'var(--dp-text-muted)', marginBottom: '16px' }}>Data Engineer · responsable de la plateforme</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                <a
-                  href="mailto:walidelkhoukh99@gmail.com"
+                <Link
+                  href="/contact"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', color: 'var(--dp-text)', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', textDecoration: 'none' }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
-                  walidelkhoukh99@gmail.com
-                </a>
+                  Nous écrire
+                </Link>
                 <a
                   href="https://github.com/Walid-peach"
                   target="_blank"
