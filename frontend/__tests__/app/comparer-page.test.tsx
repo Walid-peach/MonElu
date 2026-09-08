@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { render, screen } from '@testing-library/react'
 import ComparerPage, { metadata } from '@/app/deputes/comparer/page'
 
@@ -30,6 +32,18 @@ describe('/deputes/comparer server-rendered content (MON-265)', () => {
     expect(headings).toHaveLength(1)
     expect(headings[0]).toHaveTextContent('Comparer deux bilans')
     expect(screen.getByText(/Ce que compare cet outil/)).toBeInTheDocument()
+  })
+
+  // The h1 lives in page.tsx precisely so it is server-rendered. Putting one
+  // back in the client half would give the hydrated page two of them and leave
+  // the crawler's copy with none, and the test above cannot see that because it
+  // mocks the client out.
+  it('keeps the h1 out of the client half', () => {
+    const client = readFileSync(
+      join(__dirname, '..', '..', 'src', 'app', 'deputes', 'comparer', 'ComparerClient.tsx'),
+      'utf8'
+    )
+    expect(client).not.toMatch(/<h1[\s>]/)
   })
 
   it('links out of the page so it is not a dead end', () => {
