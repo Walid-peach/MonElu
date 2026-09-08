@@ -1,4 +1,4 @@
-import { SITE_URL, DATA_ATTRIBUTION } from '@/lib/site'
+import { SITE_URL, DATA_ATTRIBUTION, CONTACT_EMAIL } from '@/lib/site'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { GROUP_ENTRIES } from '@/lib/groups'
 
@@ -119,7 +119,9 @@ Une page par département ayant des députés en exercice, à \`${SITE_URL}/depa
 function contact(): string {
   return `## Contact
 
-Une erreur ou une incohérence : walidelkhoukh99@gmail.com, en précisant le député, le scrutin ou la page concernée.`
+Qui édite le site, comment signaler une erreur, comment demander une clé d'API : [/contact](${SITE_URL}/contact).
+
+Une erreur ou une incohérence : ${CONTACT_EMAIL}, en précisant le député, le scrutin ou la page concernée.`
 }
 
 /** The short orientation file served at `/llms.txt`. */
