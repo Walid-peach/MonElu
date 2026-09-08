@@ -168,6 +168,11 @@ It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` f
 `/chat` shipped with a private `monelu-dark` localStorage flag instead, so the nav toggle darkened the chrome and left the whole conversation panel white - the two systems shared no state and no key, and neither toggle moved the other half.
 The chat page still computes its colors as inline styles rather than Tailwind classes (it is the largest file in the app), which is fine: what matters is that the `dk` boolean feeding them comes from `useTheme()`.
 `__tests__/app/chat-theme.test.tsx` fails if `'monelu-dark'` reappears in `ChatClient.tsx` or if the panel background stops tracking the stored site theme.
+- **Every static route must appear in `sitemap.ts`** (MON-265).
+`/deputes/comparer` shipped as a client-only page with no metadata and no sitemap entry, reachable only by clicking through from inside the app - a finished feature invisible to search and to LLM crawlers, with nothing reporting it.
+`__tests__/app/sitemap-coverage.test.ts` now enumerates every non-dynamic `page.tsx` and fails if its path is absent from `sitemap.ts`; `~offline` is the single allowlisted exclusion, and dynamic routes are out of scope (they are enumerated from the API, from a slug table, or are snapshot URLs kept out by decision - MON-264).
+- A query-driven page still owes a crawler a server-rendered `<h1>` and prose (MON-265).
+`/deputes/comparer` keeps its header and its explainer block in `page.tsx` (a server component) and hydrates only the comparison itself from `ComparerClient`, the same split `HomeSummary` uses on the homepage - a `Suspense` fallback is what a JS-less crawler otherwise indexes as the whole page.
 - `/llms.txt` and `/llms-full.txt` are **route handlers**, not files in `public/` (MON-261).
 Every absolute URL in them derives from `SITE_URL`, and the section index is generated from `GROUP_ENTRIES`/`THEME_ENTRIES`, so a new group or theme cannot silently fall out of the file and a domain move carries them along.
 The body lives in `src/lib/llms.ts`; `__tests__/app/llms-txt.test.ts` fails if either file links a path with no matching `page.tsx` (`/verifier` is a 308 route handler, not a page - it is deliberately absent), drops a group or theme, or hardcodes a host.

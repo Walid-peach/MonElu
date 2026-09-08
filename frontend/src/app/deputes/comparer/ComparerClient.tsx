@@ -16,10 +16,8 @@ import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
 
 const NAVY   = 'var(--dp-text)'
-const CREAM  = 'var(--dp-page-bg)'
 const LINE   = 'var(--dp-border)'
 const ACCENT = 'var(--dp-accent)'
-const RED    = 'var(--dp-red)'
 
 type Mode = 'deputy' | 'party' | 'national'
 
@@ -297,22 +295,11 @@ export function ComparerClient() {
     return p.toString() ? `?${p}` : ''
   })()}`
 
+  // The page chrome, the <h1> and the explainer live in the server component
+  // (page.tsx, MON-265) so they exist before this component hydrates. This
+  // half renders only the interactive comparison.
   return (
-    <div style={{ background: CREAM, minHeight: '100vh' }}>
-      <div style={{ padding: '38px 24px 60px' }}>
-        <div style={{ maxWidth: 980, margin: '0 auto' }}>
-
-          {/* Header */}
-          <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
-            Comparateur
-          </div>
-          <h1 className="font-newsreader" style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 600, color: NAVY, margin: '12px 0 8px', letterSpacing: '-0.01em' }}>
-            Comparer deux bilans
-          </h1>
-          <p style={{ fontSize: 15.5, color: 'var(--dp-text-secondary)', margin: '0 0 28px', maxWidth: 620 }}>
-            Présence, votes et alignement, côte à côte. Comparez un·e député·e à un·e autre, à son groupe, ou à la moyenne nationale.
-          </p>
-
+    <>
           {/* Mode tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
             {([
@@ -471,8 +458,6 @@ export function ComparerClient() {
               </div>
             </>
           )}
-        </div>
-      </div>
-    </div>
+    </>
   )
 }
