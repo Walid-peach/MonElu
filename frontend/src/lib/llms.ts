@@ -1,4 +1,4 @@
-import { SITE_URL, DATA_ATTRIBUTION } from '@/lib/site'
+import { SITE_URL, DATA_ATTRIBUTION, CONTACT_EMAIL } from '@/lib/site'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { GROUP_ENTRIES } from '@/lib/groups'
 
@@ -24,8 +24,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://monelu-production.u
 
 const REPO = 'https://github.com/Walid-peach/MonElu'
 
-/** The caveats that change how a number should be read. Shared by both files. */
-const CAVEATS = [
+/**
+ * The caveats that change how a number should be read. Shared by both llms.txt
+ * files and by the per-page Markdown twins (`/deputes/{id}.md`,
+ * `/votes/{id}.md`, MON-271) - a Markdown page that carries its own caveats is
+ * a better citation than the HTML page it mirrors, which buries them behind a
+ * tooltip.
+ */
+export const CAVEATS = [
   '`nonVotant` n\'est pas `abstention`. Un non-votant était présent dans l\'hémicycle sans exprimer de vote ; une abstention est une position exprimée. Les pourcentages pour/contre/abstention se calculent sur les seules positions exprimées.',
   'Le taux de présence compte le `nonVotant` comme présent, et son dénominateur est limité aux scrutins tenus pendant le mandat du député - un député élu en cours de législature n\'est pas pénalisé pour les votes antérieurs.',
   'Yaël Braun-Pivet affiche 100 % de présence parce qu\'elle préside l\'Assemblée et figure sur chaque scrutin par construction des données source. Ce n\'est pas une performance, et ce n\'est pas une anomalie.',
@@ -50,6 +56,7 @@ const SECTIONS: Array<{ path: string; what: string }> = [
   { path: '/developpeurs', what: 'Documentation de l\'API REST.' },
   { path: '/licence-donnees', what: 'Conditions de réutilisation.' },
   { path: '/a-propos', what: 'Le projet, ses sources et ses partis pris.' },
+  { path: '/contact', what: 'Qui édite le site et comment le joindre : erreur de données, clé d\'API, presse et recherche.' },
 ]
 
 function list(lines: string[]): string {
@@ -74,6 +81,7 @@ function machineReadable(): string {
   return `## Surfaces lisibles par une machine
 
 - [Plan du site](${SITE_URL}/sitemap.xml) : toutes les URL indexables.
+- Jumeau Markdown de chaque fiche : ajoutez \`.md\` à l'URL d'une fiche député ou d'un scrutin (ex. \`/deputes/{id}.md\`, \`/votes/{id}.md\`) pour le contenu seul, sans mise en page - définitions et mises en garde incluses. [/methodologie.md](${SITE_URL}/methodologie.md) réunit toutes les définitions de calcul.
 - [Spécification OpenAPI](${API_BASE}/openapi.json) de l'API REST publique, et sa [documentation interactive](${API_BASE}/docs).
 - CSV - scorecard de tous les députés : \`GET ${API_BASE}/deputies/scorecard.csv\`
 - CSV - historique de vote d'un député : \`GET ${API_BASE}/deputies/{deputy_id}/votes.csv\`
@@ -118,7 +126,9 @@ Une page par département ayant des députés en exercice, à \`${SITE_URL}/depa
 function contact(): string {
   return `## Contact
 
-Une erreur ou une incohérence : walidelkhoukh99@gmail.com, en précisant le député, le scrutin ou la page concernée.`
+Qui édite le site, comment signaler une erreur, comment demander une clé d'API : [/contact](${SITE_URL}/contact).
+
+Une erreur ou une incohérence : ${CONTACT_EMAIL}, en précisant le député, le scrutin ou la page concernée.`
 }
 
 /** The short orientation file served at `/llms.txt`. */
@@ -135,14 +145,12 @@ export function buildLlmsTxt(): string {
 }
 
 /**
- * The long form served at `/llms-full.txt`: the same file with the
- * calculation definitions inlined, so a model gets the formulas without a
- * second fetch to `/methodologie`.
+ * The calculation definitions section, without its own `##` heading so
+ * callers can nest it under their own (`/llms-full.txt` and `/methodologie.md`,
+ * MON-271, both do). The thing models most need and most often get wrong.
  */
-export function buildLlmsFullTxt(): string {
-  const definitions = `## Définitions de calcul
-
-### Taux de présence
+export function calculationDefinitions(): string {
+  return `### Taux de présence
 
 Numérateur : les scrutins où une position du député est enregistrée, quelle qu'elle soit - \`pour\`, \`contre\`, \`abstention\` **ou** \`nonVotant\`. Dénominateur : les scrutins tenus entre la date de début et, le cas échéant, la date de fin de son mandat. C'est l'unique définition utilisée par le site, l'API et l'assistant.
 
@@ -181,6 +189,15 @@ ${list([
   '`votes.dossier_id` est creux : l\'Assemblée n\'a commencé à renseigner le dossier législatif sur les scrutins qu\'en mars 2026. Les scrutins antérieurs ne sont pas rattachables à un dossier.',
   'Les résumés en langage clair et les réponses de l\'assistant sont générés par un LLM à partir des données du scrutin. Ils aident à lire, ils ne font pas foi.',
 ])}`
+}
+
+/**
+ * The long form served at `/llms-full.txt`: the same file with the
+ * calculation definitions inlined, so a model gets the formulas without a
+ * second fetch to `/methodologie`.
+ */
+export function buildLlmsFullTxt(): string {
+  const definitions = `## Définitions de calcul\n\n${calculationDefinitions()}`
 
   return [
     header(),

@@ -89,8 +89,8 @@ export default function DonneesPage() {
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
           L&apos;API REST expose les mêmes données en JSON, avec filtres et pagination — documentation
           sur la page <Link href="/developpeurs" style={{ color: 'var(--dp-text)' }}>développeurs</Link>. Les exports CSV sont soumis
-          au même rate-limiting que le reste de l&apos;API ; pour un usage intensif, écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a>.
+          au même rate-limiting que le reste de l&apos;API ; pour un usage intensif, demandez une clé
+          d&apos;API via la page <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link>.
         </p>
       </LegalSection>
 

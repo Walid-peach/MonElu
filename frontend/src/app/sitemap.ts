@@ -106,6 +106,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/a-propos`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/developpeurs`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/methodologie`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/contact`, changeFrequency: 'monthly', priority: 0.4 },
     // Licence and legal pages (MON-265). `/licence-donnees` is the page an
     // agent or a reuser has to be able to find on its own; the three legal
     // pages are low-traffic but are still part of the site's public surface.

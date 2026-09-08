@@ -46,3 +46,18 @@ export function canonicalUrl(path = '/'): string {
  * host it no longer answers on.
  */
 export const DATA_ATTRIBUTION = `Données : Assemblée nationale, via ${SITE_HOST} - Licence Ouverte 2.0`
+
+/**
+ * The published contact address for the project (MON-272).
+ *
+ * Was repeated as a literal `mailto:` in nine places across the legal and
+ * documentation pages. Centralised for the same reason as `SITE_URL`: moving
+ * off a personal inbox onto a project address must be a one-line change, not a
+ * grep across every page that happens to print it.
+ *
+ * Most pages now link to `/contact` instead of printing this; the pages that
+ * still print it are the ones where a direct address is the point - `mentions
+ * légales` (éditeur contact), `confidentialité` (RGPD rights) and the RGAA
+ * accessibility declaration.
+ */
+export const CONTACT_EMAIL = 'walidelkhoukh99@gmail.com'

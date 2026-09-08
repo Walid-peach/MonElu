@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
@@ -225,8 +224,6 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ---------------------------------------------------------------------------
 # Rate limiting
