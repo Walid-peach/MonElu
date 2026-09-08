@@ -105,6 +105,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/a-propos`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/developpeurs`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/methodologie`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/contact`, changeFrequency: 'monthly', priority: 0.4 },
   ]
 
   const [deputiesAndDepartments, votes] = await Promise.all([
