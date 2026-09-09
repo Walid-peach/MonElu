@@ -1,19 +1,18 @@
 ---
 name: diagnose
-description: Runs a fresh diagnostic pass on one MonÉlu project axis - inspects the current code (not old reports), writes a dated report to notes/dispatch/, updates the diagnostic roadmap, and files new findings as labeled Linear issues after deduping against the open backlog. No code changes. Use as /diagnose <axis> or /diagnose next to pick the stalest axis.
+description: Runs a fresh diagnostic pass on one MonÉlu project axis - inspects the current code (not old reports), writes a dated report to notes/dispatch/, updates the diagnostic roadmap, and files new findings as labeled GitHub issues after deduping against the open backlog. No code changes. Use as /diagnose axis or /diagnose next to pick the stalest axis.
 ---
 
 Run one category-deep diagnostic of the MonÉlu codebase, in the style of the 2026-06-11 diagnostic wave, and turn the findings into backlog input.
 This skill only inspects, reports, and files issues - it never changes code.
-Remediation happens later via `/solve-mon` (single findings) or `/plan-epic` (structural findings).
+Remediation happens later via `/solve-issue` (single findings) or `/plan-epic` (structural findings).
 
 ARGUMENTS: an axis, or `next`.
-Axes match the Linear area labels and the report names in `notes/dispatch/`:
+Axes match the GitHub area labels and the report names in `notes/dispatch/`:
 `ingestion, database, api, transform, rag, cicd, deploy-config, infra, frontend, tests`.
 `next` picks the axis with the oldest diagnostic date in `notes/dispatch/diagnostic_roadmap.md` (ties broken by how much its code has changed since, via `git log --oneline --since=<last diag date> -- <axis paths>`).
 
-Linear writes (`mcp__linear-server__save_issue`, `save_comment`) are allowlisted in `.claude/settings.local.json`.
-If the Linear MCP is unavailable, still write the report and roadmap update, and output the drafted issues for manual creation.
+Read [the GitHub backlog conventions](../solve-issue/references/github-issues.md). Use authenticated `gh` in `Walid-peach/MonElu`. If writes fail, still provide the report and roadmap, clearly mark unfiled drafts, and never invent issue numbers.
 
 ## Workflow
 
@@ -52,34 +51,34 @@ Findings must be new or materially changed since the last report; reference the 
 
 ### 4. Dedupe against the backlog
 
-Before filing anything, `list_issues` (team MonElu, all statuses) and check each finding against existing issues by title and content similarity.
+Before filing, paginate all open and closed GitHub issues (exclude PR records) and compare title/content plus linked PRs. Also consult historical diagnostic reports and ADRs: completed Linear history was not fully imported.
 - Already tracked and open: add a comment on the existing issue with the fresh evidence instead of duplicating.
-- Tracked and Done but regressed: file a new issue linking the old one (`relatedTo`; if the relation fails to apply, reference the old MON-id in the description instead).
+- Tracked and completed but regressed: file a new issue linking the old GitHub issue or historical MON reference and explain the regression. A closed-not-planned issue is not proof of a prior fix.
 - New: proceed to filing.
 
-### 5. File the findings as Linear issues
+### 5. File the findings as GitHub issues
 
-For each new finding, `save_issue` (team MonElu, state Backlog) following the po-agent fill conventions:
+For each new finding, use `gh issue create --repo Walid-peach/MonElu` with a body file and `status: backlog`:
 - Title: concise, defect-first ("X does Y - Z consequence"), action-verb-first for improvements.
 - Description: the problem, evidence with `file:line`, the recommended fix, and a `**Source:** <axis>_diagnostic_<today>.md - Finding #N` line.
 - Labels: the axis label plus a type label (`Bug` for defects, `tech-debt` for debt, `Improvement` otherwise; add `perf`, `tests`, or `docs-drift` where they apply).
-- Priority: critical → Urgent, high → High, medium → Medium, low → Low.
-- Milestone: `M0 - Hardening` in project "Product Readiness 2026-07" unless the finding clearly belongs to a feature milestone.
+- Priority labels: critical → `priority: urgent`, high → `priority: high`, medium → `priority: medium`, low → `priority: low`.
+- Milestone: use an existing appropriate milestone (`M0 - Hardening` for hardening when present), otherwise omit and flag the missing mapping. Reuse actual label spellings case-insensitively. Verify created issues/comments and dedupe again before retrying uncertain writes.
 
 ### 6. Update the roadmap
 
 Edit the axis section in `notes/dispatch/diagnostic_roadmap.md`:
-refresh the diag date, link the new report, replace the headline findings, and list the filed MON-ids.
+refresh the diag date, link the new report, replace the headline findings, and list the filed GitHub numbers and URLs.
 Keep the Legend and section structure intact.
 
 ### 7. Report
 
 Summarize: axis, verdict, findings count by severity, issues filed (ids + titles), issues commented instead of duplicated, and the single highest-impact finding.
-Recommend the follow-up: `/solve-mon <id>` for the top finding, or `/plan-epic` if a finding is structural.
+Recommend the follow-up: `/solve-issue <id>` for the top finding, or `/plan-epic` if a finding is structural.
 
 ## Guard rails
 
-- Never change code, config, or tests - inspection only. The only writes are the report, the roadmap, and Linear.
+- Never change code, config, or tests - inspection only. The only writes are the report, the roadmap, and GitHub.
 - Never re-file a finding that is already an open issue - comment on it instead.
 - Never run anything with side effects or cost during inspection (no ingestion runs, no RAG re-index, no prod writes; read-only DB queries against local are fine).
 - If a finding suggests an active incident (prod down, data corruption, leaked secret), stop the pass and surface it to the user immediately instead of filing and moving on.
