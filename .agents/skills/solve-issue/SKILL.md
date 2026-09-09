@@ -28,7 +28,7 @@ For `next` only:
 
 ### 2. Branch and implement
 
-- Inspect the working tree; preserve user changes. Fetch the default branch and create `codex/issue-<number>-<short-slug>` from its current remote tip unless continuing existing work or the user chose another base. Disclose a stale base if fetching is unavailable.
+- Inspect the working tree; preserve user changes. Fetch the default branch and create `issue-<number>-<short-slug>` from its current remote tip (agent-neutral: the same skill runs under Claude Code and Codex; existing `codex/` or `feature/mon-*` branches are continued as-is, not renamed) unless continuing existing work or the user chose another base. Disclose a stale base if fetching is unavailable.
 - Never commit to the default branch. Read every file before editing. Make the smallest change satisfying acceptance criteria.
 - Flag schema/deployment risks. Ask before non-idempotent migrations, destructive operations, production configuration changes, or actions costing money. Writing a migration does not authorize running it in production.
 
@@ -54,6 +54,19 @@ For `next` only:
 - Use project `pr-review`, apply Must Fix and Should Fix findings, push, and verify CI again. Do not implement unrelated nice-to-haves automatically.
 - Stop before merge. Report issues, branch, PR, acceptance coverage, review verdict, CI, and outstanding prerequisites. Do not close issues merely because a PR exists.
 - After the user merges, GitHub closing keywords normally close fully linked issues. Explicit `/po-agent sync` in Claude Code can reconcile missed closures and stale status labels using verified merged-PR evidence; it is not an instruction to run sync or merge during this workflow.
+
+Close with this report shape, so output is comparable across runs:
+
+```
+## Solved: #<number> - <issue title>
+
+**Branch**: <branch-name>
+**PR**: <url>
+**Acceptance**: <criterion -> evidence, one line each>
+**CI**: <status>
+**Review**: Ready to merge / Ready with minor changes / <open items>
+**Deferred**: <anything intentionally left out, or None>
+```
 
 ## Boundaries
 

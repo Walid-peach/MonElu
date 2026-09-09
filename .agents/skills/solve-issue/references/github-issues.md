@@ -43,3 +43,34 @@ When planning authorizes relationships, create native sub-issue/dependency links
 ## Migration and deduplication
 
 The September 2026 import covered 26 unfinished CSV issues. Completed history and discussions were not imported. GitHub also contains older/native issues. Search open and closed GitHub issues plus available historical reports/ADRs before filing findings. Flag stale issues that contradict later ADRs; do not implement their old proposals. Never recreate completed history merely because no migrated issue exists.
+
+## Worked examples
+
+These are shapes, not verified-current payloads. Re-read the linked API docs before any write, and read the result back.
+
+**Resolve a legacy `MON-N` to a GitHub number.** Match on the exact `MON-N: ` title prefix across all states, then confirm the migration marker in the body. Zero or multiple matches stop for clarification.
+
+```sh
+gh api --paginate --slurp 'repos/Walid-peach/MonElu/issues?state=all&per_page=100' \
+  | jq '[.[][] | select(.pull_request == null) | select(.title | startswith("MON-105: "))]
+        | map({number, title, state})'
+```
+
+Use external `jq` after `--slurp`; the installed CLI rejects combining `--slurp` with its own `--jq` flag.
+
+**Link a child or a blocker.** Both payloads take the target's database `id`, never its visible `number` - resolve the id first.
+
+```sh
+CHILD_ID=$(gh api repos/Walid-peach/MonElu/issues/369 --jq '.id')
+
+# child 369 under parent 361
+gh api --method POST repos/Walid-peach/MonElu/issues/361/sub_issues -f sub_issue_id="$CHILD_ID"
+
+# 370 is blocked by 369
+gh api --method POST repos/Walid-peach/MonElu/issues/370/dependencies/blocked_by -f issue_id="$CHILD_ID"
+
+# read back - an empty array means the link did not land
+gh api 'repos/Walid-peach/MonElu/issues/361/sub_issues?per_page=100'
+```
+
+An empty `[]` from these read endpoints is a successful call with no relations, not an error - the migrated issues currently return exactly that, so body-only `Parent issue` / `Blocked by` lines remain authoritative until native links are created.
