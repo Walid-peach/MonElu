@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { SITE_URL, canonicalUrl } from '@/lib/site'
 
@@ -66,9 +67,9 @@ export default function DeveloppeursPage() {
       <LegalSection title="Obtenir une clé">
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Les clés sont émises manuellement pour l&apos;instant - pas d&apos;inscription en libre-service.
-          Écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a>{' '}
-          en précisant votre usage prévu (recherche, rédaction, produit) et le volume de requêtes attendu.
+          Faites-en la demande via la page{' '}
+          <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link>, en précisant votre usage
+          prévu (recherche, rédaction, produit) et le volume de requêtes attendu.
         </p>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Une fois la clé reçue, passez-la dans l&apos;en-tête <code>X-API-Key</code> de chaque requête :

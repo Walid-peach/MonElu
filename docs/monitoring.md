@@ -171,7 +171,7 @@ Stripe Dashboard / bank statement) — there is no automated hook.
 ### Step 2 — issue or find their API key
 
 If the customer already has a free-tier key (issued per the process on
-`/developpeurs` — email request to walidelkhoukh99@gmail.com, then a manual
+`/developpeurs`, which routes the request through `/contact` — then a manual
 row insert), skip to Step 3. Otherwise, issue one first:
 
 ```bash

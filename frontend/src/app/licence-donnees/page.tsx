@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { JsonLd } from '@/components/JsonLd'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { buildDataLicenseJsonLd } from '@/lib/seo'
@@ -64,8 +65,7 @@ export default function LicenceDonneesPage() {
 
       <LegalSection title={'Une question sur un usage précis ?'}>
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
-          Écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a> - en
+          Passez par la page <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link> - en
           particulier pour tout usage à grande échelle de l&apos;API (au-delà du rate-limiting public).
         </p>
       </LegalSection>

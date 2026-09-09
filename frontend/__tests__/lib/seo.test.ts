@@ -8,6 +8,7 @@ import {
   buildVoteJsonLd,
   buildBreadcrumbJsonLd,
 } from '@/lib/seo'
+import { CONTACT_EMAIL } from '@/lib/site'
 import type { Deputy, Vote } from '@/lib/api'
 
 const deputy: Deputy = {
@@ -57,10 +58,17 @@ describe('buildOrganizationJsonLd', () => {
     }
   })
 
-  it('omits contactPoint and foundingDate rather than inventing them', () => {
+  // MON-272 filled in the contactPoint the MON-273 block deliberately left out
+  // until there was a real page to point it at.
+  it('points contactPoint at the /contact page, not just at an inbox', () => {
     const data = buildOrganizationJsonLd()
-    expect(data).not.toHaveProperty('contactPoint')
-    expect(data).not.toHaveProperty('foundingDate')
+    expect(data.contactPoint['@type']).toBe('ContactPoint')
+    expect(data.contactPoint.url).toBe(`${SITE_URL}/contact`)
+    expect(data.contactPoint.email).toBe(CONTACT_EMAIL)
+  })
+
+  it('omits foundingDate rather than inventing one', () => {
+    expect(buildOrganizationJsonLd()).not.toHaveProperty('foundingDate')
   })
 
   it('lists only origins the project controls in sameAs', () => {

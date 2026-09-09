@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { JsonLd } from '@/components/JsonLd'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { METHODOLOGIE_FAQ } from '@/lib/faq'
@@ -12,7 +13,12 @@ export const metadata: Metadata = {
   title: 'Méthodologie - MonÉlu',
   description:
     "Comment MonÉlu calcule chaque chiffre affiché : présence, alignement de parti, majorité, et limites connues.",
-  alternates: { canonical: canonicalUrl('/methodologie') },
+  alternates: {
+    canonical: canonicalUrl('/methodologie'),
+    // Markdown twin (MON-271) - the calculation definitions, which are the
+    // thing an agent citing this site most needs and most often gets wrong.
+    types: { 'text/markdown': canonicalUrl('/methodologie.md') },
+  },
 }
 
 const textStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }
@@ -240,10 +246,10 @@ export default function MethodologiePage() {
 
       <LegalSection id="contact" title="Une erreur ou une incohérence à signaler ?">
         <p style={textStyle}>
-          Écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a> en
-          précisant le député, le scrutin ou la page concernée. Toute correction de méthode fait l&apos;objet
-          d&apos;une mise à jour de cette page.
+          Chaque fiche de député et de scrutin porte un bouton « Signaler une erreur » qui joint la page
+          concernée au message ; la page <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link>{' '}
+          détaille les autres canaux. Toute correction de méthode fait l&apos;objet d&apos;une mise à jour de
+          cette page.
         </p>
       </LegalSection>
     </LegalPageLayout>
