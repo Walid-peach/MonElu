@@ -71,6 +71,7 @@ def test_health_ok(client, mock_cursor):
         },
         {"count": 577},
         {"count": 821},
+        {"oid": None},  # MON-256: no document_chunks_staging
     ]
     with patch.dict(
         "os.environ",
@@ -101,6 +102,7 @@ def test_health_db_size_warning_past_threshold(client, mock_cursor):
         },
         {"count": 577},
         {"count": 821},
+        {"oid": None},  # MON-256: no document_chunks_staging
     ]
     with patch.dict(
         "os.environ",
@@ -111,6 +113,57 @@ def test_health_db_size_warning_past_threshold(client, mock_cursor):
     data = resp.json()
     assert data["db_size_mb"] == 420.0
     assert data["db_size_warning"] is True
+
+
+def test_health_reports_no_rag_staging_table_by_default(client, mock_cursor):
+    """MON-256: null is the healthy reading - the table only exists mid-build."""
+    mock_cursor.fetchone.side_effect = [
+        {
+            "deputies": 577,
+            "votes": 821,
+            "positions": 289_411,
+            "last_vote": None,
+            "db_size_bytes": 150 * 1024 * 1024,
+        },
+        {"count": 577},
+        {"count": 821},
+        {"oid": None},
+    ]
+    with patch.dict(
+        "os.environ",
+        {"OPENAI_API_KEY": "sk-real", "GROQ_API_KEY": "gsk_real"},  # pragma: allowlist secret
+    ):
+        resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json()["rag_staging_chunks"] is None
+
+
+def test_health_reports_an_orphaned_rag_staging_table(client, mock_cursor):
+    """MON-256: a killed rebuild's leftover must be visible, not hidden in db_size_mb."""
+    mock_cursor.fetchone.side_effect = [
+        {
+            "deputies": 577,
+            "votes": 821,
+            "positions": 289_411,
+            "last_vote": None,
+            "db_size_bytes": 190 * 1024 * 1024,
+        },
+        {"count": 577},
+        {"count": 821},
+        {"oid": "document_chunks_staging"},
+        {"total": 3_412},
+    ]
+    with patch.dict(
+        "os.environ",
+        {"OPENAI_API_KEY": "sk-real", "GROQ_API_KEY": "gsk_real"},  # pragma: allowlist secret
+    ):
+        resp = client.get("/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["rag_staging_chunks"] == 3_412
+    # Informational only: an in-flight rebuild is a legitimate cause, so it
+    # must not flip the service to degraded.
+    assert data["status"] == "ok"
 
 
 def test_health_db_unavailable(client):
@@ -575,6 +628,7 @@ def test_health_degraded_when_openai_key_is_placeholder(client, mock_cursor):
         },
         {"count": 577},
         {"count": 821},
+        {"oid": None},  # MON-256: no document_chunks_staging
     ]
     with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-..."}):  # pragma: allowlist secret
         resp = client.get("/health")

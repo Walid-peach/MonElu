@@ -66,7 +66,7 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | Method | Endpoint | rpm | Description |
 |--------|----------|-----|-------------|
 | GET | `/` | - | Redirects to the Next.js frontend |
-| GET | `/health` | - | API status, live record counts, last ingestion, dbt mart row counts |
+| GET | `/health` | - | API status, live record counts, last ingestion, dbt mart row counts, RAG staging-table orphan check |
 | GET | `/deputies` | 30 | List deputies (`search`, `department` filters) |
 | GET | `/deputies/stats` | 30 | Aggregate counts by party, department, mandate status |
 | GET | `/deputies/{id}` | 30 | Deputy profile |
@@ -212,7 +212,7 @@ make api            uvicorn api.main:app --reload
 make psql           psql into the running Postgres container
 make check-db       table sizes, row counts, pgvector status
 
-make rag-index      truncate + re-embed all chunks (~$0.006)
+make rag-index      full rebuild: re-embed all chunks via the staging swap (~$0.006)
 make rag-notable    build the notable-deputy chunks (ADR-017)
 make rag-laws       build the law-summary chunks
 make rag-stats      chunk counts by type

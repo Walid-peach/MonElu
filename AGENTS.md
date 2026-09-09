@@ -66,7 +66,7 @@ make ingest-prod    # Production ingestion (last 3 months)
 make api            # Start dev server with hot-reload at http://localhost:8000
 
 # RAG pipeline (Phase 2)
-make rag-index      # Truncate + re-embed all chunks (costs ~$0.006)
+make rag-index      # Full rebuild: re-embed all chunks via the staging swap (~$0.006)
 make rag-stats      # Print chunk counts by type
 make rag-clear      # Truncate document_chunks only
 make rag-test       # Run 3 test questions through the full RAG chain
@@ -126,7 +126,7 @@ Assemblée Nationale Open Data (ZIPs)
 **`rag/`** — Phase 2 semantic search
 - `pipeline/chunker.py`: Five chunk strategies: `vote` (one per scrutin), `deputy` (one per député), `party` (one per parliamentary group), `global_stats` (aggregate overview), `notable_deputy` (vote-by-vote for high-profile deputies). Uses tiktoken (cl100k_base) for token counting.
 - `pipeline/embedder.py`: Batched OpenAI embedding (100 chunks/batch), stores into `document_chunks`.
-- `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` always truncates before embedding (full rebuild, ~$0.006/run).
+- `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. `build` has exactly one mode (ADR-037, MON-256): a full rebuild (~$0.006/run) that embeds into `document_chunks_staging` and swaps it in atomically (MON-233). Every exit path that does not complete the swap drops the staging table, SIGTERM included; a SIGKILL orphan is surfaced by `/health`'s `rag_staging_chunks`.
 - `chain/retriever.py`: Exact cosine similarity via pgvector `<=>`. Supports `chunk_type`, `deputy_id`, and auto-detected `result` filters (`adopté`/`rejeté`). Notable deputy names detected and their chunk pinned as first result. TTL-cached notable-deputy map (1h). Note: `register_vector` requires a plain psycopg2 cursor, not a `RealDictCursor`.
 - `chain/prompts.py`: TTL-cached system prompt (data horizon refreshed hourly) via `build_system_prompt()`. Call per request — do not cache the return value.
 - `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `openai/gpt-oss-120b` (temperature=0.2)
@@ -182,7 +182,7 @@ Hosted on Railway. Every push to `master` triggers an auto-deploy. The start com
 python scripts/migrate.py && uvicorn api.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Health check: `GET /health` — returns DB status, record counts, `last_ingestion` timestamp, and dbt mart row counts (degrades gracefully if marts are absent).
+Health check: `GET /health` — returns DB status, record counts, `last_ingestion` timestamp, and dbt mart row counts (degrades gracefully if marts are absent), and `rag_staging_chunks` (MON-256).
 
 ---
 

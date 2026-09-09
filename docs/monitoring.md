@@ -64,6 +64,33 @@ A failed cache revalidation is likewise not fatal, but the gate now emits a
 `::warning::` and a step-summary note for it — pages keep serving the previous
 build until their `revalidate` window expires, which is worth seeing.
 
+### Orphaned RAG staging table (MON-256)
+
+`/health` reports `rag_staging_chunks`. It is `null` almost always: the
+`document_chunks_staging` table exists only while a full RAG rebuild is running.
+
+A **number** means one of two things:
+
+* a rebuild is in flight right now - normal during the 06:00 UTC window, ignore it;
+* a rebuild was killed before it could clean up (only SIGKILL gets past the
+  SIGTERM handler, so in practice a hard job kill), and the table is holding a
+  second copy of the vectors - roughly 35-40 MB at ~5,900 chunks, against the
+  Supabase free tier's 500 MB cap.
+
+It self-heals: the next successful build recreates the table from scratch, so
+the worst case is one day of doubled index storage. Nothing needs doing unless
+the reading persists across a successful ingestion run, which would mean the
+cleanup is not covering the real kill path (see ADR-037's revisit trigger).
+
+To clear one by hand: `DROP TABLE IF EXISTS document_chunks_staging;` - but only
+once you have confirmed no build is running, since dropping it mid-build aborts
+that build (harmlessly: the live index is untouched either way).
+
+The daily workflow's database-size step cannot catch this. It runs *after* the
+RAG build, which drops and recreates the staging table, so yesterday's orphan is
+already gone by the time the probe reads `/health`. The orphan is visible in the
+window between two runs - to a human, or to the uptime checker's body assertion.
+
 ## 3. Uptime checker (UptimeRobot or Better Stack — either free tier works)
 
 Create two monitors:

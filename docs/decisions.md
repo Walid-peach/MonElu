@@ -1221,6 +1221,47 @@ The state this replaces was not a decision. `sitemap.ts` omitted the three snaps
 
 ---
 
+## ADR-037 - The RAG index has one build mode: full rebuild into a staging table (MON-256)
+
+**Date:** 2026-09-08
+**Status:** Final
+**Related:** ADR-032 (snapshot retention and the 500 MB size alert), MON-233 (the atomic swap this completes), MON-218 (why the rebuild became unconditional), MON-225 (the free-tier cap)
+
+**Decision:** `python -m rag.pipeline.index_manager build` has no `--since` flag and no incremental mode.
+Every build embeds the whole corpus into `document_chunks_staging` and swaps it in with `ALTER TABLE ... RENAME`.
+Every exit path that does not complete that swap drops the staging table, including the SIGTERM a GitHub Actions job timeout or a cancelled workflow sends.
+Whatever still survives - SIGKILL cannot be caught - is reported by `staging_chunk_count()` and by `/health`'s `rag_staging_chunks`.
+
+**Reason:**
+
+MON-233 made the full rebuild atomic so a mid-run failure could not leave `/search` blind, and it did that correctly for exceptions.
+It did not cover the process being killed. `ingest_prod.yml` runs the whole job - ingestion, a full re-embed, `dbt run`/`test`/`snapshot`/`source freshness` - under a single `timeout-minutes: 30`, and a timeout or a cancel sends SIGTERM first.
+Under the default disposition that ends the process without unwinding, so the `except` block never ran and the staging table survived with however many `vector(1536)` rows had been embedded: roughly 35-40 MB at ~5,900 chunks, on a tier ADR-032 is already rationing at 500 MB.
+It self-healed on the next successful run, but nothing said it had happened, and the one instrument pointed at this - `/health`'s `db_size_mb`, polled daily by the workflow's MON-225 probe - would have read the jump as organic growth.
+
+A SIGTERM handler that raises turns the kill into an ordinary exception, so the cleanup that already existed simply runs. That is the whole fix for the catchable case; the reporting exists for the case that stays uncatchable.
+
+**Why the incremental path is removed rather than kept:**
+
+It had no caller. `ingest_prod.yml` and the `make rag-index` target both run a bare `build`, and have since MON-218 made the daily rebuild unconditional - a party change or a corrected vote arrives with no new votes, so a new-votes-only refresh was skipping the days that most needed it.
+That leaves `--since` as roughly sixty lines exercised by nothing, which is the state ADR-033 archived the Airflow stack for.
+
+It also contradicts the contract this same module now advertises. The incremental path issued `DELETE FROM document_chunks` for the aggregate chunks and then embedded into the live table, so a crash between the delete and the embed left production search missing its party and global chunks - precisely the failure MON-233 removed from the full path. Two build modes with opposite safety properties behind one command is worse than one mode.
+
+**Why not the third option - full rebuild weekly, `--since` on weekdays:**
+it trades a real safety property for an unmeasured cost saving. A full re-index is about $0.006; six days of incremental builds saves fractions of a cent and buys back the non-atomic write path, plus a corpus whose correctness now depends on a code path with no tests and no production mileage. If embedding spend ever becomes material, the answer is to make the *staged* build incremental - embed only what changed into the staging table, copying the rest - not to reintroduce writes against the live index.
+
+**Impact:**
+- `build_index()` takes no arguments. `tests/unit/test_index_manager_staging.py` asserts the argparse `--since` literal and `DELETE FROM document_chunks` are both absent from the module, so the path cannot drift back in.
+- `_build_full_index_atomic` is `try/finally` on a `swapped` flag rather than `except Exception`: a build that ends any other way than a completed swap drops the staging table. A failure inside that drop is printed, never allowed to mask the error that caused it.
+- `_raise_on_termination` installs the SIGTERM/SIGINT handlers only for the build and restores the previous ones on the way out, and no-ops off the main thread where `signal.signal` is unavailable.
+- `/health` gains `rag_staging_chunks`: `null` normally, a row count when the table exists. It is deliberately **not** part of `status` - a rebuild in flight is a legitimate cause, and a health check that goes yellow every morning during ingestion teaches people to ignore it.
+- The daily workflow is unchanged. Its DB-size probe runs *after* the RAG build, which recreates the staging table from scratch, so an orphan from the previous day is already gone by the time the probe reads `/health` - the orphan is visible to a human or an external monitor in the window between the two runs, not to that step.
+
+**Trigger to revisit:** embedding spend becomes material (a corpus large enough that $0.006/day is no longer noise), at which point build incrementally *into the staging table* and keep the swap. A second trigger: if `rag_staging_chunks` is ever observed non-null outside a build window, SIGTERM handling did not cover the real kill path and the orphan needs an active cleanup - a startup sweep in `migrate.py` - rather than a report.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1243,3 +1284,4 @@ The state this replaces was not a decision. `sitemap.ts` omitted the three snaps
 18. Group-majority position is one formula everywhere: plurality with an alphabetical tiebreak, defined in `int_party_vote_majority` and replicated exactly by `groups.py`'s `_majority_position` (ADR-034, MON-24, MON-228) - never invent a different tiebreak; quiz's skip-ties behavior in `compute_group_alignment` is a documented, deliberate exception, not a bug to "fix" into matching
 19. Bill timeline pages are built on the dossier acte parcours from `Dossiers_Legislatifs`, not on votes grouped by `dossier_id` (ADR-035, MON-105/MON-242) - the AN only began tagging scrutins with a dossier in March 2026, so a scrutin-only timeline misses the first four fifths of most bills; never fuzzy-match scrutin titles to bills, never publish a page for a dossier with no scrutins, and never list amendment scrutins inline by default
 20. The share-snapshot pages `/chat/s/*`, `/verifier/v/*` and `/quiz/s/*` are `noindex`, not merely absent from the sitemap (ADR-036, MON-264) - never add them to `sitemap.ts`, never drop the `robots: { index: false }` from their `generateMetadata` (including its early-return path), and never add `ClaimReview`/`QAPage` or other rich-result markup to them; MON-263 is closed as won't-do under this ADR, and the trigger to reopen is a real moderation operator, not share volume
+21. The RAG index has exactly one build mode - a full rebuild into `document_chunks_staging`, swapped in at the end (ADR-037, MON-233/MON-256) - never reintroduce `--since` or any path that writes to the live `document_chunks`; a build that does not complete the swap must drop the staging table on every exit path, and `/health`'s `rag_staging_chunks` must stay informational rather than feeding `status`
