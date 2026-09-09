@@ -19,6 +19,7 @@ Read [the GitHub backlog conventions](../solve-issue/references/github-issues.md
 ### 1. Establish the baseline
 
 - Read the axis section in `notes/dispatch/diagnostic_roadmap.md`: last diag date, headline findings, remediation PRs.
+- The roadmap is local-only. If its header still calls Linear the active tracker, update only that header to GitHub Issues and `/solve-issue <number>`, marking existing MON references as historical. Preserve dated findings and their original references; do not force-add the ignored roadmap to git.
 - Read the axis's previous report (`notes/dispatch/<axis>_diagnostic_<date>.md`; two naming exceptions: transform and rag share `transform_rag_diagnostic_*.md`, and deploy-config is `deployment_config_diagnostic_*.md`) to know what was already found - the new pass must not re-report fixed or known-open findings.
 - List what changed since: `git log --oneline --since=<last diag date> -- <axis paths>`.
   If nothing changed and the previous findings are all resolved, say so, stamp the roadmap with a "re-checked, clean" note, and stop - a diagnostic of unchanged code is noise.

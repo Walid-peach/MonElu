@@ -1,122 +1,61 @@
 ---
 name: solve-issue
-description: Resolves a GitHub issue end-to-end: reads the issue, creates a branch, implements the fix, commits, creates a PR, reviews the PR, and applies any review fixes. Use when the user asks to solve, fix, or close a GitHub issue by number.
+description: Resolves a MonÉlu GitHub issue through implementation, verification, a PR, CI, review, and review fixes. Stops before merge. Use /solve-issue number or /solve-issue next for the next unblocked issue with a three-open-PR WIP limit.
 ---
 
-When solving a GitHub issue, follow this workflow exactly, in order.
+Resolve issues in `Walid-peach/MonElu`. Read [the GitHub backlog conventions](references/github-issues.md) before selecting or updating an issue.
 
-ARGUMENTS: the issue number(s) to solve. Multiple numbers mean they belong in the same branch/PR.
+ARGUMENTS: GitHub issue number(s), repository issue URL(s), or `next`. Multiple issues share one branch/PR only when small and related; otherwise ask which to start. Resolve legacy MON identifiers exactly as described in the reference, never as GitHub numbers.
 
----
+## Select the next issue
 
-## Step 1 — Read the issue(s)
+For `next` only:
 
-- Fetch each issue with `gh issue view <number>` to get the full body, labels, and context.
-- If multiple issues are given, read all of them before doing anything else.
-- Understand the stated problem, the proposed fix (if any), and the affected files.
-- If the issue body references a specific file and line number, read that file before proceeding.
+1. Count all of the user's open PRs in this repository, including drafts, with pagination. At three or more, stop and list them.
+2. Read the full open backlog, including issues without migration/status labels. Exclude epics (route to `/plan-epic`), unresolved decisions (route to `adr-skill`), in-progress work, incomplete or unknown blockers, and unmet manual/external prerequisites.
+3. Order by priority (urgent, high, medium, low, none), then milestone sequence (M0, M1, M2…), then creation time. Use preserved original creation dates for migrated issues when available.
+4. Check open PR diffs and skip overlapping candidates. Announce the selected number, title, and reason. Do not change skipped issues.
 
----
+## Workflow
 
-## Step 2 — Identify the branch
+### 1. Read and check prior work
 
-- Check whether a branch already exists for these issues: `git branch -a | grep <issue-number>`.
-- If a matching branch exists, check it out and continue from there.
-- If no branch exists, create one from `master` (or the repo default branch).
-- Branch naming convention:
-  - `fix/<short-description>` for bugs and security issues
-  - `perf/<short-description>` for performance issues
-  - `refactor/<short-description>` for refactors
-  - `chore/<short-description>` for maintenance and cleanup
-  - `test/<short-description>` for test-only changes
-- Keep branch names lowercase, hyphen-separated, under 50 characters.
-- Include the issue number(s) only if the description would otherwise be ambiguous.
+- Fetch full body, comments, state, labels, assignees, milestone, parent, sub-issues, blockers, and linked PRs. Follow pagination, including comments and relations.
+- Scope and acceptance criteria define completion. Read referenced code and `docs/decisions.md`; an old issue's proposed fix does not override an ADR.
+- Stop and recommend `/plan-epic` for scope too broad for one reviewable PR. Surface unresolved architecture decisions before implementation.
+- Search existing branches and all PR states using the GitHub number and any preserved MON identifier; confirm actual links/content, not numeric substring matches. Continue verified existing work instead of duplicating it.
+- If a merged PR or current default-branch code already covers the issue, report evidence and comment on the issue. Do not make a no-op PR or automatically close it.
 
----
+### 2. Branch and implement
 
-## Step 3 — Read relevant code before editing
+- Inspect the working tree; preserve user changes. Fetch the default branch and create `codex/issue-<number>-<short-slug>` from its current remote tip unless continuing existing work or the user chose another base. Disclose a stale base if fetching is unavailable.
+- Never commit to the default branch. Read every file before editing. Make the smallest change satisfying acceptance criteria.
+- Flag schema/deployment risks. Ask before non-idempotent migrations, destructive operations, production configuration changes, or actions costing money. Writing a migration does not authorize running it in production.
 
-- Never edit a file you have not read in this session.
-- Use `Read` on every file you plan to modify.
-- If the issue references a function or line number, verify it still matches before acting.
-- If the code has changed since the issue was filed (already fixed, refactored away), report that and stop — do not make unnecessary changes.
+### 3. Verify
 
----
+- Inspect current CI configuration and run relevant gates. Distinguish baseline/environment failures from regressions; report unverified checks instead of assuming historical failures remain normal.
+- Known local baselines to investigate: the full pytest suite can fail with database connection errors when Docker is down; frontend builds have previously failed during `sitemap.xml` prerendering. Reproduce on the current default branch in a separate worktree/environment before classifying either as baseline noise. These are diagnostic clues, not permission to waive a new failure or call an unrun check green.
+- Backend defaults: `venv/bin/python -m pytest tests/ -m "not integration" -q`, `venv/bin/ruff check .`, and `venv/bin/ruff format --check .`. Run relevant integration tests when prerequisites are available. Report unrelated lint drift instead of silently changing unrelated files.
+- Frontend changes: run current frontend lint, type-check, tests, and relevant build/smoke checks from `frontend/`.
+- Exercise the changed behavior, not only mocks. Use `docs-sync` when documentation describes the changed behavior.
 
-## Step 4 — Implement the fix
+### 4. Commit, push, and create the PR
 
-- Apply the smallest change that fully resolves the issue.
-- Follow the fix approach described in the issue body when one is given.
-- Do not refactor code unrelated to the issue.
-- Do not add features, error handling, or abstractions beyond what the issue requires.
-- Do not add comments unless the WHY is non-obvious and would genuinely help a future reader.
-- After editing, verify the changed files with `git diff` to confirm the output matches intent.
+- Stage only this task's files, honor pre-commit hooks, and use factual commit authorship; do not invent co-author identities.
+- Check concurrent/automatic commits and the cumulative diff against the base before pushing. Do not reset, squash, or remove suspected duplicate files without verifying ownership and authorization.
+- Never squash, reset, or stash on shared branches: the user may commit in parallel; use per-branch worktrees for isolation. This repository has experienced auto-committer/iCloud sync creating `"<name> 2.<ext>"` duplicates, committing under its own messages, and reverting files to stale content. Inspect the log, status, and cumulative diff before pushing; verify provenance before restoring edits or removing duplicates.
+- Use the project `pr-create` skill. Title: `<type>: <headline> (#<number>)`. Body: changes and rationale, acceptance-criterion evidence, tests, risks, and `Closes #<number>` for fully covered issues. Use `Refs #<number>` for partial work and parent epics.
 
----
+### 5. Update GitHub, check CI, and review
 
-## Step 5 — Commit
+- Keep the issue open. Set `status: in progress`, removing contradictory status labels. Assign the authenticated user when appropriate and comment with the PR link, approach, and deferred scope. Keep original migration metadata as history.
+- Watch checks with bounded waits and progress updates. Diagnose run logs and fix regressions on the same branch.
+- Use project `pr-review`, apply Must Fix and Should Fix findings, push, and verify CI again. Do not implement unrelated nice-to-haves automatically.
+- Stop before merge. Report issues, branch, PR, acceptance coverage, review verdict, CI, and outstanding prerequisites. Do not close issues merely because a PR exists.
+- After the user merges, GitHub closing keywords normally close fully linked issues. Explicit `/po-agent sync` in Claude Code can reconcile missed closures and stale status labels using verified merged-PR evidence; it is not an instruction to run sync or merge during this workflow.
 
-- Stage only the files changed for this issue.
-- Run pre-commit hooks (they run automatically on `git commit`); if a hook fails, fix the issue and re-stage.
-- Write a concise commit message:
-  - Format: `<type>: <what changed and why in one line>`
-  - Types: `fix`, `perf`, `refactor`, `chore`, `test`
-  - Reference the issue: append `(closes #<number>)` at the end of the subject line when the commit fully resolves it.
-  - No bullet lists in the subject; use the body only for non-obvious context.
-- Always append the co-author trailer:
-  ```
-  Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-  ```
+## Boundaries
 
----
-
-## Step 6 — Create a PR
-
-- Push the branch: `git push -u origin <branch>`.
-- Use the `pr-create` skill to generate and open the PR.
-- The PR description must:
-  - State what changed and why (not just what the issue says).
-  - List any deployment, migration, or config risks.
-  - Reference the issue with `Closes #<number>` so GitHub auto-closes it on merge.
-
----
-
-## Step 7 — Review the PR
-
-- Use the `pr-review` skill immediately after creating the PR.
-- Post the review as a comment on the PR using `mcp__github__pull_request_review_write`.
-
----
-
-## Step 8 — Apply review fixes
-
-- Read the review output.
-- Apply all **Must Fix** and **Should Fix** items.
-- Do not implement **Nice to Have** items unless the user asks.
-- Commit the fixes with a message like `fix: address PR review feedback`.
-- Push the updated branch.
-
----
-
-## Step 9 — Report to the user
-
-At the end, output a short summary in this format:
-
-```
-## Solved: #<number> — <issue title>
-
-**Branch**: <branch-name>
-**PR**: <url>
-**Changes**: <one sentence describing what was changed>
-**Review status**: Ready to merge / Ready with minor changes / (any open items)
-```
-
----
-
-## Guard rails
-
-- If a fix requires a DB migration, call it out explicitly and confirm with the user before applying.
-- If the fix has a deployment risk (env var change, CORS, auth), note it in the PR and pause for confirmation.
-- If the issue is already resolved in the current codebase, close it with `gh issue close <number> --comment "Already resolved: <brief explanation>"` and stop.
-- Never commit to `master` directly.
-- Never skip pre-commit hooks (`--no-verify`).
+- Never skip hooks or force-push shared work. Scope growth requires user direction, not automatic extra issues.
+- Failed GitHub writes are not success. Re-read after writes and reconcile uncertain results before retrying. If access remains blocked, report the unfinished update; never fall back to Linear writes.

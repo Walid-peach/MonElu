@@ -1,10 +1,10 @@
 ---
 name: top-issues
-description: Surfaces the top 10 Linear issues to attack next, ranked by effort vs impact, with a separate section for issues that need manual/external setup before code can start. Use as /top-issues, or /top-issues <filter> to scope by milestone, label, or priority (e.g. /top-issues frontend, /top-issues M2).
+description: Surfaces the top 10 GitHub issues to attack next, ranked by effort vs impact, with a separate section for issues that need manual/external setup before code can start. Use as /top-issues, or /top-issues filter to scope by milestone, label, or priority (e.g. /top-issues frontend, /top-issues M2).
 ---
 
-Triage the open MonÉlu backlog in Linear and hand back a ranked shortlist to attack next - not a full backlog dump, a decision aid.
-This skill only reads Linear and the codebase - it never files, edits, or starts issues. Follow-up work happens via `/solve-mon <id>` or `/plan-epic <id>`.
+Triage the open MonÉlu backlog in GitHub and hand back a ranked shortlist to attack next - not a full backlog dump, a decision aid.
+This skill only reads GitHub and the codebase - it never files, edits, or starts issues. Follow-up work happens via `/solve-issue <id>` or `/plan-epic <id>`.
 
 ARGUMENTS: optional filter - a milestone name (e.g. `M0`, `M2 - Core UX`), a label (`frontend`, `rag`, `tech-debt`), or a priority (`high`). No argument scans the whole open backlog.
 
@@ -12,27 +12,26 @@ ARGUMENTS: optional filter - a milestone name (e.g. `M0`, `M2 - Core UX`), a lab
 
 ### 1. Pull the open backlog
 
-`mcp__linear-server__list_issues` for team MonElu across the open states actually in use (`Backlog`, `Todo`, and any `In Progress` if present - check what states exist, don't assume). Use a high `limit` (100+) to get everything in one pass rather than paging.
-If a filter argument was given, apply it via the `project`/`label`/`priority` params where they map directly; otherwise filter client-side after fetching (milestone names don't have a dedicated list_issues param).
+Read [the GitHub backlog conventions](../solve-issue/references/github-issues.md). Fetch every open issue in `Walid-peach/MonElu` with pagination, excluding PR records. Include native issues without migration/status labels. Filter by actual milestone, labels, or priority labels; do not interpret the historical Project body field as a live board.
 
-Exclude anything already `Done`, `Canceled`, or `Duplicate`.
+Check native and body-only dependencies and linked PRs. Exclude closed issues; separate blocked, unknown-prerequisite, and already-in-progress work from actionable recommendations.
 
 ### 2. Score each issue on effort vs impact
 
-For every open issue, read enough of the description (`get_issue` if the truncated summary isn't enough to judge) to place it on two axes:
+For every open issue, read enough of the description (fetch the full issue body and comments when needed) to place it on two axes:
 
-**Effort** - infer from scope, not from the Linear priority field:
+**Effort** - infer from scope, not from the GitHub priority field:
 - *Low*: touches one file or one narrow surface (a component, a query, a single endpoint), no new external dependency, no schema migration with data risk.
 - *Medium*: touches a few files or one full vertical slice (API + frontend), may need a small migration or a new table.
 - *High*: labeled `epic`, spans ingestion + API + frontend, or requires a product/design decision before implementation can start.
 
-**Impact** - judge from what the issue itself argues (trust, credibility, retention, distribution, correctness-visible-to-users) plus Linear priority as a signal, not the sole input. A Low-priority issue that fixes a visible "looks broken" moment can outrank a Medium-priority nice-to-have.
+**Impact** - judge from what the issue itself argues (trust, credibility, retention, distribution, correctness-visible-to-users) plus GitHub priority as a signal, not the sole input. A Low-priority issue that fixes a visible "looks broken" moment can outrank a Medium-priority nice-to-have.
 
 **Manual-setup flag** - mark an issue as needing manual setup if it requires any of: a new external account or SaaS signup (email provider, payment processor, form service), a secret/API key that must be provisioned and added to Railway/GitHub env vars, DNS changes (domain verification), or non-code work (an audit, a legal/compliance step, a business decision) before code can start. A DB migration alone does *not* count as manual setup - that's routine.
 
 ### 2b. Verify before recommending
 
-Before an issue makes the final ten, confirm it's still actionable: re-read its current Linear state (not a stale mental model), and spot-check that any file/function it names still exists (`grep`/`Read`) if the recommendation hinges on it. Drop or flag anything that's stale.
+Before an issue makes the final ten, confirm it's still actionable: re-read its current GitHub state (not a stale mental model), and spot-check that any file/function it names still exists (using `rg` and file reads) if the recommendation hinges on it. Drop or flag anything that's stale.
 
 ### 3. Rank and select the top 10
 
@@ -54,7 +53,7 @@ End with one offer to proceed: start the top pick, or let the user redirect.
 
 ## Guard rails
 
-- Read-only against Linear and the codebase - never call `save_issue`, `save_comment`, or any write tool.
-- Never invent issues - every pick must be a real, currently-open Linear issue with its MON-id and URL.
-- Don't let Linear's `priority` field alone drive ranking - it's one input; the effort/impact judgment call is the point of this skill.
+- Read-only against GitHub and the codebase - never create/edit/comment on issues or perform any external writes.
+- Never invent issues - every pick must be a real, currently-open GitHub issue with its GitHub number and URL.
+- Don't let GitHub's `priority` field alone drive ranking - it's one input; the effort/impact judgment call is the point of this skill.
 - If the filter argument matches zero open issues, say so plainly instead of silently falling back to the full backlog.

@@ -13,6 +13,10 @@ GitHub Issues in `Walid-peach/MonElu` is the active backlog. Use `/solve-issue`,
 for migrated identifiers. Read the [shared backlog conventions](.agents/skills/solve-issue/references/github-issues.md)
 before selecting or updating issues. Linear links are historical references, not a writable tracker.
 
+The five shared workflow skills and their `solve-issue/references/` resources are mirrored
+between `.agents/skills/` and `.claude/skills/`; update both when changing common behavior.
+Preserve Claude-specific presentation instructions in `plan-epic`.
+
 ## Project Overview
 
 **MonÉlu** is a civic transparency platform exposing the complete voting record of every deputy in the French Assemblée Nationale (17th legislature, since 2024-07-07). The tagline is "Every vote. Every deputy. In plain French."

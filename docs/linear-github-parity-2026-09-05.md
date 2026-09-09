@@ -91,3 +91,26 @@ These are triage findings, not authority to close issues. No issues were closed 
 The project skills now use GitHub as the active tracker. `solve-issue` is canonical; `solve-mon` only resolves legacy identifiers and delegates. `top-issues` remains read-only; `plan-epic` and `diagnose` use GitHub creation/deduplication. Shared instructions cover both native and body-only relations, stale historical states, pagination, and stopping before merge.
 
 Optional follow-up to improve operational parity: create the five native parent links and five unresolved native blocker links; reconcile stale issues with acceptance evidence; retain the original export and Linear access for history. A complete historical migration needs separate scope and a source containing comments/attachments.
+
+## Review validation — 2026-09-09
+
+This is a later read-only smoke check, not a replacement for the September 5 snapshot or a fresh live Linear audit. No issue mutations were performed.
+
+- The paginated issue inventory returned four pages, 100 issue records after excluding PRs, and 35 open issues. Native issues without migration/status labels were retained.
+- Live identity spot-checks confirmed MON-42 → #358, MON-105 → #361, and MON-272 → #383, each with the expected source title.
+- `GET /repos/Walid-peach/MonElu/issues/361/sub_issues?per_page=100` returned **HTTP 200, `[]`**.
+- `GET /repos/Walid-peach/MonElu/issues/369/dependencies/blocked_by?per_page=100` returned **HTTP 200, `[]`**. The full body of #369 still explicitly names open #368 as a blocker, so the selection rules correctly keep it blocked despite the empty native response.
+- The author's open-PR inventory returned #86 and #395 (two, below the three-PR limit). This exercises the WIP gate but is not a full automatic next-issue selection.
+- Existing labels include `bug`, `Feature`, `Improvement`, the three workflow statuses, and high/medium/low/no-priority labels. `priority: urgent` does not currently exist; a future write needing it must explicitly create the intended label or report an unapplied mapping, not assume it exists.
+- The local export's SHA-256 still matches the source checksum above. The export is not committed; a reviewer without it cannot independently reconstruct its original counts. Historical GitHub totals also cannot be reconstructed from today's live list alone.
+
+Reproduce the API checks with authenticated read access:
+
+```sh
+gh api --paginate --slurp 'repos/Walid-peach/MonElu/issues?state=all&per_page=100' | jq '[.[][] | select(.pull_request == null)] | {total:length, open:map(select(.state == "open"))|length}'
+gh api --include 'repos/Walid-peach/MonElu/issues/361/sub_issues?per_page=100'
+gh api --include 'repos/Walid-peach/MonElu/issues/369/dependencies/blocked_by?per_page=100'
+gh issue view 369 --repo Walid-peach/MonElu --json number,body
+```
+
+Use external `jq` after `--slurp`; the installed CLI rejects combining `--slurp` with its `--jq` flag. Successful empty responses establish that these read endpoints work, not that native relation writes have been tested. Full solve/diagnose/fill/sync workflows were not run, because they would implement work or mutate the backlog outside this review.

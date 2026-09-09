@@ -35,6 +35,7 @@ For `next` only:
 ### 3. Verify
 
 - Inspect current CI configuration and run relevant gates. Distinguish baseline/environment failures from regressions; report unverified checks instead of assuming historical failures remain normal.
+- Known local baselines to investigate: the full pytest suite can fail with database connection errors when Docker is down; frontend builds have previously failed during `sitemap.xml` prerendering. Reproduce on the current default branch in a separate worktree/environment before classifying either as baseline noise. These are diagnostic clues, not permission to waive a new failure or call an unrun check green.
 - Backend defaults: `venv/bin/python -m pytest tests/ -m "not integration" -q`, `venv/bin/ruff check .`, and `venv/bin/ruff format --check .`. Run relevant integration tests when prerequisites are available. Report unrelated lint drift instead of silently changing unrelated files.
 - Frontend changes: run current frontend lint, type-check, tests, and relevant build/smoke checks from `frontend/`.
 - Exercise the changed behavior, not only mocks. Use `docs-sync` when documentation describes the changed behavior.
@@ -43,6 +44,7 @@ For `next` only:
 
 - Stage only this task's files, honor pre-commit hooks, and use factual commit authorship; do not invent co-author identities.
 - Check concurrent/automatic commits and the cumulative diff against the base before pushing. Do not reset, squash, or remove suspected duplicate files without verifying ownership and authorization.
+- Never squash, reset, or stash on shared branches: the user may commit in parallel; use per-branch worktrees for isolation. This repository has experienced auto-committer/iCloud sync creating `"<name> 2.<ext>"` duplicates, committing under its own messages, and reverting files to stale content. Inspect the log, status, and cumulative diff before pushing; verify provenance before restoring edits or removing duplicates.
 - Use the project `pr-create` skill. Title: `<type>: <headline> (#<number>)`. Body: changes and rationale, acceptance-criterion evidence, tests, risks, and `Closes #<number>` for fully covered issues. Use `Refs #<number>` for partial work and parent epics.
 
 ### 5. Update GitHub, check CI, and review
@@ -51,6 +53,7 @@ For `next` only:
 - Watch checks with bounded waits and progress updates. Diagnose run logs and fix regressions on the same branch.
 - Use project `pr-review`, apply Must Fix and Should Fix findings, push, and verify CI again. Do not implement unrelated nice-to-haves automatically.
 - Stop before merge. Report issues, branch, PR, acceptance coverage, review verdict, CI, and outstanding prerequisites. Do not close issues merely because a PR exists.
+- After the user merges, GitHub closing keywords normally close fully linked issues. Explicit `/po-agent sync` in Claude Code can reconcile missed closures and stale status labels using verified merged-PR evidence; it is not an instruction to run sync or merge during this workflow.
 
 ## Boundaries
 
