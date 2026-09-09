@@ -1,23 +1,22 @@
 ---
 name: plan-epic
-description: Decomposes a large Linear (MonElu) issue into ordered, solve-mon-sized sub-issues - explores the codebase to ground the plan, drafts sub-issues with Scope and Acceptance criteria, flags architectural decisions for the ADR first, and creates them in Linear under the parent. Use as /plan-epic <MON-id>, e.g. /plan-epic MON-91.
+description: Decomposes a large GitHub (MonElu) issue into ordered, solve-issue-sized sub-issues - explores the codebase to ground the plan, drafts sub-issues with Scope and Acceptance criteria, flags architectural decisions for the ADR first, and creates them in GitHub under the parent. Use as /plan-epic number, e.g. /plan-epic 359.
 ---
 
-Turn one epic-sized Linear issue into a sequence of sub-issues that each fit the `/solve-mon` cycle (one branch, one PR, reviewable in one sitting).
-This skill only plans and writes to Linear - it never touches code, branches, or PRs.
+Turn one epic-sized GitHub issue into a sequence of sub-issues that each fit the `/solve-issue` cycle (one branch, one PR, reviewable in one sitting).
+This skill only plans and writes to GitHub - it never touches code, branches, or PRs.
 
-ARGUMENTS: one MON-id of the epic to decompose.
+ARGUMENTS: one GitHub issue number or repository issue URL. Resolve legacy MON identifiers through the shared reference.
 
-Linear writes (`mcp__linear-server__save_issue`, `save_comment`) are allowlisted in `.claude/settings.local.json`.
-If the Linear MCP is unavailable, say so and output the drafted sub-issues for manual creation instead.
+Read [the GitHub backlog conventions](../solve-issue/references/github-issues.md) before proceeding. Use authenticated `gh` in `Walid-peach/MonElu`; if writes are unavailable, report the limitation and provide drafts without claiming creation.
 
 ## Workflow
 
 ### 1. Read the epic
 
-- Fetch the full issue with `mcp__linear-server__get_issue`: title, description, priority, labels, milestone, comments.
-- If the issue already has sub-issues (`parentId` children), list them and reconcile: plan only the missing parts, never duplicate.
-- If the issue is actually solve-mon-sized (clear scope, one surface, existing acceptance criteria), say so and recommend `/solve-mon` directly instead of decomposing.
+- Fetch the full GitHub issue: title, body, priority labels, all labels, milestone, comments, state, and relations.
+- List native children and body/checklist-linked children, including closed ones, with pagination. Reconcile implemented, planned, and missing scope; never duplicate.
+- If the issue is actually solve-issue-sized (clear scope, one surface, existing acceptance criteria), say so and recommend `/solve-issue` directly instead of decomposing.
 
 ### 2. Ground the plan in the codebase
 
@@ -52,13 +51,13 @@ Slice by deliverable layer and dependency order - the proven pattern from MON-90
 
 Each sub-issue must have:
 
-- **Title**: concise, action-verb-first, suffixed with the epic reference (e.g. "Add follow-deputy API endpoints (MON-91 backend)").
+- **Title**: concise, action-verb-first, suffixed with the epic reference (e.g. "Add follow-deputy API endpoints (#359 backend)").
 - **Description** in the established format:
   one-line context sentence, then a **Scope** bullet list, then an **Acceptance criteria** bullet list.
-  Acceptance criteria must be checkable by `/solve-mon` step 11 without interpretation.
+  Acceptance criteria must be checkable during `/solve-issue` verification without interpretation.
 - **Size check**: if a sub-issue would touch more than ~2 layers or needs its own decomposition, split it again.
 - **Priority**: inherit from the epic unless a step is clearly blocking (raise it) or polish (lower it).
-- **Dependencies**: note "depends on <previous sub-issue>" in the description body; also set `blockedBy` relations where real.
+- **Dependencies**: record explicit GitHub blocker links and native dependencies where real; preferred ordering alone is not a blocker.
 
 ### 5. Review with the user
 
@@ -66,15 +65,14 @@ Present the full plan as a numbered list (title, one-line scope, dependency) bef
 Include: which steps are decision-first ADR items, the suggested order, and anything the epic asked for that is being deferred and why.
 Proceed to create unless the user redirects.
 
-### 6. Create in Linear
+### 6. Create in GitHub
 
-For each drafted sub-issue: `save_issue` with team MonElu, state Backlog, `parentId` set to the epic, labels carried over from the epic plus the layer label (`api`, `frontend`, `database`, `rag`, `ingestion`), and the epic's milestone.
-Set `blockedBy` relations between sequential sub-issues where the dependency is real, not just preferred order.
-Then comment on the epic (`save_comment`) with the plan summary and links, and move the epic to **Todo** (it is now planned; it goes In Progress when the first sub-issue does).
+For each drafted sub-issue, use `gh issue create --repo Walid-peach/MonElu` with a body file, `status: backlog`, priority, relevant layer/type labels, and the epic's milestone. Do not inherit `epic`, migration markers, or the parent's workflow status.
+Attach children and genuine blockers using native GitHub relations per the shared reference, then read them back. Comment on the epic with a linked checklist and execution order. Keep it open; set `status: todo` and remove conflicting status labels. If it is already in progress, preserve that state. On partial failure reconcile existing creations before retrying; disclose text-only fallback relations.
 
 ### 7. Report
 
-Print the created sub-issue ids and URLs in execution order, marking which one `/solve-mon` should pick up first and which are blocked on an ADR.
+Print the created sub-issue ids and URLs in execution order, marking which one `/solve-issue` should pick up first and which are blocked on an ADR.
 
 ## Guard rails
 
@@ -82,4 +80,4 @@ Print the created sub-issue ids and URLs in execution order, marking which one `
 - Never create sub-issues for work whose data source or upstream dependency is unverified - flag it as a research step instead.
 - Check for existing near-duplicate issues (backlog-wide title similarity) before creating; link relations instead of duplicating.
 - Do not decompose into more than ~7 sub-issues in one pass; if the epic genuinely needs more, propose milestone-level phasing to the user first.
-- Never touch Done/Canceled/Duplicate issues.
+- Never mutate closed issues as part of decomposition.

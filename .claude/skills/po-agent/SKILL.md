@@ -1,126 +1,48 @@
 ---
 name: po-agent
-description: PO assistant for MonÉlu — keeps Linear in sync with git state, auto-detects what issue is being worked on from the current branch/diff, and drafts well-structured backlog issues from free-text descriptions. Three modes: sync (default), detect, fill.
+description: Reconciles MonÉlu GitHub issues with verified PR state, detects the current issue without writes, or drafts and creates deduplicated backlog issues. Use /po-agent sync (default), detect, or fill.
 ---
 
-Act as a Product Owner assistant for the MonÉlu project.
-You have full access to the Linear MCP (`mcp__linear-server__*`) and GitHub CLI (`gh`).
+Act as a Product Owner assistant for `Walid-peach/MonElu`. Read [the GitHub backlog conventions](../solve-issue/references/github-issues.md), including legacy-ID resolution, state reasons, pagination, and verified writes. Linear is historical only; never write to it.
 
 ARGUMENTS: `[mode] [args]`
-- `/po-agent` or `/po-agent sync` — reconcile Linear with git/PR state
-- `/po-agent detect` — infer the matching Linear issue from the current branch and propose a status update
-- `/po-agent fill <free-text description>` — draft and create one or more backlog issues
 
-Linear team: **MonElu**
-Allowed statuses: Backlog · Todo · In Progress · Done · Canceled · Duplicate
+- `/po-agent` or `/po-agent sync`: reconcile GitHub issues with PR evidence.
+- `/po-agent detect`: identify the current issue and propose a transition, read-only.
+- `/po-agent fill <description>`: draft and create scoped backlog issues.
 
----
+## sync
 
-## sync mode
+1. Paginate issues and PRs in all states (exclude PR records from the issue list). Include closed issues when checking stale workflow labels. Check each selected issue's linked PRs/timeline, including older merged work; do not impose an arbitrary recent-PR cutoff.
+2. Establish actual issue-to-PR relationships: closing links/keywords for this repository, or an explicit legacy mapping with full-scope evidence. Title/branch/body mentions are discovery hints, not proof of completion. Distinguish `Refs #N` from `Closes #N`, and GitHub issues from PRs sharing the number namespace.
+3. For each confirmed match:
+   - Open PR genuinely implementing the issue, issue still open: replace backlog/todo labels with `status: in progress`. Do not close it.
+   - PR merged into the repository default branch and all issue acceptance criteria covered: GitHub normally closes it automatically. If still open, verify it was not deliberately reopened after that merge before closing as completed, with an evidence comment linking the PR.
+   - Already closed as completed: remove stale active workflow labels only when the matched merged PR supports completion. Do not create a redundant Done label or repeat comments.
+   - Closed as not planned/duplicate, deliberately reopened, partial implementation, multiple unresolved PRs, or ambiguous evidence: leave unchanged and report for user review.
+   - Local branch only, unmerged closed PR, no match, or merge into a non-default branch: leave unchanged. None proves delivery.
+4. Re-read state, comments, and labels before a write to detect intervening edits; read back afterward. Reconcile uncertain results before retrying.
+5. Report issue number/URL, old and new state/labels, linked evidence, and skipped/ambiguous cases.
 
-Reconcile Linear issue statuses with actual git/PR state.
-Run this whenever you want the board to reflect reality without doing it manually.
+An invocation of sync authorizes these narrowly evidenced tracker updates, not merging PRs or guessing completion from any MON mention. Without merged full-scope evidence, propose closure and ask for confirmation instead.
 
-### Steps
+## detect
 
-1. Fetch all recent PRs:
-   `gh pr list --state all --limit 60 --json number,title,state,headRefName,body`
+1. Read current branch, recent commits, working-tree diff, and any existing PR without switching branches.
+2. Resolve candidate GitHub numbers or exact migrated MON IDs; verify issue content against the diff. Search title keywords only as a fallback discovery aid.
+3. Report the match, current issue state, branch/PR, and proposed transition with reasoning. Do not write. Ask for confirmation before applying a change.
+4. If missing or ambiguous, report it and offer fill; never create automatically.
 
-2. For every PR, extract any MON-id mentioned in the title, branch name, or body
-   (pattern: `MON-\d+`).
+## fill
 
-3. Pull all non-Done, non-Canceled Linear issues:
-   `mcp__linear-server__list_issues` filtered to team MonElu.
+1. Parse the requested work. Split only genuinely distinct deliverables; do not expand scope.
+2. Paginate open and closed GitHub issues, compare title/content and historical reports, and check merged work. Report near-duplicates and ask whether a distinct issue is intended before creating.
+3. Draft each issue with a concise action-oriented title, context, **Scope**, and checkable **Acceptance criteria**. Apply existing layer/type labels, `status: backlog`, and a justified priority label (medium by default; high for a demonstrated break/blocker, low for explicitly deferred polish). Use an existing appropriate milestone or flag the missing mapping.
+4. Show drafts before creation; proceed within the requested fill scope unless redirected. Use `gh issue create --repo Walid-peach/MonElu` with body files.
+5. Read back creations and report real GitHub numbers/URLs. If only part succeeds, report exactly what exists and dedupe before retrying.
 
-4. For each matched issue:
-   - PR state **merged** and issue not Done → move to **Done** via `save_issue`.
-   - PR state **open** and issue still Backlog or Todo → move to **In Progress** via `save_issue`.
-   - Branch exists locally but no PR yet → leave untouched, note it in the report.
-   - No PR or branch found → leave untouched.
+## Boundaries
 
-5. Print a sync summary table:
-
-   | Issue | Title | Old status | New status | Reason |
-   |-------|-------|-----------|-----------|--------|
-
-Guard rails:
-- Never move to Done without a merged PR as evidence — confirmation is required otherwise.
-- Never touch Canceled or Duplicate issues.
-- If the Linear MCP is unavailable, print the exact `save_issue` calls for manual application.
-
----
-
-## detect mode
-
-Inspect the current branch and recent commits to find the matching Linear issue
-and propose a status update.
-
-### Steps
-
-1. Get current branch: `git rev-parse --abbrev-ref HEAD`
-
-2. Get recent commit log: `git log --oneline -10`
-
-3. Get diff summary: `git diff --stat HEAD~1 2>/dev/null || git diff --stat`
-
-4. Search Linear for issues whose `gitBranchName` or title keywords match the branch name.
-   Also scan for MON-ids in commit messages.
-
-5. If a match is found:
-   - Report: issue ID, title, current status, branch, last commit.
-   - Propose a status transition with reasoning (e.g. "branch has commits but no open PR → In Progress").
-   - Ask for confirmation before applying any status change.
-
-6. If no match is found:
-   - Say so clearly.
-   - Offer to run `fill` mode with the branch name and diff context pre-populated as description.
-
----
-
-## fill mode
-
-Draft and create one or more well-structured backlog issues from a free-text description.
-
-### Steps
-
-1. Parse the description argument (or conversation context if none given).
-
-2. Identify how many distinct issues are implied.
-   Split compound requests into individual issues (one feature or bug = one issue).
-
-3. Before drafting, run `mcp__linear-server__list_issues` (team MonElu, all statuses)
-   and check for title similarity to avoid duplicates.
-   If a near-duplicate exists, report it and ask whether to proceed.
-
-4. For each issue, draft:
-   - **Title:** concise, action-verb-first ("Add X to Y", "Fix Z on W page")
-   - **Description (Markdown):**
-     ```
-     <one-line context sentence>
-
-     **Scope**
-     - bullet list of what is included
-
-     **Acceptance criteria**
-     - bullet list of done conditions
-     ```
-   - **Priority:** infer from keywords
-     - "urgent", "broken", "blocker" → 2 (High)
-     - "nice to have", "eventually", "low priority" → 4 (Low)
-     - default → 3 (Medium)
-   - **State:** Backlog
-
-5. Show all drafts in a numbered list for the user to review.
-   Proceed to create unless the user redirects.
-
-6. Create each issue: `mcp__linear-server__save_issue` (team: MonElu, state: Backlog).
-
-7. Print created issue IDs and Linear URLs.
-
----
-
-## General guard rails
-
-- Match the description style already established in this project (see MON-66…MON-71 for reference format).
-- Never commit, push, or open PRs — this skill only touches Linear.
-- If unsure which mode the user intended, default to `sync`.
+- Never commit, push, open/merge PRs, or write to production; this skill only changes GitHub issues in sync/fill. Detect is read-only.
+- Do not infer that lack of GitHub history means completed Linear work must be recreated.
+- If access is unavailable, return proposed updates/drafts clearly marked unapplied; do not fall back to Linear.
