@@ -358,14 +358,15 @@ def _get_db_stats() -> dict:
     """Return counts, last ingestion, and mart row counts; raises if the DB is down.
 
     Keys: deputies, votes, positions, last_ingestion, mart_scorecards,
-    mart_vote_summaries (mart keys are None when the marts are absent).
+    mart_vote_summaries (mart keys are None when the marts are absent), and
+    rag_staging_chunks (None unless document_chunks_staging exists).
     """
     global _stats_cache, _stats_cached_at
     with _stats_lock:
         if _stats_cache is not None and time.monotonic() - _stats_cached_at < _STATS_TTL_SECONDS:
             return _stats_cache
 
-    stats: dict = {"mart_scorecards": None, "mart_vote_summaries": None}
+    stats: dict = {"mart_scorecards": None, "mart_vote_summaries": None, "rag_staging_chunks": None}
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -401,6 +402,21 @@ def _get_db_stats() -> dict:
             conn.rollback()
             logger.warning("Stats mart check error: %s", exc)
 
+        # MON-256: document_chunks_staging exists only while a full RAG rebuild
+        # is in flight. A count here on an ordinary read is an orphan left by a
+        # rebuild that was killed (a job timeout's SIGKILL) - tens of MB of
+        # vectors held against the 500 MB tier, otherwise indistinguishable
+        # from organic growth in db_size_mb.
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT to_regclass('public.document_chunks_staging') AS oid")
+                if cur.fetchone()["oid"] is not None:
+                    cur.execute("SELECT COUNT(*) AS total FROM document_chunks_staging")
+                    stats["rag_staging_chunks"] = cur.fetchone()["total"]
+        except Exception as exc:
+            conn.rollback()
+            logger.warning("Stats staging check error: %s", exc)
+
     with _stats_lock:
         _stats_cache = stats
         _stats_cached_at = time.monotonic()
@@ -430,6 +446,11 @@ def health() -> JSONResponse:
     `services.dbt_marts` reports `degraded` when the analytics layer is missing.
     The API stays up in that state, but the scorecard, alignment and vote-summary
     endpoints return 503 and the group and department pages serve null rates.
+
+    `rag_staging_chunks` is normally `null`. A number means the RAG index's
+    staging table exists: either a rebuild is running right now, or one was
+    killed mid-flight and left a second copy of the vectors behind. It clears
+    on the next successful rebuild.
 
     Returns 200 when the database is reachable and 503 when it is not; the body
     has the same shape either way.
@@ -469,6 +490,8 @@ def health() -> JSONResponse:
                 # ingestion workflow polls this to alert before writes start failing.
                 "db_size_mb": stats["db_size_mb"],
                 "db_size_warning": stats["db_size_mb"] >= _DB_SIZE_WARN_MB,
+                # MON-256: null unless a RAG rebuild is running or left an orphan.
+                "rag_staging_chunks": stats["rag_staging_chunks"],
             }
         )
     if services["dbt_marts"] == "ok":
