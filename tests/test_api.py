@@ -116,7 +116,7 @@ def test_health_db_size_warning_past_threshold(client, mock_cursor):
 
 
 def test_health_reports_no_rag_staging_table_by_default(client, mock_cursor):
-    """MON-256: null is the healthy reading — the table only exists mid-build."""
+    """MON-256: null is the healthy reading - the table only exists mid-build."""
     mock_cursor.fetchone.side_effect = [
         {
             "deputies": 577,

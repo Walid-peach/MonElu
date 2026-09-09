@@ -148,18 +148,20 @@ def _build_full_index_atomic() -> None:
     table, so the live index is left exactly as it was and no orphaned copy of
     the vectors is left behind (MON-256).
     """
-    _create_staging_table()
-
     swapped = False
     try:
         with _raise_on_termination():
+            # Inside the guard, not before it: the CREATE is committed on its
+            # own, so a signal landing between it and the first embed would
+            # otherwise leave an empty orphan behind.
+            _create_staging_table()
             _populate_staging_table()
             print("\nSwapping in the new index...")
             _swap_in_staging_table()
             swapped = True
     finally:
         if not swapped:
-            print(f"\nBuild did not complete — dropping {_STAGING_TABLE}, live index untouched.")
+            print(f"\nBuild did not complete - dropping {_STAGING_TABLE}, live index untouched.")
             try:
                 _drop_staging_table()
             except Exception as exc:  # never mask the failure that got us here
@@ -283,7 +285,7 @@ def _print_staging_state(staging: int | None) -> None:
     else:
         print(
             f"WARNING: {_STAGING_TABLE} exists with {staging:,} rows. "
-            "If no build is running, this is an orphan from a killed rebuild — "
+            "If no build is running, this is an orphan from a killed rebuild - "
             "it holds a second copy of the vectors until the next successful build."
         )
     print()

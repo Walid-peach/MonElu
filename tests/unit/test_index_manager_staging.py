@@ -58,6 +58,21 @@ def test_failed_build_drops_the_staging_table(build_doubles):
     build_doubles["swap"].assert_not_called()
 
 
+def test_sigterm_during_table_creation_is_still_cleaned_up(build_doubles):
+    """The CREATE commits on its own, so it must sit inside the signal guard."""
+
+    def _killed(*_args, **_kwargs):
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    build_doubles["create"].side_effect = _killed
+
+    with pytest.raises(index_manager.BuildInterrupted):
+        index_manager._build_full_index_atomic()
+
+    build_doubles["drop"].assert_called_once()
+    build_doubles["populate"].assert_not_called()
+
+
 def test_sigterm_mid_build_drops_the_staging_table(build_doubles):
     """A job timeout / cancelled workflow sends SIGTERM before SIGKILL."""
 
