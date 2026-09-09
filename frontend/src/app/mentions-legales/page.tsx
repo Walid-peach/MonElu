@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { CONTACT_EMAIL, canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Mentions légales - MonÉlu',
   description: "Éditeur, hébergement et contact du site MonÉlu.",
+  alternates: { canonical: canonicalUrl('/mentions-legales') },
 }
 
 export default function MentionsLegalesPage() {
@@ -15,7 +17,7 @@ export default function MentionsLegalesPage() {
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
           MonÉlu est édité à titre individuel par Walid Elkhoukh.
           <br />
-          Contact : <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a>
+          Contact : <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--dp-text)' }}>{CONTACT_EMAIL}</a>
           <br />
           Directeur de la publication : Walid Elkhoukh.
         </p>
@@ -54,8 +56,10 @@ export default function MentionsLegalesPage() {
       <LegalSection title="Contact">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
           Pour toute question relative au site, à une donnée affichée ou à ces mentions légales, écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a>.
-          Réponse sous 48 h pour les questions techniques.
+          <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--dp-text)' }}>{CONTACT_EMAIL}</a>.
+          La page <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link> détaille ce qui est
+          attendu selon le type de demande (erreur de donnée, clé d&apos;API, presse). Réponse sous 48 h pour les
+          questions techniques.
         </p>
       </LegalSection>
 

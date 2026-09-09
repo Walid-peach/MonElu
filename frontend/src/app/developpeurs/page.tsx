@@ -1,11 +1,14 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { SITE_URL, canonicalUrl } from '@/lib/site'
 
 const API_BASE = 'https://monelu-production.up.railway.app'
 
 export const metadata: Metadata = {
   title: 'Développeurs - MonÉlu',
   description: "Documentation de l'API MonÉlu : endpoints, limites de débit, clés d'accès et licence des données.",
+  alternates: { canonical: canonicalUrl('/developpeurs') },
 }
 
 const textStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }
@@ -26,14 +29,24 @@ export default function DeveloppeursPage() {
       <LegalSection title="L'API">
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           MonÉlu expose l&apos;intégralité des votes et des fiches de députés via une API REST publique.
-          La documentation interactive (OpenAPI/Swagger) liste tous les endpoints, leurs paramètres et
-          leurs schémas de réponse :
+          Chaque endpoint est décrit avec ses paramètres, ses schémas de réponse, un exemple de charge
+          utile et les mises en garde méthodologiques qui s&apos;y appliquent :
         </p>
-        <p style={textStyle}>
-          <a href={`${API_BASE}/docs`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text)', fontWeight: 600 }}>
-            {API_BASE}/docs
-          </a>
-        </p>
+        <ul style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--dp-text-secondary)', margin: '0 0 10px', paddingLeft: '20px' }}>
+          <li>
+            <a href={`${API_BASE}/openapi.json`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text)', fontWeight: 600 }}>
+              {API_BASE}/openapi.json
+            </a>
+            {' '}- la spécification OpenAPI brute. C&apos;est le format à donner à un agent, à un client
+            généré, ou à un pont MCP.
+          </li>
+          <li>
+            <a href={`${API_BASE}/docs`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text)', fontWeight: 600 }}>
+              {API_BASE}/docs
+            </a>
+            {' '}- la même spécification, en documentation interactive (Swagger UI), pour explorer à la main.
+          </li>
+        </ul>
       </LegalSection>
 
       <LegalSection title="Limites de débit">
@@ -54,15 +67,15 @@ export default function DeveloppeursPage() {
       <LegalSection title="Obtenir une clé">
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Les clés sont émises manuellement pour l&apos;instant - pas d&apos;inscription en libre-service.
-          Écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a>{' '}
-          en précisant votre usage prévu (recherche, rédaction, produit) et le volume de requêtes attendu.
+          Faites-en la demande via la page{' '}
+          <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link>, en précisant votre usage
+          prévu (recherche, rédaction, produit) et le volume de requêtes attendu.
         </p>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Une fois la clé reçue, passez-la dans l&apos;en-tête <code>X-API-Key</code> de chaque requête :
         </p>
         <div style={codeBlockStyle}>
-          curl -H &quot;X-API-Key: votre_cle&quot; {API_BASE}/deputes/
+          curl -H &quot;X-API-Key: votre_cle&quot; {API_BASE}/deputies/
         </div>
       </LegalSection>
 
@@ -74,6 +87,30 @@ export default function DeveloppeursPage() {
         <div style={codeBlockStyle}>
           curl -H &quot;X-API-Key: votre_cle&quot; {API_BASE}/keys/usage
         </div>
+      </LegalSection>
+
+      <LegalSection title="Intégrer un vote (oEmbed)">
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          Chaque page de scrutin expose un encart embarquable et déclare un point d&apos;accès{' '}
+          <a href="https://oembed.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text)' }}>oEmbed</a>.
+          Sur Notion, Slack, Substack, Ghost, WordPress ou Discourse, coller l&apos;URL de la page suffit :
+          l&apos;encart s&apos;affiche à la place du lien.
+        </p>
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          Pour les intégrations sur mesure, le point d&apos;accès répond directement :
+        </p>
+        <div style={codeBlockStyle}>
+          curl &quot;{SITE_URL}/api/oembed?url={SITE_URL}/votes/VTANR5L17V1234&amp;format=json&quot;
+        </div>
+        <p style={{ ...textStyle, margin: '10px 0 0' }}>
+          La réponse est une charge utile oEmbed <code>rich</code> standard (<code>version</code>,{' '}
+          <code>type</code>, <code>title</code>, <code>width</code>, <code>height</code>, <code>html</code>).
+          Les paramètres <code>maxwidth</code> et <code>maxheight</code> sont pris en compte,{' '}
+          <code>format</code> n&apos;accepte que <code>json</code> (le XML renvoie 501). Une URL qui ne
+          désigne pas un scrutin de MonÉlu renvoie 404. Le bouton &laquo;&nbsp;Intégrer&nbsp;&raquo; d&apos;une
+          page de scrutin donne le même encart sous forme d&apos;<code>&lt;iframe&gt;</code> à copier, pour les
+          plateformes qui ne parlent pas oEmbed.
+        </p>
       </LegalSection>
 
       <LegalSection title="Licence des données">

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 
-import VotesLoading from '@/app/votes/loading'
+import VotesLoading from '@/app/votes/(liste)/loading'
 import { PAGE_SIZE } from '@/app/votes/VotesClient'
 
 describe('VotesLoading (route skeleton)', () => {

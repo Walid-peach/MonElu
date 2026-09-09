@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og'
+import { SITE_HOST } from '@/lib/site'
 
 export const runtime = 'edge'
 export const alt = 'Réponse MonÉlu — recherche sur les votes et les députés'
@@ -95,7 +96,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
             marginTop: 44,
           }}
         >
-          mon-elu.vercel.app/chat
+          {`${SITE_HOST}/chat`}
         </div>
       </div>
     ),

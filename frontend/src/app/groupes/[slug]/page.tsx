@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import type { GroupMember, GroupVoteBreakdown } from '@/lib/api'
 import { partyHex, formatDate } from '@/lib/utils'
 import { groupName } from '@/lib/groups'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 3600
@@ -23,8 +24,9 @@ export async function generateMetadata(
   const { slug } = await params
   const canonicalSlug = decodeURIComponent(slug).trim().toLowerCase()
   if (!groupName(canonicalSlug)) return {}
+  const alternates = { canonical: canonicalUrl(`/groupes/${canonicalSlug}`) }
   const data = await api.groups.get(canonicalSlug).catch(() => null)
-  if (!data) return {}
+  if (!data) return { alternates }
   const title = `${data.name} - MonÉlu`
   const description =
     `Les ${data.member_count} député${data.member_count !== 1 ? 's' : ''} du groupe ${data.name} ` +
@@ -32,6 +34,7 @@ export async function generateMetadata(
   return {
     title,
     description,
+    alternates,
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }
@@ -62,7 +65,7 @@ export default async function GroupPage(
   if (!name) notFound()
 
   const [data, nationalStats] = await Promise.all([
-    api.groups.get(canonicalSlug).catch(() => null),
+    api.groups.get(canonicalSlug).catch(nullIfMissing),
     api.deputies.stats().catch(() => null),
   ])
   if (!data) notFound()

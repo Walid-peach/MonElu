@@ -110,13 +110,34 @@ Reusable components live in `src/components/`.
 | `Nav` | Desktop header navigation (64px height) |
 | `BottomNav` | Mobile footer navigation |
 | `MonEluLogo` | Responsive logo with configurable size and variant |
-| `DeputyAvatar` | Avatar with four sizes (sm/lg/xl/2xl) and initials fallback |
+| `DeputyAvatar` | Avatar with four sizes (sm/lg/xl/2xl) and initials fallback; portraits go through the `/api/portraits/<id>` proxy (see below) |
 | `HeroSearch` | Search form with postal-code resolution |
 | `ChatRedirectInput` | Chat entry input |
 | `PageTransition` | Framer Motion page-transition wrapper |
 | `ShareButton` | Native share API with clipboard fallback |
 
 Subfolders group page-specific pieces: `home/` (landing components such as `AssemblyScrollExperience`, `LiveAssemblyPulse`, `TrustRow`) and `chat/` (chat UI).
+
+### Deputy portraits
+
+Deputy portraits are hosted by the Assemblée Nationale, one JPEG per deputy.
+Pointing `next/image` straight at that host made the serving cost scale with runtime combinations - deputy x rendered width x format x DPR - which exhausted Vercel's free image-transformation quota (MON-197).
+
+Every consumer now calls `portraitSrc()` from `src/lib/portraits.ts`, which rewrites the stored `photo_url` to the same-origin route handler `src/app/api/portraits/[id]/route.ts` as `/api/portraits/<id>.jpg`.
+That route validates the id, fetches the upstream JPEG once, and returns it with a week-long `s-maxage`, so the address space is exactly one CDN-cacheable URL per deputy (~648) regardless of the size rendered.
+Anything that is not a recognised AN portrait URL passes through unchanged.
+
+The id must be a *real* deputy's, checked against the generated allowlist in `src/lib/portraitIds.ts` before any I/O (MON-251).
+The shape check alone (`/^\d{1,9}$/`) admits a billion ids, and the route acted on every one of them: one Vercel function invocation plus one outbound fetch to the Assemblée Nationale, uncapped - a quota-exhaustion vector for us and an amplification vector pointed at the AN from our own domain.
+Membership in the allowlist restores the "cost bounded by deputy count" property for abusive traffic, not just legitimate traffic, and an unknown id is cached as a 404 for a day rather than 5 minutes since the answer only changes on a redeploy.
+
+Regenerate the allowlist with `make portrait-ids` when a by-election seats a new deputy (`make portrait-ids-check` reports drift against the live API).
+A stale list is cosmetic, never an outage: `portraitSrc()` deliberately stays allowlist-independent, so an unknown deputy's avatar 404s and `DeputyAvatar` falls back to initials - rather than passing the raw AN URL through to `next/image`, which is the quota blowout MON-198 removed.
+
+The `.jpg` suffix is load-bearing: `public/sw.js` registers its StaleWhileRevalidate image rule (`static-image-assets`, 64 entries, 30 days) by file extension and *before* its `/api/*` rule, so an extensionless proxy path would fall into the 16-entry NetworkFirst `apis` cache instead - thrashing on any page rendering more than 16 avatars and breaking the offline deputy pages MON-115 exists to keep readable.
+
+Avatars stay `unoptimized`, so the optimizer is not involved at all today.
+`images.imageSizes` in `next.config.mjs` is narrowed to the four widths `DeputyAvatar` renders plus their 2x counterparts, so a future re-enable stays bounded by deputy count x that fixed set instead of the default width ladder.
 
 ### Server/client split
 

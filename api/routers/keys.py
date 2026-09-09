@@ -8,10 +8,19 @@ from api.schemas import ApiKeyUsageDay, ApiKeyUsageResponse
 router = APIRouter()
 
 
-@router.get("/usage", response_model=ApiKeyUsageResponse)
+@router.get(
+    "/usage",
+    response_model=ApiKeyUsageResponse,
+    summary="Your own API key's usage over the last 30 days",
+)
 @limiter.limit(tiered_limit(10))
 def get_key_usage(request: Request):
-    """Usage for the calling key over the last 30 days, grouped by endpoint and day."""
+    """Request counts for the calling key, by endpoint and by day.
+
+    Requires the `X-API-Key` header and reports only on that key - there is no
+    way to read another key's usage. `rate_limit_multiplier` is the factor
+    applied to the anonymous per-minute limits. 401 without a valid key.
+    """
     record = resolve_api_key(request.headers.get(API_KEY_HEADER))
     if not record:
         raise HTTPException(status_code=401, detail=f"Missing or invalid {API_KEY_HEADER} header")

@@ -33,7 +33,7 @@ from rag.chain.prompts import (  # noqa: E402
 from rag.chain.rag_chain import compute_confidence  # noqa: E402
 from rag.chain.retriever import retrieve  # noqa: E402
 from rag.chain.sql_router import _get_pool  # noqa: E402
-from rag.constants import LLM_MODEL  # noqa: E402
+from rag.constants import LLM_MAX_TOKENS, LLM_MODEL  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -277,7 +277,7 @@ def verify_claim(claim: str) -> dict:
         # open-ended generation; sampling diversity only adds verdict
         # variance on boundary cases (MON-129).
         temperature=0.0,
-        max_tokens=1024,
+        max_tokens=LLM_MAX_TOKENS,
         response_format={"type": "json_object"},
     )
     parsed = _parse_llm_verdict(response.choices[0].message.content)

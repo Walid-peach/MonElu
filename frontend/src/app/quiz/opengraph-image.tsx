@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og'
+import { SITE_HOST } from '@/lib/site'
 
 export const runtime = 'edge'
 export const alt = 'Quel député vote comme vous ? — MonÉlu'
@@ -72,7 +73,7 @@ export default function OGImage() {
             marginTop: 44,
           }}
         >
-          mon-elu.vercel.app/quiz — faites le test
+          {`${SITE_HOST}/quiz — faites le test`}
         </div>
       </div>
     ),

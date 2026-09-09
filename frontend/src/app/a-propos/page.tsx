@@ -1,11 +1,16 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { JsonLd } from '@/components/JsonLd'
+import { A_PROPOS_FAQ } from '@/lib/faq'
+import { buildFaqJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'À propos — MonÉlu',
   description:
     "Comment MonÉlu collecte, transforme et publie les données de vote de l'Assemblée Nationale française.",
+  alternates: { canonical: canonicalUrl('/a-propos') },
 }
 
 const heroStats = [
@@ -138,6 +143,7 @@ const apiFeatures = [
 export default function AProposPage() {
   return (
     <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
+      <JsonLd data={buildFaqJsonLd(A_PROPOS_FAQ)} />
 
       {/* ====== HERO ====== */}
       <div style={{ padding: '72px 56px 64px', background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
@@ -395,6 +401,35 @@ export default function AProposPage() {
         </div>
       </div>
 
+      {/* ====== FAQ ====== */}
+      {/* Visible question/answer copy, and the source of this page's FAQPage
+          JSON-LD (MON-268) - schema.org requires both halves to be readable
+          here, so the markup and the section below cannot disagree. */}
+      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
+        <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '80px', alignItems: 'start' }}>
+          <div>
+            <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Questions fréquentes</div>
+            <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px', marginBottom: '20px' }} />
+            <p style={{ fontSize: '15px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
+              L&apos;essentiel sur la plateforme, ses sources et ses conditions de réutilisation.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            {A_PROPOS_FAQ.map((item) => (
+              <div key={item.id} id={item.id} style={{ scrollMarginTop: '96px' }}>
+                <h3 className="font-newsreader" style={{ fontWeight: 600, fontSize: '20px', color: 'var(--dp-text)', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
+                  {item.question}
+                </h3>
+                <p style={{ fontSize: '15.5px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
+                  {item.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* ====== CONTACT ====== */}
       <div style={{ padding: '64px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '80px', alignItems: 'start' }}>
@@ -402,7 +437,7 @@ export default function AProposPage() {
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Contact</div>
             <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px', marginBottom: '20px' }} />
             <p style={{ fontSize: '15px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
-              Une question, un bug, une proposition de partenariat ? Contactez directement la personne responsable de la plateforme.
+              Une question, un bug, une proposition de partenariat ? La page contact indique quoi écrire selon le cas, et à qui.
             </p>
           </div>
 
@@ -418,16 +453,16 @@ export default function AProposPage() {
               <div style={{ fontWeight: 700, fontSize: '19px', color: 'var(--dp-text)', marginBottom: '4px' }}>Walid Elkhoukh</div>
               <div style={{ fontSize: '14px', color: 'var(--dp-text-muted)', marginBottom: '16px' }}>Data Engineer · responsable de la plateforme</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                <a
-                  href="mailto:walidelkhoukh99@gmail.com"
+                <Link
+                  href="/contact"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', color: 'var(--dp-text)', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', textDecoration: 'none' }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
-                  walidelkhoukh99@gmail.com
-                </a>
+                  Nous écrire
+                </Link>
                 <a
                   href="https://github.com/Walid-peach"
                   target="_blank"

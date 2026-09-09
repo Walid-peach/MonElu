@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { SITE_URL } from '@/lib/seo'
 
 export const dynamicParams = true
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function EmbedVotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const vote = await api.votes.get(id).catch(() => null)
+  const vote = await api.votes.get(id).catch(nullIfMissing)
   if (!vote) notFound()
 
   const denom = vote.total_voters || 1

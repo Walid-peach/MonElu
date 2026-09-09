@@ -16,6 +16,19 @@ function describeFreshness(lastIngestion: string): { stale: boolean; formatted: 
   }
 }
 
+/**
+ * Rendered from the root layout, so its `/health` fetch sets the floor for the
+ * ISR revalidation interval of every route on the site (GH #354). It is cached
+ * by tag and refreshed by `/api/revalidate` after ingestion - see
+ * `@/lib/cacheTags` - rather than on a five-minute timer.
+ *
+ * It fails closed: if `/health` is unreachable, or has no `last_ingestion`,
+ * nothing renders rather than a stale or invented date. A failed fetch is not
+ * cached by Next, but the badge-less render of the page it was in is, so a
+ * `/health` outage can hide the badge until the next revalidation - which the
+ * post-ingestion `/api/revalidate` call, not the fallback interval, normally
+ * provides.
+ */
 export async function FreshnessBadge() {
   let lastIngestion: string | null = null
   try {

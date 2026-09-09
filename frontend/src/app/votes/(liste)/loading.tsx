@@ -1,18 +1,19 @@
 import { ContentSkeleton, SkeletonBlock } from '@/components/ui/ContentSkeleton'
-import { DeputyRowSkeleton } from './DeputyRowSkeleton'
-import { PAGE_SIZE } from './DeputiesClient'
+import { VoteRowSkeleton } from '../VoteRowSkeleton'
+import { PAGE_SIZE } from '../VotesClient'
 
-// /deputes has no client-side loading state of its own (the list is filtered
-// client-side over data already fetched server-side) — the only moment a user
-// ever sees a loading treatment here is this route-level Suspense fallback
-// while the server awaits fetchAllDeputies(). Approximates the hero's height
-// too, not just the list, so landing here doesn't cause a large layout jump
-// once the real page replaces it. Matches DeputiesClient's own PAGE_SIZE (the
-// real per-page row count) rather than an arbitrary placeholder, for the same
-// CLS reason as votes/loading.tsx.
+// Route-level Suspense fallback for the initial navigation, while the server
+// awaits VotesPage's api.votes.list() calls. Distinct from VotesClient's own
+// isLoading-gated skeleton, which covers client-side filter/pagination
+// refetches after the page has already mounted.
+//
+// Matches VotesClient's own PAGE_SIZE (not a smaller placeholder count):
+// VotesPage fetches and renders up to PAGE_SIZE rows with no client-side
+// windowing, so a shorter skeleton would grow substantially once the real
+// list mounts, causing a large, visible layout jump on first navigation.
 const ROW_COUNT = PAGE_SIZE
 
-export default function DeputiesLoading() {
+export default function VotesLoading() {
   return (
     <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
       <div
@@ -23,7 +24,7 @@ export default function DeputiesLoading() {
         }}
       >
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-          <SkeletonBlock className="h-3 w-40 mb-4" />
+          <SkeletonBlock className="h-3 w-36 mb-4" />
           <SkeletonBlock className="h-10 w-full max-w-[600px] mb-3" />
           <SkeletonBlock className="h-4 w-full max-w-[480px] mb-7" />
           <SkeletonBlock className="h-[54px] w-full max-w-[720px] rounded-[10px]" />
@@ -32,7 +33,7 @@ export default function DeputiesLoading() {
 
       <div className="px-5 sm:px-14 pt-8 pb-14 sm:pb-[72px]">
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-          <ContentSkeleton label="Chargement des députés…">
+          <ContentSkeleton label="Chargement des scrutins…">
             <div
               style={{
                 background: 'var(--dp-card-bg)',
@@ -42,7 +43,7 @@ export default function DeputiesLoading() {
               }}
             >
               {Array.from({ length: ROW_COUNT }).map((_, i) => (
-                <DeputyRowSkeleton key={i} />
+                <VoteRowSkeleton key={i} />
               ))}
             </div>
           </ContentSkeleton>

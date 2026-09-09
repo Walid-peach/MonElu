@@ -46,6 +46,51 @@ still fire either way. Once set, a failed ingestion step *or* a `dbt source
 freshness` failure (stale data past the thresholds in
 `transform/models/staging/_sources.yml`) both trigger an email.
 
+Since MON-250 the data-quality assertions no longer fail the job directly.
+`dbt snapshot`, `dbt test`, `dbt source freshness` and the quiz vote_id
+validation each run with `continue-on-error`, and a final `Data-quality gate`
+step re-fails the job when any of them reports `failure`, naming which one in
+the run summary.
+The alerting is unchanged — `Notify failure` and `Email failure alert` still
+fire, because the gate itself is what turns the job red.
+What changed is that a failing assertion no longer skips the steps after it:
+cache revalidation, the quiz gate and the database-size probe now run on every
+attempt, which matters most during a recess, when `source freshness` errors on
+the same stale data every single day.
+The database-size probe stays outside the gate: a transient `/health` hiccup is
+a monitoring gap, not an ingestion failure, and must not send a false
+"ingestion failed" alert.
+A failed cache revalidation is likewise not fatal, but the gate now emits a
+`::warning::` and a step-summary note for it — pages keep serving the previous
+build until their `revalidate` window expires, which is worth seeing.
+
+### Orphaned RAG staging table (MON-256)
+
+`/health` reports `rag_staging_chunks`. It is `null` almost always: the
+`document_chunks_staging` table exists only while a full RAG rebuild is running.
+
+A **number** means one of two things:
+
+* a rebuild is in flight right now - normal during the 06:00 UTC window, ignore it;
+* a rebuild was killed before it could clean up (only SIGKILL gets past the
+  SIGTERM handler, so in practice a hard job kill), and the table is holding a
+  second copy of the vectors - roughly 35-40 MB at ~5,900 chunks, against the
+  Supabase free tier's 500 MB cap.
+
+It self-heals: the next successful build recreates the table from scratch, so
+the worst case is one day of doubled index storage. Nothing needs doing unless
+the reading persists across a successful ingestion run, which would mean the
+cleanup is not covering the real kill path (see ADR-037's revisit trigger).
+
+To clear one by hand: `DROP TABLE IF EXISTS document_chunks_staging;` - but only
+once you have confirmed no build is running, since dropping it mid-build aborts
+that build (harmlessly: the live index is untouched either way).
+
+The daily workflow's database-size step cannot catch this. It runs *after* the
+RAG build, which drops and recreates the staging table, so yesterday's orphan is
+already gone by the time the probe reads `/health`. The orphan is visible in the
+window between two runs - to a human, or to the uptime checker's body assertion.
+
 ## 3. Uptime checker (UptimeRobot or Better Stack — either free tier works)
 
 Create two monitors:
@@ -126,7 +171,7 @@ Stripe Dashboard / bank statement) — there is no automated hook.
 ### Step 2 — issue or find their API key
 
 If the customer already has a free-tier key (issued per the process on
-`/developpeurs` — email request to walidelkhoukh99@gmail.com, then a manual
+`/developpeurs`, which routes the request through `/contact` — then a manual
 row insert), skip to Step 3. Otherwise, issue one first:
 
 ```bash

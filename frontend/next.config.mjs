@@ -25,6 +25,15 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   images: {
+    // Deputy portraits are served through the same-origin proxy at
+    // /api/portraits/<id> and rendered `unoptimized`, so they cost nothing at
+    // the optimizer today (MON-198). This list caps what a future re-enable
+    // could cost: the optimizer may only emit these widths, so the worst case
+    // is deputy count x this fixed set, never one variant per runtime
+    // combination the way the default width ladder allowed (MON-197).
+    // 40/64/80/210 are the four widths DeputyAvatar renders; the rest are
+    // their 2x retina counterparts.
+    imageSizes: [40, 64, 80, 128, 160, 210, 420],
     remotePatterns: [
       {
         protocol: 'https',
@@ -42,7 +51,40 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    return []
+    // Explicit `.md` URLs (MON-271) rather than `Accept`-header negotiation:
+    // trivially cacheable and carries no `Vary` risk on a heavily ISR-cached
+    // site. `:id` is greedy up to the literal `.md` suffix (path-to-regexp
+    // default), so `/deputes/PA720892.md` rewrites to `id=PA720892`.
+    return [
+      { source: '/deputes/:id.md', destination: '/md/deputes/:id' },
+      { source: '/votes/:id.md', destination: '/md/votes/:id' },
+      { source: '/methodologie.md', destination: '/md/methodologie' },
+    ]
+  },
+  // English aliases for the conventional paths agents, scanners and
+  // link-checkers probe before they parse navigation (MON-272). The French URL
+  // stays canonical - these are 308s (`permanent: true`), so nothing indexes
+  // the alias and no ranking is split between the two spellings.
+  //
+  // `/api` is exact-match only: it does not shadow the `/api/revalidate` route
+  // handler, which stays reachable. Every `destination` below must be a route
+  // that actually exists - a redirect into a 404 is worse than a plain 404,
+  // because it costs a round trip first. `__tests__/app/alias-redirects.test.ts`
+  // holds that line.
+  async redirects() {
+    return [
+      { source: '/about', destination: '/a-propos', permanent: true },
+      { source: '/privacy', destination: '/confidentialite', permanent: true },
+      { source: '/terms', destination: '/mentions-legales', permanent: true },
+      { source: '/legal', destination: '/mentions-legales', permanent: true },
+      { source: '/api', destination: '/developpeurs', permanent: true },
+      { source: '/docs', destination: '/developpeurs', permanent: true },
+      { source: '/data', destination: '/donnees', permanent: true },
+      { source: '/methodology', destination: '/methodologie', permanent: true },
+      { source: '/license', destination: '/licence-donnees', permanent: true },
+      { source: '/accessibility', destination: '/accessibilite', permanent: true },
+      { source: '/deputies', destination: '/deputes', permanent: true },
+    ]
   },
   // /embed/* pages (MON-96) are meant to be iframed on external sites; every
   // other route stays framing-denied by default.

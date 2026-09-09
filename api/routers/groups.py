@@ -64,7 +64,11 @@ def _majority_position(pour: int, contre: int, abstention: int) -> str:
     return min(position for position, count in counts.items() if count == top)
 
 
-@router.get("/{slug}", response_model=GroupDetail)
+@router.get(
+    "/{slug}",
+    response_model=GroupDetail,
+    summary="A parliamentary group: roster, cohesion, and its most divided votes",
+)
 @limiter.limit(tiered_limit(30))
 def get_group(
     request: Request,
@@ -73,6 +77,28 @@ def get_group(
     divided_votes_limit: int = Query(10, ge=1, le=50),
     recent_scrutins_limit: int = Query(10, ge=1, le=50),
 ):
+    """One parliamentary group, addressed by slug (`rn`, `lfi`, `epr`, `soc`, …).
+
+    There are 12 groups, including `ni` for the non-inscrits, who are not a group
+    in any political sense - just deputies belonging to none. Treat any aggregate
+    over `ni` as a statistical artefact rather than a position.
+
+    **Current members only.** Deputies who have left the Assemblée or changed
+    groups are absent, and every rate here is computed over today's roster
+    applied to the whole voting window. Group composition shifts during a
+    legislature, so this is a snapshot, not a history.
+
+    `avg_dissident_rate` is the group's cohesion inverted: higher means members
+    break ranks more often. `divided_votes` ranks by how close the internal
+    pour/contre split was, `recent_scrutins` is simply the newest. Both carry
+    `majority_position`, the group's plurality on that scrutin (ties broken
+    alphabetically), which is the same definition the per-deputy dissidence
+    endpoints use.
+
+    `avg_presence_rate` and `avg_dissident_rate` are null when the analytics
+    layer is unavailable; the roster and the vote breakdowns still work. 404 on
+    an unknown slug or a group with no sitting members.
+    """
     canonical_slug = slug.strip().lower()
     party = normalize_slug(canonical_slug)
     if party is None:

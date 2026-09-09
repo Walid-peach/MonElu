@@ -1,14 +1,20 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { JsonLd } from '@/components/JsonLd'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { buildDataLicenseJsonLd } from '@/lib/seo'
+import { canonicalUrl, DATA_ATTRIBUTION } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Licence des données - MonÉlu',
   description: "Sous quelle licence sont publiées les données de MonÉlu, et à quelles conditions vous pouvez les réutiliser.",
+  alternates: { canonical: canonicalUrl('/licence-donnees') },
 }
 
 export default function LicenceDonneesPage() {
   return (
     <LegalPageLayout eyebrow="Réutilisation" title="Licence des données">
+      <JsonLd data={buildDataLicenseJsonLd()} />
 
       <LegalSection title="Origine des données">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
@@ -44,7 +50,7 @@ export default function LicenceDonneesPage() {
           suggérée :
         </p>
         <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', color: 'var(--dp-text)', fontFamily: 'monospace' }}>
-          Données : Assemblée nationale, via monelu.fr - Licence Ouverte 2.0
+          {DATA_ATTRIBUTION}
         </div>
       </LegalSection>
 
@@ -59,8 +65,7 @@ export default function LicenceDonneesPage() {
 
       <LegalSection title={'Une question sur un usage précis ?'}>
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
-          Écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a> - en
+          Passez par la page <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link> - en
           particulier pour tout usage à grande échelle de l&apos;API (au-delà du rate-limiting public).
         </p>
       </LegalSection>

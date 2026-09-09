@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { CONTACT_EMAIL, canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité - MonÉlu',
   description: 'Ce que MonÉlu collecte, pourquoi, et vos droits sur ces données (RGPD).',
+  alternates: { canonical: canonicalUrl('/confidentialite') },
 }
 
 export default function ConfidentialitePage() {
@@ -66,8 +68,8 @@ export default function ConfidentialitePage() {
       <LegalSection title="Vos droits">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
           Conformément au RGPD, vous disposez d&apos;un droit d&apos;accès, de rectification et de suppression sur
-          toute donnée vous concernant. Pour l&apos;exercer, écrivez à{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a>.
+          toute donnée vous concernant. Pour l&apos;exercer, écrivez directement à{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--dp-text)' }}>{CONTACT_EMAIL}</a>.
         </p>
       </LegalSection>
 

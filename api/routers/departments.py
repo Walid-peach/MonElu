@@ -53,13 +53,31 @@ def _fetch_mart_rates(cur, deputy_ids: list[str]) -> dict[str, dict]:
     return {r["deputy_id"]: r for r in cur.fetchall()}
 
 
-@router.get("/{code}", response_model=DepartmentDetail)
+@router.get(
+    "/{code}",
+    response_model=DepartmentDetail,
+    summary="The deputies of one département, with local aggregates",
+)
 @limiter.limit(tiered_limit(30))
 def get_department(
     request: Request,
     code: str,
     split_votes_limit: int = Query(10, ge=1, le=50),
 ):
+    """One département addressed by its INSEE code - `59`, `2A`, `971`, `75`.
+
+    Answers "who represents this place": the current deputies, the group
+    breakdown, and the recent scrutins where those deputies did not vote
+    together. A département with a single seat has no split votes by definition.
+
+    `split_votes` requires deputies on opposing sides of the same scrutin, so it
+    reflects local disagreement rather than national controversy.
+    `avg_presence_rate` and `most_dissident` are null when the analytics layer is
+    unavailable; the roster still works.
+
+    Codes are matched leniently (case, zero-padding), but must be the department
+    code, not the name and not a circonscription. 404 on an unknown code.
+    """
     canonical = normalize_code(code)
     if canonical is None:
         raise HTTPException(status_code=404, detail="Unknown department code")

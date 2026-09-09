@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import type { ThemePartyPosition, ThemeVoteItem } from '@/lib/api'
 import { partyHex, normalizePartyShort, formatDate, themeColors } from '@/lib/utils'
 import { themeName, themeSlug, THEME_ENTRIES } from '@/lib/themes'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
+import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
 export const revalidate = 3600
@@ -16,9 +17,15 @@ const CREAM = 'var(--dp-page-bg)'
 const LINE  = 'var(--dp-border)'
 const RED   = 'var(--dp-red)'
 
-export function generateStaticParams() {
-  return THEME_ENTRIES.map(({ slug }) => ({ slug }))
-}
+// No `generateStaticParams` (MON-275), for the same reason `/votes/[id]` has
+// none: prerendering these ten pages adds twenty API calls to a build that is
+// already over the API's budget, and the failures come back as 500s on
+// endpoints that answer in 200 ms on every manual request. `dynamicParams`
+// defaults to true and `revalidate = 3600` ISR-caches the result, so the cost
+// is one on-demand render per theme per hour.
+//
+// THEME_ENTRIES is still the source of truth for which slugs exist - `sitemap.ts`
+// enumerates them, and `themeName()` below rejects anything not in the list.
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
@@ -26,8 +33,12 @@ export async function generateMetadata(
   const { slug } = await params
   const name = themeName(decodeURIComponent(slug))
   if (!name) return {}
+  // The slug in the URL is not necessarily the canonical one - `themeSlug`
+  // re-derives it from the theme's own name, as the page body already does.
+  // Both maps are local, so the canonical needs no API call.
+  const alternates = { canonical: canonicalUrl(`/themes/${themeSlug(name) ?? slug}`) }
   const data = await api.themes.get(slug).catch(() => null)
-  if (!data) return {}
+  if (!data) return { alternates }
   const title = `Votes sur le thème ${data.name} - MonÉlu`
   const description =
     `${data.vote_count} scrutin${data.vote_count !== 1 ? 's' : ''} de l'Assemblée nationale ` +
@@ -35,6 +46,7 @@ export async function generateMetadata(
   return {
     title,
     description,
+    alternates,
     openGraph: { title, description },
     twitter: { card: 'summary_large_image', title, description },
   }
@@ -51,7 +63,7 @@ export default async function ThemePage(
   const name = themeName(decodeURIComponent(slug))
   if (!name) notFound()
 
-  const data = await api.themes.get(slug, { limit: 50 }).catch(() => null)
+  const data = await api.themes.get(slug, { limit: 50 }).catch(nullIfMissing)
   if (!data) notFound()
 
   const canonicalSlug = themeSlug(data.name) ?? slug

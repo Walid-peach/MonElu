@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import { api } from '@/lib/api'
 import { TableauClient } from './TableauClient'
+import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Tableau des députés - MonÉlu',
   description:
     "Tous les bilans de vote des députés de l'Assemblée nationale dans un tableau dense et triable : présence, positions, participation aux scrutins solennels. Export CSV.",
+  alternates: { canonical: canonicalUrl('/deputes/tableau') },
 }
 
 // Rendered at request time, like /deputes: prerendering at build time would

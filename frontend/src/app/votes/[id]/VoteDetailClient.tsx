@@ -9,6 +9,7 @@ import { getInitials, partyHex } from '@/lib/utils'
 import { groupSlug } from '@/lib/groups'
 import { resolvePostalCode } from '@/lib/postal'
 import { csvUrl } from '@/lib/api'
+import { anDossierUrl } from '@/lib/an'
 import { HemicycleChart } from '@/components/HemicycleChart'
 import type { HemicycleDeputy } from '@/lib/hemicycle'
 
@@ -138,13 +139,9 @@ export function VoteDetailClient(props: Props) {
 
   const adopted = result === 'adopté'
   const headline = summary || voteTitle
-  // Some legacy rows still have a stringified-dict dossier_id from a past
-  // ingestion bug (MON-89) — only link when it looks like a real AN ref
-  // (e.g. "DLR5L17N53980"), so a corrupted value silently shows no link
-  // instead of a broken one.
-  const dossierUrl = dossierId && /^[A-Za-z0-9-]+$/.test(dossierId)
-    ? `https://www.assemblee-nationale.fr/dyn/17/dossiers/${dossierId}`
-    : null
+  // Shared with the vote's JSON-LD (MON-267): the link a reader clicks and the
+  // `Event.about` a crawler reads must be the same URL, guard included.
+  const dossierUrl = anDossierUrl(dossierId)
 
   return (
     <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>

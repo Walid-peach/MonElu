@@ -42,3 +42,28 @@ def mock_cursor():
     with patch.object(_db, "_pool", pool):
         yield cursor
     _main._stats_cache = None
+
+
+# ---------------------------------------------------------------------------
+# Live-API tests (tests/live) spend real tokens, so they are opt-in twice over:
+# --run-live must be passed *and* the relevant key must be set. They are not
+# part of the PR gate - see tests/live/test_groq_contract.py for why they exist.
+# ---------------------------------------------------------------------------
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-live",
+        action="store_true",
+        default=False,
+        help="run tests marked 'live', which call paid third-party APIs",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--run-live"):
+        return
+    skip_live = pytest.mark.skip(reason="needs --run-live (calls a paid API)")
+    for item in items:
+        if "live" in item.keywords:
+            item.add_marker(skip_live)

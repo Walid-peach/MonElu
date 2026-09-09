@@ -11,6 +11,7 @@ import { LiveAssemblyPulse } from './LiveAssemblyPulse'
 import { HeroSearch } from '@/components/HeroSearch'
 import { TrustRow } from './TrustRow'
 import type { DeputyInfo } from '@/app/page'
+import { portraitSrc } from '@/lib/portraits'
 import { NAV_HEIGHT_PX } from '@/components/Nav'
 import { departmentLabel } from '@/lib/departments'
 
@@ -39,6 +40,8 @@ function StaticExperience({ stats, leadVote }: Props) {
             <p className="text-xs font-semibold uppercase text-red-light">
               Données officielles de l&apos;Assemblée Nationale
             </p>
+            {/* The page's single `<h1>` in the reduced-motion branch (MON-270);
+                `StaticExperience` and `MobileExperience` never render together. */}
             <h1 className="mt-6 font-serif text-5xl leading-tight text-white md:text-7xl">
               La vie politique française, enfin lisible.
             </h1>
@@ -96,6 +99,8 @@ function MobileExperience({ stats, leadVote }: Props) {
           <p className="text-xs font-semibold uppercase text-red-light">
             Données officielles
           </p>
+          {/* The page's single `<h1>` (MON-270). This section is server-rendered on
+              every viewport - the cinematic below it only ever adds `<h2>`s. */}
           <h1 className="mt-5 font-serif text-4xl leading-tight text-white">
             La vie politique française, enfin lisible.
           </h1>
@@ -160,6 +165,8 @@ function MobileExperience({ stats, leadVote }: Props) {
 // ---- cinematic scroll experience (desktop) ----
 function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
   const trackRef = useRef<HTMLDivElement>(null)
+  // Same-origin proxy: one cacheable URL per deputy (MON-198).
+  const portrait = portraitSrc(deputyInfo?.photoUrl)
   const [query, setQuery] = useState('')
   const router = useRouter()
 
@@ -741,13 +748,20 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
             <p style={{ fontSize: 'clamp(16px,1.8vw,19px)', lineHeight: 1.55, color: 'rgba(255,255,255,0.9)', margin: '16px auto 0', maxWidth: 520, textShadow: '0 1px 14px rgba(0,0,0,0.55)' }}>Suivez les votes de vos députés, en toute neutralité.</p>
           </div>
 
-          {/* data act titles */}
+          {/*
+            data act titles - `<h2>`, not `<h1>` (MON-270). Both panels render
+            together (the scroll animation cross-fades them), and the cinematic
+            mounts on top of `MobileExperience`, whose hero already carries the
+            page's only `<h1>`. Three competing `<h1>`s gave a crawler no
+            primary subject; the styling here is inline, so the tag change is
+            purely semantic.
+          */}
           <div data-title="0" style={{ position: 'absolute', top: 'clamp(90px,13vh,124px)', left: 'clamp(22px,4vw,60px)', width: 'min(460px,86vw)', opacity: 0 }}>
-            <h1 style={{ margin: 0, fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 800, fontSize: 'clamp(34px,4.6vw,52px)', lineHeight: 1.03, letterSpacing: '-0.02em', color: '#fff', textShadow: '0 2px 30px rgba(0,0,0,0.6)' }}>LA DÉMOCRATIE<br />EN DONNÉES</h1>
+            <h2 style={{ margin: 0, fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 800, fontSize: 'clamp(34px,4.6vw,52px)', lineHeight: 1.03, letterSpacing: '-0.02em', color: '#fff', textShadow: '0 2px 30px rgba(0,0,0,0.6)' }}>LA DÉMOCRATIE<br />EN DONNÉES</h2>
             <p style={{ margin: '22px 0 0', fontSize: 'clamp(16px,1.8vw,19px)', lineHeight: 1.55, color: 'rgba(255,255,255,0.84)', maxWidth: 340, textShadow: '0 1px 14px rgba(0,0,0,0.7)' }}>Chaque siège devient un point.<br />Chaque vote, une certitude.</p>
           </div>
           <div data-title="1" style={{ position: 'absolute', top: 'clamp(90px,13vh,124px)', left: 'clamp(22px,4vw,60px)', width: 'min(460px,86vw)', opacity: 0 }}>
-            <h1 style={{ margin: 0, fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 800, fontSize: 'clamp(32px,4.4vw,50px)', lineHeight: 1.04, letterSpacing: '-0.02em', color: '#fff', textShadow: '0 2px 30px rgba(0,0,0,0.6)' }}>VOTRE DÉPUTÉ,<br />VOTRE VOIX</h1>
+            <h2 style={{ margin: 0, fontFamily: 'DM Serif Display, Georgia, serif', fontWeight: 800, fontSize: 'clamp(32px,4.4vw,50px)', lineHeight: 1.04, letterSpacing: '-0.02em', color: '#fff', textShadow: '0 2px 30px rgba(0,0,0,0.6)' }}>VOTRE DÉPUTÉ,<br />VOTRE VOIX</h2>
             <p style={{ margin: '22px 0 0', fontSize: 'clamp(16px,1.8vw,19px)', lineHeight: 1.55, color: 'rgba(255,255,255,0.84)', maxWidth: 330, textShadow: '0 1px 14px rgba(0,0,0,0.7)' }}>Derrière un seul point,<br />l&apos;élu qui répond de votre voix.</p>
           </div>
 
@@ -797,13 +811,14 @@ function CinematicExperience({ stats, leadVote, deputyInfo }: Props) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
               <div style={{ width: 100, height: 100, borderRadius: 999, padding: 3, background: 'linear-gradient(160deg,rgba(240,88,76,0.85),rgba(120,150,210,0.5))', boxShadow: '0 0 24px rgba(240,68,56,0.45)', overflow: 'hidden', flexShrink: 0 }}>
-                {deputyInfo?.photoUrl ? (
+                {portrait ? (
                   <Image
-                    src={deputyInfo.photoUrl}
+                    src={portrait}
                     alt=""
                     width={94}
                     height={94}
                     style={{ borderRadius: 999, objectFit: 'cover', width: 94, height: 94 }}
+                    unoptimized
                   />
                 ) : (
                   <div style={{ width: 94, height: 94, borderRadius: 999, background: 'rgba(13,31,60,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'rgba(150,185,240,0.7)' }}>⚖</div>

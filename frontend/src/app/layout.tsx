@@ -15,7 +15,8 @@ import { HideOnEmbed } from '@/components/HideOnEmbed'
 import { MainFrame } from '@/components/MainFrame'
 import { JsonLd } from '@/components/JsonLd'
 import { ThemeProvider } from '@/components/ThemeProvider'
-import { buildWebsiteJsonLd } from '@/lib/seo'
+import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
+import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
 
 const serif = DM_Serif_Display({
@@ -42,15 +43,17 @@ const sans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://mon-elu.vercel.app'),
+  metadataBase: new URL(SITE_URL),
   title: 'MonÉlu — Suivez vos députés',
-  description: "Données officielles de l'Assemblée Nationale. Suivez chaque vote de chaque député français.",
+  // Shared with Organization.description in the JSON-LD below (MON-273) so the
+  // meta description and the structured data cannot drift apart.
+  description: SITE_DESCRIPTION,
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'MonÉlu' },
   openGraph: {
     title: 'MonÉlu — Suivez vos députés',
     description: "Données officielles de l'Assemblée Nationale",
-    url: 'https://mon-elu.vercel.app',
+    url: SITE_URL,
     siteName: 'MonÉlu',
     locale: 'fr_FR',
     type: 'website',
@@ -77,7 +80,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {`(function(){try{if(window.location.pathname==='/')return;var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`}
         </Script>
         <ThemeProvider>
-          <JsonLd data={buildWebsiteJsonLd()} />
+          {/* Organization first: WebSite.publisher references it by @id (MON-273). */}
+          <JsonLd data={[buildOrganizationJsonLd(), buildWebsiteJsonLd()]} />
           <Suspense fallback={null}>
             <Nav />
           </Suspense>

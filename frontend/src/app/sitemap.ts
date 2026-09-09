@@ -3,8 +3,8 @@ import { api, type Deputy, type Vote } from '@/lib/api'
 import { departmentCode } from '@/lib/departments'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { GROUP_ENTRIES } from '@/lib/groups'
+import { SITE_URL } from '@/lib/site'
 
-const SITE_URL = 'https://mon-elu.vercel.app'
 const PAGE_SIZE = 200
 const OFFSET_CAP = 2000 // api.votes.list() rejects offset beyond this — see api/routers/votes.py
 
@@ -81,8 +81,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE_URL, changeFrequency: 'daily', priority: 1.0 },
     { url: `${SITE_URL}/deputes`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/deputes/tableau`, changeFrequency: 'daily', priority: 0.6 },
+    { url: `${SITE_URL}/deputes/comparer`, changeFrequency: 'weekly', priority: 0.6 },
     { url: `${SITE_URL}/donnees`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/votes`, changeFrequency: 'daily', priority: 0.9 },
+    // The forward view (MON-213) - rewritten daily, like /votes.
+    { url: `${SITE_URL}/agenda`, changeFrequency: 'daily', priority: 0.7 },
+    { url: `${SITE_URL}/mon-depute`, changeFrequency: 'monthly', priority: 0.6 },
     ...THEME_ENTRIES.map(({ slug }) => ({
       url: `${SITE_URL}/themes/${slug}`,
       changeFrequency: 'weekly' as const,
@@ -94,12 +98,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
     { url: `${SITE_URL}/chat`, changeFrequency: 'monthly', priority: 0.5 },
-    // /quiz only — /quiz/s/* share snapshots stay out of the sitemap, like
-    // the /chat/s/* and /verifier/v/* snapshot URLs.
+    // /quiz only. The /quiz/s/*, /chat/s/* and /verifier/v/* share snapshots
+    // stay out of the sitemap AND out of the index (ADR-036, MON-264): they
+    // are an unmoderated, user-submitted corpus, so each page declares
+    // `robots: { index: false }` rather than relying on this omission alone.
     { url: `${SITE_URL}/quiz`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/a-propos`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/developpeurs`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/methodologie`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/contact`, changeFrequency: 'monthly', priority: 0.4 },
+    // Licence and legal pages (MON-265). `/licence-donnees` is the page an
+    // agent or a reuser has to be able to find on its own; the three legal
+    // pages are low-traffic but are still part of the site's public surface.
+    { url: `${SITE_URL}/licence-donnees`, changeFrequency: 'yearly', priority: 0.4 },
+    { url: `${SITE_URL}/mentions-legales`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${SITE_URL}/confidentialite`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${SITE_URL}/accessibilite`, changeFrequency: 'yearly', priority: 0.2 },
   ]
 
   const [deputiesAndDepartments, votes] = await Promise.all([

@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
+import { CONTACT_EMAIL, canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: "Déclaration d'accessibilité - MonÉlu",
   description:
     "État de conformité RGAA de MonÉlu, méthode d'évaluation, non-conformités connues et contact pour signaler un problème d'accessibilité.",
+  alternates: { canonical: canonicalUrl('/accessibilite') },
 }
 
 const pStyle = { fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }
@@ -69,10 +71,11 @@ export default function AccessibilitePage() {
         <p style={pStyle}>
           Si vous n&apos;arrivez pas à accéder à un contenu ou à un service de MonÉlu, vous pouvez contacter
           l&apos;éditeur pour être orienté vers une solution alternative ou pour signaler un problème :{' '}
-          <a href="mailto:walidelkhoukh99@gmail.com" style={{ color: 'var(--dp-text)' }}>walidelkhoukh99@gmail.com</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--dp-text)' }}>{CONTACT_EMAIL}</a>.
         </p>
         <p style={{ ...pStyle, margin: '10px 0 0' }}>
-          Voir aussi les <Link href="/mentions-legales" style={{ color: 'var(--dp-text)' }}>mentions légales</Link>.
+          Voir aussi la page <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link> et les{' '}
+          <Link href="/mentions-legales" style={{ color: 'var(--dp-text)' }}>mentions légales</Link>.
         </p>
       </LegalSection>
 

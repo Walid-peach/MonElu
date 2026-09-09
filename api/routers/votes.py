@@ -39,7 +39,11 @@ def _decode_cursor(token: str) -> tuple[Optional[datetime], str]:
         raise HTTPException(status_code=422, detail="Invalid cursor") from exc
 
 
-@router.get("/", response_model=VoteListResponse)
+@router.get(
+    "/",
+    response_model=VoteListResponse,
+    summary="List scrutins, with full-text search and result / theme filters",
+)
 @limiter.limit(tiered_limit(30))
 def list_votes(
     request: Request,
@@ -58,6 +62,28 @@ def list_votes(
         description="Full-text search over vote_title and summary_plain (French stemming)",
     ),
 ):
+    """Recorded votes of the 17th legislature, newest first.
+
+    The entry point for anything about a bill or a vote: search here, then pass
+    `vote_id` to `/votes/{vote_id}` for the per-deputy breakdown.
+
+    Production holds scrutins from **2025-07-01** onward. A question about an
+    earlier vote has no answer in this dataset.
+
+    `search` is Postgres full-text search over the title and the plain-French
+    summary, with French stemming - pass words, not a sentence, and expect no
+    fuzzy matching on names. `result` takes the accented French values `adopté`
+    or `rejeté`.
+
+    Two paging modes, and they do not mix. `offset` is capped at 2000; past that
+    ceiling, pass the `next_cursor` from the previous response as `before=`,
+    which has no depth limit and silently overrides `offset` when set. `total` is
+    the full filtered count either way. A null `next_cursor` means the last page.
+
+    Every scrutin is a recorded vote. Much of the Assemblée's business passes by
+    show of hands and never appears here at all, so a bill's absence is not
+    evidence it was not debated.
+    """
     # Decode before opening a connection so a bad cursor fails fast with 422.
     cursor_key = _decode_cursor(before) if before else None
 
@@ -151,9 +177,19 @@ def list_votes(
     )
 
 
-@router.get("/latest", response_model=list[VoteSummary])
+@router.get(
+    "/latest",
+    response_model=list[VoteSummary],
+    summary="The 10 most recent scrutins",
+)
 @limiter.limit(tiered_limit(30))
 def latest_votes(request: Request):
+    """The newest 10 scrutins as a bare array - no envelope, no paging, no filters.
+
+    A convenience shorthand for "what did the Assemblée just vote on"; anything
+    else should use `/votes` with `limit`. Data refreshes on weekday mornings, so
+    a vote held today typically appears the next morning.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -179,6 +215,11 @@ def latest_votes(request: Request):
 )
 @limiter.limit(tiered_limit(10))
 def export_vote_positions_csv(request: Request, vote_id: str):
+    """Every deputy's position on one scrutin as a CSV download, with group and department.
+
+    The same 577-odd rows `/votes/{vote_id}` embeds, in a form spreadsheets can
+    read. 404 when the scrutin is unknown.
+    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT vote_id FROM votes WHERE vote_id = %s", (vote_id,))
@@ -205,9 +246,30 @@ def export_vote_positions_csv(request: Request, vote_id: str):
     )
 
 
-@router.get("/{vote_id}", response_model=VoteDetail)
+@router.get(
+    "/{vote_id}",
+    response_model=VoteDetail,
+    summary="One scrutin in full, including how every deputy voted",
+)
 @limiter.limit(tiered_limit(30))
 def get_vote(request: Request, vote_id: str):
+    """A single scrutin with its tallies and the complete per-deputy roll call.
+
+    `positions` is the whole chamber in one array - typically 577 entries, not
+    paginated. Each `position` is `pour`, `contre`, `abstention` or `nonVotant`;
+    `abstention` and `nonVotant` are different and must not be summed.
+
+    The aggregate counters (`votes_for`, `votes_against`, `abstentions`,
+    `total_voters`) come from the Assemblée's own synthesis rather than from
+    counting `positions`, so prefer them when quoting a tally. `summary_plain` is
+    an LLM-generated plain-French gloss of the title and may be null.
+
+    `dossier_id` links the scrutin to its bill, but is present on a minority of
+    votes: the Assemblée only began tagging scrutins with a dossier in March 2026.
+    Its absence says nothing about the vote.
+
+    404 when the id is unknown.
+    """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:

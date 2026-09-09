@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { ChatAnswerCard } from '@/components/ChatAnswerCard'
+import { SITE_URL, canonicalUrl } from '@/lib/site'
+import { SNAPSHOT_ROBOTS } from '@/lib/seo'
 
 // Chat shares are immutable snapshots (ADR-024, mirrors ADR-022 for
 // verifications): this page reads the stored answer via GET /search/share/{id}
@@ -16,21 +18,24 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
+  const alternates = { canonical: canonicalUrl(`/chat/s/${id}`) }
   const share = await api.chatShare(id).catch(() => null)
-  if (!share) return {}
+  if (!share) return { alternates, robots: SNAPSHOT_ROBOTS }
   const title = `« ${share.question} » - MonÉlu`
   const description = share.answer.length > 160 ? share.answer.slice(0, 160) + '…' : share.answer
   return {
     title,
     description,
-    openGraph: { title, description, url: `https://mon-elu.vercel.app/chat/s/${id}` },
+    alternates,
+    robots: SNAPSHOT_ROBOTS,
+    openGraph: { title, description, url: `${SITE_URL}/chat/s/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }
 }
 
 export default async function ChatSharePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const result = await api.chatShare(id).catch(() => null)
+  const result = await api.chatShare(id).catch(nullIfMissing)
   if (!result) notFound()
 
   return (

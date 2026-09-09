@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, nullIfMissing } from '@/lib/api'
 import { VerdictCard } from '@/components/VerdictCard'
+import { SITE_URL, canonicalUrl } from '@/lib/site'
+import { SNAPSHOT_ROBOTS } from '@/lib/seo'
 
 // Verdicts are immutable snapshots (ADR-022): this page reads the stored
 // verdict via GET /verify/{id} — it must never trigger a new verification.
@@ -22,8 +24,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
+  const alternates = { canonical: canonicalUrl(`/verifier/v/${id}`) }
   const v = await api.verification(id).catch(() => null)
-  if (!v) return {}
+  if (!v) return { alternates, robots: SNAPSHOT_ROBOTS }
   const label = VERDICT_LABELS[v.verdict] ?? v.verdict
   const shortClaim = v.claim.length > 90 ? v.claim.slice(0, 90) + '…' : v.claim
   const title = `${label} - « ${shortClaim} » - MonÉlu Vérification`
@@ -31,14 +34,16 @@ export async function generateMetadata({
   return {
     title,
     description,
-    openGraph: { title, description, url: `https://mon-elu.vercel.app/verifier/v/${id}` },
+    alternates,
+    robots: SNAPSHOT_ROBOTS,
+    openGraph: { title, description, url: `${SITE_URL}/verifier/v/${id}` },
     twitter: { card: 'summary_large_image', title, description },
   }
 }
 
 export default async function VerificationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const result = await api.verification(id).catch(() => null)
+  const result = await api.verification(id).catch(nullIfMissing)
   if (!result) notFound()
 
   return (

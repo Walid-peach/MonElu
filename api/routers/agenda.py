@@ -90,13 +90,34 @@ def _resolve_window(from_date: Optional[date], to_date: Optional[date]) -> tuple
     return from_date, to_date
 
 
-@router.get("", response_model=AgendaResponse)
+@router.get(
+    "",
+    response_model=AgendaResponse,
+    summary="Upcoming séance publique sittings, grouped by day",
+)
 @limiter.limit(tiered_limit(30))
 def get_agenda(
     request: Request,
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
 ):
+    """What the Assemblée is scheduled to take up in the hemicycle.
+
+    Window defaults to the current ISO week; pass `from` and `to` as ISO dates to
+    move it. The span is capped at 90 days, and the feed's forward coverage is
+    short anyway - asking for months ahead returns thin days, not an error.
+
+    **Forward-looking and volatile.** The ordre du jour is rewritten constantly:
+    items are cancelled, reordered and rescheduled. Cancelled items and anything
+    missing from the latest ingestion run are filtered out, so a point that
+    vanishes between two calls was dropped upstream. Describe what is here as
+    scheduled, never as certain.
+
+    `vote_id` and `result` are filled in once a scrutin exists for the item's
+    dossier, which turns a scheduled item into a settled one; otherwise
+    `dossier_url` points at the official dossier page. Séance publique only -
+    committee work is not covered.
+    """
     from_date, to_date = _resolve_window(from_date, to_date)
 
     with get_conn() as conn:

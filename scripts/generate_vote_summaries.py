@@ -31,9 +31,14 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 BATCH_SIZE = 5
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-120b"
 TEMPERATURE = 0.1
 MAX_TOKENS = 150
+# gpt-oss is a reasoning model and reasoning tokens count against MAX_TOKENS.
+# At default effort a 150-token budget was fully consumed by reasoning and the
+# summary came back truncated mid-sentence ("Le Parlement a"). "low" lands at
+# ~70 tokens for a two-sentence summary, well inside the budget.
+REASONING_EFFORT = "low"
 
 VALID_THEMES = {
     "Économie & Budget",
@@ -94,6 +99,7 @@ def _call_groq(client, system: str, user: str, max_retries: int = 6) -> str | No
                 ],
                 temperature=TEMPERATURE,
                 max_tokens=MAX_TOKENS,
+                reasoning_effort=REASONING_EFFORT,
             )
             return resp.choices[0].message.content.strip()
         except Exception as exc:

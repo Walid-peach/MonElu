@@ -16,10 +16,8 @@ import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
 
 const NAVY   = 'var(--dp-text)'
-const CREAM  = 'var(--dp-page-bg)'
 const LINE   = 'var(--dp-border)'
 const ACCENT = 'var(--dp-accent)'
-const RED    = 'var(--dp-red)'
 
 type Mode = 'deputy' | 'party' | 'national'
 
@@ -297,182 +295,169 @@ export function ComparerClient() {
     return p.toString() ? `?${p}` : ''
   })()}`
 
+  // The page chrome, the heading and the explainer live in the server component
+  // (page.tsx, MON-265) so they exist before this component hydrates. This
+  // half renders only the interactive comparison.
   return (
-    <div style={{ background: CREAM, minHeight: '100vh' }}>
-      <div style={{ padding: '38px 24px 60px' }}>
-        <div style={{ maxWidth: 980, margin: '0 auto' }}>
+    <>
+      {/* Mode tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {([
+          { key: 'deputy', label: 'Un autre député' },
+          { key: 'party', label: 'Son groupe' },
+          { key: 'national', label: 'Moyenne nationale' },
+        ] as { key: Mode; label: string }[]).map(t => (
+          <button
+            key={t.key}
+            onClick={() => syncUrl({ mode: t.key })}
+            style={{
+              padding: '9px 18px', borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+              border: `1px solid ${mode === t.key ? 'var(--dp-active-bg)' : LINE}`,
+              background: mode === t.key ? 'var(--dp-active-bg)' : 'var(--dp-card-bg)',
+              color: mode === t.key ? '#fff' : 'var(--dp-text-secondary)',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-          {/* Header */}
-          <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED }}>
-            Comparateur
+      {/* Pickers */}
+      <div style={{ display: 'grid', gridTemplateColumns: mode === 'deputy' ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 30 }}>
+        <DeputyPicker
+          placeholder="Rechercher le premier député…"
+          selected={deputyA}
+          onSelect={d => { setDeputyA(d); syncUrl({ a: d?.deputy_id ?? '' }) }}
+        />
+        {mode === 'deputy' && (
+          <DeputyPicker
+            placeholder="Rechercher le second député…"
+            selected={deputyB}
+            onSelect={d => { setDeputyB(d); syncUrl({ b: d?.deputy_id ?? '' }) }}
+          />
+        )}
+      </div>
+
+      {!deputyA && (
+        <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 15 }}>
+          Choisissez au moins un·e député·e pour démarrer la comparaison.
+        </div>
+      )}
+
+      {deputyA && loading && !sideA && (
+        <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 15 }}>
+          Chargement…
+        </div>
+      )}
+
+      {deputyA && sideA && (
+        <>
+          {/* Column headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 999, background: NAVY }} />
+              <Link href={`/deputes/${deputyA.deputy_id}`} style={{ fontWeight: 700, fontSize: 16, color: NAVY, textDecoration: 'none' }}>
+                {deputyA.full_name}
+              </Link>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 999, background: ACCENT }} />
+              {mode === 'deputy' && deputyB ? (
+                <Link href={`/deputes/${deputyB.deputy_id}`} style={{ fontWeight: 700, fontSize: 16, color: NAVY, textDecoration: 'none' }}>
+                  {deputyB.full_name}
+                </Link>
+              ) : (
+                <span style={{ fontWeight: 700, fontSize: 16, color: NAVY }}>{bLabel}</span>
+              )}
+            </div>
           </div>
-          <h1 className="font-newsreader" style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 600, color: NAVY, margin: '12px 0 8px', letterSpacing: '-0.01em' }}>
-            Comparer deux bilans
-          </h1>
-          <p style={{ fontSize: 15.5, color: 'var(--dp-text-secondary)', margin: '0 0 28px', maxWidth: 620 }}>
-            Présence, votes et alignement, côte à côte. Comparez un·e député·e à un·e autre, à son groupe, ou à la moyenne nationale.
-          </p>
 
-          {/* Mode tabs */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-            {([
-              { key: 'deputy', label: 'Un autre député' },
-              { key: 'party', label: 'Son groupe' },
-              { key: 'national', label: 'Moyenne nationale' },
-            ] as { key: Mode; label: string }[]).map(t => (
-              <button
-                key={t.key}
-                onClick={() => syncUrl({ mode: t.key })}
-                style={{
-                  padding: '9px 18px', borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-                  border: `1px solid ${mode === t.key ? 'var(--dp-active-bg)' : LINE}`,
-                  background: mode === t.key ? 'var(--dp-active-bg)' : 'var(--dp-card-bg)',
-                  color: mode === t.key ? '#fff' : 'var(--dp-text-secondary)',
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Pickers */}
-          <div style={{ display: 'grid', gridTemplateColumns: mode === 'deputy' ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 30 }}>
-            <DeputyPicker
-              placeholder="Rechercher le premier député…"
-              selected={deputyA}
-              onSelect={d => { setDeputyA(d); syncUrl({ a: d?.deputy_id ?? '' }) }}
-            />
-            {mode === 'deputy' && (
-              <DeputyPicker
-                placeholder="Rechercher le second député…"
-                selected={deputyB}
-                onSelect={d => { setDeputyB(d); syncUrl({ b: d?.deputy_id ?? '' }) }}
-              />
-            )}
-          </div>
-
-          {!deputyA && (
-            <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 15 }}>
-              Choisissez au moins un·e député·e pour démarrer la comparaison.
+          {/* Stat rows */}
+          {noPartyForComparison ? (
+            <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '24px 26px', color: 'var(--dp-text-secondary)', fontSize: 14 }}>
+              {deputyA.full_name} n&apos;est rattaché·e à aucun groupe politique — la comparaison par groupe n&apos;est pas disponible. Essayez la moyenne nationale, ou comparez à un autre député.
+            </div>
+          ) : (
+            <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '10px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
+              {rows.map(r => (
+                <CompareRow key={r.key} label={r.label} aPct={r.a} bPct={r.b} aColor={NAVY} bColor={ACCENT} />
+              ))}
             </div>
           )}
 
-          {deputyA && loading && !sideA && (
-            <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 15 }}>
-              Chargement…
-            </div>
-          )}
-
-          {deputyA && sideA && (
-            <>
-              {/* Column headers */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 999, background: NAVY }} />
-                  <Link href={`/deputes/${deputyA.deputy_id}`} style={{ fontWeight: 700, fontSize: 16, color: NAVY, textDecoration: 'none' }}>
-                    {deputyA.full_name}
-                  </Link>
+          {/* Party alignment (deputy-vs-deputy only) */}
+          {mode === 'deputy' && sideA.alignment && sideB?.alignment && (
+            <div style={{ marginTop: 24, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
+              <div style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 14 }}>
+                Alignement avec son groupe politique
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <span className="font-mono" style={{ fontWeight: 700, fontSize: 22, color: NAVY }}>
+                    {pct(sideA.alignment.party_alignment_rate)}%
+                  </span>
+                  <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{sideA.alignment.party ?? '—'}</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 999, background: ACCENT }} />
-                  {mode === 'deputy' && deputyB ? (
-                    <Link href={`/deputes/${deputyB.deputy_id}`} style={{ fontWeight: 700, fontSize: 16, color: NAVY, textDecoration: 'none' }}>
-                      {deputyB.full_name}
-                    </Link>
-                  ) : (
-                    <span style={{ fontWeight: 700, fontSize: 16, color: NAVY }}>{bLabel}</span>
-                  )}
+                <div>
+                  <span className="font-mono" style={{ fontWeight: 700, fontSize: 22, color: NAVY }}>
+                    {pct(sideB.alignment.party_alignment_rate)}%
+                  </span>
+                  <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{sideB.alignment.party ?? '—'}</div>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Stat rows */}
-              {noPartyForComparison ? (
-                <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '24px 26px', color: 'var(--dp-text-secondary)', fontSize: 14 }}>
-                  {deputyA.full_name} n&apos;est rattaché·e à aucun groupe politique — la comparaison par groupe n&apos;est pas disponible. Essayez la moyenne nationale, ou comparez à un autre député.
-                </div>
+          {/* Diverging votes (deputy-vs-deputy only) */}
+          {mode === 'deputy' && deputyB && (
+            <div style={{ marginTop: 30 }}>
+              <h2 className="font-newsreader" style={{ fontSize: 20, fontWeight: 600, color: NAVY, margin: '0 0 16px' }}>
+                Votes où ils ont divergé
+              </h2>
+              {divergingVotes.length === 0 ? (
+                <p style={{ fontSize: 14, color: 'var(--dp-text-muted)' }}>
+                  Aucun vote divergent trouvé entre ces deux député·e·s (sur les scrutins récents).
+                </p>
               ) : (
-                <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '10px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
-                  {rows.map(r => (
-                    <CompareRow key={r.key} label={r.label} aPct={r.a} bPct={r.b} aColor={NAVY} bColor={ACCENT} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {divergingVotes.map(v => (
+                    <Link
+                      key={v.vote_id}
+                      href={`/votes/${v.vote_id}`}
+                      style={{ display: 'block', background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 10, padding: '14px 18px', textDecoration: 'none' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+                        {v.voted_at && (
+                          <span className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-muted)' }}>{formatDate(v.voted_at)}</span>
+                        )}
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, color: positionStyle(v.position_a).color, background: positionStyle(v.position_a).bg }}>
+                          {deputyA.full_name.split(' ')[0]} : {positionStyle(v.position_a).label}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, color: positionStyle(v.position_b).color, background: positionStyle(v.position_b).bg }}>
+                          {deputyB.full_name.split(' ')[0]} : {positionStyle(v.position_b).label}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 15, color: NAVY, lineHeight: 1.35 }}>{v.vote_title}</div>
+                      {v.summary_plain && (
+                        <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', marginTop: 6, lineHeight: 1.4 }}>{v.summary_plain}</div>
+                      )}
+                    </Link>
                   ))}
                 </div>
               )}
-
-              {/* Party alignment (deputy-vs-deputy only) */}
-              {mode === 'deputy' && sideA.alignment && sideB?.alignment && (
-                <div style={{ marginTop: 24, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
-                  <div style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 14 }}>
-                    Alignement avec son groupe politique
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    <div>
-                      <span className="font-mono" style={{ fontWeight: 700, fontSize: 22, color: NAVY }}>
-                        {pct(sideA.alignment.party_alignment_rate)}%
-                      </span>
-                      <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{sideA.alignment.party ?? '—'}</div>
-                    </div>
-                    <div>
-                      <span className="font-mono" style={{ fontWeight: 700, fontSize: 22, color: NAVY }}>
-                        {pct(sideB.alignment.party_alignment_rate)}%
-                      </span>
-                      <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{sideB.alignment.party ?? '—'}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Diverging votes (deputy-vs-deputy only) */}
-              {mode === 'deputy' && deputyB && (
-                <div style={{ marginTop: 30 }}>
-                  <h2 className="font-newsreader" style={{ fontSize: 20, fontWeight: 600, color: NAVY, margin: '0 0 16px' }}>
-                    Votes où ils ont divergé
-                  </h2>
-                  {divergingVotes.length === 0 ? (
-                    <p style={{ fontSize: 14, color: 'var(--dp-text-muted)' }}>
-                      Aucun vote divergent trouvé entre ces deux député·e·s (sur les scrutins récents).
-                    </p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {divergingVotes.map(v => (
-                        <Link
-                          key={v.vote_id}
-                          href={`/votes/${v.vote_id}`}
-                          style={{ display: 'block', background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 10, padding: '14px 18px', textDecoration: 'none' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-                            {v.voted_at && (
-                              <span className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-muted)' }}>{formatDate(v.voted_at)}</span>
-                            )}
-                            <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, color: positionStyle(v.position_a).color, background: positionStyle(v.position_a).bg }}>
-                              {deputyA.full_name.split(' ')[0]} : {positionStyle(v.position_a).label}
-                            </span>
-                            <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, color: positionStyle(v.position_b).color, background: positionStyle(v.position_b).bg }}>
-                              {deputyB.full_name.split(' ')[0]} : {positionStyle(v.position_b).label}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: 15, color: NAVY, lineHeight: 1.35 }}>{v.vote_title}</div>
-                          {v.summary_plain && (
-                            <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', marginTop: 6, lineHeight: 1.4 }}>{v.summary_plain}</div>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div style={{ marginTop: 30, display: 'flex', justifyContent: 'flex-end' }}>
-                <ShareButton
-                  url={shareUrl}
-                  title="Comparaison de bilans - MonÉlu"
-                  text={`Comparaison de ${deputyA.full_name}${mode === 'deputy' && deputyB ? ` et ${deputyB.full_name}` : ''} sur MonÉlu`}
-                  ariaLabel="Partager cette comparaison"
-                />
-              </div>
-            </>
+            </div>
           )}
-        </div>
-      </div>
-    </div>
+
+          <div style={{ marginTop: 30, display: 'flex', justifyContent: 'flex-end' }}>
+            <ShareButton
+              url={shareUrl}
+              title="Comparaison de bilans - MonÉlu"
+              text={`Comparaison de ${deputyA.full_name}${mode === 'deputy' && deputyB ? ` et ${deputyB.full_name}` : ''} sur MonÉlu`}
+              ariaLabel="Partager cette comparaison"
+            />
+          </div>
+        </>
+      )}
+    </>
   )
 }

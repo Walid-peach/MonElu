@@ -8,7 +8,7 @@
 
 MonÉlu is a civic transparency platform that makes the voting record of every deputy in the French Assemblée Nationale fully accessible — in plain language, in real time. Built for journalists, researchers, and engaged citizens who shouldn't need to dig through government ZIP exports to understand how their representatives vote.
 
-**Site:** https://mon-elu.vercel.app · **API:** https://monelu-production.up.railway.app · **API docs:** `/docs`
+**Site:** https://mon-elu.vercel.app · **API:** https://monelu-production.up.railway.app · **API docs:** `/docs` · **Machine-readable spec:** `/openapi.json`
 
 ---
 
@@ -57,14 +57,16 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 
 ## API Endpoints
 
-Full interactive reference at `/docs`. Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting).
+Full interactive reference at `/docs`; the raw spec agents and generated clients should read is at `/openapi.json`.
+Every route carries a summary and a description written for that reader - what it returns, in what units, and the domain caveat that applies (MON-260).
+Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting).
 
 ### Core data
 
 | Method | Endpoint | rpm | Description |
 |--------|----------|-----|-------------|
 | GET | `/` | - | Redirects to the Next.js frontend |
-| GET | `/health` | - | API status, live record counts, last ingestion, dbt mart row counts |
+| GET | `/health` | - | API status, live record counts, last ingestion, dbt mart row counts, RAG staging-table orphan check |
 | GET | `/deputies` | 30 | List deputies (`search`, `department` filters) |
 | GET | `/deputies/stats` | 30 | Aggregate counts by party, department, mandate status |
 | GET | `/deputies/{id}` | 30 | Deputy profile |
@@ -145,7 +147,7 @@ On limit exceeded: HTTP 429 · `{"error": "Too Many Requests", "detail": "..."}`
 
 **Monitoring:** Sentry (API + frontend), opt-in via `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`
 
-**Phase 2 — RAG:** OpenAI `text-embedding-3-small` · Groq `llama-3.3-70b-versatile` · tiktoken · MLflow
+**Phase 2 — RAG:** OpenAI `text-embedding-3-small` · Groq `openai/gpt-oss-120b` · tiktoken · MLflow
 
 **Phase 4 — Transform:** dbt 1.12 · dbt_utils · `analytics_staging` + `analytics_marts` schemas
 
@@ -210,7 +212,7 @@ make api            uvicorn api.main:app --reload
 make psql           psql into the running Postgres container
 make check-db       table sizes, row counts, pgvector status
 
-make rag-index      truncate + re-embed all chunks (~$0.006)
+make rag-index      full rebuild: re-embed all chunks via the staging swap (~$0.006)
 make rag-notable    build the notable-deputy chunks (ADR-017)
 make rag-laws       build the law-summary chunks
 make rag-stats      chunk counts by type
@@ -424,6 +426,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `/deputes` · `/deputes/[id]` · `/deputes/tableau` · `/deputes/comparer` | Deputy directory, profile, dense sortable table, side-by-side comparison |
 | `/votes` · `/votes/[id]` | Vote list and vote detail with per-deputy positions |
 | `/groupes/[slug]` · `/departements/[code]` · `/themes/[slug]` | Group, department, and theme hub pages |
+| `/agenda` | Ordre du jour of the séance publique, grouped by sitting day (MON-213); renders an explicit empty state during recess |
 | `/chat` · `/chat/s/[id]` | RAG chat (the fact-check UI lives here, ADR-023) and shared answer snapshots |
 | `/verifier` · `/verifier/v/[id]` | Redirect to the chat · shared fact-check verdicts |
 | `/quiz` · `/quiz/s/[id]` | Vote-matching quiz and shared results |
@@ -431,6 +434,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `/embed/votes/[id]` | Embeddable vote widget |
 | `/partager` | Web Share Target endpoint (MON-115) - normalises an OS share payload into a claim and redirects to `/chat?mode=verify` |
 | `/donnees` · `/developpeurs` · `/methodologie` | Open data, API usage guide, methodology |
+| `/api/oembed` | oEmbed provider (MON-266) - resolves a `/votes/<id>` URL to the `rich` payload that makes Notion, Slack, Substack, Ghost, WordPress and Discourse unfurl the pasted link into the embed widget |
 | `/api/revalidate` | Internal ISR revalidation webhook, guarded by a shared secret - not a public route |
 | `/a-propos` · `/accessibilite` · `/mentions-legales` · `/confidentialite` · `/licence-donnees` | Institutional pages |
 
@@ -438,6 +442,11 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 |---|---|
 | `src/lib/api.ts` | Typed API client for all backend endpoints |
 | `src/lib/seo.ts` · `src/app/sitemap.ts` | Canonical site URL, metadata helpers, generated sitemap |
+| `src/lib/agenda.ts` | Paris-timezone window arithmetic and the summary/`objet` fallback shared by `/agenda` and the homepage teaser - `summary_plain` is NULL until MON-211 ships, so the official wording is the lead whenever there is no one-liner |
+| `src/lib/an.ts` | Official assemblee-nationale.fr URLs built from stored ids - the deputy profile link behind `Person.sameAs` and the dossier link shared by vote cards and `Event.about` (MON-267) |
+| `src/lib/faq.ts` | Q&A copy for `/methodologie` and `/a-propos`, rendered as the visible text *and* published as `FAQPage` JSON-LD (MON-268) - edit the answers here, not in the pages; `__tests__/app/faq-jsonld.test.tsx` fails if the two diverge |
+| `src/lib/oembed.ts` | The oEmbed contract in one place (MON-266): which URLs the provider answers for, the discovery-link href every embeddable page must emit, and the iframe markup - all derived from `SITE_URL` |
+| `src/lib/exports.ts` | The three published CSV exports, described once - `/donnees` renders the cards from this array and `buildDataCatalogJsonLd()` marks the same entries up as `DataCatalog`/`Dataset` JSON-LD (MON-262); `__tests__/app/dataset-jsonld.test.tsx` fails if the page and the markup diverge |
 | `src/components/home/` | Landing-page scenes, live pulse panel, trust strip |
 | `src/components/HeroSearch.tsx` · `GlobalSearch.tsx` | Search entry points wired to the API |
 
@@ -505,6 +514,7 @@ cd frontend && npm test               # Jest + Testing Library
 Both suites run on every PR via `ci.yml` and block merge on failure.
 
 `tests/unit/test_readme_endpoints.py` checks the **API Endpoints** tables above against `app.openapi()` and the live slowapi limits: adding, removing, or re-limiting an endpoint without updating this file fails CI. Edit the table, don't loosen the test.
+The same file asserts every route in the spec has a non-empty `summary` and a description of real length, so a new endpoint cannot ship undocumented (MON-260). FastAPI reads `summary` off the `@router` decorator and `description` off the handler's docstring.
 
 ---
 
