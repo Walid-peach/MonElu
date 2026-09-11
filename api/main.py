@@ -71,6 +71,7 @@ _warn_if_placeholder("DATABASE_URL", os.getenv("DATABASE_URL"), context="the API
 
 from starlette.concurrency import run_in_threadpool  # noqa: E402
 
+from api import groq_health  # noqa: E402
 from api.auth import API_KEY_HEADER, record_usage, resolve_api_key  # noqa: E402
 from api.config import frontend_base_url  # noqa: E402
 from api.db import close_pool, get_conn, init_pool  # noqa: E402
@@ -449,7 +450,14 @@ def health() -> JSONResponse:
     killed mid-flight and left a second copy of the vectors behind. It clears
     on the next successful rebuild.
 
-    Returns 200 when the database is reachable and 503 when it is not; the body
+    `groq` comes from a probe of Groq's model catalog, cached for 10 minutes: `ok`
+    means the key is accepted and every configured model is still served;
+    `failing` means the key was rejected or a model was decommissioned, so chat
+    and fact-check are down; `degraded` means no usable key is configured;
+    `unknown` means the probe itself could not reach Groq, and does not change
+    `status`. `groq_detail` says why whenever `groq` is not `ok`.
+
+    Returns 200 when every service is ok and 207 when one is degraded; the body
     has the same shape either way.
     """
     services: dict[str, str] = {}
@@ -469,13 +477,24 @@ def health() -> JSONResponse:
         services["dbt_marts"] = "degraded"
 
     services["openai"] = "degraded" if _is_placeholder(os.getenv("OPENAI_API_KEY")) else "ok"
-    services["groq"] = "degraded" if _is_placeholder(os.getenv("GROQ_API_KEY")) else "ok"
+    groq_key = os.getenv("GROQ_API_KEY")
+    if _is_placeholder(groq_key):
+        services["groq"], groq_detail = "degraded", "GROQ_API_KEY is missing or a placeholder"
+    else:
+        # GH #385: a cached catalog probe, not key presence - see api/groq_health.py.
+        services["groq"], groq_detail = groq_health.groq_status(groq_key)
 
     # all_ok excludes dbt_marts — marts are absent on every fresh deploy and
     # degrade gracefully; their absence should not trip Railway's health check.
-    all_ok = all(v == "ok" for k, v in services.items() if k != "dbt_marts")
+    # A groq "unknown" is an inconclusive probe, not an outage, so it is
+    # reported without flipping the status.
+    all_ok = all(
+        v == "ok" or (k == "groq" and v == groq_health.UNKNOWN)
+        for k, v in services.items()
+        if k != "dbt_marts"
+    )
 
-    body: dict = {"status": "ok" if all_ok else "degraded", **services}
+    body: dict = {"status": "ok" if all_ok else "degraded", **services, "groq_detail": groq_detail}
     if services["db"] == "ok":
         body.update(
             {
