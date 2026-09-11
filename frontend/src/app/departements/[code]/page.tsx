@@ -12,7 +12,7 @@ import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 
 export const dynamicParams = true
-export const revalidate = 3600
+export const revalidate = 86400
 
 const NAVY   = 'var(--dp-text)'
 const CREAM  = 'var(--dp-page-bg)'

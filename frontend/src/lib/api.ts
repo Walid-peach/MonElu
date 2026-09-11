@@ -1,3 +1,4 @@
+import { DAILY_REVALIDATE_SECONDS } from '@/lib/cachePolicy'
 import { HEALTH_REVALIDATE_SECONDS, HEALTH_TAG } from '@/lib/cacheTags'
 
 /**
@@ -463,7 +464,9 @@ export function nullIfMissing(error: unknown): null {
   throw error
 }
 
-type FetchOpts = { revalidate?: number; tags?: string[] }
+// `revalidate` is required, with no default: each call states its own
+// fallback, justified against `@/lib/cachePolicy` (GH #352).
+type FetchOpts = { revalidate: number; tags?: string[] }
 
 /**
  * Retry ladders, split by phase (MON-275).
@@ -491,14 +494,14 @@ const IS_BUILD = process.env.NEXT_PHASE === 'phase-production-build'
 const SERVER_ERROR_DELAYS_MS = IS_BUILD ? [200, 400, 2_000, 15_000, 30_000] : [200, 400]
 const RATE_LIMIT_DELAYS_MS = IS_BUILD ? [2_000, 15_000, 30_000, 61_000] : [500, 2_000]
 
-async function apiFetch<T>(path: string, opts?: FetchOpts): Promise<T> {
+async function apiFetch<T>(path: string, opts: FetchOpts): Promise<T> {
   let lastStatus = 0
   let serverErrorAttempt = 0
   let rateLimitAttempt = 0
   for (;;) {
     const res = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
-      next: { revalidate: opts?.revalidate ?? 300, tags: opts?.tags },
+      next: { revalidate: opts.revalidate, tags: opts.tags },
     })
     if (res.ok) return res.json()
     lastStatus = res.status
@@ -518,14 +521,14 @@ async function apiFetch<T>(path: string, opts?: FetchOpts): Promise<T> {
 // Same retry policy as apiFetch, but a 404 means "nothing to show" rather
 // than an error — used by endpoints with a genuine empty state, like
 // /quiz/weekly on a recess week with no qualifying scrutin (MON-185).
-async function apiFetchOptional<T>(path: string, opts?: FetchOpts): Promise<T | null> {
+async function apiFetchOptional<T>(path: string, opts: FetchOpts): Promise<T | null> {
   let lastStatus = 0
   let serverErrorAttempt = 0
   let rateLimitAttempt = 0
   for (;;) {
     const res = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
-      next: { revalidate: opts?.revalidate ?? 300, tags: opts?.tags },
+      next: { revalidate: opts.revalidate, tags: opts.tags },
     })
     if (res.ok) return res.json()
     if (res.status === 404) return null
@@ -565,41 +568,41 @@ export const api = {
       if (params?.offset) q.set('offset', String(params.offset))
       return apiFetch<{ total: number; items: Deputy[]; limit: number; offset: number }>(
         `/deputies/?${q}`,
-        { revalidate: 900 }
+        { revalidate: DAILY_REVALIDATE_SECONDS }
       )
     },
-    get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`, { revalidate: 86400 }),
-    scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`, { revalidate: 86400 }),
+    get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`, { revalidate: DAILY_REVALIDATE_SECONDS }),
+    scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`, { revalidate: DAILY_REVALIDATE_SECONDS }),
     scorecards: () =>
-      apiFetch<{ total: number; items: ScorecardRow[] }>('/deputies/scorecards', { revalidate: 3600 }),
+      apiFetch<{ total: number; items: ScorecardRow[] }>('/deputies/scorecards', { revalidate: DAILY_REVALIDATE_SECONDS }),
     stats: (party?: string) => {
       const q = new URLSearchParams()
       if (party) q.set('party', party)
       const qs = q.toString()
-      return apiFetch<DeputyStats>(`/deputies/stats/${qs ? `?${qs}` : ''}`, { revalidate: 3600 })
+      return apiFetch<DeputyStats>(`/deputies/stats/${qs ? `?${qs}` : ''}`, { revalidate: DAILY_REVALIDATE_SECONDS })
     },
     votes: (id: string, limit = 10, since?: string) => {
       const q = new URLSearchParams({ limit: String(limit) })
       if (since) q.set('since', since)
-      return apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?${q}`, { revalidate: 86400 })
+      return apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?${q}`, { revalidate: DAILY_REVALIDATE_SECONDS })
     },
     alignment: (id: string) =>
-      apiFetch<Alignment>(`/deputies/${id}/alignment/`, { revalidate: 86400 }),
+      apiFetch<Alignment>(`/deputies/${id}/alignment/`, { revalidate: DAILY_REVALIDATE_SECONDS }),
     dissidentVotes: (id: string, limit = 10) =>
-      apiFetch<DissidentVotesResponse>(`/deputies/${id}/dissident-votes/?limit=${limit}`, { revalidate: 86400 }),
+      apiFetch<DissidentVotesResponse>(`/deputies/${id}/dissident-votes/?limit=${limit}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
     divergingVotes: (id: string, otherId: string, limit = 10) =>
       apiFetch<DivergingVotesResponse>(
         `/deputies/${id}/diverging-votes/?other_deputy_id=${encodeURIComponent(otherId)}&limit=${limit}`,
-        { revalidate: 86400 }
+        { revalidate: DAILY_REVALIDATE_SECONDS }
       ),
   },
   departments: {
     get: (code: string) =>
-      apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, { revalidate: 3600 }),
+      apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
   },
   groups: {
     get: (slug: string) =>
-      apiFetch<GroupDetail>(`/groups/${encodeURIComponent(slug)}`, { revalidate: 3600 }),
+      apiFetch<GroupDetail>(`/groups/${encodeURIComponent(slug)}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
   },
   themes: {
     get: (slug: string, params?: { limit?: number; offset?: number }) => {
@@ -609,22 +612,23 @@ export const api = {
       const qs = q.toString()
       return apiFetch<ThemeDetail>(
         `/themes/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`,
-        { revalidate: 3600 }
+        { revalidate: DAILY_REVALIDATE_SECONDS }
       )
     },
   },
   agenda: {
     // The ordre du jour is rewritten constantly upstream (ADR-030), but this
     // table only moves when `ingest_agenda.py` runs - and that run POSTs
-    // /api/revalidate, which invalidates `/agenda`. So an hour is the fallback
-    // for a run whose revalidate call never fired, not the refresh mechanism;
-    // a shorter window would only re-create the ISR write volume GH #354 cut.
+    // /api/revalidate, which invalidates `/agenda` and `/`. So a day is the
+    // fallback for a run whose revalidate call never fired, not the refresh
+    // mechanism (GH #352); anything shorter drags the homepage, which also
+    // reads this, under the same timer.
     get: (params?: { from?: string; to?: string }) => {
       const q = new URLSearchParams()
       if (params?.from) q.set('from', params.from)
       if (params?.to) q.set('to', params.to)
       const qs = q.toString()
-      return apiFetch<AgendaResponse>(`/agenda${qs ? `?${qs}` : ''}`, { revalidate: 3600 })
+      return apiFetch<AgendaResponse>(`/agenda${qs ? `?${qs}` : ''}`, { revalidate: DAILY_REVALIDATE_SECONDS })
     },
   },
   votes: {
@@ -638,19 +642,19 @@ export const api = {
       if (params?.before) q.set('before', params.before)
       return apiFetch<{ total: number; items: Vote[]; limit: number; offset: number; next_cursor: string | null }>(
         `/votes/?${q}`,
-        { revalidate: 900 }
+        { revalidate: DAILY_REVALIDATE_SECONDS }
       )
     },
-    latest: () => apiFetch<Vote[]>('/votes/latest/', { revalidate: 300 }),
-    get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`, { revalidate: 86400 }),
+    latest: () => apiFetch<Vote[]>('/votes/latest/', { revalidate: DAILY_REVALIDATE_SECONDS }),
+    get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`, { revalidate: DAILY_REVALIDATE_SECONDS }),
   },
   quiz: {
     // The question set is a versioned repo file server-side (ADR-025) — it only
     // changes by deploy, so cache it as aggressively as immutable snapshots.
-    questions: () => apiFetch<QuizQuestionsResponse>('/quiz/questions', { revalidate: 86400 }),
+    questions: () => apiFetch<QuizQuestionsResponse>('/quiz/questions', { revalidate: DAILY_REVALIDATE_SECONDS }),
     // Same qualifying scrutin all week (MON-185); null on a recess week with
     // no qualifying scrutin — the homepage widget renders nothing then.
-    weekly: () => apiFetchOptional<QuizWeeklyQuestion>('/quiz/weekly', { revalidate: 3600 }),
+    weekly: () => apiFetchOptional<QuizWeeklyQuestion>('/quiz/weekly', { revalidate: DAILY_REVALIDATE_SECONDS }),
     match: (
       answers: Array<{ vote_id: string; position: QuizAnswerPosition }>,
       department?: string,
@@ -676,14 +680,14 @@ export const api = {
         ...(includeAnswers ? { include_answers: true } : {}),
       }),
     // Immutable snapshots — cache like chat shares / verifications.
-    getShare: (id: string) => apiFetch<QuizShareResult>(`/quiz/share/${id}`, { revalidate: 86400 }),
+    getShare: (id: string) => apiFetch<QuizShareResult>(`/quiz/share/${id}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
   },
   search: (question: string, signal?: AbortSignal) =>
     apiPost<SearchResult>('/search/', { question }, signal),
   verify: (claim: string, signal?: AbortSignal) =>
     apiPost<VerifyResult>('/verify/', { claim }, signal),
   // Verdicts are immutable snapshots (ADR-022) — cache aggressively.
-  verification: (id: string) => apiFetch<VerifyResult>(`/verify/${id}`, { revalidate: 86400 }),
+  verification: (id: string) => apiFetch<VerifyResult>(`/verify/${id}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
   // Chat shares are immutable snapshots too (ADR-024) — same caching approach.
   shareAnswer: (result: SearchResult) =>
     apiPost<ChatShareResult>('/search/share', {
@@ -694,7 +698,7 @@ export const api = {
       data_source: result.data_source,
       caveat: result.caveat,
     }),
-  chatShare: (id: string) => apiFetch<ChatShareResult>(`/search/share/${id}`, { revalidate: 86400 }),
+  chatShare: (id: string) => apiFetch<ChatShareResult>(`/search/share/${id}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
   feedback: {
     chat: (vote: 'up' | 'down', question: string, answer: string, sources: SearchResult['sources']) =>
       apiPost<{ status: string }>('/feedback/chat', { vote, question, answer, sources }),

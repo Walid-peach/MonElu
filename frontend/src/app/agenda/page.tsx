@@ -17,10 +17,11 @@ import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 
 // The agenda table only changes when `ingest_agenda.py` runs, and that run
-// POSTs /api/revalidate, which invalidates this path. An hour is therefore the
-// fallback for a run whose revalidate call never fired - a shorter window would
-// only re-create the ISR write volume GH #354 cut, for no extra freshness.
-export const revalidate = 3600
+// POSTs /api/revalidate, which invalidates this path. A day is therefore the
+// fallback for a run whose revalidate call never fired (GH #352, see
+// `@/lib/cachePolicy`). The weekday run also rolls "today" over each morning;
+// on weekends, when the chamber does not normally sit, the fallback does.
+export const revalidate = 86400
 
 const NAVY = 'var(--dp-text)'
 const CREAM = 'var(--dp-page-bg)'

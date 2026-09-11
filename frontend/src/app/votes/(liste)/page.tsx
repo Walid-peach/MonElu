@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   alternates: { canonical: canonicalUrl('/votes') },
 }
 
-export const revalidate = 900
+export const revalidate = 86400
 
 export default async function VotesPage() {
   const initial = await api.votes.list({ limit: 50 })

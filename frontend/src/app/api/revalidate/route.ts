@@ -30,15 +30,25 @@ export async function POST(req: NextRequest) {
   // Refreshed by `ingest_agenda.py` in the same nightly run (MON-210, MON-213).
   revalidatePath('/agenda')
   revalidatePath('/deputes')
-  revalidatePath('/deputes/[id]', 'page')
-  revalidatePath('/votes/[id]', 'page')
+  // Force-dynamic, but its scorecards fetch sits in the data cache for a day.
+  revalidatePath('/deputes/tableau')
+  // 'layout' rather than 'page': it also covers what nests under the detail
+  // route - `/deputes/[id]/dossier` and the per-entity OG images (GH #352).
+  revalidatePath('/deputes/[id]', 'layout')
+  revalidatePath('/votes/[id]', 'layout')
+  // Markdown twins (MON-271) and the vote embed read the same data.
+  revalidatePath('/md/deputes/[id]', 'layout')
+  revalidatePath('/md/votes/[id]', 'layout')
+  revalidatePath('/embed/votes/[id]', 'page')
+  // Root OG card prints live deputy/vote counts from /health.
+  revalidatePath('/opengraph-image')
   revalidatePath('/departements/[code]', 'page')
   revalidatePath('/groupes/[slug]', 'page')
   revalidatePath('/themes/[slug]', 'page')
   revalidatePath('/sitemap.xml')
 
   // The freshness badge in the root layout (GH #354). Its `/health` fetch is on a
-  // six-hour fallback so it does not drag every static route into a five-minute ISR
+  // one-day fallback (GH #352) so it does not drag every static route into a short ISR
   // interval, which makes this call the thing that normally refreshes the badge.
   revalidateTag(HEALTH_TAG)
 

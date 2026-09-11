@@ -41,7 +41,7 @@ describe('POST /api/revalidate', () => {
 
   it('still revalidates the data route families', async () => {
     await POST(request(SECRET))
-    for (const path of ['/', '/votes', '/deputes', '/sitemap.xml'])
+    for (const path of ['/', '/votes', '/deputes', '/deputes/tableau', '/sitemap.xml'])
       expect(revalidatePath).toHaveBeenCalledWith(path)
   })
 
