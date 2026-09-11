@@ -3,6 +3,10 @@ from pathlib import Path
 
 EMBEDDING_MODEL = "text-embedding-3-small"
 LLM_MODEL = "openai/gpt-oss-120b"
+# Fast/cheap model for routing and claim detection (rag/chain/llm_router.py).
+# Defined here rather than in llm_router so /health's Groq probe (GH #385) can
+# read it without importing a module that builds a Groq client at import time.
+CLASSIFIER_MODEL = "openai/gpt-oss-20b"
 # Total completion budget for the generation paths (rag_chain, verify).
 # gpt-oss is a reasoning model and Groq bills reasoning tokens against
 # max_tokens, so this ceiling is shared between thinking and the answer - it is

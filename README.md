@@ -66,7 +66,7 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | Method | Endpoint | rpm | Description |
 |--------|----------|-----|-------------|
 | GET | `/` | - | Redirects to the Next.js frontend |
-| GET | `/health` | - | API status, live record counts, last ingestion, dbt mart row counts, RAG staging-table orphan check |
+| GET | `/health` | - | API status, live record counts, last ingestion, dbt mart row counts, RAG staging-table orphan check, cached Groq key and model probe |
 | GET | `/deputies` | 30 | List deputies (`search`, `department` filters) |
 | GET | `/deputies/stats` | 30 | Aggregate counts by party, department, mandate status |
 | GET | `/deputies/{id}` | 30 | Deputy profile |

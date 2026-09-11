@@ -4,8 +4,25 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api.db as _db
+import api.groq_health as _groq_health
 import api.main as _main
 from api.main import app
+
+
+@pytest.fixture(autouse=True)
+def _stub_groq_catalog():
+    """Keep /health's Groq probe (GH #385) off the network in every test.
+
+    Serves a catalog that contains every configured model, so a test that sets a
+    real-looking key reads `groq: ok`. Tests of the probe itself patch
+    `_fetch_catalog` again inside this one.
+    """
+    _groq_health.reset_cache()
+    with patch.object(
+        _groq_health, "_fetch_catalog", return_value=set(_groq_health.REQUIRED_MODELS)
+    ):
+        yield
+    _groq_health.reset_cache()
 
 
 @pytest.fixture(scope="module")

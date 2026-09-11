@@ -27,13 +27,12 @@ from rag.chain.sql_router import (
     execute_intent,
     normalize_text,
 )
+from rag.constants import CLASSIFIER_MODEL
 
 load_dotenv()
 
 log = logging.getLogger(__name__)
 
-# Fast/cheap model - this is a classification call, not generation.
-CLASSIFIER_MODEL = "openai/gpt-oss-20b"
 # gpt-oss models are reasoning models: reasoning tokens are billed against
 # max_tokens *before* any tool call is emitted. At the old 32/64 budgets the
 # model spent the whole allowance thinking and returned no tool call at all,

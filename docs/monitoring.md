@@ -101,6 +101,12 @@ Create two monitors:
      not a hard failure, since it can be expected right after a fresh deploy.
    - If the provider supports a keyword/body assertion, also check the
      response body contains `"status":"ok"`.
+   - `groq` is a cached probe of Groq's model catalog (GH #385), not a key
+     check. `"groq":"failing"` means the key was rejected or a configured model
+     was decommissioned - `/search` and `/verify` are down, and `groq_detail`
+     says which. It flips `status` to `degraded`, so it trips the body
+     assertion above. `"groq":"unknown"` means the probe could not reach Groq;
+     it is retried after 60 seconds and does not change `status`.
    - Check interval: 5 minutes (matches the acceptance criterion "downtime
      produces an alert within 5 minutes").
 2. **Frontend homepage** — the production Vercel URL, plain HTTP-200 uptime
