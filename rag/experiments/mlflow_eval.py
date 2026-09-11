@@ -283,9 +283,16 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
             routing_accuracy = round(
                 sum(1 for pq in per_question if pq["routing_ok"]) / len(per_question), 3
             )
+            # avg_similarity above averages in SQL-routed answers, which carry no
+            # sources and count as 0, so it moves with routing, not retrieval.
+            # This one averages over RAG-routed answers only, the population the
+            # ADR-008 pin-on/pin-off comparison measured.
+            rag_sims = [pq["top_sim"] for pq in per_question if not pq["sql_routed"]]
+            rag_avg_sim = round(sum(rag_sims) / len(rag_sims), 3) if rag_sims else 0
 
             mlflow.log_metric("keyword_score", avg_score)
             mlflow.log_metric("avg_similarity", avg_sim)
+            mlflow.log_metric("rag_avg_similarity", rag_avg_sim)
             mlflow.log_metric("sql_routed_count", sql_count)
             mlflow.log_metric("routing_accuracy", routing_accuracy)
 
