@@ -22,10 +22,11 @@
  * Why immutable snapshots also sit at one day rather than `false`: the root
  * layout renders `FreshnessBadge`, whose `/health` fetch is on this same
  * interval, and Next.js takes the lowest `revalidate` across a route and all
- * of its layouts. No route can cache longer than the badge without moving that
- * fetch out of the layout. The daily snapshot fetch also keeps one takedown
- * lever for the unmoderated share corpus (ADR-036): a deleted row stops being
- * served within a day, without a redeploy.
+ * of its layouts. No page can cache longer than the badge without moving that
+ * fetch out of the layout. Snapshot OG image routes do not render the layout,
+ * but they stay at one day for the second reason, which covers pages too: it
+ * keeps a takedown lever for the unmoderated share corpus (ADR-036) - a
+ * deleted row stops being served within a day, without a redeploy.
  *
  * Route segment `export const revalidate` values must be literals Next.js can
  * read statically, so pages write `86400` and point here;

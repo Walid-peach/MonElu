@@ -31,17 +31,41 @@ describe('ISR fallback policy (GH #352)', () => {
 
   it('declares no route segment revalidate below a day', () => {
     const offenders = sourceFiles(join(SRC, 'app')).flatMap((path) => {
-      const match = readFileSync(path, 'utf8').match(/^export const revalidate = (\d+)/m)
-      return match && Number(match[1]) < DAILY_REVALIDATE_SECONDS
+      const match = readFileSync(path, 'utf8').match(
+        /^export const revalidate(?::\s*\w+)?\s*=\s*([\d_]+)/m
+      )
+      return match && Number(match[1].replace(/_/g, '')) < DAILY_REVALIDATE_SECONDS
         ? [`${relative(SRC, path)}: ${match[1]}`]
         : []
     })
     expect(offenders).toEqual([])
   })
 
-  it('gives every API fetch a named interval rather than a literal', () => {
+  it('puts every API fetch on one of the policy constants', () => {
     const api = readFileSync(join(SRC, 'lib', 'api.ts'), 'utf8')
-    expect(api.match(/revalidate: \d/g)).toBeNull()
-    expect(api).not.toMatch(/revalidate \?\?/)
+    const values = [...api.matchAll(/\brevalidate:\s*(?!number\b)([^,}\s]+)/g)].map((m) => m[1])
+    expect(values.length).toBeGreaterThan(10)
+    const allowed = ['DAILY_REVALIDATE_SECONDS', 'HEALTH_REVALIDATE_SECONDS', 'opts.revalidate']
+    expect(values.filter((v) => !allowed.includes(v))).toEqual([])
+  })
+
+  it('has no numeric fetch-level revalidate anywhere in src', () => {
+    const offenders = sourceFiles(SRC).filter((path) =>
+      /\brevalidate:\s*\d/.test(readFileSync(path, 'utf8'))
+    )
+    expect(offenders.map((p) => relative(SRC, p))).toEqual([])
+  })
+
+  it('purges every ingestion-reading dynamic route family from /api/revalidate', () => {
+    const route = readFileSync(join(SRC, 'app', 'api', 'revalidate', 'route.ts'), 'utf8')
+    for (const call of [
+      "revalidatePath('/deputes/[id]', 'layout')",
+      "revalidatePath('/votes/[id]', 'layout')",
+      "revalidatePath('/md/deputes/[id]', 'layout')",
+      "revalidatePath('/md/votes/[id]', 'layout')",
+      "revalidatePath('/embed/votes/[id]', 'page')",
+      "revalidatePath('/opengraph-image')",
+    ])
+      expect(route).toContain(call)
   })
 })
