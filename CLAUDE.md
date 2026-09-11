@@ -274,7 +274,9 @@ Health check: `GET /health` — returns DB status, record counts, `last_ingestio
 
 **Vercel only builds when `frontend/` changes** (#356).
 The Vercel project's Root Directory is `frontend/`, and `ignoreCommand` in `frontend/vercel.json` runs `frontend/scripts/vercel-ignore-build.sh` - the repository copy overrides whatever the dashboard's Ignored Build Step field says, so the policy lives in git rather than drifting in project settings.
-The script diffs `frontend/` against `VERCEL_GIT_PREVIOUS_SHA` (the branch's last successful deployment), falling back to `HEAD^`, and skips the deployment only when nothing under `frontend/` changed; a missing base or a failed diff builds.
+The script diffs `frontend/` against `VERCEL_GIT_PREVIOUS_SHA` (the branch's last successful deployment) and skips the deployment only when nothing under `frontend/` changed.
+Vercel leaves that variable unset on a branch's first push, so without it production falls back to `HEAD^`, which a merge commit's first parent makes cover the whole PR, while a preview compares the whole branch against its merge base with `master` - `HEAD^` there would judge a branch on its tip commit alone.
+A base that cannot be resolved, or a failed diff, builds.
 That path set is complete because the frontend imports nothing from outside its own directory - the backend data it mirrors (`src/lib/departments.ts`, `src/lib/groups.ts`) are copies, so changing the backend side alone never changes what Vercel ships.
 If the frontend ever starts reading a file outside `frontend/`, add that path to the script's `git diff` or the deployment will silently go stale.
 Railway, dbt and the GitHub Actions workflows never read this file and are unaffected, and ISR revalidation through `/api/revalidate` is a runtime call rather than a deployment, so it is unaffected too.

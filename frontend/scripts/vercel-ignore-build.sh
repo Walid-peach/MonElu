@@ -15,13 +15,32 @@
 
 set -u
 
-# The last successful deployment of this branch. It covers every commit since
-# that deploy, including ones whose own builds were skipped or failed. Vercel
-# only sets it when an ignore step is configured, and a shallow clone may not
-# contain it, so fall back to the parent commit.
+# The repository's default branch, which Vercel deploys to production.
+production_branch="master"
+
+# Preferred base: the last successful deployment of this branch. It covers
+# every commit since that deploy, including ones whose own builds were skipped
+# or failed. Vercel leaves it unset on a branch's first push, and a shallow
+# clone may not contain it.
 base="${VERCEL_GIT_PREVIOUS_SHA:-}"
-if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
+  :
+elif [ "${VERCEL_ENV:-}" = "production" ]; then
+  # A push to the production branch: HEAD^ is its previous tip, and a merge
+  # commit's first parent covers the whole merged PR.
   base="HEAD^"
+else
+  # A preview with no deployed base. HEAD^ would judge the branch on its tip
+  # commit alone, so compare the whole branch against where it forked from the
+  # production branch instead.
+  base=""
+  if git fetch --quiet --depth=100 origin "$production_branch" 2>/dev/null; then
+    base="$(git merge-base HEAD FETCH_HEAD 2>/dev/null)" || base=""
+  fi
+  if [ -z "$base" ]; then
+    echo "vercel-ignore-build: no merge base with ${production_branch} - building."
+    exit 1
+  fi
 fi
 
 if ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null; then
