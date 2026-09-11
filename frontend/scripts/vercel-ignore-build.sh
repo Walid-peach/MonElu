@@ -33,9 +33,30 @@ else
   # A preview with no deployed base. HEAD^ would judge the branch on its tip
   # commit alone, so compare the whole branch against where it forked from the
   # production branch instead.
+  # Vercel's checkout cannot be relied on to carry an `origin` remote, so fetch
+  # from the repository URL its system variables describe. The repository is
+  # public, so no credentials are needed. Local runs fall back to `origin`.
+  if [ -n "${VERCEL_GIT_REPO_OWNER:-}" ] && [ -n "${VERCEL_GIT_REPO_SLUG:-}" ]; then
+    remote="https://github.com/${VERCEL_GIT_REPO_OWNER}/${VERCEL_GIT_REPO_SLUG}.git"
+  else
+    remote="origin"
+  fi
+  # Deepen only a clone that is already shallow: `--depth` on a full clone would
+  # make it shallow. Cap the fetch so a slow network cannot stall the deploy.
+  depth_arg=""
+  if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+    depth_arg="--depth=100"
+  fi
+  timeout_cmd=""
+  if command -v timeout >/dev/null 2>&1; then
+    timeout_cmd="timeout 60"
+  fi
   base=""
-  if git fetch --quiet --depth=100 origin "$production_branch" 2>/dev/null; then
+  # shellcheck disable=SC2086 # the optional words must split
+  if fetch_error="$(GIT_TERMINAL_PROMPT=0 $timeout_cmd git fetch --quiet $depth_arg "$remote" "$production_branch" 2>&1)"; then
     base="$(git merge-base HEAD FETCH_HEAD 2>/dev/null)" || base=""
+  else
+    echo "vercel-ignore-build: could not fetch ${production_branch} from ${remote}: ${fetch_error}"
   fi
   if [ -z "$base" ]; then
     echo "vercel-ignore-build: no merge base with ${production_branch} - building."
