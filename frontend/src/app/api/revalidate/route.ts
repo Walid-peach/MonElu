@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
   // Refreshed by `ingest_agenda.py` in the same nightly run (MON-210, MON-213).
   revalidatePath('/agenda')
   revalidatePath('/deputes')
+  // Force-dynamic, but its scorecards fetch sits in the data cache for a day.
+  revalidatePath('/deputes/tableau')
   revalidatePath('/deputes/[id]', 'page')
   revalidatePath('/votes/[id]', 'page')
   revalidatePath('/departements/[code]', 'page')

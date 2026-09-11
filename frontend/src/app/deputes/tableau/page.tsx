@@ -12,7 +12,8 @@ export const metadata: Metadata = {
 
 // Rendered at request time, like /deputes: prerendering at build time would
 // call the API's /deputies/scorecards during the deploy (and 404 until the
-// API side of MON-97 is live). The fetch itself is cached for 1h (lib/api.ts).
+// API side of MON-97 is live). The fetch itself is cached for a day and purged
+// by /api/revalidate after ingestion (GH #352, lib/cachePolicy.ts).
 export const dynamic = 'force-dynamic'
 
 export default async function TableauPage() {

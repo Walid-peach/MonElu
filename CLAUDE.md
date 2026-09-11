@@ -171,7 +171,10 @@ SIGKILL stays uncatchable, so `staging_chunk_count()` and `/health`'s `rag_stagi
 - Every route declares `alternates.canonical` via `canonicalUrl()` (MON-269) - see the Deployment section.
 - **A fetch in the root layout sets the ISR floor for every route on the site** (GH #354).
 Next.js takes the lowest `revalidate` across a route and all of its layouts, so `FreshnessBadge`'s `/health` fetch at `revalidate: 300` was making otherwise-static pages like `/quiz` and `/deputes/comparer` regenerate every five minutes - 460 903 ISR Write Units in a month against a Hobby allowance of 200 000.
-That fetch is now tagged (`HEALTH_TAG` in `frontend/src/lib/cacheTags.ts`) with a six-hour fallback, and `/api/revalidate` - which both `ingest_prod.yml` and `summarize_backfill.yml` already call after publishing - invalidates the tag.
+That fetch is now tagged (`HEALTH_TAG` in `frontend/src/lib/cacheTags.ts`) with a one-day fallback, and `/api/revalidate` - which both `ingest_prod.yml` and `summarize_backfill.yml` already call after publishing - invalidates the tag.
+- **Every ISR interval is a one-day fallback, never the refresh mechanism** (GH #352).
+All server-rendered data changes at most once a day and `/api/revalidate` invalidates it on demand, so `DAILY_REVALIDATE_SECONDS` in `frontend/src/lib/cachePolicy.ts` is the floor for both route segment `revalidate` literals and fetch-level intervals; that file holds the rationale, including why immutable share snapshots cannot cache longer than the root layout's health fetch.
+A route family that reads ingestion-refreshed data needs a `revalidatePath` line in `/api/revalidate`, and `__tests__/lib/cachePolicy.test.ts` fails on any interval below a day.
 Any new server fetch added to the root layout must use the same shape; a short `revalidate` there is a site-wide cost, not a per-page one.
 `__tests__/lib/api.test.ts` and `__tests__/api/revalidate.route.test.ts` pin both halves, and `__tests__/app/layout-isr-floor.test.ts` fails if any server component the root layout renders reaches the API outside that contract.
 - The homepage carries **exactly one `<h1>`**, and it lives in `AssemblyScrollExperience`'s server-rendered half (MON-270).

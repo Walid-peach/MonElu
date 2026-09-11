@@ -241,7 +241,7 @@ jobs:
           if [ "${{ steps.revalidate.outcome }}" = "failure" ]; then
             echo "::warning::Frontend cache revalidation failed - pages stay stale until their next revalidate window."
             echo "## ⚠️ Frontend cache not revalidated" >> "$GITHUB_STEP_SUMMARY"
-            echo "The revalidation call failed. Pages keep serving the previous build until their \`revalidate\` window expires (up to 24h on deputy and vote detail pages)." >> "$GITHUB_STEP_SUMMARY"
+            echo "The revalidation call failed. Pages keep serving the previous build until their \`revalidate\` window expires (up to 24h - see frontend/src/lib/cachePolicy.ts)." >> "$GITHUB_STEP_SUMMARY"
           fi
 
           failed=()
