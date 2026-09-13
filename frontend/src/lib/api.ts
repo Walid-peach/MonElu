@@ -1,4 +1,4 @@
-import { DAILY_REVALIDATE_SECONDS } from '@/lib/cachePolicy'
+import { DAILY_REVALIDATE_SECONDS, WINDOWED_REVALIDATE_SECONDS } from '@/lib/cachePolicy'
 import { HEALTH_REVALIDATE_SECONDS, HEALTH_TAG } from '@/lib/cacheTags'
 
 /**
@@ -619,16 +619,20 @@ export const api = {
   agenda: {
     // The ordre du jour is rewritten constantly upstream (ADR-030), but this
     // table only moves when `ingest_agenda.py` runs - and that run POSTs
-    // /api/revalidate, which invalidates `/agenda` and `/`. So a day is the
-    // fallback for a run whose revalidate call never fired, not the refresh
-    // mechanism (GH #352); anything shorter drags the homepage, which also
-    // reads this, under the same timer.
+    // /api/revalidate, which invalidates `/agenda` and `/`. So the interval is
+    // a fallback, not the refresh mechanism (GH #352) - but the no-argument
+    // call gets the windowed one: it asks for the *current ISO week*, so its
+    // URL is identical either side of the Monday rollover and a daily entry
+    // would keep serving last week. `/` passes explicit `from`/`to` dates, so
+    // its URL changes with the day and it re-fetches on its own.
     get: (params?: { from?: string; to?: string }) => {
       const q = new URLSearchParams()
       if (params?.from) q.set('from', params.from)
       if (params?.to) q.set('to', params.to)
       const qs = q.toString()
-      return apiFetch<AgendaResponse>(`/agenda${qs ? `?${qs}` : ''}`, { revalidate: DAILY_REVALIDATE_SECONDS })
+      return apiFetch<AgendaResponse>(`/agenda${qs ? `?${qs}` : ''}`, {
+        revalidate: qs ? DAILY_REVALIDATE_SECONDS : WINDOWED_REVALIDATE_SECONDS,
+      })
     },
   },
   votes: {

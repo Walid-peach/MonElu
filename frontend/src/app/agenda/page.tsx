@@ -17,11 +17,15 @@ import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 
 // The agenda table only changes when `ingest_agenda.py` runs, and that run
-// POSTs /api/revalidate, which invalidates this path. A day is therefore the
-// fallback for a run whose revalidate call never fired (GH #352, see
-// `@/lib/cachePolicy`). The weekday run also rolls "today" over each morning;
-// on weekends, when the chamber does not normally sit, the fallback does.
-export const revalidate = 86400
+// POSTs /api/revalidate, which invalidates this path - so the timer below is
+// only a fallback for a run whose revalidate call never fired.
+//
+// It is an hour rather than the site-wide day (GH #352,
+// `WINDOWED_REVALIDATE_SECONDS` in `@/lib/cachePolicy`) because this render
+// encodes the current ISO week, which rolls at Monday 00:00 Paris - hours
+// before any webhook fires. A daily fallback would serve last week's already
+// finished sittings under the "cette semaine" copy below for most of Monday.
+export const revalidate = 3600
 
 const NAVY = 'var(--dp-text)'
 const CREAM = 'var(--dp-page-bg)'

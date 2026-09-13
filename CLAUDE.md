@@ -175,7 +175,9 @@ That fetch is now tagged (`HEALTH_TAG` in `frontend/src/lib/cacheTags.ts`) with 
 - **Every ISR interval is a one-day fallback, never the refresh mechanism** (GH #352).
 All server-rendered data changes at most once a day and `/api/revalidate` invalidates it on demand, so `DAILY_REVALIDATE_SECONDS` in `frontend/src/lib/cachePolicy.ts` is the floor for both route segment `revalidate` literals and fetch-level intervals; that file holds the rationale, including why immutable share snapshots cannot cache longer than the root layout's health fetch.
 A route family that reads ingestion-refreshed data needs a `revalidatePath` line in `/api/revalidate` (use `'layout'` on `/deputes/[id]`-style paths so nested routes like `dossier` and OG images are covered).
-`__tests__/lib/cachePolicy.test.ts` fails on a route segment interval below a day, on any numeric fetch-level `revalidate` in `src/`, and on an `api.ts` fetch not using a policy constant.
+`__tests__/lib/cachePolicy.test.ts` enumerates the route tree and fails on a server route reading the API that is neither purged nor explicitly exempted, on a route segment interval below a day, on any numeric fetch-level `revalidate` in `src/`, and on an `api.ts` fetch not using a policy constant.
+The one exception is a render encoding a **date window** rather than a table snapshot: `/agenda` bakes in the current ISO week, which rolls at Monday 00:00 Paris - hours before any webhook - so it uses `WINDOWED_REVALIDATE_SECONDS` (1 h) and is allowlisted in that test.
+No amount of post-ingestion revalidation fixes a stale calendar; do not "align" it back to a day.
 Any new server fetch added to the root layout must use the same shape; a short `revalidate` there is a site-wide cost, not a per-page one.
 `__tests__/lib/api.test.ts` and `__tests__/api/revalidate.route.test.ts` pin both halves, and `__tests__/app/layout-isr-floor.test.ts` fails if any server component the root layout renders reaches the API outside that contract.
 - The homepage carries **exactly one `<h1>`**, and it lives in `AssemblyScrollExperience`'s server-rendered half (MON-270).

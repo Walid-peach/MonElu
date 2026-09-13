@@ -33,3 +33,21 @@
  * `__tests__/lib/cachePolicy.test.ts` keeps both halves at or above this floor.
  */
 export const DAILY_REVALIDATE_SECONDS = 24 * 60 * 60
+
+/**
+ * The exception: a render that encodes a *date window* rather than a snapshot
+ * of a table.
+ *
+ * `/agenda` asks the API for the current ISO week and bakes the answer into
+ * the cached page. That window rolls at Monday 00:00 Paris, but the earliest
+ * webhook after it is `summarize_backfill.yml` at 07:00 UTC - so a daily
+ * fallback would serve last week's finished sittings under "cette semaine"
+ * copy for most of Monday morning. The staleness here is the calendar moving,
+ * which no amount of on-demand revalidation after ingestion can fix.
+ *
+ * One page on an hourly timer is a rounding error against the write volume
+ * GH #354 cut; a wrong week on the page whose whole job is "what happens this
+ * week" is not. Use this only for renders whose correctness depends on the
+ * current date, never as a general-purpose shorter interval.
+ */
+export const WINDOWED_REVALIDATE_SECONDS = 60 * 60

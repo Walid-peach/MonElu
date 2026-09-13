@@ -36,15 +36,23 @@ export async function POST(req: NextRequest) {
   // route - `/deputes/[id]/dossier` and the per-entity OG images (GH #352).
   revalidatePath('/deputes/[id]', 'layout')
   revalidatePath('/votes/[id]', 'layout')
-  // Markdown twins (MON-271) and the vote embed read the same data.
+  // Markdown twins (MON-271) and the vote embed read the same data. 'layout'
+  // is mandatory on the twins, not stylistic: a route handler's page id ends
+  // in `/route`, so a 'page'-scoped tag matches nothing and silently no-ops.
+  // The argument is the internal app-router path, not the public
+  // `/deputes/{id}.md` URL the rewrite exposes - tags come from the route
+  // definition, not the request URL.
   revalidatePath('/md/deputes/[id]', 'layout')
   revalidatePath('/md/votes/[id]', 'layout')
-  revalidatePath('/embed/votes/[id]', 'page')
+  revalidatePath('/embed/votes/[id]', 'layout')
   // Root OG card prints live deputy/vote counts from /health.
-  revalidatePath('/opengraph-image')
-  revalidatePath('/departements/[code]', 'page')
-  revalidatePath('/groupes/[slug]', 'page')
-  revalidatePath('/themes/[slug]', 'page')
+  revalidatePath('/opengraph-image', 'layout')
+  // 'layout' throughout on dynamic families: a page-scoped tag covers only
+  // `<path>/page`, so a nested route or an OG image added later would fall
+  // out of coverage silently (GH #352).
+  revalidatePath('/departements/[code]', 'layout')
+  revalidatePath('/groupes/[slug]', 'layout')
+  revalidatePath('/themes/[slug]', 'layout')
   revalidatePath('/sitemap.xml')
 
   // The freshness badge in the root layout (GH #354). Its `/health` fetch is on a
