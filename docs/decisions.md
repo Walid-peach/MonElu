@@ -1283,6 +1283,11 @@ The swap made under outage pressure in #351 is confirmed as no quality regressio
 Routing improved outright, from 0.824 to a clean sweep.
 Retrieval is unchanged, as expected: the embeddings never changed, and 0.642 sits just above the 0.622 that ADR-008's pin-off arm measured on the same metric.
 
+**Read the two columns as two observations, not as a controlled experiment.**
+The runs are two months apart on different corpora, and `_get_live_counts()` derives the router suite's expected keywords from the database at eval time, so both the ground truth and the retrieved corpus moved between them.
+Which database the July run used is no longer recoverable.
+The argument for "no regression" rests on the per-question breakdown below, where every deficit has an identified non-model cause, rather than on the difference between two keyword_score averages.
+
 **Why the keyword_score gap is not a quality gap:** every deficit in the first sweep was traced to the harness or the environment, not to the model.
 
 - `router - discipline RN` scored 0/2 because `analytics_marts.mart_party_alignment` was empty in the local database, so `execute_intent` returned None and the question fell through to RAG.
