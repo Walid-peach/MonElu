@@ -15,12 +15,34 @@ Runs three MLflow configs:
 """
 
 import os
+import re
+import time
 
+import groq
 import mlflow
 import psycopg2
 
 import rag.chain.rag_chain as _rag_chain
 from rag.constants import LLM_MODEL
+
+# Groq's free tier caps tokens-per-minute, and a full sweep (3 configs x 17
+# questions) exceeds it partway through. A 429 mid-sweep loses the whole run,
+# so retry rather than restart: the error carries the wait it wants.
+RATE_LIMIT_ATTEMPTS = 6
+
+
+def _ask_with_retry(question: str) -> dict:
+    for attempt in range(RATE_LIMIT_ATTEMPTS):
+        try:
+            return _rag_chain.ask(question)
+        except groq.RateLimitError as exc:
+            if attempt == RATE_LIMIT_ATTEMPTS - 1:
+                raise
+            match = re.search(r"try again in ([0-9.]+)s", str(exc))
+            wait = float(match.group(1)) + 1 if match else 2 ** (attempt + 1)
+            print(f"         rate limited, retrying in {wait:.1f}s", flush=True)
+            time.sleep(wait)
+    raise AssertionError("unreachable")
 
 
 def _get_live_counts() -> dict:
@@ -249,7 +271,7 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
             total = len(golden_set)
             for i, qa in enumerate(golden_set, 1):
                 print(f"  [{i}/{total}] {qa['label']} ...", flush=True)
-                result = _rag_chain.ask(qa["question"])
+                result = _ask_with_retry(qa["question"])
                 src = "SQL" if result.get("data_source") == "SQL" else "RAG"
                 if result.get("data_source") == "SQL":
                     sql_count += 1
