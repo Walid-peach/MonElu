@@ -23,7 +23,13 @@ WORKFLOW = pathlib.Path(__file__).resolve().parents[2] / ".github" / "workflows"
 
 # Steps whose failure must fail the job, but only via the gate — never by
 # aborting the steps that follow them.
-GATED_STEP_IDS = ("dbt_snapshot", "dbt_test", "dbt_freshness", "quiz_votes")
+#
+# `revalidate` joined this list in GH #352: it was warning-only under MON-250,
+# which fit when a missed purge cost the hour or so until the next ISR window.
+# Every interval is now a one-day fallback and /api/revalidate is the only
+# mechanism that publishes ingested data to the site, so a missed purge is a
+# day of stale pages.
+GATED_STEP_IDS = ("dbt_snapshot", "dbt_test", "dbt_freshness", "quiz_votes", "revalidate")
 
 
 @pytest.fixture(scope="module")
@@ -79,18 +85,25 @@ def test_every_gated_id_exists_and_is_non_blocking(steps):
         assert by_id[step_id].get("continue-on-error") is True
 
 
-def test_revalidation_failure_is_reported_but_not_fatal(steps):
-    """A failed purge leaves pages stale — a degraded run, not a bad one — but
-    it must not be the one step whose failure produces no signal at all."""
+def test_revalidation_failure_fails_the_job(steps):
+    """A failed purge is now a day of stale pages, not a cosmetic delay, so it
+    joins the assertions that exit 1 (GH #352) — while still being
+    continue-on-error, so it cannot skip the operational steps after it."""
     revalidate = steps[_index_of(steps, "Revalidate frontend cache")]
     assert revalidate.get("id") == "revalidate"
     assert revalidate.get("continue-on-error") is True
     gate_run = steps[_index_of(steps, "Data-quality gate")]["run"]
-    assert "steps.revalidate.outcome" in gate_run
-    # Reported via ::warning::, never added to the list that exits 1.
-    warn_section, _, fail_section = gate_run.partition("failed=()")
-    assert "steps.revalidate.outcome" in warn_section
-    assert "steps.revalidate.outcome" not in fail_section
+    # Inside the block that appends to `failed`, which is what exits 1.
+    _, marker, fail_section = gate_run.partition("failed=()")
+    assert marker, "the gate no longer builds a `failed` array — update this test"
+    assert "steps.revalidate.outcome" in fail_section
+
+
+def test_revalidation_retries_before_the_gate_calls_it_a_failure(steps):
+    """The gate makes this fatal, so a single transient blip must not redden
+    the daily run on its own."""
+    revalidate = steps[_index_of(steps, "Revalidate frontend cache")]
+    assert "--retry" in revalidate["run"]
 
 
 def test_database_size_probe_is_not_gated(steps):
