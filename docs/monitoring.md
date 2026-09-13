@@ -60,9 +60,17 @@ the same stale data every single day.
 The database-size probe stays outside the gate: a transient `/health` hiccup is
 a monitoring gap, not an ingestion failure, and must not send a false
 "ingestion failed" alert.
-A failed cache revalidation is likewise not fatal, but the gate now emits a
-`::warning::` and a step-summary note for it — pages keep serving the previous
-build until their `revalidate` window expires, which is worth seeing.
+A failed cache revalidation **is** fatal, as of GH #352: the gate counts it
+alongside the dbt assertions. It was warning-only when every page had an
+hourly or sub-hourly fallback, so a missed purge cost minutes. Now that every
+ISR interval is a one-day fallback and `/api/revalidate` is the only mechanism
+that publishes ingested data to the site, a missed purge means a day of stale
+pages — most likely from a broken `REVALIDATE_SECRET` or `FRONTEND_URL`, which
+fails silently and identically every run until someone looks. The `curl`
+retries three times first, so a red job here means the endpoint is genuinely
+unreachable, not that one request blipped.
+The same step in `summarize_backfill.yml` stays warning-only: that workflow is
+a retry backstop, and the next ingestion run purges the cache anyway.
 
 ### Orphaned RAG staging table (MON-256)
 
