@@ -1262,6 +1262,53 @@ it trades a real safety property for an unmeasured cost saving. A full re-index 
 
 ---
 
+## ADR-038 - gpt-oss keeps the Llama prompts unchanged; the eval's keyword scoring is the weak part (#386)
+
+**Date:** 2026-09-13
+**Status:** Final
+
+**Decision:** keep `openai/gpt-oss-120b` and the existing prompts as they are.
+The swap made under outage pressure in #351 is confirmed as no quality regression, so nothing is retuned and `tests/live/test_groq_contract.py` fixtures are left alone.
+
+**Evidence:** a local MLflow sweep on 2026-09-13 against the full local corpus (577 deputies, 5 380 votes, 800 k positions, 6 092 chunks), compared with the last complete Llama run, `monelu-rag-phase_a_k5` of 2026-07-04.
+
+| Metric | Llama 3.3 70B (2026-07-04) | gpt-oss-120b (2026-09-13) |
+|---|---|---|
+| keyword_score, `phase_a_k5` | 1.000 | 0.951 |
+| keyword_score, `phase_b_final` | not recorded | 0.980 |
+| routing_accuracy | 0.824 | 1.000 |
+| SQL-routed questions | 14/17 | 13/17 |
+| rag_avg_similarity | not recorded | 0.642 |
+
+Routing improved outright, from 0.824 to a clean sweep.
+Retrieval is unchanged, as expected: the embeddings never changed, and 0.642 sits just above the 0.622 that ADR-008's pin-off arm measured on the same metric.
+
+**Why the keyword_score gap is not a quality gap:** every deficit in the first sweep was traced to the harness or the environment, not to the model.
+
+- `router - discipline RN` scored 0/2 because `analytics_marts.mart_party_alignment` was empty in the local database, so `execute_intent` returned None and the question fell through to RAG.
+  `classify_intent` returned the correct `party_alignment` on three consecutive probes.
+  Building the marts locally (`dbt run`, 575 rows) moved routing_accuracy from 0.941 to 1.000 and the question to 2/2.
+  The eval silently depends on dbt marts existing, which is worth knowing before reading any future run.
+- `retrieval - Braun-Pivet présence` scores 2/3 against a correct answer.
+  The model writes "Braun‑Pivet" with a non-breaking hyphen (U+2011) and `keyword_score` is a plain substring match, so the keyword "Braun-Pivet" misses.
+  This is the only remaining deficit in the clean run.
+- `retrieval - Attal PLFSS vote` scored 1/2 in one sweep and 2/2 in the next, because the model sometimes expands "PLFSS" to "projet de loi de financement de la sécurité sociale".
+  Both answers were factually correct and cited a real scrutin.
+
+**What this says about the eval:** `keyword_score` measures surface form, not correctness, so it penalises a right answer for its typography and moves between runs on synonym choice.
+Read it as a smoke test, not a quality score, and read the per-question breakdown before concluding anything from the average.
+Normalising Unicode punctuation and accepting known synonyms would remove both artifacts, and is deliberately left undone here because it changes the metric that the historical runs were recorded under.
+
+**The stale half of #386:** the issue asks whether `extract_confidence` still receives well-formed `Confiance:` trailers.
+It does not receive them from anywhere, and nothing depends on it.
+Since ADR-016 confidence is computed from retrieval quality, no production prompt asks for a trailer, and `extract_confidence()` only strips a stray one defensively.
+`tests/live/test_groq_contract.py` still prompts for a `Confiance: haute|moyenne|faible` trailer that no production call site requests, which is harmless but tests a format the app no longer uses.
+
+**Trigger to revisit:** a Groq model decommission (the failure mode #351 hit), or a prompt change to the RAG or verify templates.
+Either invalidates this comparison and needs a fresh sweep against the numbers above.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1285,3 +1332,4 @@ it trades a real safety property for an unmeasured cost saving. A full re-index 
 19. Bill timeline pages are built on the dossier acte parcours from `Dossiers_Legislatifs`, not on votes grouped by `dossier_id` (ADR-035, MON-105/MON-242) - the AN only began tagging scrutins with a dossier in March 2026, so a scrutin-only timeline misses the first four fifths of most bills; never fuzzy-match scrutin titles to bills, never publish a page for a dossier with no scrutins, and never list amendment scrutins inline by default
 20. The share-snapshot pages `/chat/s/*`, `/verifier/v/*` and `/quiz/s/*` are `noindex`, not merely absent from the sitemap (ADR-036, MON-264) - never add them to `sitemap.ts`, never drop the `robots: { index: false }` from their `generateMetadata` (including its early-return path), and never add `ClaimReview`/`QAPage` or other rich-result markup to them; MON-263 is closed as won't-do under this ADR, and the trigger to reopen is a real moderation operator, not share volume
 21. The RAG index has exactly one build mode - a full rebuild into `document_chunks_staging`, swapped in at the end (ADR-037, MON-233/MON-256) - never reintroduce `--since` or any path that writes to the live `document_chunks`; a build that does not complete the swap must drop the staging table on every exit path, and `/health`'s `rag_staging_chunks` must stay informational rather than feeding `status`
+22. gpt-oss keeps the prompts written for Llama, and `keyword_score` is a smoke test rather than a quality score (ADR-038, #386/#351) - the 2026-09-13 sweep found no regression (routing 0.824 to 1.000, retrieval similarity 0.642), so do not retune prompts or fixtures on the strength of an eval average; read the per-question breakdown first, and populate the dbt marts before running the eval or the router suite will misroute `party_alignment` and look like a model fault
