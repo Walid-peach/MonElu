@@ -5,7 +5,7 @@ export const alt = 'MonÉlu — Chaque vote. Chaque député.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-export const revalidate = 3600
+export const revalidate = 86400
 
 export default async function OGImage() {
   const health = await fetch(

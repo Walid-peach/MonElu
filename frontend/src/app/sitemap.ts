@@ -8,7 +8,7 @@ import { SITE_URL } from '@/lib/site'
 const PAGE_SIZE = 200
 const OFFSET_CAP = 2000 // api.votes.list() rejects offset beyond this — see api/routers/votes.py
 
-export const revalidate = 3600
+export const revalidate = 86400
 
 function toDeputyUrl(d: Deputy): MetadataRoute.Sitemap[number] {
   return {

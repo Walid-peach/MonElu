@@ -124,6 +124,12 @@ jobs:
       - name: Revalidate frontend cache
         # Runs unconditionally so deputy/party profile fixes (update_party.py,
         # run inside run_ingestion_prod.py) also purge the cache, not just new-vote runs.
+        #
+        # Still continue-on-error so a failure here cannot skip the dbt and
+        # monitoring steps below - but the data-quality gate now re-fails the
+        # job on it (GH #352). Since every ISR interval is a one-day fallback,
+        # a silently broken REVALIDATE_SECRET means 24h of stale pages, and
+        # this call is the only thing that publishes new data to the site.
         if: ${{ !cancelled() }}
         id: revalidate
         continue-on-error: true
@@ -132,7 +138,10 @@ jobs:
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
         run: |
           if [ -n "$FRONTEND_URL" ] && [ -n "$REVALIDATE_SECRET" ]; then
-            curl -sf -X POST "$FRONTEND_URL/api/revalidate" \
+            # Retry first: the gate makes this fatal, so a transient blip must
+            # not turn the daily run red on its own.
+            curl -sf --retry 3 --retry-delay 10 --retry-all-errors \
+              -X POST "$FRONTEND_URL/api/revalidate" \
               -H "x-revalidate-secret: $REVALIDATE_SECRET" \
               -H "Content-Type: application/json"
             echo "Frontend cache revalidated."
@@ -234,17 +243,15 @@ jobs:
         if: ${{ !cancelled() }}
         shell: bash
         run: |
-          # Reported, never fatal: a failed purge leaves pages stale for up to
-          # their revalidate window, which is a degraded run rather than a bad
-          # one - but it was the last step in this file whose failure produced
-          # no signal at all (MON-250).
-          if [ "${{ steps.revalidate.outcome }}" = "failure" ]; then
-            echo "::warning::Frontend cache revalidation failed - pages stay stale until their next revalidate window."
-            echo "## ⚠️ Frontend cache not revalidated" >> "$GITHUB_STEP_SUMMARY"
-            echo "The revalidation call failed. Pages keep serving the previous build until their \`revalidate\` window expires (up to 24h on deputy and vote detail pages)." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
           failed=()
+          # Fatal since GH #352, warning-only before it (MON-250): with every
+          # ISR interval now a one-day fallback, a failed purge is not a
+          # cosmetic delay - it is a day of stale pages, and this call is the
+          # only mechanism that publishes the data this job just ingested.
+          # The curl above retries, so reaching here means it really is down.
+          if [ "${{ steps.revalidate.outcome }}" = "failure" ]; then
+            failed+=("frontend cache revalidation (pages stay stale up to 24h - see frontend/src/lib/cachePolicy.ts)")
+          fi
           if [ "${{ steps.dbt_snapshot.outcome }}" = "failure" ]; then failed+=("dbt snapshot"); fi
           if [ "${{ steps.dbt_test.outcome }}" = "failure" ]; then failed+=("dbt test"); fi
           if [ "${{ steps.dbt_freshness.outcome }}" = "failure" ]; then failed+=("dbt source freshness (stale data past the error_after windows)"); fi
@@ -259,7 +266,7 @@ jobs:
           {
             echo "## ❌ Data-quality checks failed"
             echo ""
-            echo "Ingestion, dbt run, cache revalidation and the monitoring probes all completed - only the assertions below failed:"
+            echo "Ingestion, dbt run and the monitoring probes all completed - only the checks below failed:"
             echo ""
             for item in "${failed[@]}"; do echo "- ${item}"; done
           } >> "$GITHUB_STEP_SUMMARY"

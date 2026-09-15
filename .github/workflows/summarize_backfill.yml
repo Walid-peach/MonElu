@@ -74,19 +74,36 @@ jobs:
       - name: Revalidate frontend cache
         # Runs when summaries were generated so vote cards show updated summary_plain immediately.
         if: steps.summarize.outputs.generated != '0' && steps.summarize.outputs.generated != ''
+        id: revalidate
         continue-on-error: true
         env:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
         run: |
           if [ -n "$FRONTEND_URL" ] && [ -n "$REVALIDATE_SECRET" ]; then
-            curl -sf -X POST "$FRONTEND_URL/api/revalidate" \
+            curl -sf --retry 3 --retry-delay 10 --retry-all-errors \
+              -X POST "$FRONTEND_URL/api/revalidate" \
               -H "x-revalidate-secret: $REVALIDATE_SECRET" \
               -H "Content-Type: application/json"
             echo "Frontend cache revalidated."
           else
             echo "FRONTEND_URL or REVALIDATE_SECRET not set — skipping revalidation."
           fi
+
+      - name: Report failed revalidation
+        # Warning, not fatal, unlike the same step in ingest_prod.yml: this
+        # workflow is the summary retry backstop (MON-221), and the next
+        # ingestion run purges the cache anyway. Silence was the actual gap -
+        # freshly generated summaries stayed invisible for up to a day with no
+        # signal at all (GH #352).
+        if: ${{ !cancelled() && steps.revalidate.outcome == 'failure' }}
+        run: |
+          echo "::warning::Frontend cache revalidation failed - new summaries stay invisible until the next successful purge."
+          {
+            echo "## ⚠️ Frontend cache not revalidated"
+            echo ""
+            echo "Summaries were generated but the purge failed, so vote cards keep serving the previous build (up to 24h - see frontend/src/lib/cachePolicy.ts)."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Write job summary
         if: always()
