@@ -72,6 +72,26 @@ unreachable, not that one request blipped.
 The same step in `summarize_backfill.yml` stays warning-only: that workflow is
 a retry backstop, and the next ingestion run purges the cache anyway.
 
+### Summary backfill generating nothing (GH #384)
+
+`summarize_backfill.yml` used to report success every day while generating zero
+summaries.
+Per-vote failures are caught and logged at WARNING so one bad vote cannot abort
+a backfill of a thousand, and the workflow parsed the resulting error count into
+a step output it never asserted on, so six consecutive runs against an expired
+Groq key went green while 1 243 votes sat unsummarized.
+`check_summary_yield()` now exits 1 when the run attempted work and generated
+nothing at all, which is the unambiguous shape: an expired or revoked key, a
+decommissioned model (the 2026-09 outage in GH #351), or a Groq outage.
+A partial failure stays green and is surfaced as a `::warning::` with the count:
+those votes keep `summary_plain IS NULL` and are retried the next morning,
+and a ratio guard like the ingestion parsers' `SKIP_RATE_THRESHOLD` would
+redden a small daily backlog over one transient 429.
+Diagnosing a red run: open the run log, and the repeated `[WARNING] Groq error:`
+lines name the cause directly (`expired_api_key`, `model_decommissioned`, 429).
+Replacing `GROQ_API_KEY` in the repository secrets is the usual fix; the backlog
+drains on its own from the next scheduled run.
+
 ### Orphaned RAG staging table (MON-256)
 
 `/health` reports `rag_staging_chunks`. It is `null` almost always: the
