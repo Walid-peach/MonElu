@@ -32,6 +32,18 @@ from groq import Groq
 from rag.chain.llm_router import CLASSIFIER_MODEL
 from rag.constants import LLM_MAX_TOKENS, LLM_MODEL
 
+# The summary generators' call config (scripts/_summaries.py, shared by
+# generate_vote_summaries.py and generate_agenda_summaries.py) - distinct from
+# the LLM_* RAG config above and the CLASSIFIER_* router config.
+#
+# Imported at module level deliberately. These moved out of
+# generate_vote_summaries.py when the two generators were merged onto one
+# implementation (#366), and the function-local import this replaces meant the
+# rename surfaced only here, on the weekly live run, hours after merge: the PR
+# gate collects this file and then deselects it by marker, so it sees a
+# module-level import error but never a function-local one.
+from scripts._summaries import MAX_TOKENS, MODEL, REASONING_EFFORT, TEMPERATURE
+
 pytestmark = [
     pytest.mark.live,
     pytest.mark.skipif(
@@ -156,8 +168,6 @@ def test_summary_fits_its_token_budget():
     budget was fully consumed by reasoning and the summary came back as
     'Le Parlement a' with finish_reason='length'.
     """
-    from scripts.generate_vote_summaries import MAX_TOKENS, MODEL, REASONING_EFFORT, TEMPERATURE
-
     resp = Groq(api_key=os.environ["GROQ_API_KEY"], timeout=60.0).chat.completions.create(
         model=MODEL,
         messages=[
