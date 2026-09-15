@@ -217,6 +217,24 @@ def main() -> None:
         if t_summaries is None:
             soft_failures.append("Vote summaries")
 
+        # Agenda one-liners (MON-211, ADR-030 §5). Same contract as vote
+        # summaries above: the `summary_plain IS NULL` query no-ops when there
+        # is nothing to do, so a re-run costs nothing, and a Groq outage here
+        # must not block the dbt run / RAG rebuild that follow this script.
+        # Runs after the agenda ingestion above, which is what both supplies
+        # new items and clears the summaries of reworded ones.
+        #
+        # Unlike vote summaries there is no daily backfill workflow behind this
+        # one: agenda items are only worth summarizing while they are still
+        # upcoming, so a failure is retried by tomorrow's run or not at all.
+        t_agenda_summaries = run_step(
+            "Agenda summaries",
+            "generate_agenda_summaries.py",
+            critical=False,
+        )
+        if t_agenda_summaries is None:
+            soft_failures.append("Agenda summaries")
+
         # soft_failures is only fully known once every non-critical step has run,
         # so it is written last, separately from new_votes above.
         if github_output:
@@ -235,6 +253,7 @@ def main() -> None:
         log.info("║  Party fix :          (%s)      ║", _fmt(t_party))
         log.info("║  Agenda    :          (%s)      ║", _fmt(t_agenda))
         log.info("║  Summaries :          (%s)      ║", _fmt(t_summaries))
+        log.info("║  Agenda sum:          (%s)      ║", _fmt(t_agenda_summaries))
         log.info("╠══════════════════════════════════════╣")
         log.info("║  Total time: %.1fs                   ║", total_elapsed)
         log.info("╚══════════════════════════════════════╝")

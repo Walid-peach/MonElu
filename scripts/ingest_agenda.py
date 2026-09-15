@@ -309,6 +309,22 @@ ON CONFLICT (point_uid) DO UPDATE SET
     published_at    = EXCLUDED.published_at,
     cancelled_at    = EXCLUDED.cancelled_at,
     objet_hash      = EXCLUDED.objet_hash,
+    -- Regeneration trigger for MON-211: a reworded objet invalidates the
+    -- one-liner written from the old wording, so both summary columns are
+    -- cleared here and generate_agenda_summaries.py's `summary_plain IS NULL`
+    -- sweep picks the item up on the next run. The row never holds a summary
+    -- that describes text it no longer carries.
+    --
+    -- This is why nothing stores "the hash the summary was generated from":
+    -- objet_hash is overwritten on every upsert, so it cannot by itself say
+    -- whether the stored summary is still current. Clearing at the moment of
+    -- change is what makes the comparison unnecessary.
+    summary_plain   = CASE
+                        WHEN agenda_items.objet_hash IS DISTINCT FROM EXCLUDED.objet_hash
+                        THEN NULL ELSE agenda_items.summary_plain END,
+    theme           = CASE
+                        WHEN agenda_items.objet_hash IS DISTINCT FROM EXCLUDED.objet_hash
+                        THEN NULL ELSE agenda_items.theme END,
     last_seen_at    = NOW();
 """
 
