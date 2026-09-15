@@ -143,6 +143,11 @@ Supabase sits behind PgBouncer, and `ingest_deputies.py`/`ingest_votes.py` are `
 A new parser without such a guard ships a skeleton dataset on a green run - the exact failure mode these guards exist to remove.
 - `migrate.py` doubles as the Railway start hook (runs before uvicorn in `railway.json`)
 - `run_ingestion_prod.py` orchestrates the full pipeline for production runs, including `ingest_agenda.py` (MON-210) as a non-critical step - an agenda-feed failure must not block core deputies/votes/positions ingestion
+- **The two summary generators share one implementation** (MON-211).
+`generate_vote_summaries.py` and `generate_agenda_summaries.py` take their model, prompts, `VALID_THEMES` and retry/parse logic from `scripts/_summaries.py` - never re-declare any of them per script, the same rule `SKIP_RATE_THRESHOLD` follows.
+Agenda one-liners follow ADR-030 §5: a stub `objet` (blank, identical to `point_type`, or at most `STUB_OBJET_MAX_LEN` = 30 chars - the bound the MON-208 spike measured) gets **no LLM call at all**, so `summary_plain` stays NULL by design and the frontend renders `point_type` instead.
+**Regeneration is not the generator's job.** `ingest_agenda.py`'s upsert nulls `summary_plain`/`theme` whenever an item's `objet_hash` changes, so a reworded item simply reappears in the `summary_plain IS NULL` sweep. This is why nothing stores "the hash the summary was generated from": `objet_hash` is overwritten on every upsert and so cannot by itself report staleness - clearing at the moment of change is what makes that comparison unnecessary.
+Unlike vote summaries there is no `summarize_backfill.yml` equivalent behind the agenda step: an item is only worth summarizing while it is still upcoming, so a failure is retried by tomorrow's run or not at all.
 - `create_dbt_profile.py` generates `transform/profiles.yml` from `DBT_*` env vars (used by CI and deploy workflows)
 
 **`transform/`** — dbt project
@@ -240,7 +245,7 @@ The endpoint validates the caller's `url` against that allowlist before building
 | `chat_shares` | Stored chat/RAG answer snapshots (MON-66, ADR-024): immutable snapshots behind `/chat/s/<id>` share URLs |
 | `quiz_shares` | Stored quiz result snapshots (MON-139, ADR-025): server-recomputed, immutable snapshots behind `/quiz/s/<id>` share URLs; `result` JSONB optionally carries the sharer's answers when they opt in (MON-184, ADR-028) |
 | `feedback` | Generic user-feedback sink (MON-70, MON-101): `type`-discriminated rows (`chat` thumbs / `report` data-page error reports) with a JSONB `payload`; weekly manual triage query in `docs/monitoring.md` |
-| `agenda_items` | Séance publique ODJ points (MON-210, ADR-030): one denormalized row per point, upserted only - never deleted. `dossier_id` joins `votes.dossier_id`. `last_seen_at` plus `reunion_etat`/`point_etat` (not `DELETE`) are how cancelled or dropped items are reflected |
+| `agenda_items` | Séance publique ODJ points (MON-210, ADR-030): one denormalized row per point, upserted only - never deleted. `dossier_id` joins `votes.dossier_id`. `last_seen_at` plus `reunion_etat`/`point_etat` (not `DELETE`) are how cancelled or dropped items are reflected. `summary_plain`/`theme` are the MON-211 one-liner, NULL by design for stub `objet`s and cleared by the upsert when `objet_hash` changes |
 
 Important data quirks:
 - `nonVotant` ≠ `abstention`: present in chamber but did not vote vs. formally abstained
