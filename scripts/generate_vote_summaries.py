@@ -13,6 +13,7 @@ Usage:
 import argparse
 import logging
 import os
+import sys
 import time
 from datetime import date, timedelta
 
@@ -23,6 +24,7 @@ from dotenv import load_dotenv
 try:
     from scripts._summaries import (
         BATCH_SIZE,
+        MODEL,
         call_groq,
         detect_motion_type,
         is_procedural,
@@ -31,6 +33,7 @@ try:
 except ImportError:  # running as a plain file: python scripts/generate_vote_summaries.py
     from _summaries import (
         BATCH_SIZE,
+        MODEL,
         call_groq,
         detect_motion_type,
         is_procedural,
@@ -101,6 +104,36 @@ def process_batch(
         log.info("Committed %d summaries", len(updates))
 
 
+def check_summary_yield(stats: dict) -> None:
+    """Exit 1 when the run attempted work and none of it succeeded (GH #384).
+
+    ``call_groq`` and ``parse_response`` swallow every per-vote failure into a
+    WARNING so one bad vote cannot abort a backfill of a thousand. Correct on
+    its own, but it makes a run where *every single call* failed
+    indistinguishable from a run with nothing to do: six consecutive green
+    daily runs against an expired API key, with 1 243 votes sitting unsummarized,
+    are what this guard turns red.
+
+    Only the unambiguous shape exits: work was attempted and nothing was
+    generated. A partial failure stays green on purpose, unlike the
+    ``SKIP_RATE_THRESHOLD`` ratio the four ingestion parsers apply (MON-220,
+    MON-249). Those parse a fixed upstream export where a raised skip rate means
+    the format moved under us; this job is idempotent and self-healing - the
+    next run re-selects the same ``summary_plain IS NULL`` rows - and its daily
+    backlog is usually a handful of votes, where a single transient 429 is
+    already past 5% and would redden a run that fixes itself the next morning.
+    The error count is still reported by the caller either way.
+    """
+    if stats["errors"] > 0 and stats["generated"] == 0:
+        log.error(
+            "All %d summary attempts failed and nothing was generated. "
+            "Check the Groq API key and the configured model (%s).",
+            stats["errors"],
+            MODEL,
+        )
+        sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate vote summaries via Groq")
     parser.add_argument(
@@ -127,7 +160,7 @@ def main() -> None:
     warnings.filterwarnings("ignore")
     from groq import Groq
 
-    # max_retries=0: disable SDK-level retries so _call_groq is the sole backoff controller.
+    # max_retries=0: disable SDK-level retries so call_groq is the sole backoff controller.
     client = Groq(api_key=groq_api_key, max_retries=0)
 
     conn = psycopg2.connect(database_url)
@@ -169,11 +202,14 @@ def main() -> None:
             time.sleep(2.0)  # ~15 req/min conservative → avoids 429 cascade
 
     conn.close()
+    # The "Done —" line is what summarize_backfill.yml greps for its generated/
+    # errors step outputs, so it must be logged before the guard can exit.
     log.info(
         "Done — generated: %d, errors: %d (will retry on next run)",
         stats["generated"],
         stats["errors"],
     )
+    check_summary_yield(stats)
 
 
 if __name__ == "__main__":

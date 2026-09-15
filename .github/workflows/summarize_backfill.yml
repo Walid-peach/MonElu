@@ -64,12 +64,31 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          python -m scripts.generate_vote_summaries --since 2024-07-07 2>&1 | tee /tmp/summary_run.log
+          # Capturing the status is what is load-bearing here (GH #384), not
+          # pipefail: `shell: bash` already runs with -eo pipefail, so a bare
+          # failing pipeline would abort this step at the line above - before
+          # the greps - and generated/errors would never reach GITHUB_OUTPUT,
+          # leaving the job summary reporting 0/0 on exactly the runs that need
+          # the counts. So: capture, publish, then re-raise at the end.
+          # pipefail is still set explicitly so this keeps holding if the
+          # `shell: bash` line is ever dropped (the default shell is `bash -e`,
+          # without pipefail, and tee's exit code would then mask the failure).
+          set -o pipefail
+          status=0
+          python -m scripts.generate_vote_summaries --since 2024-07-07 2>&1 | tee /tmp/summary_run.log || status=$?
           generated=$(grep "Done —" /tmp/summary_run.log | grep -oP "generated: \K[0-9]+" || echo "0")
           errors=$(grep "Done —" /tmp/summary_run.log | grep -oP "errors: \K[0-9]+" || echo "0")
           echo "generated=$generated" >> "$GITHUB_OUTPUT"
           echo "errors=$errors"       >> "$GITHUB_OUTPUT"
           echo "Generated: $generated  Errors: $errors"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Summary generation failed - $errors call(s) failed and no summary was generated. The backlog is not draining."
+          elif [ "$errors" != "0" ]; then
+            # Partial failure stays green by design (see check_summary_yield):
+            # these votes keep summary_plain IS NULL and are retried tomorrow.
+            echo "::warning::$generated summaries generated, $errors failed - the failed votes stay in the backlog and retry on the next run."
+          fi
+          exit "$status"
 
       - name: Revalidate frontend cache
         # Runs when summaries were generated so vote cards show updated summary_plain immediately.
@@ -116,7 +135,8 @@ jobs:
           if [ "$remaining_before" = "0" ]; then
             status="complete"
           elif [ "$generated" = "0" ] && [ "$errors" -gt "0" ] 2>/dev/null; then
-            status="no-credit"
+            # Red since GH #384 - the step above exits non-zero on this shape.
+            status="failed"
           elif [ "$generated" -gt "0" ] 2>/dev/null; then
             status="progress"
           else
