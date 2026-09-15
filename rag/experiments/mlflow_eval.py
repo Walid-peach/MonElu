@@ -15,12 +15,34 @@ Runs three MLflow configs:
 """
 
 import os
+import re
+import time
 
+import groq
 import mlflow
 import psycopg2
 
 import rag.chain.rag_chain as _rag_chain
 from rag.constants import LLM_MODEL
+
+# Groq's free tier caps tokens-per-minute, and a full sweep (3 configs x 17
+# questions) exceeds it partway through. A 429 mid-sweep loses the whole run,
+# so retry rather than restart: the error carries the wait it wants.
+RATE_LIMIT_ATTEMPTS = 6
+
+
+def _ask_with_retry(question: str) -> dict:
+    for attempt in range(RATE_LIMIT_ATTEMPTS):
+        try:
+            return _rag_chain.ask(question)
+        except groq.RateLimitError as exc:
+            if attempt == RATE_LIMIT_ATTEMPTS - 1:
+                raise
+            match = re.search(r"try again in ([0-9.]+)s", str(exc))
+            wait = float(match.group(1)) + 1 if match else 2 ** (attempt + 1)
+            print(f"         rate limited, retrying in {wait:.1f}s", flush=True)
+            time.sleep(wait)
+    raise AssertionError("unreachable")
 
 
 def _get_live_counts() -> dict:
@@ -249,7 +271,7 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
             total = len(golden_set)
             for i, qa in enumerate(golden_set, 1):
                 print(f"  [{i}/{total}] {qa['label']} ...", flush=True)
-                result = _rag_chain.ask(qa["question"])
+                result = _ask_with_retry(qa["question"])
                 src = "SQL" if result.get("data_source") == "SQL" else "RAG"
                 if result.get("data_source") == "SQL":
                     sql_count += 1
@@ -283,9 +305,16 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
             routing_accuracy = round(
                 sum(1 for pq in per_question if pq["routing_ok"]) / len(per_question), 3
             )
+            # avg_similarity above averages in SQL-routed answers, which carry no
+            # sources and count as 0, so it moves with routing, not retrieval.
+            # This one averages over RAG-routed answers only, the population the
+            # ADR-008 pin-on/pin-off comparison measured.
+            rag_sims = [pq["top_sim"] for pq in per_question if not pq["sql_routed"]]
+            rag_avg_sim = round(sum(rag_sims) / len(rag_sims), 3) if rag_sims else 0
 
             mlflow.log_metric("keyword_score", avg_score)
             mlflow.log_metric("avg_similarity", avg_sim)
+            mlflow.log_metric("rag_avg_similarity", rag_avg_sim)
             mlflow.log_metric("sql_routed_count", sql_count)
             mlflow.log_metric("routing_accuracy", routing_accuracy)
 

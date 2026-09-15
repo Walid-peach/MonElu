@@ -54,7 +54,7 @@ Production API: https://monelu-production.up.railway.app
 | Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
 | CI/CD | GitHub Actions (6 workflows) | See Workflows section |
 | Error tracking | Sentry (API + frontend) | Opt-in via `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` — no-ops when unset. See `docs/monitoring.md` |
-| Experiment tracking | MLflow (local) | router suite + retrieval suite eval (11 questions total) |
+| Experiment tracking | MLflow (local) | router suite + retrieval suite eval (17 questions total) · needs the dbt marts populated (ADR-038) |
 | IaC | Terraform ~> 5.0 (AWS, archived) | `archive/infra-aws/` — not applied, kept as reference |
 
 ---
@@ -161,7 +161,7 @@ SIGKILL stays uncatchable, so `staging_chunk_count()` and `/health`'s `rag_stagi
 - `chain/prompts.py`: TTL-cached system prompt (data horizon refreshed hourly) via `build_system_prompt()`. Call per request — do not cache the return value.
 - `chain/rag_chain.py`: `ask()` — retrieve → format → Groq `openai/gpt-oss-120b` (temperature=0.2). RAG-path answers to claim-shaped input carry `suggested_action: "verify"` (ADR-023): `detect_claim()` in `llm_router.py` (regex pre-filter + small classifier) only annotates the response for the UI nudge - it never calls the verify chain.
 - `chain/verify.py`: `verify_claim()` — claim verification (MON-126, ADR-022): deputy detection over all deputies, vote-chunk retrieval, positions join, structured JSON verdict (`vrai`/`faux`/`trompeur`/`inverifiable`). Cited vote_ids are validated against the votes table in code; low similarity, parse failure, or a factual verdict with no valid citation all force `inverifiable`.
-- `experiments/mlflow_eval.py`: 11 golden Q&A pairs split into router suite (live SQL ground truth) and retrieval suite (keyword scoring).
+- `experiments/mlflow_eval.py`: 17 golden Q&A pairs split into router suite (13, live SQL ground truth) and retrieval suite (4, keyword scoring). `keyword_score` is a substring match, so it penalises a correct answer that differs in typography or wording - read the per-question breakdown, not the average (ADR-038). The router suite queries `analytics_marts`, so run `dbt run` against the local DB first or `party_alignment` misroutes to RAG.
 - ~5,900 chunks in production (2026-07): 5,105 vote + 645 deputy + 12 party + 1 global_stats + 102 notable_deputy + 20 law_summary · party and global chunks count active mandates only
 
 **`frontend/`** - Next.js App Router
