@@ -67,12 +67,18 @@ class TestScriptGuard:
 
 
 class TestWorkflowPropagatesTheFailure:
-    def test_pipefail_is_set(self, summarize_step):
-        """Without pipefail the pipeline reports tee's status, so the script's
-        non-zero exit leaves the step green and the guard is inert."""
+    def test_the_pipeline_cannot_report_tees_exit_code(self, summarize_step):
+        """The summarizer is piped into tee, so its exit code survives only
+        under pipefail. `shell: bash` already implies `-eo pipefail`, and the
+        explicit `set -o pipefail` keeps that true if the shell line is ever
+        dropped - the default shell is `bash -e`, without pipefail. Either one
+        alone is enough; losing both silently restores GH #384."""
+        assert (
+            summarize_step.get("shell") == "bash" or "set -o pipefail" in summarize_step["run"]
+        ), "neither `shell: bash` nor an explicit `set -o pipefail` - tee's exit code would win"
         assert "set -o pipefail" in summarize_step["run"], (
-            "the summarizer is piped into tee; without pipefail its exit code is "
-            "discarded and GH #384 is back"
+            "the explicit set -o pipefail is gone; the step now depends entirely on "
+            "`shell: bash` implying it"
         )
 
     def test_summarizer_exit_code_is_propagated(self, summarize_step):

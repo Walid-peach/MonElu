@@ -64,14 +64,18 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          # pipefail is load-bearing (GH #384): without it the pipeline reports
-          # tee's exit code, so the summarizer's non-zero exit - the whole point
-          # of check_summary_yield - would leave this step green.
+          # Capturing the status is what is load-bearing here (GH #384), not
+          # pipefail: `shell: bash` already runs with -eo pipefail, so a bare
+          # failing pipeline would abort this step at the line above - before
+          # the greps - and generated/errors would never reach GITHUB_OUTPUT,
+          # leaving the job summary reporting 0/0 on exactly the runs that need
+          # the counts. So: capture, publish, then re-raise at the end.
+          # pipefail is still set explicitly so this keeps holding if the
+          # `shell: bash` line is ever dropped (the default shell is `bash -e`,
+          # without pipefail, and tee's exit code would then mask the failure).
           set -o pipefail
           status=0
           python -m scripts.generate_vote_summaries --since 2024-07-07 2>&1 | tee /tmp/summary_run.log || status=$?
-          # Parse and publish the counts before propagating the failure: the job
-          # summary below reads these outputs and must still describe a red run.
           generated=$(grep "Done —" /tmp/summary_run.log | grep -oP "generated: \K[0-9]+" || echo "0")
           errors=$(grep "Done —" /tmp/summary_run.log | grep -oP "errors: \K[0-9]+" || echo "0")
           echo "generated=$generated" >> "$GITHUB_OUTPUT"
