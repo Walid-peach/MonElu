@@ -103,10 +103,10 @@ def is_stub(objet: str | None, point_type: str | None = None) -> bool:
 
 
 def process_batch(client, batch: list[dict], dry_run: bool, conn, stats: dict) -> None:
-    try:
-        from rag.chain.prompts import SUMMARY_PROMPT, SUMMARY_PROMPT_PROCEDURAL
-    except ImportError:  # pragma: no cover - PYTHONPATH is set by run_ingestion_prod
-        raise
+    # Imported here, not at module scope, so the module stays importable (and
+    # unit-testable) without rag/ on the path - the same shape the vote
+    # generator uses.
+    from rag.chain.prompts import SUMMARY_PROMPT, SUMMARY_PROMPT_PROCEDURAL
 
     updates = []
     for item in batch:
@@ -118,7 +118,8 @@ def process_batch(client, batch: list[dict], dry_run: bool, conn, stats: dict) -
             stats["stubs"] += 1
             continue
 
-        if is_procedural(objet):
+        procedural = is_procedural(objet)
+        if procedural:
             system = SUMMARY_PROMPT_PROCEDURAL
             user_msg = f'Type de motion : {detect_motion_type(objet)}\nTitre : "{objet}"'
         else:
@@ -138,7 +139,7 @@ def process_batch(client, batch: list[dict], dry_run: bool, conn, stats: dict) -
 
         summary, theme = parsed
         if dry_run:
-            proc_flag = " [PROCEDURAL]" if is_procedural(objet) else ""
+            proc_flag = " [PROCEDURAL]" if procedural else ""
             log.info("[DRY-RUN]%s %s | theme=%s | %s", proc_flag, point_uid, theme, summary[:80])
         else:
             updates.append((summary, theme, point_uid))
