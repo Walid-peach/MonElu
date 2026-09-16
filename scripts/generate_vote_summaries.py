@@ -22,6 +22,7 @@ import psycopg2.extras
 from dotenv import load_dotenv
 
 try:
+    from scripts._cache_scope import write_changed_ids
     from scripts._summaries import (
         BATCH_SIZE,
         MODEL,
@@ -31,6 +32,7 @@ try:
         parse_response,
     )
 except ImportError:  # running as a plain file: python scripts/generate_vote_summaries.py
+    from _cache_scope import write_changed_ids
     from _summaries import (
         BATCH_SIZE,
         MODEL,
@@ -102,6 +104,13 @@ def process_batch(
             )
         conn.commit()
         log.info("Committed %d summaries", len(updates))
+        # Which scrutins to purge from the frontend cache (GH #353). Recorded
+        # here rather than rediscovered with a query because this UPDATE
+        # deliberately leaves `ingested_at` alone: that column means "the AN
+        # record changed", which is what the dbt staging layer and the change
+        # detection in run_ingestion_prod.py both read it as. A summary is our
+        # own text, not a new record from upstream.
+        stats.setdefault("summarized_vote_ids", []).extend(vote_id for _, _, vote_id in updates)
 
 
 def check_summary_yield(stats: dict) -> None:
@@ -146,6 +155,15 @@ def main() -> None:
         action="store_true",
         help="Print summaries without writing to DB.",
     )
+    parser.add_argument(
+        "--changed-ids-out",
+        default=os.getenv("MONELU_CHANGED_IDS_OUT"),
+        help=(
+            "Write the vote_ids that got a summary, one per line, for the caller's "
+            "cache-invalidation scope (GH #353). Written even when empty, so an "
+            "absent file means the run died rather than generated nothing."
+        ),
+    )
     args = parser.parse_args()
 
     groq_api_key = os.getenv("GROQ_API_KEY")
@@ -187,10 +205,11 @@ def main() -> None:
 
     if not rows:
         log.info("Nothing to do.")
+        write_changed_ids(args.changed_ids_out, [])
         conn.close()
         return
 
-    stats = {"generated": 0, "errors": 0}
+    stats: dict = {"generated": 0, "errors": 0, "summarized_vote_ids": []}
     total_batches = (len(rows) + BATCH_SIZE - 1) // BATCH_SIZE
 
     for i in range(0, len(rows), BATCH_SIZE):
@@ -202,6 +221,7 @@ def main() -> None:
             time.sleep(2.0)  # ~15 req/min conservative → avoids 429 cascade
 
     conn.close()
+    write_changed_ids(args.changed_ids_out, stats["summarized_vote_ids"])
     # The "Done —" line is what summarize_backfill.yml greps for its generated/
     # errors step outputs, so it must be logged before the guard can exit.
     log.info(

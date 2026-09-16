@@ -125,6 +125,19 @@ jobs:
         # Runs unconditionally so deputy/party profile fixes (update_party.py,
         # run inside run_ingestion_prod.py) also purge the cache, not just new-vote runs.
         #
+        # Since GH #353 the call carries a *scope*: the data families and the
+        # individual scrutins/deputies this run actually changed, which the
+        # endpoint turns into cache tags. A run that ingested nothing therefore
+        # purges nothing instead of regenerating every deputy, vote, group,
+        # department and theme page on the next crawl.
+        #
+        # `cache_scope` is empty whenever the ingestion step did not get far
+        # enough to publish one - a crash, a cancelled job, an older script
+        # revision. An empty body is exactly what the endpoint reads as the
+        # full, conservative purge, so every failure mode here over-purges.
+        # Never "fix" this by sending `{}` or by failing the step on an empty
+        # scope: that is the difference between a costly day and a stale one.
+        #
         # Still continue-on-error so a failure here cannot skip the dbt and
         # monitoring steps below - but the data-quality gate now re-fails the
         # job on it (GH #352). Since every ISR interval is a one-day fallback,
@@ -136,15 +149,36 @@ jobs:
         env:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          CACHE_SCOPE: ${{ steps.ingest.outputs.cache_scope }}
+          CACHE_SCOPE_SUMMARY: ${{ steps.ingest.outputs.cache_scope_summary }}
         run: |
           if [ -n "$FRONTEND_URL" ] && [ -n "$REVALIDATE_SECRET" ]; then
+            if [ -n "$CACHE_SCOPE" ]; then
+              echo "Cache scope: ${CACHE_SCOPE_SUMMARY:-$CACHE_SCOPE}"
+            else
+              echo "No cache scope published — falling back to a full purge."
+            fi
             # Retry first: the gate makes this fatal, so a transient blip must
             # not turn the daily run red on its own.
             curl -sf --retry 3 --retry-delay 10 --retry-all-errors \
               -X POST "$FRONTEND_URL/api/revalidate" \
               -H "x-revalidate-secret: $REVALIDATE_SECRET" \
-              -H "Content-Type: application/json"
+              -H "Content-Type: application/json" \
+              --data "$CACHE_SCOPE"
             echo "Frontend cache revalidated."
+            {
+              echo "## Cache invalidation"
+              echo ""
+              if [ -n "$CACHE_SCOPE" ]; then
+                echo "Scope: ${CACHE_SCOPE_SUMMARY:-$CACHE_SCOPE}"
+                echo ""
+                echo '```json'
+                echo "$CACHE_SCOPE"
+                echo '```'
+              else
+                echo "Scope: full purge (no scope published by the ingestion step)."
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "FRONTEND_URL or REVALIDATE_SECRET not set — skipping revalidation."
           fi

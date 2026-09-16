@@ -12,6 +12,7 @@ Usage:
 import argparse
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -23,8 +24,10 @@ from dotenv import load_dotenv
 from psycopg2 import sql
 
 try:
+    from scripts._cache_scope import CacheScope, changed_ids, publish_scope, read_changed_ids
     from scripts._http import download_with_retry
 except ImportError:  # running as a plain file: python scripts/run_ingestion_prod.py
+    from _cache_scope import CacheScope, changed_ids, publish_scope, read_changed_ids
     from _http import download_with_retry
 
 load_dotenv()
@@ -78,6 +81,18 @@ def row_count(conn, table: str) -> int:
         raise ValueError(f"Unknown table: {table!r}")
     with conn.cursor() as cur:
         cur.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table)))
+        return cur.fetchone()[0]
+
+
+def _now(conn):
+    """Server-side wall clock, so the change window is measured on the DB.
+
+    ``clock_timestamp()`` rather than ``NOW()``: ``NOW()`` is the *transaction*
+    start time, and this connection is held open for the whole pipeline, so it
+    would return a moment from before the run and mark every row changed.
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT clock_timestamp()")
         return cur.fetchone()[0]
 
 
@@ -138,8 +153,16 @@ def main() -> None:
 
     log.info("Advisory lock acquired (key=%d).", _INGESTION_LOCK_KEY)
     total_start = time.perf_counter()
+    # Read before any step writes, so `ingested_at >= run_started_at` is exactly
+    # "this run changed it" (GH #353). The upserts all carry an IS DISTINCT FROM
+    # guard, so an AN record republished unchanged is not in the window.
+    run_started_at = _now(lock_conn)
+    scope = CacheScope()
 
     soft_failures: list[str] = []
+    # Holds the summary generators' changed-id files. Not the `tmp_dir` below:
+    # that one closes after the ZIP-driven steps, and the generators run later.
+    ids_dir = tempfile.mkdtemp(prefix="monelu-ingest-")
 
     def _fmt(elapsed: float | None) -> str:
         return f"{elapsed:5.1f}s" if elapsed is not None else " skip "
@@ -192,6 +215,40 @@ def main() -> None:
         new_votes = n_votes - votes_before
         log.info("New votes ingested this run: %d", new_votes)
 
+        # What this run actually changed, for the targeted frontend purge
+        # (GH #353). Taken here rather than at the end so a summary write, which
+        # deliberately leaves `ingested_at` alone, cannot be mistaken for an
+        # upstream record change: the `votes` family carries the `health` tag,
+        # and the root layout reads `/health`, so claiming it purges every page
+        # on the site.
+        changed_votes = changed_ids(lock_conn, "votes", "vote_id", run_started_at)
+        changed_deputies = changed_ids(lock_conn, "deputies", "deputy_id", run_started_at)
+        changed_position_votes = changed_ids(lock_conn, "vote_positions", "vote_id", run_started_at)
+        changed_agenda = changed_ids(lock_conn, "agenda_items", "point_uid", run_started_at)
+
+        scope.add_votes(changed_votes)
+        scope.add_deputies(changed_deputies)
+        if changed_position_votes:
+            scope.add_family("positions")
+            # A corrected position changes the scrutin's own page without
+            # touching its row, so the vote ids ride along as entity tags.
+            scope.votes.update(changed_position_votes)
+        if changed_agenda:
+            scope.add_family("agenda")
+        if changed_votes or changed_deputies or changed_position_votes:
+            # `dbt run` rebuilds the marts unconditionally after this script, but
+            # the marts only *change* when their sources did.
+            scope.add_family("marts")
+
+        log.info(
+            "Changed this run — votes: %d, deputies: %d, scrutins with position "
+            "changes: %d, agenda items: %d",
+            len(changed_votes),
+            len(changed_deputies),
+            len(changed_position_votes),
+            len(changed_agenda),
+        )
+
         # Write new_votes as soon as it is known — a summaries failure below must
         # not lose this signal for downstream workflow steps.
         github_output = os.getenv("GITHUB_OUTPUT")
@@ -208,10 +265,11 @@ def main() -> None:
         # remove summarize_backfill.yml as "redundant" with this step. Non-critical: a
         # Groq/OpenAI outage here must not block the dbt run/RAG rebuild that follows
         # this script.
+        vote_summary_ids_path = os.path.join(ids_dir, "vote_summaries.txt")
         t_summaries = run_step(
             "Vote summaries",
             "generate_vote_summaries.py",
-            ["--since", args.since],
+            ["--since", args.since, "--changed-ids-out", vote_summary_ids_path],
             critical=False,
         )
         if t_summaries is None:
@@ -227,19 +285,32 @@ def main() -> None:
         # Unlike vote summaries there is no daily backfill workflow behind this
         # one: agenda items are only worth summarizing while they are still
         # upcoming, so a failure is retried by tomorrow's run or not at all.
+        agenda_summary_ids_path = os.path.join(ids_dir, "agenda_summaries.txt")
         t_agenda_summaries = run_step(
             "Agenda summaries",
             "generate_agenda_summaries.py",
+            ["--changed-ids-out", agenda_summary_ids_path],
             critical=False,
         )
         if t_agenda_summaries is None:
             soft_failures.append("Agenda summaries")
+
+        scope.add_summaries(read_changed_ids(vote_summary_ids_path))
+        if read_changed_ids(agenda_summary_ids_path):
+            scope.add_family("agenda")
 
         # soft_failures is only fully known once every non-critical step has run,
         # so it is written last, separately from new_votes above.
         if github_output:
             with open(github_output, "a") as f:
                 f.write(f"soft_failures={','.join(soft_failures)}\n")
+
+        # Published last: the revalidate step in ingest_prod.yml reads this and
+        # POSTs it as the request body. An unset variable there means an empty
+        # body, which the endpoint treats as the full, conservative purge - so
+        # every way this can go wrong over-purges rather than under-purges.
+        publish_scope(scope)
+        log.info("Cache invalidation scope: %s", scope.describe())
 
         total_elapsed = time.perf_counter() - total_start
 
@@ -268,6 +339,7 @@ def main() -> None:
         log.error("Ingestion failed — see above for details.")
         raise
     finally:
+        shutil.rmtree(ids_dir, ignore_errors=True)
         lock_conn.close()
 
 

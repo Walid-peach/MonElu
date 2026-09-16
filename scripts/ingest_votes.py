@@ -196,7 +196,25 @@ ON CONFLICT (vote_id) DO UPDATE SET
     abstentions   = EXCLUDED.abstentions,
     total_voters  = EXCLUDED.total_voters,
     dossier_id    = EXCLUDED.dossier_id,
-    ingested_at   = NOW();
+    ingested_at   = NOW()
+-- Skip rows the AN republished unchanged (GH #353). Two reasons:
+--   1. `ingested_at` becomes a true "this record changed" marker, which is how
+--      run_ingestion_prod.py builds the cache-invalidation scope it hands to
+--      the frontend. Without this guard every daily run reports all ~5 100
+--      scrutins as changed and the targeted purge degrades to the blanket one.
+--   2. It stops rewriting the whole table every morning, which on a Supabase
+--      free tier is dead tuples and autovacuum for no new data.
+-- `ingested_at` is excluded from the comparison on purpose: it is set to NOW()
+-- on every write, so including it would make every row differ from itself.
+WHERE (
+    votes.voted_at, votes.vote_title, votes.vote_type, votes.result,
+    votes.votes_for, votes.votes_against, votes.abstentions,
+    votes.total_voters, votes.dossier_id
+) IS DISTINCT FROM (
+    EXCLUDED.voted_at, EXCLUDED.vote_title, EXCLUDED.vote_type, EXCLUDED.result,
+    EXCLUDED.votes_for, EXCLUDED.votes_against, EXCLUDED.abstentions,
+    EXCLUDED.total_voters, EXCLUDED.dossier_id
+);
 """
 
 

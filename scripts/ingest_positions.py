@@ -128,7 +128,10 @@ INSERT INTO vote_positions (vote_id, deputy_id, position, ingested_at)
 VALUES (%(vote_id)s, %(deputy_id)s, %(position)s, NOW())
 ON CONFLICT (vote_id, deputy_id) DO UPDATE SET
     position    = EXCLUDED.position,
-    ingested_at = NOW();
+    ingested_at = NOW()
+-- Same change guard as ingest_votes.py (GH #353), and the one that matters most
+-- for table churn: without it every run rewrites all ~715 000 position rows.
+WHERE vote_positions.position IS DISTINCT FROM EXCLUDED.position;
 """
 
 

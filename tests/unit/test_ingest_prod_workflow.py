@@ -132,3 +132,38 @@ def test_soft_failure_report_survives_a_red_gate(steps):
     2026-07 organeRef incident showed is needed."""
     for name in ("Notify soft failures", "Email soft-failure alert"):
         assert "cancelled()" in str(steps[_index_of(steps, name)]["if"])
+
+
+# ---------------------------------------------------------------------------
+# Scoped cache invalidation (GH #353)
+# ---------------------------------------------------------------------------
+
+
+def test_revalidate_posts_the_published_cache_scope(steps: list[dict]) -> None:
+    """The purge must carry the run's change manifest, not an empty request.
+
+    Without `--data "$CACHE_SCOPE"` the endpoint falls back to the full purge,
+    which is safe but is exactly the cost GH #353 removes - and nothing else in
+    the pipeline would report the regression.
+    """
+    step = steps[_index_of(steps, "Revalidate frontend cache")]
+    assert step["env"]["CACHE_SCOPE"] == "${{ steps.ingest.outputs.cache_scope }}"
+    assert '--data "$CACHE_SCOPE"' in step["run"]
+
+
+def test_revalidate_reports_the_scope_in_the_job_summary(steps: list[dict]) -> None:
+    """A purge nobody can see the shape of is a purge nobody can debug."""
+    step = steps[_index_of(steps, "Revalidate frontend cache")]
+    assert "GITHUB_STEP_SUMMARY" in step["run"]
+    assert "Cache invalidation" in step["run"]
+
+
+def test_revalidate_never_substitutes_an_empty_targeted_scope(steps: list[dict]) -> None:
+    """An unpublished scope must send nothing, which the endpoint reads as "purge all".
+
+    Sending `{}` or `{"families":[]}` on a crashed run would purge *nothing* and
+    leave the site a day stale with a green workflow.
+    """
+    run = steps[_index_of(steps, "Revalidate frontend cache")]["run"]
+    assert '--data "{}"' not in run
+    assert '"families":[]' not in run

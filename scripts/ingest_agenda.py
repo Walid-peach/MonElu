@@ -325,7 +325,29 @@ ON CONFLICT (point_uid) DO UPDATE SET
     theme           = CASE
                         WHEN agenda_items.objet_hash IS DISTINCT FROM EXCLUDED.objet_hash
                         THEN NULL ELSE agenda_items.theme END,
-    last_seen_at    = NOW();
+    last_seen_at    = NOW(),
+    -- `last_seen_at` has to be stamped on every run (visibility depends on it -
+    -- ADR-030), so this upsert cannot skip unchanged rows the way the other
+    -- three do. It moves `ingested_at` conditionally instead, which gives
+    -- run_ingestion_prod.py the same "this record really changed" signal for
+    -- the cache-invalidation scope (GH #353).
+    ingested_at     = CASE WHEN (
+                          agenda_items.reunion_uid, agenda_items.sitting_start,
+                          agenda_items.sitting_end, agenda_items.objet,
+                          agenda_items.point_type, agenda_items.travaux_nature,
+                          agenda_items.procedure_label, agenda_items.dossier_id,
+                          agenda_items.reunion_etat, agenda_items.point_etat,
+                          agenda_items.published_at, agenda_items.cancelled_at,
+                          agenda_items.objet_hash
+                        ) IS DISTINCT FROM (
+                          EXCLUDED.reunion_uid, EXCLUDED.sitting_start,
+                          EXCLUDED.sitting_end, EXCLUDED.objet,
+                          EXCLUDED.point_type, EXCLUDED.travaux_nature,
+                          EXCLUDED.procedure_label, EXCLUDED.dossier_id,
+                          EXCLUDED.reunion_etat, EXCLUDED.point_etat,
+                          EXCLUDED.published_at, EXCLUDED.cancelled_at,
+                          EXCLUDED.objet_hash
+                        ) THEN NOW() ELSE agenda_items.ingested_at END;
 """
 
 

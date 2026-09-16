@@ -70,7 +70,17 @@ fails silently and identically every run until someone looks. The `curl`
 retries three times first, so a red job here means the endpoint is genuinely
 unreachable, not that one request blipped.
 The same step in `summarize_backfill.yml` stays warning-only: that workflow is
-a retry backstop, and the next ingestion run purges the cache anyway.
+a retry backstop, and a missed summary corrects itself within the one-day
+fallback.
+Note that since GH #353 the next ingestion run no longer covers for it: both
+calls are *scoped* now, so an ingestion run that generated no summaries of its
+own does not purge the summary caches.
+
+Both revalidation steps print the scope they sent to the job summary — the data
+families, and the number of scrutins and deputies named. A run whose scope reads
+"nothing changed" purged nothing, which is the expected shape of a recess
+weekday, not a fault. A run that reports a full purge did not manage to publish
+a scope, which is the safe fallback but is worth looking at if it repeats.
 
 ### Summary backfill generating nothing (GH #384)
 

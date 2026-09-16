@@ -189,7 +189,25 @@ ON CONFLICT (deputy_id) DO UPDATE SET
     mandate_start   = EXCLUDED.mandate_start,
     mandate_end     = EXCLUDED.mandate_end,
     photo_url       = EXCLUDED.photo_url,
-    ingested_at     = NOW();
+    ingested_at     = NOW()
+-- Same change guard as ingest_votes.py (GH #353): `ingested_at` only moves when
+-- the record really moved, so run_ingestion_prod.py can name the deputies whose
+-- pages need purging instead of purging all 577.
+-- The party columns are compared against the same COALESCE expressions the SET
+-- clause writes, not against raw EXCLUDED - AMO10 always supplies NULL there, so
+-- a raw comparison would mark every deputy changed on every run.
+WHERE (
+    deputies.full_name, deputies.first_name, deputies.last_name,
+    deputies.party, deputies.party_short, deputies.circonscription,
+    deputies.department, deputies.mandate_start, deputies.mandate_end,
+    deputies.photo_url
+) IS DISTINCT FROM (
+    EXCLUDED.full_name, EXCLUDED.first_name, EXCLUDED.last_name,
+    COALESCE(EXCLUDED.party, deputies.party),
+    COALESCE(EXCLUDED.party_short, deputies.party_short),
+    EXCLUDED.circonscription, EXCLUDED.department, EXCLUDED.mandate_start,
+    EXCLUDED.mandate_end, EXCLUDED.photo_url
+);
 """
 
 

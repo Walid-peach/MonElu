@@ -1314,6 +1314,53 @@ Either invalidates this comparison and needs a fresh sweep against the numbers a
 
 ---
 
+## ADR-039 - Cache invalidation is scoped by data family, and `health` rides on `votes` alone (#353)
+
+**Date:** 2026-09-17
+**Status:** Final
+**Related:** #352 (one-day ISR fallbacks), #354 (the freshness badge's site-wide floor), MON-275 (build-time generation, 135 pages to 25), MON-240 (the route families the webhook covers)
+
+**Decision:** `POST /api/revalidate` accepts an optional scope payload naming the data families, scrutins and deputies a run changed, and invalidates only the Next.js cache tags those map to.
+A request with **no body** keeps the previous behaviour - every route family purged by path, every family tag invalidated - and is the fallback for anything unrecognised.
+Ingestion builds that payload from `ingested_at`, which every upsert in `scripts/` now guards with an `IS DISTINCT FROM` comparison so a record the AN republished unchanged does not move it.
+The `health` tag belongs to the `votes` family and to no other.
+
+**Reason:**
+
+#352 and #354 attacked ISR write volume from the timer side and left the runtime side untouched: the weekday ingestion workflow purged every route family unconditionally, and the daily summary backfill did the same whenever it generated a single sentence.
+A quiet recess weekday and a sitting day therefore cost the same - every deputy, vote, group, department and theme page regenerated on the next crawl.
+The Aug 5 to Sep 4 window reached 460 903 ISR Write Units against a Hobby allowance of 200 000.
+
+A path purge cannot express "only this changed" for a dynamic family: `revalidatePath('/deputes/[id]', 'layout')` is all 577 pages or none.
+A tag can, because it names the data a cache entry read rather than the URL it was served at, and Next.js invalidates both the data-cache entry and every rendered route that consumed it.
+
+**The constraint that shapes the whole design:** a route's cache entry depends on the union of the tags of every fetch its render touched, *including the fetches in its layouts*.
+`FreshnessBadge` renders from the root layout, so `revalidateTag('health')` invalidates every page on the site - the same coupling #354 found on the timer axis, on the tag axis.
+The blanket purge was therefore not merely path-based; it was also unconditionally purging the whole site through that one tag.
+`/health` reports `last_ingestion` as `MAX(voted_at)`, which moves only when a new scrutin lands, so `health` is attached to the `votes` family and nothing else.
+A new scrutin still purges the whole site, which is correct - the badge's date really did change on every page.
+A retried summary no longer does.
+
+**What the guards buy beyond the scope:** `ingested_at` was previously rewritten on every upsert, so it said "this row was seen", not "this row changed", and no scope could be derived from it.
+Guarding each `DO UPDATE` also stops rewriting ~5 100 vote rows and ~715 000 position rows every morning, which on the free tier is dead tuples and autovacuum for no new data.
+`ingest_agenda.py` is the exception in form only: `last_seen_at` has to be stamped on every run (ADR-030), so it moves `ingested_at` through a `CASE` instead of skipping the row.
+
+**The asymmetry that makes this safe:** an unset workflow variable, a crashed manifest query, an older script revision and a manual `curl` all send no body, and no body is the full purge.
+Every way of getting this wrong over-purges - a costly day - rather than under-purging, which is a silently stale day.
+Never "fix" an empty scope into `{}` or `{"families":[]}` in a workflow: those are valid *targeted* payloads that purge nothing.
+
+**Accepted gap:** `/deputes/[id]` renders each recent vote's `summary_plain`, but `deputies.votes()` carries no summary tag, so a summary retried by `summarize_backfill.yml` reaches the deputy timeline on the next ingestion run or within the one-day fallback, whichever comes first.
+Tagging it would mean one retried sentence purges all 577 deputy pages, which is the cost this ADR exists to remove.
+The vote's own page, the vote lists and the theme pages all carry the tag and update immediately.
+
+**Rejected:** moving the freshness badge to a client fetch so `health` stops being a layout dependency.
+It buys back the full-site purge on sitting days, but costs a request per page view against an API rate-limited at 30 req/min and a badge that pops in above the fold after hydration.
+Revisit only if sitting-day purges become the dominant write driver.
+
+**Trigger to revisit:** a second fetch added to the root layout (it inherits the site-wide blast radius and needs the same treatment), or a measured window where the remaining volume is still over the allowance.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1338,3 +1385,4 @@ Either invalidates this comparison and needs a fresh sweep against the numbers a
 20. The share-snapshot pages `/chat/s/*`, `/verifier/v/*` and `/quiz/s/*` are `noindex`, not merely absent from the sitemap (ADR-036, MON-264) - never add them to `sitemap.ts`, never drop the `robots: { index: false }` from their `generateMetadata` (including its early-return path), and never add `ClaimReview`/`QAPage` or other rich-result markup to them; MON-263 is closed as won't-do under this ADR, and the trigger to reopen is a real moderation operator, not share volume
 21. The RAG index has exactly one build mode - a full rebuild into `document_chunks_staging`, swapped in at the end (ADR-037, MON-233/MON-256) - never reintroduce `--since` or any path that writes to the live `document_chunks`; a build that does not complete the swap must drop the staging table on every exit path, and `/health`'s `rag_staging_chunks` must stay informational rather than feeding `status`
 22. gpt-oss keeps the prompts written for Llama, and `keyword_score` is a smoke test rather than a quality score (ADR-038, #386/#351) - the 2026-09-13 sweep found no regression (routing 0.824 to 1.000, retrieval similarity 0.642), so do not retune prompts or fixtures on the strength of an eval average; read the per-question breakdown first, and populate the dbt marts before running the eval or the router suite will misroute `party_alignment` and look like a model fault
+23. Cache invalidation is scoped, and over-purges on doubt (ADR-039, #353) - `/api/revalidate` with no body is the full purge and must stay the fallback for anything unrecognised; never make a workflow send `{}` or `{"families":[]}` when it failed to build a scope, never attach the `health` tag to a family other than `votes` (the root layout reads `/health`, so it purges the whole site), and never drop the `IS DISTINCT FROM` guard from an upsert in `scripts/` - `ingested_at` is what the scope is derived from
