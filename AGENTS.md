@@ -9,11 +9,11 @@ This file provides guidance to Codex when working with code in this repository.
 ## Issue workflow
 
 GitHub Issues in `Walid-peach/MonElu` is the active backlog. Use `/solve-issue`,
-`/top-issues`, `/plan-epic`, and `/diagnose`; `/solve-mon` is a compatibility alias
-for migrated identifiers. Read the [shared backlog conventions](.agents/skills/solve-issue/references/github-issues.md)
+`/top-issues`, `/plan-epic`, and `/diagnose`.
+Read the [shared backlog conventions](.agents/skills/solve-issue/references/github-issues.md)
 before selecting or updating issues. Linear links are historical references, not a writable tracker.
 
-The five shared workflow skills and their `solve-issue/references/` resources are mirrored
+The four shared workflow skills and their `solve-issue/references/` resources are mirrored
 between `.agents/skills/` and `.claude/skills/`; update both when changing common behavior.
 Preserve Claude-specific presentation instructions in `plan-epic`.
 

@@ -9,13 +9,13 @@ This file provides guidance to Claude Code when working with code in this reposi
 ## Issue workflow
 
 GitHub Issues in `Walid-peach/MonElu` is the active backlog. Use `/solve-issue`,
-`/top-issues`, `/plan-epic`, and `/diagnose`; `/solve-mon` resolves migrated identifiers.
+`/top-issues`, `/plan-epic`, and `/diagnose`.
 Use `/po-agent sync` explicitly to reconcile GitHub issues after merge, `/po-agent detect`
 for read-only matching, or `/po-agent fill` to draft and create backlog items.
 Read the [shared backlog conventions](.claude/skills/solve-issue/references/github-issues.md)
 before selecting or updating issues. Linear links are historical references, not a writable tracker.
 
-The five shared workflow skills and their `solve-issue/references/` resources are mirrored
+The four shared workflow skills and their `solve-issue/references/` resources are mirrored
 between `.agents/skills/` and `.claude/skills/`; update both when changing common behavior.
 Preserve Claude-specific presentation instructions in `plan-epic`.
 
