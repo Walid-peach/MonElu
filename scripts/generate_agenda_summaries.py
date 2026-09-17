@@ -39,6 +39,7 @@ import psycopg2.extras
 from dotenv import load_dotenv
 
 try:
+    from scripts._cache_scope import write_changed_ids
     from scripts._http import connect_with_retry
     from scripts._summaries import (
         BATCH_SIZE,
@@ -48,6 +49,7 @@ try:
         parse_response,
     )
 except ImportError:  # running as a plain file: python scripts/generate_agenda_summaries.py
+    from _cache_scope import write_changed_ids
     from _http import connect_with_retry
     from _summaries import (
         BATCH_SIZE,
@@ -102,7 +104,14 @@ def is_stub(objet: str | None, point_type: str | None = None) -> bool:
     return len(text) <= STUB_OBJET_MAX_LEN
 
 
-def process_batch(client, batch: list[dict], dry_run: bool, conn, stats: dict) -> None:
+def process_batch(
+    client,
+    batch: list[dict],
+    dry_run: bool,
+    conn,
+    stats: dict,
+    changed_ids_out: str | None = None,
+) -> None:
     # Imported here, not at module scope, so the module stays importable (and
     # unit-testable) without rag/ on the path - the same shape the vote
     # generator uses.
@@ -154,6 +163,13 @@ def process_batch(client, batch: list[dict], dry_run: bool, conn, stats: dict) -
             )
         conn.commit()
         log.info("Committed %d summaries", len(updates))
+        # Same contract as generate_vote_summaries.py (GH #353): record the rows
+        # written so the caller can purge only /agenda, and leave `ingested_at`
+        # to mean "the AN record changed".
+        stats.setdefault("summarized_point_uids", []).extend(uid for _, _, uid in updates)
+        # After every committed batch, for the same reason as the vote
+        # generator: a crash mid-sweep must not lose what was already written.
+        write_changed_ids(changed_ids_out, stats["summarized_point_uids"])
 
 
 def main() -> None:
@@ -170,6 +186,15 @@ def main() -> None:
         "--dry-run",
         action="store_true",
         help="Print summaries without writing to DB.",
+    )
+    parser.add_argument(
+        "--changed-ids-out",
+        default=os.getenv("MONELU_CHANGED_IDS_OUT"),
+        help=(
+            "Write the point_uids that got a one-liner, one per line, for the "
+            "caller's cache-invalidation scope (GH #353). Rewritten after every "
+            "committed batch so a crash mid-sweep still reports what was written."
+        ),
     )
     args = parser.parse_args()
 
@@ -203,21 +228,23 @@ def main() -> None:
 
     if not rows:
         log.info("Nothing to do.")
+        write_changed_ids(args.changed_ids_out, [])
         conn.close()
         return
 
-    stats = {"generated": 0, "errors": 0, "stubs": 0}
+    stats: dict = {"generated": 0, "errors": 0, "stubs": 0, "summarized_point_uids": []}
     total_batches = (len(rows) + BATCH_SIZE - 1) // BATCH_SIZE
 
     for i in range(0, len(rows), BATCH_SIZE):
         batch = rows[i : i + BATCH_SIZE]
         batch_num = i // BATCH_SIZE + 1
         log.info("Batch %d/%d (%d items)…", batch_num, total_batches, len(batch))
-        process_batch(client, batch, args.dry_run, conn, stats)
+        process_batch(client, batch, args.dry_run, conn, stats, args.changed_ids_out)
         if i + BATCH_SIZE < len(rows):
             time.sleep(2.0)  # ~15 req/min conservative → avoids 429 cascade
 
     conn.close()
+    write_changed_ids(args.changed_ids_out, stats["summarized_point_uids"])
     log.info(
         "Done — generated: %d, stubs skipped: %d, errors: %d (will retry on next run)",
         stats["generated"],

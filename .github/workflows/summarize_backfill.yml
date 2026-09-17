@@ -75,7 +75,8 @@ jobs:
           # without pipefail, and tee's exit code would then mask the failure).
           set -o pipefail
           status=0
-          python -m scripts.generate_vote_summaries --since 2024-07-07 2>&1 | tee /tmp/summary_run.log || status=$?
+          python -m scripts.generate_vote_summaries --since 2024-07-07 \
+            --changed-ids-out /tmp/summarized_vote_ids.txt 2>&1 | tee /tmp/summary_run.log || status=$?
           generated=$(grep "Done —" /tmp/summary_run.log | grep -oP "generated: \K[0-9]+" || echo "0")
           errors=$(grep "Done —" /tmp/summary_run.log | grep -oP "errors: \K[0-9]+" || echo "0")
           echo "generated=$generated" >> "$GITHUB_OUTPUT"
@@ -92,6 +93,17 @@ jobs:
 
       - name: Revalidate frontend cache
         # Runs when summaries were generated so vote cards show updated summary_plain immediately.
+        #
+        # Scoped since GH #353. This job only ever rewrites `summary_plain` /
+        # `theme` on the handful of votes whose generation failed earlier, so it
+        # sends the `summaries` family plus those vote ids. It must not send the
+        # `votes` family: that one carries the `health` tag, which the root
+        # layout's freshness badge reads, so it would purge every page on the
+        # site for one retried sentence - and `last_ingestion` (MAX(voted_at))
+        # has not moved anyway.
+        #
+        # Deputy pages are deliberately not purged here either; see the
+        # "deliberate gap" note in frontend/src/lib/cacheTags.ts.
         if: steps.summarize.outputs.generated != '0' && steps.summarize.outputs.generated != ''
         id: revalidate
         continue-on-error: true
@@ -100,11 +112,22 @@ jobs:
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
         run: |
           if [ -n "$FRONTEND_URL" ] && [ -n "$REVALIDATE_SECRET" ]; then
+            # An unreadable or missing id file yields an empty body, which the
+            # endpoint reads as the full conservative purge - the same
+            # over-purge-on-doubt rule ingest_prod.yml follows.
+            scope=$(python -m scripts.build_summary_scope /tmp/summarized_vote_ids.txt || echo "")
+            echo "Cache scope: ${scope:-full purge}"
             curl -sf --retry 3 --retry-delay 10 --retry-all-errors \
               -X POST "$FRONTEND_URL/api/revalidate" \
               -H "x-revalidate-secret: $REVALIDATE_SECRET" \
-              -H "Content-Type: application/json"
+              -H "Content-Type: application/json" \
+              --data "$scope"
             echo "Frontend cache revalidated."
+            {
+              echo "## Cache invalidation"
+              echo ""
+              echo "Scope: ${scope:-full purge (no id file)}"
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "FRONTEND_URL or REVALIDATE_SECRET not set — skipping revalidation."
           fi

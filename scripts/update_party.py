@@ -43,13 +43,25 @@ def update_parties(conn, deputy_map: dict[str, str]) -> None:
     # keys the frontend's partyHex()/partyShort() already use, instead of
     # depending on a separately-resolved string that could drift.
     print(f"\nUpdating party for {len(deputy_map)} deputies …")
+    #
+    # The IS DISTINCT FROM guard and the changed_at bump are what make a party
+    # change visible to the cache-invalidation scope (GH #353): this step runs
+    # after ingest_deputies.py, which never writes a party label, so without the
+    # bump a deputy who switched groups would not appear in the changed set and
+    # their page would keep serving the old group for up to a day. The guard is
+    # the other half - it keeps the normal no-change run from marking all 577.
+    # `ingested_at` is deliberately untouched (as it always was here): it is
+    # dbt's source-freshness field, and ingest_deputies.py has already stamped
+    # it for this run.
     rows = [
-        (party, CANONICAL_SHORT_LABELS[party], deputy_id) for deputy_id, party in deputy_map.items()
+        (party, CANONICAL_SHORT_LABELS[party], deputy_id, party, CANONICAL_SHORT_LABELS[party])
+        for deputy_id, party in deputy_map.items()
     ]
     with conn.cursor() as cur:
         psycopg2.extras.execute_batch(
             cur,
-            "UPDATE deputies SET party = %s, party_short = %s WHERE deputy_id = %s",
+            "UPDATE deputies SET party = %s, party_short = %s, changed_at = NOW() "
+            "WHERE deputy_id = %s AND (party, party_short) IS DISTINCT FROM (%s, %s)",
             rows,
             page_size=200,
         )
@@ -80,13 +92,17 @@ def update_departments(conn) -> None:
         code = (d["department"] or "").strip()
         full_name = DEPT_NAMES.get(code)
         if full_name:
-            to_update.append((full_name, d["deputy_id"]))
+            to_update.append((full_name, d["deputy_id"], full_name))
 
     print(f"\nUpdating department names for {len(to_update)} deputies …")
+    # Same guard + changed_at bump as update_parties above (GH #353). This step
+    # is a no-op in the normal case, so without the guard it would be a no-op
+    # that still reported every matched deputy as changed.
     with conn.cursor() as cur:
         psycopg2.extras.execute_batch(
             cur,
-            "UPDATE deputies SET department = %s WHERE deputy_id = %s",
+            "UPDATE deputies SET department = %s, changed_at = NOW() "
+            "WHERE deputy_id = %s AND department IS DISTINCT FROM %s",
             to_update,
             page_size=200,
         )

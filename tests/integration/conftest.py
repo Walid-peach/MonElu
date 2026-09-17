@@ -40,6 +40,10 @@ MIGRATIONS = [
     Path(__file__).parents[2] / "data" / "migrations" / "002_vote_summaries.sql",
     Path(__file__).parents[2] / "data" / "migrations" / "003_schema_cleanup.sql",
     Path(__file__).parents[2] / "data" / "migrations" / "009_agenda.sql",
+    # Adds `changed_at` to the four ingested tables (GH #353). Required by every
+    # upsert in scripts/, so test_change_tracking.py and test_upsert.py both
+    # fail without it.
+    Path(__file__).parents[2] / "data" / "migrations" / "011_changed_at.sql",
 ]
 
 # Minimal mart stub DDL — mirrors the columns read by api/routers/deputies.py

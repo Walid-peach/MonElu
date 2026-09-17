@@ -168,11 +168,11 @@ UPSERT_SQL = """
 INSERT INTO deputies (
     deputy_id, full_name, first_name, last_name,
     party, party_short, circonscription, department,
-    mandate_start, mandate_end, photo_url, ingested_at
+    mandate_start, mandate_end, photo_url, ingested_at, changed_at
 ) VALUES (
     %(deputy_id)s, %(full_name)s, %(first_name)s, %(last_name)s,
     %(party)s, %(party_short)s, %(circonscription)s, %(department)s,
-    %(mandate_start)s, %(mandate_end)s, %(photo_url)s, NOW()
+    %(mandate_start)s, %(mandate_end)s, %(photo_url)s, NOW(), NOW()
 )
 ON CONFLICT (deputy_id) DO UPDATE SET
     full_name       = EXCLUDED.full_name,
@@ -189,7 +189,27 @@ ON CONFLICT (deputy_id) DO UPDATE SET
     mandate_start   = EXCLUDED.mandate_start,
     mandate_end     = EXCLUDED.mandate_end,
     photo_url       = EXCLUDED.photo_url,
-    ingested_at     = NOW();
+    ingested_at     = NOW(),
+    -- This row in particular must keep writing `ingested_at` on every run:
+    -- all 577 deputies are re-upserted whether the AN changed anything or not,
+    -- which is exactly why sources.yml makes this the "cron silently died"
+    -- detector at error_after 7 days. `changed_at` carries the change signal
+    -- instead (GH #353, migration 011) - see ingest_votes.py for the full note.
+    -- The party columns are compared against the same COALESCE expressions the
+    -- SET clause writes, not against raw EXCLUDED: AMO10 always supplies NULL
+    -- there, so a raw comparison would mark every deputy changed on every run.
+    changed_at      = CASE WHEN (
+                          deputies.full_name, deputies.first_name, deputies.last_name,
+                          deputies.party, deputies.party_short, deputies.circonscription,
+                          deputies.department, deputies.mandate_start, deputies.mandate_end,
+                          deputies.photo_url
+                        ) IS DISTINCT FROM (
+                          EXCLUDED.full_name, EXCLUDED.first_name, EXCLUDED.last_name,
+                          COALESCE(EXCLUDED.party, deputies.party),
+                          COALESCE(EXCLUDED.party_short, deputies.party_short),
+                          EXCLUDED.circonscription, EXCLUDED.department,
+                          EXCLUDED.mandate_start, EXCLUDED.mandate_end, EXCLUDED.photo_url
+                        ) THEN NOW() ELSE deputies.changed_at END;
 """
 
 

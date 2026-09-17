@@ -124,11 +124,17 @@ def fetch_scrutin_zip(zip_path: str | None = None) -> bytes:
 # ---------------------------------------------------------------------------
 
 UPSERT_SQL = """
-INSERT INTO vote_positions (vote_id, deputy_id, position, ingested_at)
-VALUES (%(vote_id)s, %(deputy_id)s, %(position)s, NOW())
+INSERT INTO vote_positions (vote_id, deputy_id, position, ingested_at, changed_at)
+VALUES (%(vote_id)s, %(deputy_id)s, %(position)s, NOW(), NOW())
 ON CONFLICT (vote_id, deputy_id) DO UPDATE SET
     position    = EXCLUDED.position,
-    ingested_at = NOW();
+    ingested_at = NOW(),
+    -- `changed_at` only, never a `WHERE` that skips the row: `ingested_at` is
+    -- dbt's source-freshness field here too (GH #353, migration 011 - see
+    -- ingest_votes.py for the full note).
+    changed_at  = CASE
+                    WHEN vote_positions.position IS DISTINCT FROM EXCLUDED.position
+                    THEN NOW() ELSE vote_positions.changed_at END;
 """
 
 

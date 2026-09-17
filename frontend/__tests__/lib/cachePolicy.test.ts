@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 
 import { DAILY_REVALIDATE_SECONDS, WINDOWED_REVALIDATE_SECONDS } from '@/lib/cachePolicy'
-import { HEALTH_REVALIDATE_SECONDS } from '@/lib/cacheTags'
+import { HEALTH_REVALIDATE_SECONDS, HEALTH_TAG, SCOPE_FAMILY_TAGS } from '@/lib/cacheTags'
 
 const SRC = join(__dirname, '..', '..', 'src')
 const APP = join(SRC, 'app')
@@ -42,10 +42,14 @@ function routePath(file: string): string {
   return `/${segments.join('/')}`.replace(/\/$/, '') || '/'
 }
 
-/** Every `revalidatePath(path, scope?)` call in the webhook. */
+/**
+ * Every path the webhook's full purge covers, read from the table it iterates
+ * (`['/deputes/[id]', 'layout']`) rather than from a run of calls.
+ */
 function purgeCalls(): Array<{ path: string; scope: string | null }> {
   const route = readFileSync(join(APP, 'api', 'revalidate', 'route.ts'), 'utf8')
-  return [...route.matchAll(/revalidatePath\('([^']+)'(?:,\s*'(\w+)')?\)/g)].map((m) => ({
+  const table = route.split('const paths:')[1]?.split('\n  ]')[0] ?? ''
+  return [...table.matchAll(/\['([^']+)'(?:,\s*'(\w+)')?\]/g)].map((m) => ({
     path: m[1],
     scope: m[2] ?? null,
   }))
@@ -138,6 +142,44 @@ describe('ISR fallback policy (GH #352)', () => {
       (path) => !(path in UNPURGED_ROUTES) && !isPurged(path, calls)
     )
     expect(uncovered).toEqual([])
+  })
+
+  /**
+   * GH #353: the timers above are the fallback and `/api/revalidate` is the
+   * refresh mechanism, but since that purge became *targeted* it reaches a
+   * cache entry only through the tags its fetches declared. An untagged fetch
+   * is therefore invisible to ingestion: it serves whatever it cached until the
+   * one-day fallback expires, with nothing reporting it.
+   */
+  it('tags every API fetch that reads ingestion-refreshed data', () => {
+    // The `api` object only - not the two `apiFetch` definitions above it.
+    const api = readFileSync(join(SRC, 'lib', 'api.ts'), 'utf8').split('export const api = {')[1]
+    // Immutable snapshots (ADR-022, ADR-024, ADR-025) are written once and are
+    // precisely the routes ingestion must never purge, so they carry no tag.
+    const UNTAGGED_PATHS = ['/verify/', '/search/share/', '/quiz/share/']
+
+    // Each fetch call, from its opening paren to the start of the next one.
+    const starts = [...api.matchAll(/\bapiFetch(?:Optional)?</g)].map((m) => m.index ?? 0)
+    expect(starts.length).toBeGreaterThan(10)
+    const offenders = starts
+      .map((start, i) => api.slice(start, starts[i + 1] ?? api.length))
+      .filter((call) => !UNTAGGED_PATHS.some((path) => call.includes(path)))
+      .filter((call) => !/tags:\s*\[/.test(call))
+      .map((call) => call.split('\n')[0].trim())
+    expect(offenders).toEqual([])
+  })
+
+  /**
+   * The root layout renders `FreshnessBadge`, and a route's cache entry depends
+   * on the union of the tags of every fetch its render touched - layouts
+   * included. So `health` invalidates the entire site, and it may only ride on
+   * the one family whose data actually moves it (`MAX(voted_at)`).
+   */
+  it('keeps the health tag on the votes scope alone', () => {
+    const owners = Object.entries(SCOPE_FAMILY_TAGS)
+      .filter(([, tags]) => tags.includes(HEALTH_TAG))
+      .map(([family]) => family)
+    expect(owners).toEqual(['votes'])
   })
 
   it('keeps the exemption list honest', () => {

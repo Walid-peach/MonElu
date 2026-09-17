@@ -1,5 +1,16 @@
 import { DAILY_REVALIDATE_SECONDS, WINDOWED_REVALIDATE_SECONDS } from '@/lib/cachePolicy'
-import { HEALTH_REVALIDATE_SECONDS, HEALTH_TAG } from '@/lib/cacheTags'
+import {
+  AGENDA_TAG,
+  DEPUTIES_TAG,
+  HEALTH_REVALIDATE_SECONDS,
+  HEALTH_TAG,
+  MARTS_TAG,
+  POSITIONS_TAG,
+  VOTES_TAG,
+  VOTE_SUMMARIES_TAG,
+  deputyTag,
+  voteTag,
+} from '@/lib/cacheTags'
 
 /**
  * Origin of the MonÉlu REST API.
@@ -568,41 +579,74 @@ export const api = {
       if (params?.offset) q.set('offset', String(params.offset))
       return apiFetch<{ total: number; items: Deputy[]; limit: number; offset: number }>(
         `/deputies/?${q}`,
-        { revalidate: DAILY_REVALIDATE_SECONDS }
+        { revalidate: DAILY_REVALIDATE_SECONDS, tags: [DEPUTIES_TAG] }
       )
     },
-    get: (id: string) => apiFetch<Deputy>(`/deputies/${id}/`, { revalidate: DAILY_REVALIDATE_SECONDS }),
-    scorecard: (id: string) => apiFetch<Scorecard>(`/deputies/${id}/scorecard/`, { revalidate: DAILY_REVALIDATE_SECONDS }),
+    get: (id: string) =>
+      apiFetch<Deputy>(`/deputies/${id}/`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [DEPUTIES_TAG, deputyTag(id)],
+      }),
+    scorecard: (id: string) =>
+      apiFetch<Scorecard>(`/deputies/${id}/scorecard/`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [MARTS_TAG, deputyTag(id)],
+      }),
     scorecards: () =>
-      apiFetch<{ total: number; items: ScorecardRow[] }>('/deputies/scorecards', { revalidate: DAILY_REVALIDATE_SECONDS }),
+      apiFetch<{ total: number; items: ScorecardRow[] }>('/deputies/scorecards', {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [MARTS_TAG],
+      }),
     stats: (party?: string) => {
       const q = new URLSearchParams()
       if (party) q.set('party', party)
       const qs = q.toString()
-      return apiFetch<DeputyStats>(`/deputies/stats/${qs ? `?${qs}` : ''}`, { revalidate: DAILY_REVALIDATE_SECONDS })
+      return apiFetch<DeputyStats>(`/deputies/stats/${qs ? `?${qs}` : ''}`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [MARTS_TAG],
+      })
     },
     votes: (id: string, limit = 10, since?: string) => {
       const q = new URLSearchParams({ limit: String(limit) })
       if (since) q.set('since', since)
-      return apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?${q}`, { revalidate: DAILY_REVALIDATE_SECONDS })
+      // No VOTE_SUMMARIES_TAG: see the deliberate gap documented in @/lib/cacheTags.
+      return apiFetch<DeputyVotesResponse>(`/deputies/${id}/votes/?${q}`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [POSITIONS_TAG, deputyTag(id)],
+      })
     },
     alignment: (id: string) =>
-      apiFetch<Alignment>(`/deputies/${id}/alignment/`, { revalidate: DAILY_REVALIDATE_SECONDS }),
+      apiFetch<Alignment>(`/deputies/${id}/alignment/`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [MARTS_TAG, deputyTag(id)],
+      }),
     dissidentVotes: (id: string, limit = 10) =>
-      apiFetch<DissidentVotesResponse>(`/deputies/${id}/dissident-votes/?limit=${limit}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
+      apiFetch<DissidentVotesResponse>(`/deputies/${id}/dissident-votes/?limit=${limit}`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [MARTS_TAG, POSITIONS_TAG, deputyTag(id)],
+      }),
     divergingVotes: (id: string, otherId: string, limit = 10) =>
       apiFetch<DivergingVotesResponse>(
         `/deputies/${id}/diverging-votes/?other_deputy_id=${encodeURIComponent(otherId)}&limit=${limit}`,
-        { revalidate: DAILY_REVALIDATE_SECONDS }
+        {
+          revalidate: DAILY_REVALIDATE_SECONDS,
+          tags: [POSITIONS_TAG, deputyTag(id), deputyTag(otherId)],
+        }
       ),
   },
   departments: {
     get: (code: string) =>
-      apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
+      apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [DEPUTIES_TAG, MARTS_TAG, POSITIONS_TAG],
+      }),
   },
   groups: {
     get: (slug: string) =>
-      apiFetch<GroupDetail>(`/groups/${encodeURIComponent(slug)}`, { revalidate: DAILY_REVALIDATE_SECONDS }),
+      apiFetch<GroupDetail>(`/groups/${encodeURIComponent(slug)}`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [DEPUTIES_TAG, MARTS_TAG, POSITIONS_TAG],
+      }),
   },
   themes: {
     get: (slug: string, params?: { limit?: number; offset?: number }) => {
@@ -612,7 +656,10 @@ export const api = {
       const qs = q.toString()
       return apiFetch<ThemeDetail>(
         `/themes/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`,
-        { revalidate: DAILY_REVALIDATE_SECONDS }
+        {
+          revalidate: DAILY_REVALIDATE_SECONDS,
+          tags: [VOTES_TAG, VOTE_SUMMARIES_TAG, POSITIONS_TAG],
+        }
       )
     },
   },
@@ -630,8 +677,12 @@ export const api = {
       if (params?.from) q.set('from', params.from)
       if (params?.to) q.set('to', params.to)
       const qs = q.toString()
+      // VOTES_TAG as well as AGENDA_TAG: an item carries `vote_id`/`result`
+      // once a scrutin exists for its dossier, so a new vote changes this
+      // payload without the agenda table moving (ADR-030).
       return apiFetch<AgendaResponse>(`/agenda${qs ? `?${qs}` : ''}`, {
         revalidate: qs ? DAILY_REVALIDATE_SECONDS : WINDOWED_REVALIDATE_SECONDS,
+        tags: [AGENDA_TAG, VOTES_TAG],
       })
     },
   },
@@ -646,19 +697,38 @@ export const api = {
       if (params?.before) q.set('before', params.before)
       return apiFetch<{ total: number; items: Vote[]; limit: number; offset: number; next_cursor: string | null }>(
         `/votes/?${q}`,
-        { revalidate: DAILY_REVALIDATE_SECONDS }
+        { revalidate: DAILY_REVALIDATE_SECONDS, tags: [VOTES_TAG, VOTE_SUMMARIES_TAG] }
       )
     },
-    latest: () => apiFetch<Vote[]>('/votes/latest/', { revalidate: DAILY_REVALIDATE_SECONDS }),
-    get: (id: string) => apiFetch<VoteDetail>(`/votes/${id}/`, { revalidate: DAILY_REVALIDATE_SECONDS }),
+    latest: () =>
+      apiFetch<Vote[]>('/votes/latest/', {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [VOTES_TAG, VOTE_SUMMARIES_TAG],
+      }),
+    // Entity tag only: one corrected scrutin or one retried summary purges
+    // this page without touching the other ~5 100 vote pages. The family
+    // tags belong on the *lists*, which genuinely change when any vote does.
+    get: (id: string) =>
+      apiFetch<VoteDetail>(`/votes/${id}/`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [voteTag(id)],
+      }),
   },
   quiz: {
     // The question set is a versioned repo file server-side (ADR-025) — it only
     // changes by deploy, so cache it as aggressively as immutable snapshots.
-    questions: () => apiFetch<QuizQuestionsResponse>('/quiz/questions', { revalidate: DAILY_REVALIDATE_SECONDS }),
+    questions: () =>
+      apiFetch<QuizQuestionsResponse>('/quiz/questions', {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [VOTES_TAG],
+      }),
     // Same qualifying scrutin all week (MON-185); null on a recess week with
     // no qualifying scrutin — the homepage widget renders nothing then.
-    weekly: () => apiFetchOptional<QuizWeeklyQuestion>('/quiz/weekly', { revalidate: DAILY_REVALIDATE_SECONDS }),
+    weekly: () =>
+      apiFetchOptional<QuizWeeklyQuestion>('/quiz/weekly', {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [VOTES_TAG],
+      }),
     match: (
       answers: Array<{ vote_id: string; position: QuizAnswerPosition }>,
       department?: string,

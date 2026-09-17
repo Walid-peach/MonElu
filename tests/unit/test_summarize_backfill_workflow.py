@@ -108,3 +108,42 @@ class TestWorkflowPropagatesTheFailure:
             "the summary step would be skipped once the summarizer fails, hiding "
             "the counts on exactly the runs that need them"
         )
+
+
+# ---------------------------------------------------------------------------
+# Scoped cache invalidation (GH #353)
+# ---------------------------------------------------------------------------
+
+
+def _named(steps: list[dict], name: str) -> dict:
+    for step in steps:
+        if step.get("name") == name:
+            return step
+    raise AssertionError(f"no step named {name!r} in summarize_backfill.yml")
+
+
+def test_summarizer_writes_the_ids_it_summarized(summarize_step: dict) -> None:
+    """The scope is built from the ids, so the generator has to emit them."""
+    assert "--changed-ids-out /tmp/summarized_vote_ids.txt" in summarize_step["run"]
+
+
+def test_revalidate_sends_a_summaries_only_scope(steps: list[dict]) -> None:
+    """This job rewrites summary text and nothing else.
+
+    It must not send the `votes` family: that family carries the `health` tag
+    the root layout reads, so it would purge every page on the site for a
+    handful of retried sentences, and `MAX(voted_at)` has not moved anyway.
+    """
+    run = _named(steps, "Revalidate frontend cache")["run"]
+    assert "scripts.build_summary_scope /tmp/summarized_vote_ids.txt" in run
+    assert '--data "$scope"' in run
+
+
+def test_revalidate_falls_back_to_a_full_purge_without_an_id_file(steps: list[dict]) -> None:
+    """`build_summary_scope.py` prints nothing when there is no file.
+
+    An empty `$scope` is an empty body, which the endpoint reads as the full
+    purge - over-purging on doubt, never under-purging.
+    """
+    run = _named(steps, "Revalidate frontend cache")["run"]
+    assert "|| echo" in run

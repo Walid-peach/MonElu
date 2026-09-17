@@ -288,12 +288,12 @@ INSERT INTO agenda_items (
     point_uid, reunion_uid, sitting_start, sitting_end,
     objet, point_type, travaux_nature, procedure_label, dossier_id,
     reunion_etat, point_etat, published_at, cancelled_at, objet_hash,
-    last_seen_at, ingested_at
+    last_seen_at, ingested_at, changed_at
 ) VALUES (
     %(point_uid)s, %(reunion_uid)s, %(sitting_start)s, %(sitting_end)s,
     %(objet)s, %(point_type)s, %(travaux_nature)s, %(procedure_label)s, %(dossier_id)s,
     %(reunion_etat)s, %(point_etat)s, %(published_at)s, %(cancelled_at)s, %(objet_hash)s,
-    NOW(), NOW()
+    NOW(), NOW(), NOW()
 )
 ON CONFLICT (point_uid) DO UPDATE SET
     reunion_uid     = EXCLUDED.reunion_uid,
@@ -325,7 +325,28 @@ ON CONFLICT (point_uid) DO UPDATE SET
     theme           = CASE
                         WHEN agenda_items.objet_hash IS DISTINCT FROM EXCLUDED.objet_hash
                         THEN NULL ELSE agenda_items.theme END,
-    last_seen_at    = NOW();
+    last_seen_at    = NOW(),
+    -- `ingested_at` stays insert-only here, as it always was, and `changed_at`
+    -- carries the change signal (GH #353, migration 011). This table already
+    -- had the two-meanings split that the other three needed adding:
+    -- `last_seen_at` is the per-run stamp visibility depends on (ADR-030).
+    changed_at      = CASE WHEN (
+                          agenda_items.reunion_uid, agenda_items.sitting_start,
+                          agenda_items.sitting_end, agenda_items.objet,
+                          agenda_items.point_type, agenda_items.travaux_nature,
+                          agenda_items.procedure_label, agenda_items.dossier_id,
+                          agenda_items.reunion_etat, agenda_items.point_etat,
+                          agenda_items.published_at, agenda_items.cancelled_at,
+                          agenda_items.objet_hash
+                        ) IS DISTINCT FROM (
+                          EXCLUDED.reunion_uid, EXCLUDED.sitting_start,
+                          EXCLUDED.sitting_end, EXCLUDED.objet,
+                          EXCLUDED.point_type, EXCLUDED.travaux_nature,
+                          EXCLUDED.procedure_label, EXCLUDED.dossier_id,
+                          EXCLUDED.reunion_etat, EXCLUDED.point_etat,
+                          EXCLUDED.published_at, EXCLUDED.cancelled_at,
+                          EXCLUDED.objet_hash
+                        ) THEN NOW() ELSE agenda_items.changed_at END;
 """
 
 
