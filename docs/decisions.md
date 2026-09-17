@@ -1345,7 +1345,8 @@ A retried summary no longer does.
 Guarding each `DO UPDATE` also stops rewriting ~5 100 vote rows and ~715 000 position rows every morning, which on the free tier is dead tuples and autovacuum for no new data.
 `ingest_agenda.py` is the exception in form only: `last_seen_at` has to be stamped on every run (ADR-030), so it moves `ingested_at` through a `CASE` instead of skipping the row.
 
-**The asymmetry that makes this safe:** an unset workflow variable, a crashed manifest query, an older script revision and a manual `curl` all send no body, and no body is the full purge.
+**The asymmetry that makes this safe:** an unset workflow variable, a crashed manifest query, an older script revision, a change set over the 50-entity cap and a manual `curl` all send no body, and no body is the full purge.
+The cap deliberately falls back rather than dropping the ids and keeping the family: a scrutin's own page is reached only through its `vote:<id>` tag, because the family tags live on the *lists* - that split is what makes one retried summary cheap, and it is also what would leave those pages stale if the ids were silently dropped.
 Every way of getting this wrong over-purges - a costly day - rather than under-purging, which is a silently stale day.
 Never "fix" an empty scope into `{}` or `{"families":[]}` in a workflow: those are valid *targeted* payloads that purge nothing.
 

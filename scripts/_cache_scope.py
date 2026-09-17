@@ -46,11 +46,16 @@ FAMILIES = frozenset(
     }
 )
 
-# Above this many changed rows, the id list is dropped and the family alone is
-# sent. Nothing is lost: an entity tag is only ever a *narrower* purge than its
-# family, and the family tag already covers the list and aggregate pages. A
-# 5 000-tag request body, on the other hand, is a new failure mode on the one
-# call that must not fail.
+# Above this many changed rows in either id list, the run stops trying to name
+# what changed and falls back to the **full purge**.
+#
+# Not "drop the ids and keep the family": a scrutin's own page is reached only
+# through its `vote:<id>` tag (the family tags live on the *lists*, which is what
+# makes one retried summary cheap), so dropping the ids would leave those pages
+# stale. A mass correction that touches more rows than this is exactly the
+# "unexpected correction" the conservative path exists for, and it costs nothing
+# in practice: any run that ingested new scrutins already purges the whole site
+# through the `votes` family's health tag.
 MAX_ENTITY_IDS = 50
 
 
@@ -96,30 +101,47 @@ class CacheScope:
     def is_empty(self) -> bool:
         return not self.families and not self.votes and not self.deputies
 
-    def to_payload(self) -> dict:
-        """The JSON body to POST. Ids are capped and sorted for a stable diff."""
+    @property
+    def is_over_cap(self) -> bool:
+        """Too many changed rows to name them, so this run cannot be targeted."""
+        return len(self.votes) > MAX_ENTITY_IDS or len(self.deputies) > MAX_ENTITY_IDS
+
+    def to_payload(self) -> dict | None:
+        """The JSON body to POST, or None when the caller must send no body.
+
+        None means "full purge": the caller writes an empty value and the
+        workflow's ``-n "$CACHE_SCOPE"`` check falls through to a body-less
+        request, which the endpoint reads as the conservative full purge.
+        """
+        if self.is_over_cap:
+            return None
         payload: dict = {"families": sorted(self.families)}
-        if 0 < len(self.votes) <= MAX_ENTITY_IDS:
+        if self.votes:
             payload["votes"] = sorted(self.votes)
-        if 0 < len(self.deputies) <= MAX_ENTITY_IDS:
+        if self.deputies:
             payload["deputies"] = sorted(self.deputies)
         return payload
 
     def to_json(self) -> str:
-        return json.dumps(self.to_payload(), separators=(",", ":"))
+        """The request body, or the empty string when there must not be one."""
+        payload = self.to_payload()
+        return "" if payload is None else json.dumps(payload, separators=(",", ":"))
 
     def describe(self) -> str:
         """One line for the workflow job summary."""
+        if self.is_over_cap:
+            return (
+                f"{len(self.votes)} vote(s), {len(self.deputies)} deputy/deputies - "
+                f"over the {MAX_ENTITY_IDS}-entity cap, falling back to a full purge"
+            )
         if self.is_empty:
             return "nothing changed - no cache invalidated"
         families = ", ".join(sorted(self.families)) or "none"
         parts = [f"families: {families}"]
         if self.votes:
-            capped = "" if len(self.votes) <= MAX_ENTITY_IDS else " (over cap, family only)"
-            parts.append(f"{len(self.votes)} vote(s){capped}")
+            parts.append(f"{len(self.votes)} vote(s)")
         if self.deputies:
-            capped = "" if len(self.deputies) <= MAX_ENTITY_IDS else " (over cap, family only)"
-            parts.append(f"{len(self.deputies)} deputy/deputies{capped}")
+            parts.append(f"{len(self.deputies)} deputy/deputies")
         return " · ".join(parts)
 
 

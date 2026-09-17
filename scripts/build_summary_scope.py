@@ -36,7 +36,11 @@ def main() -> None:
 
     scope = CacheScope()
     scope.add_summaries(ids)
-    print(scope.to_json())
+    # Empty above the entity cap: a sweep that large is the conservative path's
+    # case, not a targeted one (see MAX_ENTITY_IDS).
+    body = scope.to_json()
+    if body:
+        print(body)
 
 
 if __name__ == "__main__":

@@ -83,6 +83,19 @@ describe('POST /api/revalidate — full purge', () => {
     expect(tags()).toContain(HEALTH_TAG)
   })
 
+  // What a workflow actually sends when its scope variable is unset:
+  // `curl --data ""` is an empty body, not an absent one.
+  it('falls back to the full purge on an empty body', async () => {
+    const req = new NextRequest('http://localhost/api/revalidate', {
+      method: 'POST',
+      headers: { 'x-revalidate-secret': SECRET, 'Content-Type': 'application/json' },
+      body: '',
+    })
+    const res = await POST(req)
+    expect(await res.json()).toMatchObject({ mode: 'full' })
+    expect(revalidatePath).toHaveBeenCalledWith('/')
+  })
+
   it('falls back to the full purge on a malformed body', async () => {
     const req = new NextRequest('http://localhost/api/revalidate', {
       method: 'POST',

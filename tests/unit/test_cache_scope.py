@@ -72,18 +72,38 @@ def test_deputy_corrections_are_named_individually():
     assert payload["deputies"] == ["PA1592", "PA721"]
 
 
-def test_entity_ids_are_dropped_above_the_cap_but_the_family_survives():
-    """Over the cap the family tag alone already covers the list pages.
+def test_over_the_entity_cap_the_run_falls_back_to_a_full_purge():
+    """Dropping the ids and keeping the family would under-purge.
 
-    Losing the family here would be the under-purge this design forbids, so the
-    assertion is on the family, not on the ids.
+    A scrutin's own page is reached only through its `vote:<id>` tag - the
+    family tags live on the lists, which is what makes one retried summary
+    cheap. So a change set too large to name has to send no body at all, which
+    the endpoint reads as the full purge.
     """
     scope = CacheScope()
     scope.add_votes([f"VT{i}" for i in range(MAX_ENTITY_IDS + 1)])
-    payload = scope.to_payload()
-    assert payload["families"] == ["votes"]
-    assert "votes" not in payload
-    assert "over cap" in scope.describe()
+    assert scope.is_over_cap
+    assert scope.to_payload() is None
+    assert scope.to_json() == ""
+    assert "full purge" in scope.describe()
+
+
+def test_exactly_at_the_cap_still_names_its_entities():
+    scope = CacheScope()
+    scope.add_votes([f"VT{i}" for i in range(MAX_ENTITY_IDS)])
+    assert not scope.is_over_cap
+    assert len(scope.to_payload()["votes"]) == MAX_ENTITY_IDS
+
+
+def test_publish_writes_an_empty_scope_over_the_cap(tmp_path, monkeypatch):
+    """The workflow's `-n "$CACHE_SCOPE"` check is what turns this into a full purge."""
+    output = tmp_path / "gh_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    scope = CacheScope()
+    scope.add_deputies([f"PA{i}" for i in range(MAX_ENTITY_IDS + 1)])
+    publish_scope(scope)
+    lines = dict(line.split("=", 1) for line in output.read_text().strip().splitlines())
+    assert lines["cache_scope"] == ""
 
 
 def test_unknown_family_is_rejected_at_the_source():
@@ -145,6 +165,14 @@ def test_summary_scope_builder_emits_a_summaries_only_payload(tmp_path):
 def test_summary_scope_builder_prints_nothing_when_there_is_no_id_file(tmp_path):
     """No file means the caller falls back to a full purge, not to an empty scope."""
     result = _run_builder(str(tmp_path / "absent.txt"))
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == ""
+
+
+def test_summary_scope_builder_prints_nothing_over_the_cap(tmp_path):
+    path = tmp_path / "ids.txt"
+    path.write_text("\n".join(f"VT{i}" for i in range(MAX_ENTITY_IDS + 1)))
+    result = _run_builder(str(path))
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == ""
 
