@@ -8,6 +8,7 @@ tests care most about which shapes produce no body at all.
 
 import json
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -181,26 +182,76 @@ def test_summary_scope_builder_prints_nothing_over_the_cap(tmp_path):
 # The guards the change detection is built on
 # ---------------------------------------------------------------------------
 
-UPSERT_GUARDED = {
-    "ingest_votes.py": "IS DISTINCT FROM",
-    "ingest_deputies.py": "IS DISTINCT FROM",
-    "ingest_positions.py": "IS DISTINCT FROM",
-    "ingest_agenda.py": "IS DISTINCT FROM",
-    "update_party.py": "IS DISTINCT FROM",
-}
+WRITERS = (
+    "ingest_votes.py",
+    "ingest_deputies.py",
+    "ingest_positions.py",
+    "ingest_agenda.py",
+    "update_party.py",
+)
 
 
-@pytest.mark.parametrize("script,needle", sorted(UPSERT_GUARDED.items()))
-def test_every_upsert_skips_unchanged_rows(script: str, needle: str):
-    """`ingested_at` is only a change marker while every writer guards its update.
+@pytest.mark.parametrize("script", WRITERS)
+def test_every_writer_maintains_changed_at(script: str):
+    """`changed_at` is the change marker, and every writer has to maintain it.
 
-    `changed_ids()` reads `ingested_at >= run_start`. A writer that drops its
-    guard reports its whole table as changed on every run, and the targeted
-    purge silently degrades back to the blanket one - green tests, green
-    workflow, and the Vercel bill back where GH #353 found it.
+    `changed_ids()` reads `changed_at >= run_start`. A writer that stops setting
+    it conditionally reports either nothing or its whole table as changed, and
+    the targeted purge silently degrades - green tests, green workflow, and
+    either stale pages or the Vercel bill back where GH #353 found it.
     """
     source = (REPO_ROOT / "scripts" / script).read_text(encoding="utf-8")
-    assert needle in source, f"{script} writes rows without a change guard"
+    assert "changed_at" in source, f"{script} writes rows without maintaining changed_at"
+    assert "IS DISTINCT FROM" in source, f"{script} moves changed_at unconditionally"
+
+
+# The three tables dbt declares with `loaded_at_field: ingested_at`.
+FRESHNESS_SOURCES = ("ingest_votes.py", "ingest_deputies.py", "ingest_positions.py")
+
+
+@pytest.mark.parametrize("script", FRESHNESS_SOURCES)
+def test_ingested_at_stays_unconditional_for_dbt_source_freshness(script: str):
+    """`ingested_at` means "the last run that wrote this row", and must stay that.
+
+    `transform/models/staging/sources.yml` sets `loaded_at_field: ingested_at`
+    on all three raw sources and documents `deputies` as the "cron silently
+    died" detector at `error_after: 7 days`, precisely because every successful
+    run re-upserts all 577 rows whether or not anything changed. `dbt source
+    freshness` runs in `ingest_prod.yml` and the MON-250 gate re-fails the job
+    on it, so making this column conditional - or skipping the row with a
+    `WHERE` on the `DO UPDATE`, which stamps nothing at all - turns the daily
+    job red about a week into any quiet stretch *and* destroys the alert for a
+    cron that has really died.
+
+    That is the trap `changed_at` (migration 011) exists to avoid, and this is
+    the test that catches walking back into it.
+    """
+    source = (REPO_ROOT / "scripts" / script).read_text(encoding="utf-8")
+    upsert = source.split("UPSERT_SQL")[1]
+    assert re.search(r"ingested_at\s*=\s*NOW\(\)", upsert), (
+        f"{script} no longer stamps ingested_at unconditionally"
+    )
+    # A CASE around it is the same regression wearing a different hat.
+    assert not re.search(r"ingested_at\s*=\s*CASE", upsert), (
+        f"{script} stamps ingested_at conditionally"
+    )
+    # A `WHERE` on the DO UPDATE skips the row entirely, so it cannot stamp
+    # `ingested_at` either - the failure mode looks different but is the same.
+    conflict = upsert.split("ON CONFLICT")[1].split('"""')[0]
+    assert "\nWHERE " not in conflict, (
+        f"{script} skips unchanged rows, which stops ingested_at from moving"
+    )
+
+
+def test_freshness_contract_is_declared_where_this_test_claims():
+    """Pins the other side of the contract, so a sources.yml edit is visible here."""
+    sources = (REPO_ROOT / "transform" / "models" / "staging" / "sources.yml").read_text(
+        encoding="utf-8"
+    )
+    assert sources.count("loaded_at_field: ingested_at") == 3
+    assert "changed_at" not in sources, (
+        "dbt must read ingested_at (the run stamp), never changed_at (the change stamp)"
+    )
 
 
 def test_orchestrator_publishes_a_scope_and_collects_summary_ids():
@@ -210,3 +261,39 @@ def test_orchestrator_publishes_a_scope_and_collects_summary_ids():
     # whole pipeline, so NOW() would predate every step.
     assert "clock_timestamp()" in source
     assert "--changed-ids-out" in source
+
+
+def test_position_changes_do_not_claim_the_votes_family():
+    """A corrected position purges the scrutin's page without purging the site.
+
+    `add_position_votes` exists so this cannot be written as `add_votes`, which
+    would claim `votes` and with it the `health` tag the root layout reads.
+    """
+    scope = CacheScope()
+    scope.add_position_votes(["VT1"])
+    payload = scope.to_payload()
+    assert payload["families"] == ["positions"]
+    assert payload["votes"] == ["VT1"]
+
+
+def test_force_full_purge_sends_no_body_and_says_why():
+    """The "we know that we do not know" case: a generator that died mid-sweep."""
+    scope = CacheScope()
+    scope.add_votes(["VT1"])
+    scope.force_full_purge("vote summaries failed before reporting what it wrote")
+    assert scope.needs_full_purge
+    assert scope.to_json() == ""
+    assert "full purge" in scope.describe()
+    assert "vote summaries failed" in scope.describe()
+
+
+def test_orchestrator_covers_the_signals_row_timestamps_cannot_see():
+    """Two blind spots the scope would otherwise have, pinned at the source.
+
+    An agenda item withdrawn upstream is never upserted, so nothing row-level
+    moves; a summary generator that dies before writing its id file leaves an
+    empty read that looks like "nothing was summarized".
+    """
+    source = (REPO_ROOT / "scripts" / "run_ingestion_prod.py").read_text(encoding="utf-8")
+    assert "visible_agenda_count" in source
+    assert "force_full_purge" in source

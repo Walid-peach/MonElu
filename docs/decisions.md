@@ -1322,7 +1322,7 @@ Either invalidates this comparison and needs a fresh sweep against the numbers a
 
 **Decision:** `POST /api/revalidate` accepts an optional scope payload naming the data families, scrutins and deputies a run changed, and invalidates only the Next.js cache tags those map to.
 A request with **no body** keeps the previous behaviour - every route family purged by path, every family tag invalidated - and is the fallback for anything unrecognised.
-Ingestion builds that payload from `ingested_at`, which every upsert in `scripts/` now guards with an `IS DISTINCT FROM` comparison so a record the AN republished unchanged does not move it.
+Ingestion builds that payload from a new `changed_at` column (migration 011), which every upsert sets through a `CASE` that fires only when the record really differs.
 The `health` tag belongs to the `votes` family and to no other.
 
 **Reason:**
@@ -1341,9 +1341,15 @@ The blanket purge was therefore not merely path-based; it was also unconditional
 A new scrutin still purges the whole site, which is correct - the badge's date really did change on every page.
 A retried summary no longer does.
 
-**What the guards buy beyond the scope:** `ingested_at` was previously rewritten on every upsert, so it said "this row was seen", not "this row changed", and no scope could be derived from it.
-Guarding each `DO UPDATE` also stops rewriting ~5 100 vote rows and ~715 000 position rows every morning, which on the free tier is dead tuples and autovacuum for no new data.
-`ingest_agenda.py` is the exception in form only: `last_seen_at` has to be stamped on every run (ADR-030), so it moves `ingested_at` through a `CASE` instead of skipping the row.
+**Why a new column rather than reusing `ingested_at`:** the obvious move is to guard each `DO UPDATE` with `IS DISTINCT FROM` so `ingested_at` stops moving on an unchanged row. That breaks two things.
+`transform/models/staging/sources.yml` sets `loaded_at_field: ingested_at` on all three raw sources and documents the `deputies` source as the "cron silently died" detector at `error_after: 7 days` - precisely *because* every successful run re-upserts all 577 rows whether the AN changed anything or not.
+`dbt source freshness` runs in `ingest_prod.yml` and the MON-250 data-quality gate re-fails the job on it, so a conditional `ingested_at` turns the daily run red about a week into any quiet stretch while simultaneously destroying the alert for a cron that has really died.
+The three marts publish `max(ingested_at)` as their `updated_at` and would stall the same way.
+
+So the run signal and the change signal are two columns and one write: `ingested_at` keeps meaning "the last run that wrote this row", `changed_at` means "the last run that wrote something different".
+A `WHERE` that skips the row is not an option either - a skipped row stamps neither column.
+`ingest_agenda.py` already had this split before the ADR, for the same reason under a different name: `last_seen_at` is its per-run stamp because ADR-030 makes visibility depend on it.
+The cost is that the daily rewrite of the vote and position rows stays; removing it would need `loaded_at_field` repointed at a third column, which is a bigger change than this issue is worth.
 
 **The asymmetry that makes this safe:** an unset workflow variable, a crashed manifest query, an older script revision, a change set over the 50-entity cap and a manual `curl` all send no body, and no body is the full purge.
 The cap deliberately falls back rather than dropping the ids and keeping the family: a scrutin's own page is reached only through its `vote:<id>` tag, because the family tags live on the *lists* - that split is what makes one retried summary cheap, and it is also what would leave those pages stale if the ids were silently dropped.
@@ -1358,7 +1364,10 @@ The vote's own page, the vote lists and the theme pages all carry the tag and up
 It buys back the full-site purge on sitting days, but costs a request per page view against an API rate-limited at 30 req/min and a badge that pops in above the fold after hydration.
 Revisit only if sitting-day purges become the dominant write driver.
 
-**Trigger to revisit:** a second fetch added to the root layout (it inherits the site-wide blast radius and needs the same treatment), or a measured window where the remaining volume is still over the allowance.
+**Two blind spots row timestamps cannot see, and how they are covered:** an agenda item withdrawn from the AN feed is never upserted at all (ADR-030 removes by omission), so `run_ingestion_prod.py` compares the count of currently-visible items either side of the agenda step.
+A summary generator that dies mid-sweep may have committed summaries it never reported, so it rewrites its changed-id file after every committed batch, and an absent file after a failed step forces the full purge.
+
+**Trigger to revisit:** a second fetch added to the root layout (it inherits the site-wide blast radius and needs the same treatment), a change to `loaded_at_field` in `sources.yml` (the two columns' meanings are a contract between this ADR and dbt), or a measured window where the remaining volume is still over the allowance.
 
 ---
 
@@ -1386,4 +1395,5 @@ Revisit only if sitting-day purges become the dominant write driver.
 20. The share-snapshot pages `/chat/s/*`, `/verifier/v/*` and `/quiz/s/*` are `noindex`, not merely absent from the sitemap (ADR-036, MON-264) - never add them to `sitemap.ts`, never drop the `robots: { index: false }` from their `generateMetadata` (including its early-return path), and never add `ClaimReview`/`QAPage` or other rich-result markup to them; MON-263 is closed as won't-do under this ADR, and the trigger to reopen is a real moderation operator, not share volume
 21. The RAG index has exactly one build mode - a full rebuild into `document_chunks_staging`, swapped in at the end (ADR-037, MON-233/MON-256) - never reintroduce `--since` or any path that writes to the live `document_chunks`; a build that does not complete the swap must drop the staging table on every exit path, and `/health`'s `rag_staging_chunks` must stay informational rather than feeding `status`
 22. gpt-oss keeps the prompts written for Llama, and `keyword_score` is a smoke test rather than a quality score (ADR-038, #386/#351) - the 2026-09-13 sweep found no regression (routing 0.824 to 1.000, retrieval similarity 0.642), so do not retune prompts or fixtures on the strength of an eval average; read the per-question breakdown first, and populate the dbt marts before running the eval or the router suite will misroute `party_alignment` and look like a model fault
-23. Cache invalidation is scoped, and over-purges on doubt (ADR-039, #353) - `/api/revalidate` with no body is the full purge and must stay the fallback for anything unrecognised; never make a workflow send `{}` or `{"families":[]}` when it failed to build a scope, never attach the `health` tag to a family other than `votes` (the root layout reads `/health`, so it purges the whole site), and never drop the `IS DISTINCT FROM` guard from an upsert in `scripts/` - `ingested_at` is what the scope is derived from
+23. Cache invalidation is scoped, and over-purges on doubt (ADR-039, #353) - `/api/revalidate` with no body is the full purge and must stay the fallback for anything unrecognised; never make a workflow send `{}` or `{"families":[]}` when it failed to build a scope, and never attach the `health` tag to a family other than `votes` (the root layout reads `/health`, so it purges the whole site)
+24. `ingested_at` and `changed_at` mean different things and must not be merged (ADR-039, #353, migration 011) - `ingested_at` is "the last run that wrote this row" and is dbt's `loaded_at_field`, the cron-death detector and the marts' `updated_at`; `changed_at` is "the last run that wrote something different" and is what the cache-invalidation scope reads. Never guard an upsert's `DO UPDATE` with a `WHERE` that skips unchanged rows, and never make `ingested_at` conditional: either one silently turns the daily ingestion job red about a week into a recess

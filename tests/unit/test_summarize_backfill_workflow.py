@@ -135,7 +135,7 @@ def test_revalidate_sends_a_summaries_only_scope(steps: list[dict]) -> None:
     handful of retried sentences, and `MAX(voted_at)` has not moved anyway.
     """
     run = _named(steps, "Revalidate frontend cache")["run"]
-    assert "build_summary_scope.py /tmp/summarized_vote_ids.txt" in run
+    assert "scripts.build_summary_scope /tmp/summarized_vote_ids.txt" in run
     assert '--data "$scope"' in run
 
 

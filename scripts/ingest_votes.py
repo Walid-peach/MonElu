@@ -180,11 +180,11 @@ UPSERT_SQL = """
 INSERT INTO votes (
     vote_id, voted_at, vote_title, vote_type, result,
     votes_for, votes_against, abstentions, total_voters,
-    dossier_id, ingested_at
+    dossier_id, ingested_at, changed_at
 ) VALUES (
     %(vote_id)s, %(voted_at)s, %(vote_title)s, %(vote_type)s, %(result)s,
     %(votes_for)s, %(votes_against)s, %(abstentions)s, %(total_voters)s,
-    %(dossier_id)s, NOW()
+    %(dossier_id)s, NOW(), NOW()
 )
 ON CONFLICT (vote_id) DO UPDATE SET
     voted_at      = EXCLUDED.voted_at,
@@ -196,25 +196,27 @@ ON CONFLICT (vote_id) DO UPDATE SET
     abstentions   = EXCLUDED.abstentions,
     total_voters  = EXCLUDED.total_voters,
     dossier_id    = EXCLUDED.dossier_id,
-    ingested_at   = NOW()
--- Skip rows the AN republished unchanged (GH #353). Two reasons:
---   1. `ingested_at` becomes a true "this record changed" marker, which is how
---      run_ingestion_prod.py builds the cache-invalidation scope it hands to
---      the frontend. Without this guard every daily run reports all ~5 100
---      scrutins as changed and the targeted purge degrades to the blanket one.
---   2. It stops rewriting the whole table every morning, which on a Supabase
---      free tier is dead tuples and autovacuum for no new data.
--- `ingested_at` is excluded from the comparison on purpose: it is set to NOW()
--- on every write, so including it would make every row differ from itself.
-WHERE (
-    votes.voted_at, votes.vote_title, votes.vote_type, votes.result,
-    votes.votes_for, votes.votes_against, votes.abstentions,
-    votes.total_voters, votes.dossier_id
-) IS DISTINCT FROM (
-    EXCLUDED.voted_at, EXCLUDED.vote_title, EXCLUDED.vote_type, EXCLUDED.result,
-    EXCLUDED.votes_for, EXCLUDED.votes_against, EXCLUDED.abstentions,
-    EXCLUDED.total_voters, EXCLUDED.dossier_id
-);
+    ingested_at   = NOW(),
+    -- `ingested_at` stays unconditional: dbt's source freshness reads it as
+    -- "the last run that wrote this row" (transform/models/staging/sources.yml)
+    -- and the marts publish max(ingested_at) as their `updated_at`.
+    -- `changed_at` is the other half (GH #353, migration 011): the last run
+    -- that wrote something *different*, which is what run_ingestion_prod.py
+    -- builds the frontend cache-invalidation scope from. Never merge the two
+    -- into one column, and never turn this into a `WHERE` that skips the row -
+    -- a skipped row cannot stamp `ingested_at` either.
+    -- `ingested_at`/`changed_at` are excluded from the comparison on purpose:
+    -- they move on every write, so including them would make every row differ
+    -- from itself.
+    changed_at    = CASE WHEN (
+                        votes.voted_at, votes.vote_title, votes.vote_type, votes.result,
+                        votes.votes_for, votes.votes_against, votes.abstentions,
+                        votes.total_voters, votes.dossier_id
+                      ) IS DISTINCT FROM (
+                        EXCLUDED.voted_at, EXCLUDED.vote_title, EXCLUDED.vote_type,
+                        EXCLUDED.result, EXCLUDED.votes_for, EXCLUDED.votes_against,
+                        EXCLUDED.abstentions, EXCLUDED.total_voters, EXCLUDED.dossier_id
+                      ) THEN NOW() ELSE votes.changed_at END;
 """
 
 

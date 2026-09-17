@@ -115,8 +115,11 @@ export async function POST(req: NextRequest) {
   // Targeted: invalidate only the tags the caller's change manifest names.
   // An empty `families` with no entity ids is a no-op run (nothing was
   // ingested), and purges nothing at all - that is the point of the scope.
-  if (scope) {
-    const tags = tagsForScope(scope)
+  //
+  // `null` tags means the caller named a family this build does not know, which
+  // falls through to the full purge below rather than dropping it.
+  const tags = scope && tagsForScope(scope)
+  if (tags) {
     for (const tag of tags) revalidateTag(tag)
     return Response.json({
       revalidated: true,

@@ -104,7 +104,14 @@ def is_stub(objet: str | None, point_type: str | None = None) -> bool:
     return len(text) <= STUB_OBJET_MAX_LEN
 
 
-def process_batch(client, batch: list[dict], dry_run: bool, conn, stats: dict) -> None:
+def process_batch(
+    client,
+    batch: list[dict],
+    dry_run: bool,
+    conn,
+    stats: dict,
+    changed_ids_out: str | None = None,
+) -> None:
     # Imported here, not at module scope, so the module stays importable (and
     # unit-testable) without rag/ on the path - the same shape the vote
     # generator uses.
@@ -160,6 +167,9 @@ def process_batch(client, batch: list[dict], dry_run: bool, conn, stats: dict) -
         # written so the caller can purge only /agenda, and leave `ingested_at`
         # to mean "the AN record changed".
         stats.setdefault("summarized_point_uids", []).extend(uid for _, _, uid in updates)
+        # After every committed batch, for the same reason as the vote
+        # generator: a crash mid-sweep must not lose what was already written.
+        write_changed_ids(changed_ids_out, stats["summarized_point_uids"])
 
 
 def main() -> None:
@@ -182,7 +192,8 @@ def main() -> None:
         default=os.getenv("MONELU_CHANGED_IDS_OUT"),
         help=(
             "Write the point_uids that got a one-liner, one per line, for the "
-            "caller's cache-invalidation scope (GH #353)."
+            "caller's cache-invalidation scope (GH #353). Rewritten after every "
+            "committed batch so a crash mid-sweep still reports what was written."
         ),
     )
     args = parser.parse_args()
@@ -228,7 +239,7 @@ def main() -> None:
         batch = rows[i : i + BATCH_SIZE]
         batch_num = i // BATCH_SIZE + 1
         log.info("Batch %d/%d (%d items)…", batch_num, total_batches, len(batch))
-        process_batch(client, batch, args.dry_run, conn, stats)
+        process_batch(client, batch, args.dry_run, conn, stats, args.changed_ids_out)
         if i + BATCH_SIZE < len(rows):
             time.sleep(2.0)  # ~15 req/min conservative → avoids 429 cascade
 

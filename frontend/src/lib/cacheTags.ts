@@ -42,6 +42,13 @@
  * itself within the one-day fallback in `@/lib/cachePolicy`. The vote's own
  * page, the vote lists and the theme pages all carry the tag and update
  * immediately.
+ *
+ * The root `opengraph-image` has the mirror-image gap: it prints live deputy and
+ * vote counts from `/health`, whose fetch carries only `HEALTH_TAG`, which rides
+ * the `votes` family. So a deputies-only day leaves the social card's deputy
+ * count a day stale. Giving that fetch a second tag would put the root layout's
+ * `/health` entry - and therefore every page - back on the `deputies` family,
+ * which is the trade this file exists to refuse.
  */
 import { DAILY_REVALIDATE_SECONDS } from './cachePolicy'
 
@@ -120,15 +127,24 @@ export const ALL_FAMILY_TAGS: readonly string[] = [
 ]
 
 /**
- * Resolve a scope payload to the tags to invalidate. Unknown family names are
- * dropped rather than failing the call: a newer ingestion run must never be
- * able to make the purge 401/400 its way into a day of stale pages, and the
- * caller can see what landed in the response body.
+ * Resolve a scope payload to the tags to invalidate, or `null` when the caller
+ * named a family this build does not know.
+ *
+ * `null` means "fall back to the full purge", never "drop the unknown part".
+ * Deploy skew makes this concrete rather than hypothetical: `vercel.json`'s
+ * ignore step (#356) skips a frontend deployment for a backend-only change, so
+ * a PR that adds a family to `scripts/_cache_scope.py` can ship while the
+ * running frontend still has the old vocabulary. Dropping the unknown family
+ * there would silently under-purge exactly the pages the new family exists to
+ * reach, and nothing inspects the response body.
  */
-export function tagsForScope(scope: RevalidateScope): string[] {
+export function tagsForScope(scope: RevalidateScope): string[] | null {
   const tags = new Set<string>()
-  for (const family of scope.families ?? [])
-    for (const tag of SCOPE_FAMILY_TAGS[family] ?? []) tags.add(tag)
+  for (const family of scope.families ?? []) {
+    const familyTags = SCOPE_FAMILY_TAGS[family]
+    if (!familyTags) return null
+    for (const tag of familyTags) tags.add(tag)
+  }
   for (const id of scope.votes ?? []) tags.add(voteTag(id))
   for (const id of scope.deputies ?? []) tags.add(deputyTag(id))
   return [...tags]

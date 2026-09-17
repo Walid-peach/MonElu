@@ -156,7 +156,11 @@ jobs:
             if [ -n "$CACHE_SCOPE" ]; then
               echo "Cache scope: ${CACHE_SCOPE_SUMMARY:-$CACHE_SCOPE}"
             else
-              echo "No cache scope published — falling back to a full purge."
+              # The summary is still published when the scope body is empty on
+              # purpose (over the entity cap, or a step that could not report
+              # what it wrote), so print it: that is what distinguishes a
+              # deliberate full purge from a crashed manifest.
+              echo "Full purge — ${CACHE_SCOPE_SUMMARY:-no cache scope published}"
             fi
             # Retry first: the gate makes this fatal, so a transient blip must
             # not turn the daily run red on its own.
@@ -176,7 +180,7 @@ jobs:
                 echo "$CACHE_SCOPE"
                 echo '```'
               else
-                echo "Scope: full purge (no scope published by the ingestion step)."
+                echo "Scope: full purge — ${CACHE_SCOPE_SUMMARY:-no scope published by the ingestion step}"
               fi
             } >> "$GITHUB_STEP_SUMMARY"
           else

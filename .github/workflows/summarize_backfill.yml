@@ -115,7 +115,7 @@ jobs:
             # An unreadable or missing id file yields an empty body, which the
             # endpoint reads as the full conservative purge - the same
             # over-purge-on-doubt rule ingest_prod.yml follows.
-            scope=$(python3 scripts/build_summary_scope.py /tmp/summarized_vote_ids.txt || echo "")
+            scope=$(python -m scripts.build_summary_scope /tmp/summarized_vote_ids.txt || echo "")
             echo "Cache scope: ${scope:-full purge}"
             curl -sf --retry 3 --retry-delay 10 --retry-all-errors \
               -X POST "$FRONTEND_URL/api/revalidate" \

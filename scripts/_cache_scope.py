@@ -66,6 +66,7 @@ class CacheScope:
     families: set[str] = field(default_factory=set)
     votes: set[str] = field(default_factory=set)
     deputies: set[str] = field(default_factory=set)
+    _full_purge_reason: str | None = None
 
     def add_votes(self, vote_ids: list[str]) -> None:
         if not vote_ids:
@@ -92,10 +93,31 @@ class CacheScope:
         self.families.add(FAMILY_DEPUTIES)
         self.deputies.update(deputy_ids)
 
+    def add_position_votes(self, vote_ids: list[str]) -> None:
+        """Scrutins whose *positions* changed without their own row moving.
+
+        Their entity tags ride along so the scrutin pages get purged, but the
+        ``votes`` family is not claimed: it carries the ``health`` tag, and
+        ``MAX(voted_at)`` has not moved.
+        """
+        if not vote_ids:
+            return
+        self.families.add(FAMILY_POSITIONS)
+        self.votes.update(vote_ids)
+
     def add_family(self, family: str) -> None:
         if family not in FAMILIES:
             raise ValueError(f"Unknown cache-scope family: {family!r}")
         self.families.add(family)
+
+    def force_full_purge(self, reason: str) -> None:
+        """Give up on naming the change and send no body at all.
+
+        For the cases where the run knows it does *not* know: a summary
+        generator that died mid-sweep, an agenda feed whose contents shifted
+        without any row being upserted. Over-purging is the cheap direction.
+        """
+        self._full_purge_reason = reason
 
     @property
     def is_empty(self) -> bool:
@@ -106,6 +128,10 @@ class CacheScope:
         """Too many changed rows to name them, so this run cannot be targeted."""
         return len(self.votes) > MAX_ENTITY_IDS or len(self.deputies) > MAX_ENTITY_IDS
 
+    @property
+    def needs_full_purge(self) -> bool:
+        return self._full_purge_reason is not None or self.is_over_cap
+
     def to_payload(self) -> dict | None:
         """The JSON body to POST, or None when the caller must send no body.
 
@@ -113,7 +139,7 @@ class CacheScope:
         workflow's ``-n "$CACHE_SCOPE"`` check falls through to a body-less
         request, which the endpoint reads as the conservative full purge.
         """
-        if self.is_over_cap:
+        if self.needs_full_purge:
             return None
         payload: dict = {"families": sorted(self.families)}
         if self.votes:
@@ -129,6 +155,8 @@ class CacheScope:
 
     def describe(self) -> str:
         """One line for the workflow job summary."""
+        if self._full_purge_reason is not None:
+            return f"full purge - {self._full_purge_reason}"
         if self.is_over_cap:
             return (
                 f"{len(self.votes)} vote(s), {len(self.deputies)} deputy/deputies - "
@@ -146,12 +174,18 @@ class CacheScope:
 
 
 def changed_ids(conn, table: str, id_column: str, since) -> list[str]:
-    """Ids in ``table`` whose ``ingested_at`` moved at or after ``since``.
+    """Ids in ``table`` whose ``changed_at`` moved at or after ``since``.
 
-    This only reports real changes because every upsert in ``scripts/`` now
-    guards its ``DO UPDATE`` with an ``IS DISTINCT FROM`` comparison, so a row
-    the AN republished unchanged keeps its previous ``ingested_at``. Without
-    that guard this returns the whole table on every run.
+    Deliberately **not** ``ingested_at``: that column means "the last run that
+    wrote this row", which dbt reads as its source-freshness field and the marts
+    publish as ``updated_at`` (see ``data/migrations/011_changed_at.sql`` for
+    why conflating the two turns the daily job red). Every upsert in
+    ``scripts/`` sets ``changed_at`` through a ``CASE`` that fires only when the
+    record really differs.
+
+    ``changed_at`` is NULL on rows written before migration 011, which a
+    ``>=`` comparison never matches - so the first run after the migration
+    reports only what it genuinely changed.
     """
     allowed = {
         ("votes", "vote_id"),
@@ -163,7 +197,7 @@ def changed_ids(conn, table: str, id_column: str, since) -> list[str]:
         raise ValueError(f"Unknown table/column for change detection: {table}.{id_column}")
     with conn.cursor() as cur:
         cur.execute(
-            f"SELECT DISTINCT {id_column} FROM {table} WHERE ingested_at >= %s",  # noqa: S608
+            f"SELECT DISTINCT {id_column} FROM {table} WHERE changed_at >= %s",  # noqa: S608
             (since,),
         )
         return [row[0] for row in cur.fetchall()]

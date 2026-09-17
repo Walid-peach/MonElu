@@ -437,9 +437,14 @@ def landing() -> RedirectResponse:
 def health() -> JSONResponse:
     """Liveness plus the numbers that say whether the data behind it is current.
 
-    `last_ingestion` is the timestamp of the most recent successful ingestion run
-    - the honest answer to "how fresh is this data". The pipeline runs on weekday
-    mornings, so a value from yesterday is normal and one from last week is not.
+    `last_ingestion` is the date of the most recent scrutin in the database
+    (`MAX(voted_at)`), not the clock time of the last pipeline run - the honest
+    answer to "how fresh is this data" rather than "when did the job last
+    succeed". So it moves when the Assemblée sits, and a recess legitimately
+    stalls it for weeks; the cron-death signal is dbt source freshness over
+    `deputies.ingested_at`, not this field. Two consumers depend on the
+    distinction: the frontend's freshness badge prints it, and its cache tag
+    rides the `votes` invalidation scope for exactly this reason (GH #353).
 
     `services.dbt_marts` reports `degraded` when the analytics layer is missing.
     The API stays up in that state, but the scorecard, alignment and vote-summary

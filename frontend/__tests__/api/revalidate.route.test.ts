@@ -145,10 +145,17 @@ describe('POST /api/revalidate — targeted scopes (GH #353)', () => {
     expect(tags()).toEqual([AGENDA_TAG])
   })
 
-  it('drops an unknown family instead of failing the purge', async () => {
+  /**
+   * Deploy skew is the real case: `vercel.json`'s ignore step (#356) skips a
+   * frontend deployment for a backend-only change, so ingestion can start
+   * naming a family this build has never heard of. Dropping it would silently
+   * under-purge the pages that family exists to reach.
+   */
+  it('falls back to the full purge on a family this build does not know', async () => {
     const res = await POST(request(SECRET, { families: ['votes', 'chocolate'] }))
     expect(res.status).toBe(200)
-    expect(tags()).toEqual(expect.arrayContaining([VOTES_TAG]))
+    expect(await res.json()).toMatchObject({ mode: 'full' })
+    expect(revalidatePath).toHaveBeenCalledWith('/')
   })
 
   it('ignores non-string entries in the id lists', async () => {

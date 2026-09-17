@@ -57,6 +57,7 @@ def process_batch(
     dry_run: bool,
     conn,
     stats: dict,
+    changed_ids_out: str | None = None,
 ) -> None:
     from rag.chain.prompts import SUMMARY_PROMPT, SUMMARY_PROMPT_PROCEDURAL
 
@@ -111,6 +112,10 @@ def process_batch(
         # detection in run_ingestion_prod.py both read it as. A summary is our
         # own text, not a new record from upstream.
         stats.setdefault("summarized_vote_ids", []).extend(vote_id for _, _, vote_id in updates)
+        # Rewritten after every committed batch, not once at the end: a run that
+        # commits 40 summaries and then dies (a Groq 429 cascade, a job timeout)
+        # must not leave those 40 vote pages stale with nothing reporting it.
+        write_changed_ids(changed_ids_out, stats["summarized_vote_ids"])
 
 
 def check_summary_yield(stats: dict) -> None:
@@ -160,8 +165,10 @@ def main() -> None:
         default=os.getenv("MONELU_CHANGED_IDS_OUT"),
         help=(
             "Write the vote_ids that got a summary, one per line, for the caller's "
-            "cache-invalidation scope (GH #353). Written even when empty, so an "
-            "absent file means the run died rather than generated nothing."
+            "cache-invalidation scope (GH #353). Rewritten after every committed "
+            "batch, so a crash mid-sweep still reports what was already written; "
+            "an absent file means the run died before committing anything, which "
+            "run_ingestion_prod.py turns into a full purge."
         ),
     )
     args = parser.parse_args()
@@ -216,7 +223,7 @@ def main() -> None:
         batch = rows[i : i + BATCH_SIZE]
         batch_num = i // BATCH_SIZE + 1
         log.info("Batch %d/%d (%d votes)…", batch_num, total_batches, len(batch))
-        process_batch(client, batch, args.dry_run, conn, stats)
+        process_batch(client, batch, args.dry_run, conn, stats, args.changed_ids_out)
         if i + BATCH_SIZE < len(rows):
             time.sleep(2.0)  # ~15 req/min conservative → avoids 429 cascade
 

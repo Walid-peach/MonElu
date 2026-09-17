@@ -141,10 +141,12 @@ Supabase sits behind PgBouncer, and `ingest_deputies.py`/`ingest_votes.py` are `
 `ingest_positions.py` streams its batches, so `check_position_yield()` runs after the loop instead: it exits 1 when nothing was written while the votes table had rows to attach positions to, or when more than 5% of extracted positions name an unknown `deputy_id`.
 `ingest_agenda.py`'s `check_agenda_yield()` exits 1 when in-window séance publique ODJ points exist but none (or more than 5%) survive `parse_point`.
 A new parser without such a guard ships a skeleton dataset on a green run - the exact failure mode these guards exist to remove.
-- **Every upsert must skip rows it did not change** (GH #353, ADR-039).
-`ingest_votes.py`, `ingest_deputies.py`, `ingest_positions.py` and `update_party.py` guard their `DO UPDATE` with an `IS DISTINCT FROM` comparison; `ingest_agenda.py` moves `ingested_at` through a `CASE` instead, because `last_seen_at` has to be stamped on every run (ADR-030).
-That makes `ingested_at` mean "this record changed", which is what `run_ingestion_prod.py` builds the frontend cache-invalidation scope from - and it stops rewriting ~715 000 position rows every morning for no new data.
-The summary generators deliberately leave `ingested_at` alone (our own text is not a new AN record) and report the ids they wrote through `--changed-ids-out` instead.
+- **`ingested_at` and `changed_at` are two different signals and must never be merged** (GH #353, ADR-039, migration 011).
+`ingested_at` means "the last run that wrote this row" and is stamped unconditionally: `transform/models/staging/sources.yml` uses it as `loaded_at_field`, the `deputies` source is the "cron silently died" detector at `error_after: 7 days` *because* all 577 rows are rewritten every run, and the three marts publish `max(ingested_at)` as their `updated_at`.
+`changed_at` means "the last run that wrote something different" and is what `run_ingestion_prod.py` builds the frontend cache-invalidation scope from; every upsert sets it through a `CASE`.
+Never guard a `DO UPDATE` with a `WHERE` that skips unchanged rows, and never make `ingested_at` conditional - either one turns the daily job red about a week into a recess and destroys the cron-death alert at the same time.
+`ingest_agenda.py` has a third column, `last_seen_at`, which ADR-030 makes visibility depend on.
+The summary generators leave both AN-facing columns alone (our own text is not a new AN record) and report the ids they wrote through `--changed-ids-out`, rewritten after every committed batch so a crash mid-sweep still reports what landed.
 - `migrate.py` doubles as the Railway start hook (runs before uvicorn in `railway.json`)
 - `run_ingestion_prod.py` orchestrates the full pipeline for production runs, including `ingest_agenda.py` (MON-210) as a non-critical step - an agenda-feed failure must not block core deputies/votes/positions ingestion
 - **The two summary generators share one implementation** (MON-211).
@@ -196,7 +198,7 @@ Every failure mode must land on that side: never make a caller send `{}` or `{"f
 A change set over `MAX_ENTITY_IDS` (50) in `scripts/_cache_scope.py` falls back to the full purge for the same reason: a scrutin's own page is reached only through its `vote:<id>` tag, so dropping the ids and keeping the family would under-purge.
 A route's cache entry depends on the tags of every fetch its render touched, **including the root layout's**, so `HEALTH_TAG` invalidates the entire site and belongs to the `votes` family alone (`/health` reports `last_ingestion` as `MAX(voted_at)`).
 Adding a second fetch to the root layout inherits that blast radius and needs the same treatment.
-The scope is derived from `ingested_at`, which is only a change marker because every upsert in `scripts/` guards its `DO UPDATE` with `IS DISTINCT FROM` - drop that guard and the targeted purge silently degrades back to the blanket one with everything still green.
+The scope is derived from `changed_at`, not `ingested_at` - see the scripts section for why those are two columns.
 `__tests__/lib/cachePolicy.test.ts` fails on an untagged `api.ts` fetch and on `health` reaching a second family; `tests/unit/test_cache_scope.py` asserts the guards and the Python/TypeScript family vocabularies match.
 - The homepage carries **exactly one `<h1>`**, and it lives in `AssemblyScrollExperience`'s server-rendered half (MON-270).
 `CinematicExperience` only mounts after `useSyncExternalStore` confirms a desktop viewport, so on desktop the DOM is the union of both trees - its two scroll-panel titles are `<h2>`, never `<h1>`.
@@ -237,11 +239,12 @@ The endpoint validates the caller's `url` against that allowlist before building
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
 - `networking`, `s3`, `rds` modules are the only parts worth salvaging if an AWS migration ever happens; `ec2` does not survive that design.
 
-**`data/migrations/`** — 11 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
+**`data/migrations/`** — 12 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
 - `001_init.sql`: `deputies`, `votes`, `vote_positions`, `document_chunks`
 - All `CREATE TABLE IF NOT EXISTS` — safe to re-run
 - `migrate.py` keeps a `schema_migrations` ledger: each file is applied once and skipped on later deploys
 - **Every new table in `public` must get `ENABLE ROW LEVEL SECURITY`** (MON-248). On Supabase, `public` is exposed through PostgREST and the anon role holds default privileges there, so RLS is the only gate — the app, ingestion and dbt all connect as the table owner and bypass it. `migrate.py`'s `assert_rls_on_created_tables` enforces this and exits 1 on a violation; `010_rls_backfill.sql` backfilled the seven tables that 004-009 missed. Tables created from Python rather than from a `.sql` file are outside that check and must enable RLS at their own creation site — `schema_migrations` (`scripts/migrate.py`) and `document_chunks_staging` (`rag/pipeline/index_manager.py`) both do. Add a `public_read` `FOR SELECT USING (true)` policy only for data meant to be readable by an anon key directly; the default is no policy at all.
+- `011_changed_at.sql` adds the `changed_at` column the cache-invalidation scope reads (GH #353) — see the scripts section for why it is not `ingested_at`
 - Numeric prefixes must be unique (`assert_unique_numeric_prefixes`, MON-226) — the duplicate `005` pair is grandfathered and that set must never grow
 
 ### Database

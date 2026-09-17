@@ -96,6 +96,23 @@ def _now(conn):
         return cur.fetchone()[0]
 
 
+def visible_agenda_count(conn) -> int:
+    """How many agenda items the API would currently show.
+
+    Under ADR-030 an item disappears from the feed by *omission*: it is simply
+    not upserted, so neither `changed_at` nor any state column moves and the
+    row-level change detection cannot see it. Comparing this count either side
+    of the agenda step catches the drop - which matters because the homepage
+    bakes a 7-day agenda window into a page cached for a day.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) FROM agenda_items "
+            "WHERE last_seen_at = (SELECT MAX(last_seen_at) FROM agenda_items)"
+        )
+        return cur.fetchone()[0]
+
+
 def run_step(
     label: str, script: str, extra_args: list[str] | None = None, critical: bool = True
 ) -> float | None:
@@ -169,6 +186,7 @@ def main() -> None:
 
     try:
         votes_before = row_count(lock_conn, "votes")
+        agenda_visible_before = visible_agenda_count(lock_conn)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             scrutins_zip, deputies_zip = _download_zips(tmp_dir)
@@ -228,12 +246,10 @@ def main() -> None:
 
         scope.add_votes(changed_votes)
         scope.add_deputies(changed_deputies)
-        if changed_position_votes:
-            scope.add_family("positions")
-            # A corrected position changes the scrutin's own page without
-            # touching its row, so the vote ids ride along as entity tags.
-            scope.votes.update(changed_position_votes)
-        if changed_agenda:
+        scope.add_position_votes(changed_position_votes)
+        # An item withdrawn from the AN feed is never upserted, so no row-level
+        # timestamp moves - only the visible count does (see visible_agenda_count).
+        if changed_agenda or visible_agenda_count(lock_conn) != agenda_visible_before:
             scope.add_family("agenda")
         if changed_votes or changed_deputies or changed_position_votes:
             # `dbt run` rebuilds the marts unconditionally after this script, but
@@ -295,7 +311,16 @@ def main() -> None:
         if t_agenda_summaries is None:
             soft_failures.append("Agenda summaries")
 
+        # A generator that died mid-sweep may have committed summaries it never
+        # got to report. It writes its file after every committed batch, so the
+        # window is small - but a crash before the first write leaves no file at
+        # all, and an empty read would silently claim "nothing was summarized".
+        if t_summaries is None and not os.path.exists(vote_summary_ids_path):
+            scope.force_full_purge("vote summaries failed before reporting what it wrote")
         scope.add_summaries(read_changed_ids(vote_summary_ids_path))
+
+        if t_agenda_summaries is None and not os.path.exists(agenda_summary_ids_path):
+            scope.force_full_purge("agenda summaries failed before reporting what it wrote")
         if read_changed_ids(agenda_summary_ids_path):
             scope.add_family("agenda")
 
