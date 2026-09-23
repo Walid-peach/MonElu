@@ -61,6 +61,9 @@ DOSSIER_REF_RE = re.compile(r"^DLR[A-Za-z0-9]+$")
 _AMENDEMENT_RE = re.compile(r"^(l'|le |la |les )?(sous-)?amendements?\b")
 _ARTICLE_RE = re.compile(r"^(l'|les )?articles?\b")
 
+# The closed vocabulary, pinned here so a test can assert against it rather than
+# re-listing the values. Read only by the test suite today; MON-244 will read it
+# when it splits headline scrutins from the amendment count.
 SCRUTIN_KINDS = ("ensemble", "motion", "amendement", "article", "autre")
 
 

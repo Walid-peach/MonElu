@@ -13,6 +13,12 @@ Refresh is upsert-only, as everywhere else (CLAUDE.md decision 8): every touched
 row is stamped with `last_seen_at`, nothing is ever deleted, and an acte that
 vanishes from the export keeps its stale stamp for readers to filter out.
 
+The whole run - ~2 900 dossier upserts, ~21 000 acte upserts and the has_scrutins
+recompute - commits as a single transaction. That is deliberate and not an
+oversight: a half-written parcours renders as a bill that skipped a stage, which
+is worse than serving yesterday's complete one. Do not split it into batches to
+shorten the transaction.
+
 Usage:
     python scripts/ingest_dossiers.py
     python scripts/ingest_dossiers.py --zip-path /tmp/Dossiers_Legislatifs.json.zip
@@ -305,11 +311,14 @@ def derive_status(actes: list[dict]) -> tuple[str, str | None]:
             and latest["root_uid"] == reading_stages[0]["acte_uid"]
         ):
             return "adoptee_definitivement", status_label
-    # 5 / 6 — nothing decided yet: déposée before the commission, en commission after
+    # 5 / 6 — nothing decided yet. The two are tested in the opposite order to
+    # the ADR's numbering because their conditions are mutually exclusive (rule 5
+    # is "no -COM acte", rule 6 is "a -COM acte exists"), so sharing the
+    # `not decisions` guard is the same rule set with one test instead of two.
     if not decisions:
         if any(COMMISSION_MARKER in a["code_acte"] for a in actes):
-            return "en_commission", status_label
-        return "deposee", status_label
+            return "en_commission", status_label  # rule 6
+        return "deposee", status_label  # rule 5
     # 7 — total fallback
     return "en_navette", status_label
 

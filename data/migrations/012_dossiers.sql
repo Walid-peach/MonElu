@@ -86,3 +86,12 @@ ALTER TABLE dossier_actes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE votes ADD COLUMN IF NOT EXISTS scrutin_kind TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_votes_scrutin_kind ON votes (scrutin_kind);
+
+-- `votes.dossier_id` becomes a join key here, not just a display field: the
+-- has_scrutins recompute runs an EXISTS over it once per dossier, and MON-244's
+-- GET /lois/{dossier_uid} runs the same predicate on every page render.
+-- 009_agenda.sql indexed `agenda_items.dossier_id` for exactly this reason; the
+-- equivalent on `votes` was never added. Partial, because the column is NULL on
+-- every scrutin before the AN's 2026-03 tagging cutover (ADR-035 §1) and those
+-- rows can never satisfy the predicate.
+CREATE INDEX IF NOT EXISTS idx_votes_dossier_id ON votes (dossier_id) WHERE dossier_id IS NOT NULL;
