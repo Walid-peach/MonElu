@@ -13,7 +13,13 @@ import pytest
 from rag.chain.sql_router import detect_department, detect_intent, normalize_text
 from scripts.backfill_dossier_ids import compute_repairs, extract_embedded_ref
 from scripts.ingest_positions import _votants, extract_positions
-from scripts.ingest_votes import _to_int, check_dossier_refs, parse_vote
+from scripts.ingest_votes import (
+    SCRUTIN_KINDS,
+    _to_int,
+    check_dossier_refs,
+    classify_scrutin_kind,
+    parse_vote,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -330,3 +336,70 @@ def test_normalize_text_apostrophes():
 
 def test_normalize_text_whitespace():
     assert normalize_text("  combien   de  députés  ") == "combien de députés"
+
+
+# ---------------------------------------------------------------------------
+# scrutin_kind — ADR-035 §4, migration 012
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("libelle", "expected"),
+    [
+        # Amendments: the bulk of the corpus, and the thing a bill timeline
+        # collapses into a count rather than listing.
+        ("l'amendement n° 15 de M. Rancoule à l'article premier de la proposition", "amendement"),
+        ("les amendements identiques n° 26 et n° 40", "amendement"),
+        # Sous-amendements are amendments for this purpose — same noise, same
+        # timeline. Without this they fell into `autre`, which is where ~200 of
+        # the tagged scrutins were landing.
+        ("le sous-amendement n° 201 de M. Vannier à l'amendement n° 181", "amendement"),
+        # Motions, anywhere in the string.
+        ("la motion de rejet préalable, déposée par Mme Mathilde Panot", "motion"),
+        ("la motion de censure déposée en application de l'article 49", "motion"),
+        # Headline votes.
+        ("l'ensemble de la proposition de loi visant à lutter contre la fraude", "ensemble"),
+        # Article votes, which must not be swallowed by the amendment rule and
+        # must not swallow it either — an amendment names the article it amends.
+        ("l'article 22 (examen prioritaire) du projet de loi de programmation", "article"),
+        ("l'article premier de la proposition de loi visant à renforcer", "article"),
+        # Neither: a vote on nothing in the text.
+        ("la demande de suspension de séance formulée par M. Piquemal", "autre"),
+        ("", "autre"),
+        (None, "autre"),
+    ],
+)
+def test_classify_scrutin_kind(libelle, expected):
+    assert classify_scrutin_kind(libelle) == expected
+
+
+def test_classify_scrutin_kind_is_accent_and_case_insensitive():
+    assert classify_scrutin_kind("L'AMENDEMENT n° 3 de M. X") == "amendement"
+    assert classify_scrutin_kind("L’ensemble du projet de loi") == "ensemble"
+
+
+def test_parse_vote_carries_the_scrutin_kind(scrutin):
+    record = parse_vote(scrutin)
+    assert record["scrutin_kind"] in SCRUTIN_KINDS
+
+
+def test_parse_vote_classifies_from_objet_libelle():
+    item = {
+        "uid": "VTANR5L17V1",
+        "dateScrutin": "2026-04-01",
+        "titre": "un titre qui ne sert pas à la classification",
+        "objet": {"libelle": "l'ensemble du projet de loi de finances"},
+    }
+    assert parse_vote(item)["scrutin_kind"] == "ensemble"
+
+
+def test_parse_vote_falls_back_to_the_title_when_objet_has_no_libelle():
+    """`titre` and `objet.libelle` are byte-identical on all 8 434 scrutins in
+    the export, which is also what makes backfill_scrutin_kinds() exact."""
+    item = {
+        "uid": "VTANR5L17V2",
+        "dateScrutin": "2026-04-01",
+        "titre": "la motion de censure déposée en application de l'article 49",
+        "objet": {},
+    }
+    assert parse_vote(item)["scrutin_kind"] == "motion"

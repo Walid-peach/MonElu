@@ -226,6 +226,20 @@ def main() -> None:
             if t_agenda is None:
                 soft_failures.append("Agenda")
 
+            # Non-critical for the same reason as the agenda step above: the
+            # dossiers export is a third, independent feed (MON-243, ADR-035),
+            # and a failure there must not block deputies/votes/positions.
+            #
+            # Runs after Votes, not before: the step ends by recomputing
+            # `dossiers.has_scrutins` from `votes.dossier_id`, so a scrutin
+            # ingested this morning gives its bill a page the same run.
+            # It takes no --since: the acte parcours is the full legislature by
+            # construction (ADR-035 §1 - it is complete precisely where
+            # `votes.dossier_id` is not), and the export is 10 MB.
+            t_dossiers = run_step("Dossiers", "ingest_dossiers.py", critical=False)
+            if t_dossiers is None:
+                soft_failures.append("Dossiers")
+
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
         n_positions = row_count(lock_conn, "vote_positions")
@@ -348,6 +362,7 @@ def main() -> None:
         log.info("║  Positions : %6d   (%5.1fs)      ║", n_positions, t_positions)
         log.info("║  Party fix :          (%s)      ║", _fmt(t_party))
         log.info("║  Agenda    :          (%s)      ║", _fmt(t_agenda))
+        log.info("║  Dossiers  :          (%s)      ║", _fmt(t_dossiers))
         log.info("║  Summaries :          (%s)      ║", _fmt(t_summaries))
         log.info("║  Agenda sum:          (%s)      ║", _fmt(t_agenda_summaries))
         log.info("╠══════════════════════════════════════╣")
