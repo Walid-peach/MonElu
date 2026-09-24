@@ -15,6 +15,8 @@ import scripts.migrate
 from scripts.migrate import (
     MIGRATIONS_DIR,
     assert_rls_on_created_tables,
+    qualify_table,
+    scan_tables,
 )
 
 
@@ -30,33 +32,36 @@ def test_current_migration_files_pass():
     assert_rls_on_created_tables(migration_files)
 
 
-def test_all_eleven_tables_are_covered():
+def test_the_full_table_set_is_covered():
     """Pins the actual table set, so a future migration that creates a table
-    and forgets RLS fails here rather than only in the generic check."""
+    and forgets RLS fails here rather than only in the generic check.
+
+    Names are schema-qualified since #412: the account tables live in
+    `app_private`, and an unqualified set could not tell them apart from a
+    same-named table in `public`.
+    """
     migration_files = sorted(glob.glob(os.path.join(MIGRATIONS_DIR, "*.sql")))
-    from scripts.migrate import CREATE_TABLE_RE, ENABLE_RLS_RE, _strip_sql_comments
+    created, secured = scan_tables(migration_files)
 
-    created, secured = set(), set()
-    for migration_file in migration_files:
-        with open(migration_file) as f:
-            sql_text = _strip_sql_comments(f.read())
-        created.update(t.lower() for t in CREATE_TABLE_RE.findall(sql_text))
-        secured.update(t.lower() for t in ENABLE_RLS_RE.findall(sql_text))
-
-    assert created == {
-        "deputies",
-        "votes",
-        "vote_positions",
-        "document_chunks",
-        "api_keys",
-        "api_key_usage",
-        "feedback",
-        "verifications",
-        "chat_shares",
-        "quiz_shares",
-        "agenda_items",
+    assert set(created) == {
+        "public.deputies",
+        "public.votes",
+        "public.vote_positions",
+        "public.document_chunks",
+        "public.api_keys",
+        "public.api_key_usage",
+        "public.feedback",
+        "public.verifications",
+        "public.chat_shares",
+        "public.quiz_shares",
+        "public.agenda_items",
+        "app_private.profiles",
+        "app_private.followed_deputies",
+        "app_private.followed_themes",
+        "app_private.bookmarks",
+        "app_private.notification_preferences",
     }
-    assert created <= secured
+    assert set(created) <= secured
 
 
 def test_table_created_without_rls_is_rejected(tmp_path):
@@ -126,6 +131,42 @@ def test_commented_out_rls_does_not_satisfy_the_check(tmp_path):
         "-- ALTER TABLE widgets ENABLE ROW LEVEL SECURITY;",
     )
     with pytest.raises(AssertionError, match="widgets"):
+        assert_rls_on_created_tables([path])
+
+
+def test_unqualified_names_normalise_to_public():
+    assert qualify_table("Widgets") == "public.widgets"
+    assert qualify_table("app_private.Profiles") == "app_private.profiles"
+
+
+def test_schema_qualified_table_is_matched(tmp_path):
+    """The pre-#412 patterns captured "app_private" as the table name here and
+    never matched the ALTER, so a fully-guarded migration failed the check while
+    naming a table that does not exist."""
+    path = _write(
+        tmp_path,
+        "013_x.sql",
+        "CREATE TABLE IF NOT EXISTS app_private.widgets (id UUID);\n"
+        "ALTER TABLE app_private.widgets ENABLE ROW LEVEL SECURITY;",
+    )
+    assert_rls_on_created_tables([path])
+
+
+def test_schema_qualified_table_without_rls_is_rejected(tmp_path):
+    path = _write(tmp_path, "013_x.sql", "CREATE TABLE app_private.widgets (id UUID);")
+    with pytest.raises(AssertionError, match="app_private.widgets"):
+        assert_rls_on_created_tables([path])
+
+
+def test_rls_on_a_same_named_public_table_does_not_cover_the_private_one(tmp_path):
+    """The reason names are compared qualified rather than by bare table name."""
+    path = _write(
+        tmp_path,
+        "013_x.sql",
+        "CREATE TABLE app_private.widgets (id UUID);\n"
+        "ALTER TABLE widgets ENABLE ROW LEVEL SECURITY;",
+    )
+    with pytest.raises(AssertionError, match="app_private.widgets"):
         assert_rls_on_created_tables([path])
 
 

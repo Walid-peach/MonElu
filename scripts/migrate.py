@@ -31,12 +31,18 @@ MIGRATIONS_DIR = os.path.join(PROJECT_ROOT, "data", "migrations")
 
 MIGRATION_PREFIX_RE = re.compile(r"^(\d{3})_")
 
+# Both accept an optional `schema.` qualifier: 013_account_schema.sql creates its
+# tables in `app_private`, and without the qualifier these patterns captured
+# "app_private" as the table name and then failed to match the ALTER at all,
+# reporting a table that does not exist as unguarded (#412).
+_TABLE_REF = r"((?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*)"
+
 CREATE_TABLE_RE = re.compile(
-    r"\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)",
+    r"\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?" + _TABLE_REF,
     re.IGNORECASE,
 )
 ENABLE_RLS_RE = re.compile(
-    r"\bALTER\s+TABLE\s+([A-Za-z_][A-Za-z0-9_]*)\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY",
+    r"\bALTER\s+TABLE\s+" + _TABLE_REF + r"\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY",
     re.IGNORECASE,
 )
 SQL_COMMENT_RE = re.compile(r"--[^\n]*|/\*.*?\*/", re.DOTALL)
@@ -53,6 +59,36 @@ def _strip_sql_comments(sql_text: str) -> str:
     header comment. Matching statements without stripping comments first reads
     those as real DDL."""
     return SQL_COMMENT_RE.sub(" ", sql_text)
+
+
+def qualify_table(name: str) -> str:
+    """Normalise a matched table reference to `schema.table`, lowercased.
+
+    An unqualified name means `public`, so the pre-#412 migrations keep comparing
+    equal to themselves whether or not a later file spells the schema out.
+    """
+    lowered = name.lower()
+    return lowered if "." in lowered else f"public.{lowered}"
+
+
+def scan_tables(migration_files: list[str]) -> tuple[dict[str, str], set[str]]:
+    """Return ({qualified table: file that creates it}, {qualified table with RLS}).
+
+    Shared by assert_rls_on_created_tables and by the tests that pin the table
+    set, so both read the same definition of "a table a migration creates".
+    """
+    created: dict[str, str] = {}
+    secured: set[str] = set()
+
+    for migration_file in migration_files:
+        filename = os.path.basename(migration_file)
+        with open(migration_file) as f:
+            sql_text = _strip_sql_comments(f.read())
+        for table in CREATE_TABLE_RE.findall(sql_text):
+            created.setdefault(qualify_table(table), filename)
+        secured.update(qualify_table(table) for table in ENABLE_RLS_RE.findall(sql_text))
+
+    return created, secured
 
 
 def assert_unique_numeric_prefixes(migration_files: list[str]) -> None:
@@ -76,8 +112,8 @@ def assert_unique_numeric_prefixes(migration_files: list[str]) -> None:
 
 
 def assert_rls_on_created_tables(migration_files: list[str]) -> None:
-    """Every table a migration creates in `public` must also have RLS enabled by
-    some migration (MON-248).
+    """Every table a migration creates, in any schema, must also have RLS enabled
+    by some migration (MON-248).
 
     On Supabase, `public` is exposed through PostgREST and the anon role holds
     default privileges there, so RLS is the only gate between an anon key and
@@ -86,17 +122,14 @@ def assert_rls_on_created_tables(migration_files: list[str]) -> None:
 
     The check is cumulative across all migration files, not per-file: enabling
     RLS in a later backfill migration is a valid way to satisfy it.
-    """
-    created: dict[str, str] = {}
-    secured: set[str] = set()
 
-    for migration_file in migration_files:
-        filename = os.path.basename(migration_file)
-        with open(migration_file) as f:
-            sql_text = _strip_sql_comments(f.read())
-        for table in CREATE_TABLE_RE.findall(sql_text):
-            created.setdefault(table.lower(), filename)
-        secured.update(table.lower() for table in ENABLE_RLS_RE.findall(sql_text))
+    Tables outside `public` are held to the same rule even though PostgREST does
+    not serve them (`app_private`, #412): there the gate that matters is the
+    restricted role plus these policies, and a table created without RLS would
+    hand every row to that role. Names are compared schema-qualified, so
+    `app_private.profiles` and a hypothetical `public.profiles` stay distinct.
+    """
+    created, secured = scan_tables(migration_files)
 
     unguarded = {table: origin for table, origin in created.items() if table not in secured}
     if unguarded:
@@ -184,18 +217,25 @@ def main() -> None:
 
         # ── Table summary ────────────────────────────────────────────────────
         with conn.cursor() as cur:
+            # `app_private` is included so the account tables (#412) show up in the
+            # deploy log like every other table, rather than being invisible there
+            # purely because they live outside `public`.
             cur.execute("""
-                SELECT table_name, COUNT(column_name) AS column_count
+                SELECT table_schema, table_name, COUNT(column_name) AS column_count
                 FROM information_schema.columns
-                WHERE table_schema = 'public'
-                GROUP BY table_name
-                ORDER BY table_name
+                WHERE table_schema IN ('public', 'app_private')
+                GROUP BY table_schema, table_name
+                ORDER BY table_schema, table_name
             """)
             rows = cur.fetchall()
 
-        log.info("Tables in public schema:")
+        log.info("Tables:")
         for row in rows:
-            log.info("  %-25s %d columns", row["table_name"], row["column_count"])
+            log.info(
+                "  %-35s %d columns",
+                f"{row['table_schema']}.{row['table_name']}",
+                row["column_count"],
+            )
 
         # ── pgvector check ───────────────────────────────────────────────────
         with conn.cursor() as cur:
