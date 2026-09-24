@@ -42,8 +42,14 @@ deferred.
 **Trigger to build:** First real user asks for alerts, or monelu.fr is live
 with real traffic.
 
+**Correction (2026-09-22, ADR-040):** the inventory below is stale.
+`subscriptions` and `alert_log` do **not** exist in `data/migrations/` and were never applied to any database, and there is no `POST /alerts/subscribe` stub in `api/`.
+Treat the list as a design sketch, not as deployed state - resuming alerts starts with a migration, not with a schema that is already there.
+ADR-040 also narrows this ADR: it forbids *scheduled or bulk* dispatch, and permits transactional authentication mail.
+That permission is not an argument for building alerts; the hold on #359 stands on its own terms.
+
 **What's ready when we resume:**
-- subscriptions + alert_log tables in Postgres (migrated to prod)
+- subscriptions + alert_log tables in Postgres (claimed migrated to prod - see the correction above; they do not exist)
 - Full implementation spec exists in this conversation history
 - SendGrid free tier: 100 emails/day, no credit card needed
 - Airflow DAG spec: dag_vote_alerts.py, schedule */5 * * * 1-5
@@ -1033,8 +1039,12 @@ Nothing is deleted, so CLAUDE.md decision 8 holds unchanged.
 
 ### 4. The timeline is headline-first; amendment scrutins collapse
 
-Of the 2 606 tagged scrutins, **87 % are amendment or article votes** (2 262 amendments, 239 articles) against just 71 "ensemble" votes, 19 motions and 17 others.
+Of the 2 606 tagged scrutins, **96 % are amendment or article votes** (2 262 amendments, 239 articles) against just 71 "ensemble" votes, 19 motions and 17 others.
 The median dossier has **one** headline scrutin; `DLR5L17N54085` has 422 scrutins of which 395 are amendments.
+
+This read "87 %" until MON-243 implemented the classifier and re-measured: the absolute counts were right and the percentage was an arithmetic slip - 2 262 + 239 of 2 606 is 96 %.
+The re-measurement over the whole export on 2026-09-22 found 2 261 amendments, 241 articles, 72 "ensemble", 19 motions and 15 others over 2 608 tagged scrutins, so the counts themselves stand.
+The decision this section makes is unaffected by the correction: it gets stronger, not weaker.
 
 A literal "vertical timeline of every scrutin attached to the dossier", as MON-105 words it, is therefore 400 rows of amendment noise around four meaningful nodes.
 
@@ -1107,6 +1117,12 @@ Publishing 2 779 near-empty pages would be thin content on a site whose SEO case
 
 `has_scrutins` is recomputed at the end of every ingestion run from `votes.dossier_id`, so a bill acquires its page automatically on its first scrutin.
 
+**Measured after MON-243 shipped: the flag lands on 70 dossiers, not 75, and that is correct.**
+74 distinct well-formed refs exist in `votes.dossier_id`; four of them - `DLR5L16N49263`, `DLR5L16N49868`, `DLR5L16N49075`, `DLR5L16N49364` - are **legislature 16** dossiers, carried over from texts that began before this legislature.
+This export is L17-scoped, so they have no `dossiers` row and get no page.
+That is the intended outcome and not a gap to close: ingesting the L16 export to publish four pages whose parcours mostly predates the site's own data horizon buys nothing.
+What it does mean is that a scrutin can carry a `dossier_id` that resolves to nothing, so MON-244's `GET /lois/{dossier_uid}` must 404 on those and MON-245 must render "no bill page" rather than treating the dangling ref as an error.
+
 **`GET /lois` and the sitemap read the flag, not a hardcoded list.**
 No slug map is hardcoded here, unlike ADR-026's group slugs: group labels are a closed set of twelve political facts, whereas dossiers are an open, growing set.
 
@@ -1171,7 +1187,7 @@ Building the page on the acte parcours instead costs one extra table and one ext
 
 **Impact:**
 
-- MON-243 implements exactly the two tables above, plus `votes.scrutin_kind`. The `votes.dossier_id` backfill is MON-258, which blocks it.
+- MON-243 implements exactly the two tables above, plus `votes.scrutin_kind`. The `votes.dossier_id` backfill is MON-258, which blocks it. **Shipped 2026-09-23 (GH #368 / PR #420)** as `data/migrations/012_dossiers.sql` - `011` had been taken by GH #353 by then - and `scripts/ingest_dossiers.py`, a non-critical step in `run_ingestion_prod.py`. The same migration indexes `votes.dossier_id`, which this ADR turns from a display field into a join key.
 - MON-244's `GET /lois/{dossier_uid}` returns the acte parcours as the primary array, with scrutins attached to actes, not a flat scrutin list. It must expose the amendment counts separately from headline scrutins.
 - MON-245 renders actes as the timeline spine and never lists amendment scrutins inline by default. It shows the raw `status_label` next to the derived badge.
 - MON-247's sitemap reads `has_scrutins`, so it emits on the order of 75 URLs, not 2 854. The 50 000-URL concern raised on that issue does not materialize.
@@ -1371,6 +1387,176 @@ A summary generator that dies mid-sweep may have committed summaries it never re
 
 ---
 
+## ADR-040 - Accounts are Supabase Auth with email codes, a server-side session, and a restricted DB role (#411)
+
+**Date:** 2026-09-22
+**Status:** Final
+
+**Decision:** MonÉlu gets private accounts on six settled choices.
+
+| Layer | Choice |
+|-------|--------|
+| Identity provider | **Supabase Auth** - no new subprocessor, no credential written here |
+| Sign-in | **Email verification code (OTP)**, no passwords at all in v1 |
+| Email delivery | **Resend as Supabase custom SMTP**, on a domain MonÉlu controls |
+| Session | **Held server-side by Next.js**, which calls FastAPI; the browser never holds a token |
+| User data | **Private schema + a restricted DB role + RLS that actually applies** |
+| Public data | **Reading stays anonymous, permanently** |
+
+### 1. Supabase Auth, because it adds no one to the privacy policy
+
+Every alternative adds a named third party to a French civic-transparency privacy policy.
+Clerk, Auth0 and Descope are faster to wire and would be defensible for a startup; here they add a US identity vendor to the RGPD chain and reach into the frontend deeply enough that leaving is a rewrite.
+Supabase already holds every row MonÉlu has, so using its auth changes the *volume* of personal data processed, not the *list of processors* - the cheapest possible answer to "who else sees this".
+
+Custom FastAPI auth was rejected on the opposite ground: it adds no vendor but makes this project the custodian of password hashes, reset tokens, lockout logic and timing-attack surface, for a solo maintainer, forever.
+That is 15 to 20 days of work to reimplement something already paid for, and the failure mode is a breach rather than a bug.
+
+FranceConnect - the obvious answer for a civic site - is legally unavailable.
+Under the arrêté du 8 novembre 2018 it serves public administrations; a private body or association qualifies only by citing a law that *obliges* it to verify its users' identity (the documented example is a bank's anti-money-laundering duty).
+Reading voting records carries no such obligation, so MonÉlu cannot be habilitated.
+This is recorded here so it is not re-proposed.
+
+### 2. Email codes, not magic links, and no passwords
+
+Sign-in is: enter an email, receive a six-digit code, type it.
+That is the whole flow.
+
+**Why no password:** there is no password to breach, reset, rotate, or store, and no "forgot password" path to build - recovery *is* the sign-in path.
+A password can be added later as an additional method; it must never become the identifier.
+
+**Why a code rather than a link:** corporate mail scanners and link pre-fetchers consume single-use links before the human clicks, which turns a magic link into an intermittent, unreproducible support ticket.
+A code also works across devices (read on a phone, type on a laptop) and never puts a credential in a URL that can land in a log, a referrer, or a shared screenshot.
+
+**Cost, stated plainly:** an inbox round trip on every sign-in.
+That is the honest price of holding no credential, and the reason the session (§4) is long-lived enough that this is rare.
+
+### 3. Resend as custom SMTP, which makes the domain a prerequisite
+
+Supabase's built-in sender is capped at **2 auth emails per hour** and its own documentation calls it unfit for production - two strangers signing up in the same hour is an outage.
+So auth email goes through Resend as Supabase's custom SMTP provider (free tier: 3 000/month, 100/day - the daily cap is the binding one).
+
+This makes a domain MonÉlu controls a **hard prerequisite**: SPF and DKIM cannot be published for `vercel.app` or `up.railway.app`, so no provider will send as MonÉlu until the domain exists.
+Acquiring it is therefore its own issue and blocks the sign-in work, not something to discover halfway through.
+The same purchase also lets the API move to a subdomain of the site later, which is the real fix for the cross-site problem §4 works around.
+
+**Relationship to ADR-002, which forbade email dispatch:** this ADR **amends** ADR-002 rather than superseding it.
+ADR-002 deferred *scheduled bulk dispatch* - a cron, a digest assembled per subscription, curated content, a send volume proportional to the subscriber list.
+Transactional auth mail is a different machine on the same pipe: user-triggered, single-recipient, no scheduler, no content pipeline, volume proportional to sign-ins.
+Rule 6 is narrowed to "no scheduled or bulk dispatch" accordingly.
+**#359 is not unblocked by this.** Its hold stands on its own terms, and the existence of an SMTP provider is not an argument for building alerts - when that hold is re-evaluated, it is re-evaluated as a product decision.
+
+ADR-002 also contains a stale claim: it states that `subscriptions` and `alert_log` tables are "migrated to prod".
+Neither exists in `data/migrations/`, and the stub `POST /alerts/subscribe` it describes is not in `api/`.
+That entry is annotated in place.
+
+### 4. The session lives on the Next.js server, and FastAPI verifies independently
+
+The frontend (`mon-elu.vercel.app`) and the API (`monelu-production.up.railway.app`) are different registrable domains, so a cookie set by the API is a **third-party** cookie: `SameSite=None` at best, dropped by Safari's ITP, partitioned by Chrome, and incompatible with the `CORS_ORIGINS=*` the project ships.
+Rather than manage that, this design removes it:
+
+1. `@supabase/ssr` keeps the Supabase session in a **first-party httpOnly cookie on the Next origin**.
+  Client JavaScript never sees a token, so an XSS cannot exfiltrate a session.
+2. Authenticated calls go through **Next route handlers**, which read the session server-side and forward the Supabase **access token** as a bearer to FastAPI.
+  Precedent exists: `api/portraits/[id]` and `md/deputes/[id]` already proxy the API server-side.
+3. FastAPI **verifies that JWT itself** against the Supabase signing key and takes `sub` as the user identity.
+
+Step 3 is not optional and is the reason this is not simply "Next asserts who the user is".
+A shared service token plus a forwarded user id would make the Next layer the authorizer, and then any header-injection or SSRF in a route handler becomes account impersonation.
+Verifying the signature at the API keeps the trust boundary at the API, where the data is.
+
+**Consequences to hold onto:** the API stays `allow_credentials=False` and its CORS config does not change, because the browser never calls it with a credential.
+Authenticated route handlers are per-user and must stay outside the ISR contract of GH #352 - never cached, never given a `revalidate`.
+Every authenticated request costs one extra hop; that is the price of keeping the token out of the browser.
+`PyJWT` joins `requirements.txt`; `@supabase/supabase-js` and `@supabase/ssr` join `frontend/package.json`.
+No other auth dependency is warranted.
+
+### 5. A private schema and a restricted role, because RLS as used today is theatre
+
+MON-248 requires RLS on every new `public` table, and that rule is sound - but the API, ingestion and dbt all connect **as the table owner**, which bypasses RLS entirely.
+For public data that is harmless: RLS is there to guard the PostgREST anon surface, and the app's own isolation needs are nil.
+For user data it would be a comfortable illusion: the policy would be visible in the migration, and a single forgotten `WHERE user_id = …` would expose every account.
+
+So user data gets three layers instead of one:
+
+1. **A private schema** (`app_private`) that is not in Supabase's exposed schemas.
+  PostgREST never serves it, so the failure mode MON-248 exists to catch cannot occur for these tables at all - removed rather than guarded.
+2. **A restricted role** for the account routes: no ownership, no `BYPASSRLS`, `USAGE` on the schema and table privileges only.
+  The API opens a second connection pool as this role, and only the account routers use it.
+  Public routes keep the existing owner connection unchanged.
+3. **RLS policies that therefore apply.** Each authenticated transaction sets the verified identity as a GUC and the policies read it:
+
+```sql
+-- per transaction, inside an explicit BEGIN
+SET LOCAL app.user_id = '<sub from the verified JWT>';
+
+-- policy shape
+USING (user_id = current_setting('app.user_id', true)::uuid)
+```
+
+A forgotten `WHERE` now returns zero rows instead of everyone's.
+That is the whole point of paying for the extra pool.
+
+Two traps, written down because both are easy and silent:
+
+- **`SET LOCAL`, never `SET`.** Supabase sits behind PgBouncer in transaction-pooling mode, so a session-scoped `SET` outlives the request and leaks the previous caller's identity to whoever gets that connection next.
+  Transaction-scoped is the only safe form, which also means every authenticated query runs inside an explicit transaction.
+- **`auth.uid()` does not apply here.** MonÉlu's API is not PostgREST and does not connect as a GoTrue-issued role, so Supabase RLS tutorials that use `auth.uid()` are wrong for this codebase.
+  The GUC above is the identity source.
+
+**Identity keys:** the profile row's primary key is a MonÉlu UUID, with the Supabase `auth.users.id` stored beside it as a unique attribute.
+Application rows reference the MonÉlu id.
+Never key application data on the provider's subject id: it makes leaving Supabase Auth, or adding a second sign-in method, a migration of every follow and bookmark instead of one column.
+
+**If a second sign-in method is ever added** (Google, passkey), link it only on a **verified** email match.
+Auto-linking on an unverified address is account takeover, and it is the single most common way this feature is broken.
+
+### 6. Reading stays anonymous, and accounts are additive
+
+No public data ever moves behind sign-in.
+Deputies, votes, groups, themes, the agenda, the quiz, search and the `.md` twins stay readable with no account, no cookie and no identification - that is what MonÉlu is.
+
+Personalization already exists anonymously: `frontend/src/lib/mon-depute.ts` stores a followed deputy and a per-deputy `lastSeenAt` in `localStorage`, and `/mon-depute` renders from it.
+That path **stays**.
+An account is an upgrade for visitors who want their follows on more than one device, and first sign-in offers a one-time import of the stored deputy which the visitor can decline, leaving `localStorage` untouched.
+
+**Data collected is the minimum for civic personalization:** display name, preferred language, department, circonscription, followed deputies, followed themes, bookmarks, notification preferences.
+No birthdate, no gender, no address, no phone.
+Each field carries an on-page explanation of why it is asked.
+**No political profile is ever derived.** Followed themes and quiz answers are stored as chosen and are never aggregated into an inferred label - the ADR-028 discipline extends here.
+
+**Territory granularity in v1 is department + circonscription.**
+`deputies.circonscription` holds a bare number scoped to `department`, and no commune-to-circonscription dataset is ingested anywhere in this repo, so a municipality picker has no data behind it.
+Commune-level lookup is deferred until such a dataset is verified and ingested - it is not a frontend task.
+
+**Notification preferences are stored and nothing is sent.** The UI says so.
+This is the ADR-002 line, held on the product surface as well as in the code.
+
+**Retention:** deletion is self-serve, immediate and total, and is tested with a second account's data present in the fixture.
+Dormant accounts are **not** auto-purged today; that follows ADR-032's precedent of building the purge when a size alert actually fires, not preemptively.
+
+**The privacy policy becomes false the day sign-up ships.** `/confidentialite` currently states MonÉlu asks for no account, no e-mail and no password, and argues from that to having no cookie banner.
+The rewrite ships *with* the sign-up flow, not after it.
+The project's position on the banner: a session cookie for a service the visitor asked for is strictly necessary and needs no consent prompt - but the page must say that, rather than resting on an argument that has stopped being true.
+
+**Reason (summary):** this is the only combination that adds no subprocessor, stores no credential, keeps the session out of the browser, makes RLS a real boundary rather than a decorative one, and leaves every public page anonymous.
+Each of the cheaper options fails one of those: Google-only excludes citizens without a Google account on a site whose whole positioning is neutral access; a client-held bearer token trades the XSS surface for one hop saved; `public` + RLS + an application filter leaves per-user isolation resting on review discipline alone.
+
+**Impact:**
+- Acquiring a domain and wiring Resend SPF/DKIM is a **prerequisite** of the sign-in work, tracked as its own issue.
+- `#412` targets `app_private` with a restricted role, not `public` - and the next free migration prefix is 012, since 011 is taken by ADR-039.
+- `#413` is not "build sign-up endpoints".
+  Supabase Auth and the Next layer own the flow; FastAPI's job is JWT verification, the restricted-role pool, and the `SET LOCAL` discipline.
+- `#415` implements the Supabase OTP flow and the `/confidentialite` rewrite together.
+- ADR-002's rule 6 is narrowed to bulk dispatch; ADR-002's stale table claim is annotated.
+- Do **not** add a password, a social button, or a second sign-in method without amending this ADR - each one is a support path, a privacy-policy line and, for social, a subprocessor.
+- Do **not** use a session-scoped `SET`, an `auth.uid()`-based policy, or the owner connection on an account route.
+- Do **not** put any public read behind sign-in, and do not cache an authenticated route handler.
+
+**Trigger to revisit:** a Supabase Auth pricing or availability change; a real need for a password or social sign-in voiced by actual users; a commune-to-circonscription dataset becoming available (territory granularity only); the API moving to a subdomain of the site domain, which would allow a simpler same-site cookie and make the Next hop optional; or the #359 alert hold being lifted, which would be the first *bulk* use of the SMTP provider this ADR authorizes for transactional mail only.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1378,7 +1564,7 @@ A summary generator that dies mid-sweep may have committed summaries it never re
 3. Kafka is not part of this project (ADR-001, ADR-005)
 4. Airflow is local only (ADR-006) — do not write Railway/cloud Airflow config
 5. Terraform IaC is archived, not live (ADR-004, ADR-021) — do not add terraform apply steps or resurrect infra/
-6. Phase 5 alerts are deferred (ADR-002) — do not build email dispatch
+6. Phase 5 alerts are deferred (ADR-002) — do not build scheduled or bulk email dispatch. Transactional authentication mail (the ADR-040 sign-in code) is explicitly permitted and does not unblock #359
 7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
 8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never trust client-computed percentages; answers may be persisted only via the opt-in path in ADR-028 (see rule 11), never by default
 9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
@@ -1397,3 +1583,4 @@ A summary generator that dies mid-sweep may have committed summaries it never re
 22. gpt-oss keeps the prompts written for Llama, and `keyword_score` is a smoke test rather than a quality score (ADR-038, #386/#351) - the 2026-09-13 sweep found no regression (routing 0.824 to 1.000, retrieval similarity 0.642), so do not retune prompts or fixtures on the strength of an eval average; read the per-question breakdown first, and populate the dbt marts before running the eval or the router suite will misroute `party_alignment` and look like a model fault
 23. Cache invalidation is scoped, and over-purges on doubt (ADR-039, #353) - `/api/revalidate` with no body is the full purge and must stay the fallback for anything unrecognised; never make a workflow send `{}` or `{"families":[]}` when it failed to build a scope, and never attach the `health` tag to a family other than `votes` (the root layout reads `/health`, so it purges the whole site)
 24. `ingested_at` and `changed_at` mean different things and must not be merged (ADR-039, #353, migration 011) - `ingested_at` is "the last run that wrote this row" and is dbt's `loaded_at_field`, the cron-death detector and the marts' `updated_at`; `changed_at` is "the last run that wrote something different" and is what the cache-invalidation scope reads. Never guard an upsert's `DO UPDATE` with a `WHERE` that skips unchanged rows, and never make `ingested_at` conditional: either one silently turns the daily ingestion job red about a week into a recess
+25. Accounts are Supabase Auth with email codes, a Next-held session and a restricted DB role (ADR-040, #411/#365) - never store a password or add a social sign-in without amending that ADR, never let the browser hold the access token (Next route handlers read the session server-side and forward it; FastAPI verifies the JWT itself rather than trusting an asserted user id), never use the owner connection or a session-scoped `SET` on an account route (PgBouncer transaction pooling leaks it to the next caller - `SET LOCAL` inside an explicit transaction is the only safe form), and never put a public read behind sign-in: reading deputies, votes and every other public surface stays anonymous permanently

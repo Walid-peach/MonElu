@@ -1,0 +1,413 @@
+[
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N51670",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Fin de vie",
+      "titreChemin": "fin_de_vie_17e"
+    },
+    "procedureParlementaire": {
+      "code": "2",
+      "libelle": "Proposition de loi ordinaire"
+    },
+    "initiateur": {
+      "acteurs": {
+        "acteur": {
+          "acteurRef": "PA605694",
+          "mandatRef": "PM842609"
+        }
+      }
+    },
+    "actesLegislatifs": {
+      "acteLegislatif": [
+        {
+          "@xsi:type": "Etape_Type",
+          "uid": "L17-AN1-51670",
+          "codeActe": "AN1",
+          "libelleActe": {
+            "nomCanonique": "1ère lecture (1ère assemblée saisie)"
+          },
+          "organeRef": "PO838901",
+          "dateActe": null,
+          "actesLegislatifs": {
+            "acteLegislatif": [
+              {
+                "@xsi:type": "DepotInitiative_Type",
+                "uid": "L17-VD224407DI",
+                "codeActe": "AN1-DEPOT",
+                "libelleActe": {
+                  "nomCanonique": "1er dépôt d'une initiative."
+                },
+                "dateActe": "2025-03-11T00:00:00.000+01:00",
+                "actesLegislatifs": null
+              },
+              {
+                "@xsi:type": "Etape_Type",
+                "uid": "L17-AN1-COM-51670",
+                "codeActe": "AN1-COM",
+                "libelleActe": {
+                  "nomCanonique": "Travaux des commissions"
+                },
+                "dateActe": null,
+                "actesLegislatifs": {
+                  "acteLegislatif": {
+                    "@xsi:type": "SaisieComFond_Type",
+                    "uid": "L17-VD224408CFS",
+                    "codeActe": "AN1-COM-FOND-SAISIE",
+                    "libelleActe": {
+                      "nomCanonique": "Renvoi en commission au fond"
+                    },
+                    "dateActe": "2025-03-11T00:00:00.000+01:00",
+                    "actesLegislatifs": null
+                  }
+                }
+              },
+              {
+                "@xsi:type": "Decision_Type",
+                "uid": "L17-VD224409DEC",
+                "codeActe": "AN1-DEBATS-DEC",
+                "libelleActe": {
+                  "nomCanonique": "Décision"
+                },
+                "dateActe": "2025-05-27T00:00:00.000+02:00",
+                "statutConclusion": {
+                  "fam_code": "1",
+                  "libelle": "adoptée"
+                },
+                "actesLegislatifs": null
+              }
+            ]
+          }
+        },
+        {
+          "@xsi:type": "Etape_Type",
+          "uid": "L17-SN1-51670",
+          "codeActe": "SN1",
+          "libelleActe": {
+            "nomCanonique": "1ère lecture (2ème assemblée saisie)"
+          },
+          "dateActe": "2025-10-07T00:00:00.000+02:00",
+          "actesLegislatifs": null
+        }
+      ]
+    }
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N50001",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Loi promulguée de test",
+      "titreChemin": "loi_promulguee_test"
+    },
+    "procedureParlementaire": {
+      "code": "1",
+      "libelle": "Projet de loi ordinaire"
+    },
+    "initiateur": {
+      "organes": {
+        "organe": {
+          "organeRef": {
+            "uid": "PO866403"
+          }
+        }
+      }
+    },
+    "actesLegislatifs": {
+      "acteLegislatif": [
+        {
+          "@xsi:type": "Etape_Type",
+          "uid": "L17-AN1-50001",
+          "codeActe": "AN1",
+          "libelleActe": {
+            "nomCanonique": "1ère lecture"
+          },
+          "dateActe": null,
+          "actesLegislatifs": {
+            "acteLegislatif": {
+              "@xsi:type": "Decision_Type",
+              "uid": "L17-VD220001DEC",
+              "codeActe": "AN1-DEBATS-DEC",
+              "libelleActe": {
+                "nomCanonique": "Décision"
+              },
+              "dateActe": "2024-11-04T00:00:00.000+01:00",
+              "statutConclusion": {
+                "fam_code": "1",
+                "libelle": "adoptée sans modification"
+              },
+              "actesLegislatifs": null
+            }
+          }
+        },
+        {
+          "@xsi:type": "Promulgation_Type",
+          "uid": "L17-VD220002PROM",
+          "codeActe": "PROM",
+          "libelleActe": {
+            "nomCanonique": "Promulgation de la loi"
+          },
+          "dateActe": "2024-12-20T00:00:00.000+01:00",
+          "actesLegislatifs": null
+        }
+      ]
+    }
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N50002",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Proposition déposée et jamais débattue",
+      "titreChemin": "ppl_deposee"
+    },
+    "procedureParlementaire": {
+      "code": "2",
+      "libelle": "Proposition de loi ordinaire"
+    },
+    "initiateur": null,
+    "actesLegislatifs": {
+      "acteLegislatif": {
+        "@xsi:type": "Etape_Type",
+        "uid": "L17-AN1-50002",
+        "codeActe": "AN1",
+        "libelleActe": {
+          "nomCanonique": "1ère lecture"
+        },
+        "dateActe": null,
+        "actesLegislatifs": {
+          "acteLegislatif": {
+            "@xsi:type": "DepotInitiative_Type",
+            "uid": "L17-VD220003DI",
+            "codeActe": "AN1-DEPOT",
+            "libelleActe": {
+              "nomCanonique": "1er dépôt d'une initiative."
+            },
+            "dateActe": "2026-02-02T00:00:00.000+01:00",
+            "actesLegislatifs": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N50003",
+    "legislature": "17",
+    "titreDossier": {
+      "titreChemin": "sans_titre"
+    },
+    "actesLegislatifs": null
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N51427",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Dossier fusionné A",
+      "titreChemin": "fusion_a"
+    },
+    "actesLegislatifs": {
+      "acteLegislatif": {
+        "@xsi:type": "Etape_Type",
+        "uid": "L17-VD223530",
+        "codeActe": "AN21-DGVT",
+        "libelleActe": {
+          "nomCanonique": "Engagement de la procédure accélérée"
+        },
+        "dateActe": "2025-06-10T00:00:00.000+02:00",
+        "actesLegislatifs": null
+      }
+    }
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N50588",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Dossier fusionné B",
+      "titreChemin": "fusion_b"
+    },
+    "actesLegislatifs": {
+      "acteLegislatif": {
+        "@xsi:type": "Etape_Type",
+        "uid": "L17-VD223530",
+        "codeActe": "ANNLEC-DGVT",
+        "libelleActe": {
+          "nomCanonique": "Engagement de la procédure accélérée"
+        },
+        "dateActe": "2025-06-10T00:00:00.000+02:00",
+        "actesLegislatifs": null
+      }
+    }
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N50004",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Résolution adoptée définitivement",
+      "titreChemin": "res_def"
+    },
+    "procedureParlementaire": {
+      "code": "10",
+      "libelle": "Proposition de résolution"
+    },
+    "actesLegislatifs": {
+      "acteLegislatif": {
+        "@xsi:type": "Etape_Type",
+        "uid": "L17-ANLUNI-50004",
+        "codeActe": "ANLUNI",
+        "libelleActe": {
+          "nomCanonique": "Lecture unique"
+        },
+        "dateActe": null,
+        "actesLegislatifs": {
+          "acteLegislatif": {
+            "@xsi:type": "Decision_Type",
+            "uid": "L17-VD220004DEC",
+            "codeActe": "ANLUNI-DEBATS-DEC",
+            "libelleActe": {
+              "nomCanonique": "Décision"
+            },
+            "dateActe": "2025-04-01T00:00:00.000+02:00",
+            "statutConclusion": {
+              "fam_code": "1",
+              "libelle": "adopté, dans les conditions prévues à l'article 45, alinéa 3, de la Constitution"
+            },
+            "actesLegislatifs": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N50005",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Texte rejeté en commission",
+      "titreChemin": "rejet"
+    },
+    "actesLegislatifs": {
+      "acteLegislatif": {
+        "@xsi:type": "Etape_Type",
+        "uid": "L17-AN1-50005",
+        "codeActe": "AN1",
+        "libelleActe": {
+          "nomCanonique": "1ère lecture"
+        },
+        "dateActe": null,
+        "actesLegislatifs": {
+          "acteLegislatif": {
+            "@xsi:type": "Decision_Type",
+            "uid": "L17-VD220005DEC",
+            "codeActe": "AN1-COM-FOND-DEC",
+            "libelleActe": {
+              "nomCanonique": "Décision de la commission"
+            },
+            "dateActe": "2025-09-15T00:00:00.000+02:00",
+            "statutConclusion": {
+              "fam_code": "2",
+              "libelle": "rejet du texte par la commission préalable"
+            },
+            "actesLegislatifs": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N50006",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Texte renvoyé en commission",
+      "titreChemin": "en_commission"
+    },
+    "actesLegislatifs": {
+      "acteLegislatif": {
+        "@xsi:type": "Etape_Type",
+        "uid": "L17-AN1-50006",
+        "codeActe": "AN1",
+        "libelleActe": {
+          "nomCanonique": "1ère lecture"
+        },
+        "dateActe": null,
+        "actesLegislatifs": {
+          "acteLegislatif": [
+            {
+              "@xsi:type": "DepotInitiative_Type",
+              "uid": "L17-VD220006DI",
+              "codeActe": "AN1-DEPOT",
+              "libelleActe": {
+                "nomCanonique": "1er dépôt d'une initiative."
+              },
+              "dateActe": "2026-01-05T00:00:00.000+01:00",
+              "actesLegislatifs": null
+            },
+            {
+              "@xsi:type": "SaisieComFond_Type",
+              "uid": "L17-VD220006CFS",
+              "codeActe": "AN1-COM-FOND-SAISIE",
+              "libelleActe": {
+                "nomCanonique": "Renvoi en commission au fond"
+              },
+              "dateActe": "2026-01-06T00:00:00.000+01:00",
+              "actesLegislatifs": null
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "@xsi:type": "DossierLegislatif_Type",
+    "uid": "DLR5L17N50007",
+    "legislature": "17",
+    "titreDossier": {
+      "titre": "Loi devant le Conseil constitutionnel",
+      "titreChemin": "cc"
+    },
+    "actesLegislatifs": {
+      "acteLegislatif": [
+        {
+          "@xsi:type": "Etape_Type",
+          "uid": "L17-AN1-50007",
+          "codeActe": "AN1",
+          "libelleActe": {
+            "nomCanonique": "1ère lecture"
+          },
+          "dateActe": null,
+          "actesLegislatifs": {
+            "acteLegislatif": {
+              "@xsi:type": "Decision_Type",
+              "uid": "L17-VD220007DEC",
+              "codeActe": "AN1-DEBATS-DEC",
+              "libelleActe": {
+                "nomCanonique": "Décision"
+              },
+              "dateActe": "2026-03-02T00:00:00.000+01:00",
+              "statutConclusion": {
+                "fam_code": "1",
+                "libelle": "adoptée"
+              },
+              "actesLegislatifs": null
+            }
+          }
+        },
+        {
+          "@xsi:type": "SaisineConseilConstit_Type",
+          "uid": "L17-VD220007CC",
+          "codeActe": "CC",
+          "libelleActe": {
+            "nomCanonique": "Saisine du Conseil constitutionnel"
+          },
+          "dateActe": "2026-03-10T00:00:00.000+01:00",
+          "actesLegislatifs": null
+        }
+      ]
+    }
+  }
+]

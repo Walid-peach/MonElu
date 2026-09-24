@@ -55,6 +55,8 @@ def test_the_full_table_set_is_covered():
         "public.chat_shares",
         "public.quiz_shares",
         "public.agenda_items",
+        "public.dossiers",
+        "public.dossier_actes",
         "app_private.profiles",
         "app_private.followed_deputies",
         "app_private.followed_themes",
