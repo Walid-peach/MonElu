@@ -91,6 +91,11 @@ $$;
 -- in production while succeeding locally. So instead of enforcing the
 -- attributes, verify them and fail loudly: either of them silently turns every
 -- policy below into decoration.
+-- The CREATE is wrapped so a missing CREATEROLE privilege explains itself. This
+-- migration runs as Railway's start hook (`migrate.py && uvicorn` in
+-- railway.json), so a failure here does not merely skip a table - it stops the
+-- API from starting. A bare "permission denied to create role" would be a
+-- confusing way to find that out at 3am.
 DO $$
 DECLARE
     role_row RECORD;
@@ -101,7 +106,16 @@ BEGIN
      WHERE rolname = 'monelu_app_user';
 
     IF NOT FOUND THEN
-        CREATE ROLE monelu_app_user NOLOGIN NOINHERIT;
+        BEGIN
+            CREATE ROLE monelu_app_user NOLOGIN NOINHERIT;
+        EXCEPTION WHEN insufficient_privilege THEN
+            RAISE EXCEPTION
+                'Cannot create the monelu_app_user role: the migration user lacks '
+                'CREATEROLE. Check it with: SELECT rolcreaterole FROM pg_roles '
+                'WHERE rolname = current_user; On Supabase the `postgres` role has '
+                'it. Until this succeeds the account routes have no restricted '
+                'connection and #413 cannot ship (ADR-040).';
+        END;
     ELSIF role_row.rolsuper OR role_row.rolbypassrls THEN
         RAISE EXCEPTION
             'monelu_app_user already exists with SUPERUSER or BYPASSRLS, which '
@@ -251,6 +265,34 @@ CREATE POLICY own_notification_preferences ON app_private.notification_preferenc
     FOR ALL
     USING      (profile_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
     WITH CHECK (profile_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+
+-- ---------------------------------------------------------------------------
+-- updated_at is maintained by the database, not by callers
+-- ---------------------------------------------------------------------------
+-- An `updated_at` that depends on every future endpoint remembering to set it is
+-- a column that quietly lies. There is no trigger precedent in this project
+-- because no earlier table has a caller-maintained timestamp - `ingested_at` and
+-- `changed_at` are written by the ingestion upserts themselves, which are the
+-- only writer. These two tables will have several writers (#414), so the
+-- guarantee belongs here.
+CREATE OR REPLACE FUNCTION app_private.touch_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS touch_profiles_updated_at ON app_private.profiles;
+CREATE TRIGGER touch_profiles_updated_at
+    BEFORE UPDATE ON app_private.profiles
+    FOR EACH ROW EXECUTE FUNCTION app_private.touch_updated_at();
+
+DROP TRIGGER IF EXISTS touch_notification_preferences_updated_at
+    ON app_private.notification_preferences;
+CREATE TRIGGER touch_notification_preferences_updated_at
+    BEFORE UPDATE ON app_private.notification_preferences
+    FOR EACH ROW EXECUTE FUNCTION app_private.touch_updated_at();
 
 -- No extra indexes: the UNIQUE constraint on profiles.auth_user_id already
 -- indexes the one lookup that runs before `app.user_id` is known ("which profile

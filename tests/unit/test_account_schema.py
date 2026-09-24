@@ -143,6 +143,34 @@ def test_profile_key_is_monelus_own_uuid_not_the_providers():
     )
 
 
+@pytest.mark.parametrize("table", ["profiles", "notification_preferences"])
+def test_tables_with_updated_at_get_a_trigger(table):
+    """Both tables carrying `updated_at` have several writers once #414 lands, so
+    the timestamp is maintained by the database rather than by caller discipline.
+    A `BEFORE UPDATE` trigger is the only thing that keeps the column honest."""
+    assert re.search(
+        rf"CREATE\s+TRIGGER\s+touch_{table}_updated_at\s+BEFORE\s+UPDATE\s+ON\s+"
+        rf"app_private\.{table}",
+        SQL,
+        re.IGNORECASE,
+    ), f"{table} has no BEFORE UPDATE trigger for updated_at"
+
+
+def test_the_updated_at_trigger_is_idempotent():
+    """`CREATE TRIGGER` has no IF NOT EXISTS, so a re-run needs the DROP first -
+    every migration in this project must survive being applied twice."""
+    assert SQL.count("DROP TRIGGER IF EXISTS") == 2
+    assert "CREATE OR REPLACE FUNCTION app_private.touch_updated_at()" in SQL
+
+
+def test_role_creation_explains_a_missing_createrole_privilege():
+    """migrate.py is Railway's start hook (`migrate.py && uvicorn`), so a failure
+    here stops the API from starting. A bare "permission denied to create role" is
+    a bad way to discover that."""
+    assert "EXCEPTION WHEN insufficient_privilege" in SQL
+    assert "CREATEROLE" in SQL
+
+
 def test_role_is_created_without_login_and_carries_no_password():
     """No credential for the restricted role lives in the repository: it is
     NOLOGIN until an operator sets a password out of band."""

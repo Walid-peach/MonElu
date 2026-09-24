@@ -273,22 +273,79 @@ def test_owner_connection_still_bypasses_rls(db_conn, accounts):
 # --- schema exposure ------------------------------------------------------
 
 
-@pytest.mark.parametrize("supabase_role", ["anon", "authenticated"])
-def test_supabase_roles_have_no_access_to_the_private_schema(db_conn, supabase_role):
-    """Skipped locally (those roles only exist on Supabase), meaningful in CI's
-    absence and in production: `app_private` is not in Supabase's exposed
-    schemas, and neither PostgREST role holds a privilege in it either.
+def test_only_the_restricted_role_can_reach_the_private_schema(db_conn):
+    """Enumerates every non-superuser role on the cluster and asserts none but
+    `monelu_app_user` holds USAGE on `app_private`.
+
+    This replaced a version that asked specifically about `anon` and
+    `authenticated` and skipped when they were absent - which was everywhere it
+    could ever run, since those roles exist only on Supabase and
+    tests/integration/conftest.py refuses to connect to a Supabase host at all.
+    A test that can never execute is not coverage. Phrased this way it runs
+    locally and in CI, and catches the mistake that actually matters: a stray
+    GRANT handing the schema to a role that should not see personal data.
     """
     with db_conn.cursor() as cur:
-        cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (supabase_role,))
-        if cur.fetchone() is None:
-            pytest.skip(f"{supabase_role} role does not exist on this database")
+        cur.execute(
+            """
+            SELECT rolname
+            FROM pg_roles
+            WHERE NOT rolsuper
+              AND rolname NOT LIKE 'pg\\_%'
+              AND has_schema_privilege(rolname, 'app_private', 'USAGE')
+            ORDER BY rolname
+            """
+        )
+        holders = {row["rolname"] for row in cur.fetchall()}
+
+    # The schema owner is whoever ran the migration; it is allowed and is the
+    # connection the rest of the app already uses.
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "SELECT nspowner::regrole::text AS owner "
+            "FROM pg_namespace WHERE nspname = 'app_private'"
+        )
+        owner = cur.fetchone()["owner"]
+
+    assert holders - {APP_ROLE, owner} == set(), (
+        f"unexpected roles hold USAGE on app_private: {sorted(holders - {APP_ROLE, owner})}"
+    )
+
+
+def test_supabase_postgrest_roles_hold_nothing_when_they_exist(db_conn):
+    """The Supabase-specific half, kept as an explicit assertion for the
+    databases that have those roles (production). It is a no-op elsewhere rather
+    than a skip, so it never reports as coverage it did not provide.
+    """
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')",
+        )
+        present = [row["rolname"] for row in cur.fetchall()]
+
+        for role in present:
+            cur.execute(
+                "SELECT has_schema_privilege(%s, 'app_private', 'USAGE') AS has_usage",
+                (role,),
+            )
+            assert cur.fetchone()["has_usage"] is False, f"{role} can reach app_private"
+
+
+def test_updated_at_is_maintained_by_the_database(db_conn, accounts):
+    """The trigger exists so the column cannot drift out of truth when #414's
+    endpoints (plural writers) forget to set it."""
+    with db_conn.cursor() as cur:
+        cur.execute("SELECT updated_at FROM app_private.profiles WHERE id = %s", (accounts["a"],))
+        before = cur.fetchone()["updated_at"]
 
         cur.execute(
-            "SELECT has_schema_privilege(%s, 'app_private', 'USAGE') AS has_usage",
-            (supabase_role,),
+            "UPDATE app_private.profiles SET display_name = %s WHERE id = %s",
+            ("Renommé", accounts["a"]),
         )
-        assert cur.fetchone()["has_usage"] is False
+        cur.execute("SELECT updated_at FROM app_private.profiles WHERE id = %s", (accounts["a"],))
+        after = cur.fetchone()["updated_at"]
+
+    assert after > before, "updated_at did not move on UPDATE - is the trigger present?"
 
 
 def test_account_deletion_cascades(db_conn):
