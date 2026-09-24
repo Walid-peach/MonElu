@@ -48,6 +48,9 @@ MIGRATIONS = [
     # by test_dossiers.py and by the ingest_votes upsert, which now writes
     # scrutin_kind on every row.
     Path(__file__).parents[2] / "data" / "migrations" / "012_dossiers.sql",
+    # The app_private account schema, the restricted role and its RLS policies
+    # (#412). test_account_rls.py is the suite that reads them.
+    Path(__file__).parents[2] / "data" / "migrations" / "013_account_schema.sql",
 ]
 
 # Minimal mart stub DDL — mirrors the columns read by api/routers/deputies.py
