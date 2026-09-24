@@ -30,7 +30,7 @@ def test_current_migration_files_pass():
     assert_rls_on_created_tables(migration_files)
 
 
-def test_all_eleven_tables_are_covered():
+def test_all_thirteen_tables_are_covered():
     """Pins the actual table set, so a future migration that creates a table
     and forgets RLS fails here rather than only in the generic check."""
     migration_files = sorted(glob.glob(os.path.join(MIGRATIONS_DIR, "*.sql")))
@@ -55,6 +55,8 @@ def test_all_eleven_tables_are_covered():
         "chat_shares",
         "quiz_shares",
         "agenda_items",
+        "dossiers",
+        "dossier_actes",
     }
     assert created <= secured
 

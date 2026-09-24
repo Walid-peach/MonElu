@@ -347,7 +347,8 @@ design.
 | `vote_type` | TEXT | e.g. `SPO` |
 | `result` | TEXT | `adopté` or `rejeté` |
 | `votes_for` / `votes_against` / `abstentions` / `total_voters` | INTEGER | |
-| `dossier_id` | TEXT | Linked dossier, if any |
+| `dossier_id` | TEXT | Linked dossier, if any - only populated by the AN since 2026-03 (ADR-035) |
+| `scrutin_kind` | TEXT | What was voted on: `ensemble` / `motion` / `amendement` / `article` / `autre`, classified from `objet.libelle` at ingestion (ADR-035 §4) |
 
 ### `vote_positions`
 | Column | Type | Notes |
@@ -374,6 +375,9 @@ design.
 | `chat_shares` | Immutable chat answer snapshots behind `/chat/s/<id>` (ADR-024) |
 | `quiz_shares` | Server-recomputed quiz result snapshots behind `/quiz/s/<id>` (ADR-025); `result` JSONB optionally carries the sharer's answers, and the themes derived from them, when they opt in (ADR-028) |
 | `feedback` | `type`-discriminated feedback sink (chat thumbs / data-page reports) with a JSONB payload |
+| `agenda_items` | Séance publique ODJ points, one denormalized row per point (ADR-030) |
+| `dossiers` | One row per L17 dossier législatif - title, procédure, derived `status` + raw `status_label`, and `has_scrutins`, which decides whether a bill gets a page (ADR-035) |
+| `dossier_actes` | The flattened acte parcours, `PRIMARY KEY (dossier_uid, acte_uid)` - 43 acte uids belong to two dossiers each (ADR-035 §3) |
 
 ### Migrations
 
@@ -388,6 +392,10 @@ design.
 | `005_feedback.sql` · `005_verifications.sql` | `feedback`, `verifications` |
 | `006_drop_position_id.sql` | Removes the redundant surrogate key on `vote_positions` |
 | `007_chat_shares.sql` · `008_quiz_shares.sql` | Share snapshot tables |
+| `009_agenda.sql` | `agenda_items` (ADR-030) |
+| `010_rls_backfill.sql` | `ENABLE ROW LEVEL SECURITY` on the seven tables 004-009 missed (MON-248) |
+| `011_changed_at.sql` | `changed_at` on the four ingested tables - the cache-invalidation signal, distinct from `ingested_at` (GH #353) |
+| `012_dossiers.sql` | `dossiers`, `dossier_actes`, `votes.scrutin_kind` (MON-243, ADR-035) |
 
 ---
 
@@ -459,6 +467,7 @@ Next.js 15 (App Router) + Tailwind + Framer Motion, deployed on Vercel separatel
 | `ingest_positions.py` | Extracts individual deputy positions from Scrutins ZIP |
 | `ingest_organes.py` | Parses `Organes.json` for parliamentary group membership |
 | `ingest_agenda.py` | Downloads the Agenda ZIP, upserts séance publique ODJ points (`--since` flag, MON-210) |
+| `ingest_dossiers.py` | Downloads the Dossiers_Legislatifs ZIP, upserts every L17 dossier and its flattened acte parcours (MON-243, ADR-035) |
 | `run_ingestion_prod.py` | Orchestrates the full pipeline with timing summary |
 | `update_party.py` | Resolves GP party names and expands department codes |
 | `backfill_party_labels.py` | Enforces the 12 canonical group labels behind `/groups/{slug}` |

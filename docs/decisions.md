@@ -1039,8 +1039,12 @@ Nothing is deleted, so CLAUDE.md decision 8 holds unchanged.
 
 ### 4. The timeline is headline-first; amendment scrutins collapse
 
-Of the 2 606 tagged scrutins, **87 % are amendment or article votes** (2 262 amendments, 239 articles) against just 71 "ensemble" votes, 19 motions and 17 others.
+Of the 2 606 tagged scrutins, **96 % are amendment or article votes** (2 262 amendments, 239 articles) against just 71 "ensemble" votes, 19 motions and 17 others.
 The median dossier has **one** headline scrutin; `DLR5L17N54085` has 422 scrutins of which 395 are amendments.
+
+This read "87 %" until MON-243 implemented the classifier and re-measured: the absolute counts were right and the percentage was an arithmetic slip - 2 262 + 239 of 2 606 is 96 %.
+The re-measurement over the whole export on 2026-09-22 found 2 261 amendments, 241 articles, 72 "ensemble", 19 motions and 15 others over 2 608 tagged scrutins, so the counts themselves stand.
+The decision this section makes is unaffected by the correction: it gets stronger, not weaker.
 
 A literal "vertical timeline of every scrutin attached to the dossier", as MON-105 words it, is therefore 400 rows of amendment noise around four meaningful nodes.
 
@@ -1113,6 +1117,12 @@ Publishing 2 779 near-empty pages would be thin content on a site whose SEO case
 
 `has_scrutins` is recomputed at the end of every ingestion run from `votes.dossier_id`, so a bill acquires its page automatically on its first scrutin.
 
+**Measured after MON-243 shipped: the flag lands on 70 dossiers, not 75, and that is correct.**
+74 distinct well-formed refs exist in `votes.dossier_id`; four of them - `DLR5L16N49263`, `DLR5L16N49868`, `DLR5L16N49075`, `DLR5L16N49364` - are **legislature 16** dossiers, carried over from texts that began before this legislature.
+This export is L17-scoped, so they have no `dossiers` row and get no page.
+That is the intended outcome and not a gap to close: ingesting the L16 export to publish four pages whose parcours mostly predates the site's own data horizon buys nothing.
+What it does mean is that a scrutin can carry a `dossier_id` that resolves to nothing, so MON-244's `GET /lois/{dossier_uid}` must 404 on those and MON-245 must render "no bill page" rather than treating the dangling ref as an error.
+
 **`GET /lois` and the sitemap read the flag, not a hardcoded list.**
 No slug map is hardcoded here, unlike ADR-026's group slugs: group labels are a closed set of twelve political facts, whereas dossiers are an open, growing set.
 
@@ -1177,7 +1187,7 @@ Building the page on the acte parcours instead costs one extra table and one ext
 
 **Impact:**
 
-- MON-243 implements exactly the two tables above, plus `votes.scrutin_kind`. The `votes.dossier_id` backfill is MON-258, which blocks it.
+- MON-243 implements exactly the two tables above, plus `votes.scrutin_kind`. The `votes.dossier_id` backfill is MON-258, which blocks it. **Shipped 2026-09-23 (GH #368 / PR #420)** as `data/migrations/012_dossiers.sql` - `011` had been taken by GH #353 by then - and `scripts/ingest_dossiers.py`, a non-critical step in `run_ingestion_prod.py`. The same migration indexes `votes.dossier_id`, which this ADR turns from a display field into a join key.
 - MON-244's `GET /lois/{dossier_uid}` returns the acte parcours as the primary array, with scrutins attached to actes, not a flat scrutin list. It must expose the amendment counts separately from headline scrutins.
 - MON-245 renders actes as the timeline spine and never lists amendment scrutins inline by default. It shows the raw `status_label` next to the derived badge.
 - MON-247's sitemap reads `has_scrutins`, so it emits on the order of 75 URLs, not 2 854. The 50 000-URL concern raised on that issue does not materialize.

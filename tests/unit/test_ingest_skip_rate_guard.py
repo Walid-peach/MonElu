@@ -1,11 +1,12 @@
 """
-Tests for the parse-failure guards in the four ingestion parsers: a shape
+Tests for the parse-failure guards in the five ingestion parsers: a shape
 change upstream must exit 1 instead of silently shipping a skeleton dataset
 with fresh ingested_at stamps.
 
 ingest_deputies / ingest_votes carry the original skip-rate guard (MON-220);
 ingest_positions and ingest_agenda carry the yield guards added in MON-249,
-and all four share SKIP_RATE_THRESHOLD from scripts._http.
+ingest_dossiers carries the one added in MON-243, and all five share
+SKIP_RATE_THRESHOLD from scripts._http.
 """
 
 import io
@@ -20,6 +21,7 @@ from scripts import ingest_positions
 from scripts._http import SKIP_RATE_THRESHOLD
 from scripts.ingest_agenda import check_agenda_yield, parse_reunions
 from scripts.ingest_deputies import upsert_deputies
+from scripts.ingest_dossiers import check_dossier_yield
 from scripts.ingest_positions import check_position_yield
 from scripts.ingest_votes import upsert_votes
 
@@ -68,13 +70,26 @@ class TestIngestVotesSkipRateGuard:
 
 
 class TestSharedThreshold:
-    """All four parsers must move together — MON-249 folded the duplicated
-    constant into scripts/_http.py so a future retune cannot drift."""
+    """Every parser must move together — MON-249 folded the duplicated
+    constant into scripts/_http.py so a future retune cannot drift. MON-243
+    added the fifth (dossiers) under the same rule."""
 
     def test_every_parser_uses_the_shared_constant(self):
-        from scripts import ingest_agenda, ingest_deputies, ingest_positions, ingest_votes
+        from scripts import (
+            ingest_agenda,
+            ingest_deputies,
+            ingest_dossiers,
+            ingest_positions,
+            ingest_votes,
+        )
 
-        for module in (ingest_deputies, ingest_votes, ingest_positions, ingest_agenda):
+        for module in (
+            ingest_deputies,
+            ingest_votes,
+            ingest_positions,
+            ingest_agenda,
+            ingest_dossiers,
+        ):
             assert module.SKIP_RATE_THRESHOLD is SKIP_RATE_THRESHOLD
 
 
@@ -242,3 +257,36 @@ class TestIngestPositionsRunWiring:
         ]
         mock_upsert = self._run(scrutins, vote_ids=["VTANR5L17V1"], deputy_ids=["PA1", "PA2"])
         assert [r["deputy_id"] for r in mock_upsert.call_args[0][0]] == ["PA1", "PA2"]
+
+
+class TestIngestDossiersYieldGuard:
+    """MON-243 / ADR-035: an empty parse is a silent no-op — the upserts write
+    nothing, `last_seen_at` never advances, and the bill pages keep serving the
+    previous run's parcours with nothing in the log saying the feed changed."""
+
+    def test_no_dossier_files_exits(self):
+        with pytest.raises(SystemExit) as exc_info:
+            check_dossier_yield(parsed=0, seen=0, actes=0)
+        assert exc_info.value.code == 1
+
+    def test_all_dossiers_unparsed_exits(self):
+        with pytest.raises(SystemExit) as exc_info:
+            check_dossier_yield(parsed=0, seen=2942, actes=0)
+        assert exc_info.value.code == 1
+
+    def test_high_skip_rate_exits(self):
+        with pytest.raises(SystemExit) as exc_info:
+            check_dossier_yield(parsed=2700, seen=2942, actes=20000)
+        assert exc_info.value.code == 1
+
+    def test_low_skip_rate_passes(self):
+        # A handful of dossiers with no titreDossier.titre is normal history.
+        check_dossier_yield(parsed=2930, seen=2942, actes=20957)
+
+    def test_dossiers_parsing_but_no_actes_exits(self):
+        # The nested actesLegislatifs.acteLegislatif path was renamed: every
+        # dossier row still parses and the parcours — the whole content of the
+        # page — is silently empty.
+        with pytest.raises(SystemExit) as exc_info:
+            check_dossier_yield(parsed=2942, seen=2942, actes=0)
+        assert exc_info.value.code == 1

@@ -57,6 +57,7 @@ VOTE = {
     "abstentions": 3,
     "total_voters": 153,
     "dossier_id": None,
+    "scrutin_kind": "ensemble",
 }
 
 POSITION = {"vote_id": "VT_CHG", "deputy_id": "PA_CHG", "position": "pour"}

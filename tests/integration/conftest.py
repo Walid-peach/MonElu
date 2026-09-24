@@ -44,6 +44,10 @@ MIGRATIONS = [
     # upsert in scripts/, so test_change_tracking.py and test_upsert.py both
     # fail without it.
     Path(__file__).parents[2] / "data" / "migrations" / "011_changed_at.sql",
+    # dossiers + dossier_actes + votes.scrutin_kind (MON-243, ADR-035). Required
+    # by test_dossiers.py and by the ingest_votes upsert, which now writes
+    # scrutin_kind on every row.
+    Path(__file__).parents[2] / "data" / "migrations" / "012_dossiers.sql",
 ]
 
 # Minimal mart stub DDL — mirrors the columns read by api/routers/deputies.py
@@ -203,6 +207,9 @@ def _make_vote(i: int, result: str = "adopté") -> dict:
         "abstentions": 50,
         "total_voters": 450,
         "dossier_id": None,
+        # Every column the real ingest_votes upsert binds, including the one
+        # migration 012 added (ADR-035 §4) - test_upsert.py runs that exact SQL.
+        "scrutin_kind": "autre",
     }
 
 
