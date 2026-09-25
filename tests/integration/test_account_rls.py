@@ -26,9 +26,9 @@ import pytest
 pytestmark = pytest.mark.integration
 
 # psycopg2 does not adapt `uuid.UUID` or return `uuid` columns as UUID objects
-# until this is called. #413's restricted-role pool will need the same call (or
-# to pass every id as a string) - the profile key is the project's first UUID
-# column, so nothing in api/ has needed it before.
+# until this is called. It is needed here only because this suite passes UUID
+# objects; the API's restricted pool (#413, api/db.py) deliberately does not
+# register it and passes every id as a string instead, matching the owner pool.
 psycopg2.extras.register_uuid()
 
 APP_ROLE = "monelu_app_user"

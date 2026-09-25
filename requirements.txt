@@ -5,6 +5,8 @@ psycopg2-binary>=2.9.10
 requests==2.32.2
 python-dotenv==1.0.1
 httpx>=0.23.0,<0.28.0
+# Accounts (ADR-040) - Supabase access-token verification; [crypto] for ES256/RS256
+PyJWT[crypto]>=2.15.0
 sentry-sdk>=2.0.0
 # Phase 2 — RAG
 openai==1.40.0
