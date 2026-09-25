@@ -45,9 +45,11 @@ SUPABASE_AUDIENCE = "authenticated"
 # Pinned rather than read from the token header, so a token cannot choose its own
 # verification algorithm (`none`, or HS256 against a public key).
 ALLOWED_ALGORITHMS = ["ES256", "RS256"]
+_ASYMMETRIC_KEY_TYPES = {"EC", "RSA"}
 
 _JWKS_TIMEOUT_SECONDS = 5
 _JWKS_CACHE_SECONDS = 600
+_CLOCK_SKEW_SECONDS = 30
 
 _UNAUTHENTICATED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
@@ -110,14 +112,40 @@ def verify_access_token(token: str) -> VerifiedUser:
         raise AuthUnavailable("SUPABASE_URL is not set")
 
     try:
-        signing_key = _jwks_client(f"{issuer}/.well-known/jwks.json").get_signing_key_from_jwt(
-            token
-        )
-    except jwt.PyJWKClientConnectionError as exc:
+        kid = jwt.get_unverified_header(token).get("kid")
+    except jwt.PyJWTError as exc:
+        raise InvalidAccessToken(type(exc).__name__) from None
+    if not kid:
+        raise InvalidAccessToken("no kid")
+
+    client = _jwks_client(f"{issuer}/.well-known/jwks.json")
+
+    # Two failure classes that must not be confused. A key set that cannot be
+    # fetched, parsed, or holds no usable key - which is exactly what a project
+    # still on the legacy HS256 secret publishes - means verification cannot
+    # run: 503. Only a token naming a key the set does not hold is the
+    # caller's fault: 401. Answering 401 to the first would sign every visitor
+    # out over a misconfiguration.
+    try:
+        client.get_jwk_set()
+    except (jwt.PyJWKClientError, jwt.PyJWKSetError, ValueError) as exc:
+        raise AuthUnavailable(type(exc).__name__) from None
+
+    try:
+        # An unknown kid forces at most one refetch per cooldown window
+        # (PyJWT >= 2.15), so random kids cannot turn this into a JWKS
+        # fetch per request.
+        signing_key = client.get_signing_key(kid)
+    except (jwt.PyJWKClientConnectionError, ValueError) as exc:
         raise AuthUnavailable(type(exc).__name__) from None
     except jwt.PyJWTError as exc:
-        # Malformed token, or a `kid` absent from the published key set.
         raise InvalidAccessToken(type(exc).__name__) from None
+
+    # The key set is the project's, not the caller's, so a symmetric key in it
+    # is a misconfiguration rather than a bad token - and decoding with one
+    # would raise outside PyJWT's error hierarchy.
+    if signing_key.key_type not in _ASYMMETRIC_KEY_TYPES:
+        raise AuthUnavailable(f"JWKS key type {signing_key.key_type} is not asymmetric")
 
     try:
         claims = jwt.decode(
@@ -126,6 +154,9 @@ def verify_access_token(token: str) -> VerifiedUser:
             algorithms=ALLOWED_ALGORITHMS,
             audience=SUPABASE_AUDIENCE,
             issuer=issuer,
+            # Absorbs clock skew between Supabase and this host, which would
+            # otherwise reject a freshly issued token's `iat` as in the future.
+            leeway=_CLOCK_SKEW_SECONDS,
             options={"require": ["exp", "iat", "sub", "aud", "iss"]},
         )
     except jwt.PyJWTError as exc:

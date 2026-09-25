@@ -113,6 +113,10 @@ _ACCOUNT_POOL_MINCONN = 1
 _ACCOUNT_POOL_MAXCONN = 5
 _ACCOUNT_CONNECT_ATTEMPTS = 3
 _ACCOUNT_CONNECT_BACKOFF_SECONDS = 0.25
+# libpq waits forever by default. Pool creation runs under a lock, so a stalled
+# pooler would otherwise queue every account request behind it and, through the
+# shared threadpool, starve the public sync routes too.
+_ACCOUNT_CONNECT_TIMEOUT_SECONDS = 5
 
 # Applied per transaction rather than as a startup `options=` parameter, which
 # Supabase's transaction-mode pooler rejects (see init_pool's fallback above).
@@ -129,7 +133,9 @@ def _with_connect_retry(connect):
             return connect()
         except psycopg2.OperationalError as exc:
             if attempt == _ACCOUNT_CONNECT_ATTEMPTS - 1:
-                raise AccountStoreUnavailable("cannot connect as the account role") from exc
+                # `from None`: the libpq message can quote the DSN, and this
+                # exception may reach Sentry from a future caller.
+                raise AccountStoreUnavailable("cannot connect as the account role") from None
             # Class name only: a libpq connection error can quote the DSN.
             logger.warning("Account DB connection failed (%s), retrying", type(exc).__name__)
             time.sleep(_ACCOUNT_CONNECT_BACKOFF_SECONDS * 2**attempt)
@@ -163,6 +169,7 @@ def _get_account_pool() -> psycopg2.pool.ThreadedConnectionPool:
                     maxconn=_ACCOUNT_POOL_MAXCONN,
                     dsn=dsn,
                     cursor_factory=psycopg2.extras.RealDictCursor,
+                    connect_timeout=_ACCOUNT_CONNECT_TIMEOUT_SECONDS,
                 )
             )
         return _account_pool

@@ -152,6 +152,39 @@ def test_unreachable_jwks_is_unavailable_not_unauthenticated(_supabase):
         account_auth.verify_access_token(_token())
 
 
+@pytest.mark.parametrize(
+    "jwks_response",
+    [
+        {"keys": []},  # what a project still on the legacy HS256 secret publishes
+        {"keys": [{"kty": "oct", "k": "c2VjcmV0", "kid": KID}]},  # a shared secret, published
+        ["not", "an", "object"],
+        ValueError("Expecting value: line 1 column 1"),  # non-JSON body
+    ],
+    ids=["empty", "symmetric-key", "not-an-object", "not-json"],
+)
+def test_broken_key_set_is_unavailable_not_unauthenticated(_supabase, jwks_response):
+    """A misconfigured JWKS must not answer 401, or the Next layer would sign
+    every visitor out over an operator mistake."""
+    if isinstance(jwks_response, Exception):
+        _supabase.side_effect = jwks_response
+    else:
+        _supabase.return_value = jwks_response
+    with pytest.raises(account_auth.AuthUnavailable):
+        account_auth.verify_access_token(_token())
+
+
+def test_token_without_kid_is_rejected():
+    token = jwt.encode(_claims(), _SIGNING_KEY, algorithm="ES256")
+    with pytest.raises(account_auth.InvalidAccessToken):
+        account_auth.verify_access_token(token)
+
+
+def test_small_clock_skew_is_tolerated():
+    """A token whose `iat` is a few seconds ahead of this host still verifies."""
+    token = _token(iat=int(time.time()) + 10)
+    assert account_auth.verify_access_token(token).auth_user_id == AUTH_USER_ID
+
+
 def test_jwks_is_fetched_once_and_cached(_supabase):
     for _ in range(3):
         account_auth.verify_access_token(_token())
@@ -443,6 +476,8 @@ def test_pool_is_created_on_first_use_and_keeps_idle_connections(monkeypatch):
 
     ctor.assert_called_once()
     assert ctor.call_args.kwargs["minconn"] >= 1
+    # libpq's default is to wait forever, under the pool-creation lock.
+    assert ctor.call_args.kwargs["connect_timeout"] > 0
 
 
 def test_failed_pool_creation_is_retried_by_the_next_request(monkeypatch):
