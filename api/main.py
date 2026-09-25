@@ -74,7 +74,13 @@ from starlette.concurrency import run_in_threadpool  # noqa: E402
 from api import groq_health  # noqa: E402
 from api.auth import API_KEY_HEADER, record_usage, resolve_api_key  # noqa: E402
 from api.config import frontend_base_url  # noqa: E402
-from api.db import close_pool, get_conn, init_pool  # noqa: E402
+from api.db import (  # noqa: E402
+    close_account_pool,
+    close_pool,
+    get_conn,
+    init_account_pool,
+    init_pool,
+)
 from api.limiter import limiter  # noqa: E402
 from rag.chain.sql_router import warm_pool as _warm_sql_pool  # noqa: E402
 
@@ -82,8 +88,10 @@ from rag.chain.sql_router import warm_pool as _warm_sql_pool  # noqa: E402
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_pool()
+    init_account_pool()  # restricted role for /account (#413); opens nothing at startup
     _warm_sql_pool()  # establish the SQL router connection pool at startup
     yield
+    close_account_pool()
     close_pool()
 
 
@@ -207,6 +215,13 @@ OPENAPI_TAGS = [
         "description": "User-submitted feedback sinks. Write-only.",
     },
     {
+        "name": "Account",
+        "description": (
+            "The signed-in caller's own account (ADR-040). Requires a Supabase access "
+            "token as a bearer; not needed for any public data, which stays anonymous."
+        ),
+    },
+    {
         "name": "Health",
         "description": (
             "Service status and data freshness. Check this before trusting a stale answer."
@@ -314,6 +329,7 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------------------------
 from api.routers import (  # noqa: E402
+    account,
     agenda,
     departments,
     deputies,
@@ -338,6 +354,7 @@ app.include_router(verify_router, prefix="/verify", tags=["Verify"])
 app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
 app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
 app.include_router(agenda.router, prefix="/agenda", tags=["Agenda"])
+app.include_router(account.router, prefix="/account", tags=["Account"])
 
 
 # ---------------------------------------------------------------------------

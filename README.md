@@ -120,6 +120,15 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | POST | `/feedback/report` | 10 | Report an error on a data page (MON-101) |
 | GET | `/keys/usage` | 10 | Per-endpoint, per-day usage for the calling API key |
 
+### Account (ADR-040)
+
+Requires `Authorization: Bearer <Supabase access token>`, forwarded by the Next.js server - the API verifies the signature itself and never trusts an asserted user id.
+There are no sign-up, sign-in or password endpoints: Supabase Auth owns that flow.
+
+| Method | Endpoint | rpm | Description |
+|--------|----------|-----|-------------|
+| GET | `/account/me` | - | The caller's own profile, read through the restricted role under RLS (#413) |
+
 ---
 
 ## Rate Limiting
@@ -488,6 +497,7 @@ All scripts use exponential-backoff retry (5 attempts, 2 s base) and upsert via 
 - **Error handling:** Global 500 handler returns a generic message - no tracebacks or DSNs in responses
 - **Rate limiting:** Per-endpoint limits (30 / 10 / 300 rpm), keyed by API key id or remote IP
 - **API keys:** Stored as sha256 hashes only; issued manually, never self-service
+- **Accounts (ADR-040):** `/account/*` verifies the Supabase access token itself (ES256/RS256 against the project JWKS - signature, expiry, audience, issuer) and never trusts a forwarded user id. Account data is read through a second pool connecting as the restricted `monelu_app_user` role, inside a transaction that opens with `SET LOCAL app.user_id`, so RLS applies; public routes keep the owner connection. Tokens and claims are never logged or returned
 - **No secrets in git:** All credentials via environment variables; `.env` is gitignored
 
 ---

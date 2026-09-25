@@ -810,3 +810,38 @@ class AgendaResponse(_Base):
     from_date: date
     to_date: date
     days: list[AgendaDay]
+
+
+# ---------------------------------------------------------------------------
+# Accounts (#413, ADR-040)
+# ---------------------------------------------------------------------------
+
+
+class AccountProfile(_Base):
+    """The signed-in caller's own profile, read through the restricted role.
+
+    `id` is MonÉlu's profile id, never the Supabase user id. No token, claim or
+    email is ever part of this response.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "7c1d9a52-3f0e-4c1b-9a7e-2b8f6d4e1a30",
+                "display_name": "Camille",
+                "preferred_language": "fr",
+                "department_code": "83",
+                "circonscription": "1",
+                "created_at": "2026-09-25T08:30:00Z",
+                "updated_at": "2026-09-25T08:30:00Z",
+            }
+        }
+    )
+
+    id: Optional[str] = None
+    display_name: Optional[str] = None
+    preferred_language: Optional[str] = None
+    department_code: Optional[str] = None
+    circonscription: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
