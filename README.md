@@ -416,7 +416,8 @@ design.
 |---|---|
 | `main.py` | App entry point - CORS, rate limiting, Sentry, exception handlers, API-key usage middleware, health check |
 | `auth.py` | API key resolution from the `X-API-Key` header |
-| `db.py` | psycopg2 connection helper |
+| `account_auth.py` | Supabase access-token verification (JWKS, ES256/RS256) and the `require_account` dependency (ADR-040, #413) |
+| `db.py` | psycopg2 connection helpers - the owner pool for public routes, and the restricted `monelu_app_user` pool + `account_transaction()` for account routes |
 | `limiter.py` | Shared slowapi `Limiter` + `tiered_limit()` (per-key multipliers) |
 | `csv_export.py` | Streaming CSV response helper (MON-97) |
 | `routers/deputies.py` | Deputy list, profile, scorecard, alignment, dissident/diverging votes, CSV exports |
@@ -429,6 +430,7 @@ design.
 | `routers/quiz.py` | `/quiz/*` - questions, weekly scrutin, stateless matching, share snapshots (ADR-025) |
 | `routers/feedback.py` | Chat thumbs and data-page error reports (MON-70, MON-101) |
 | `routers/keys.py` | `GET /keys/usage` - usage accounting for the calling key |
+| `routers/account.py` | `GET /account/me` - the signed-in caller's own profile, read under RLS (ADR-040) |
 | `quiz_data.py` | Curated, versioned quiz question set - updated quarterly by PR (ADR-025) |
 | `departments_data.py` · `groups_data.py` · `themes_data.py` | Canonical code/slug ↔ label maps, mirrored in `frontend/src/lib/` |
 | `schemas.py` | Pydantic response models (all fields `Optional` to match DB NULLs) |
