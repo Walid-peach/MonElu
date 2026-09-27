@@ -3,6 +3,10 @@ name: Deploy
 on:
   push:
     branches: [master]
+    # ADR-041 §3: an iOS-only merge must not run dbt against production.
+    # A push that also touches anything outside ios/ still runs.
+    paths-ignore:
+      - 'ios/**'
   workflow_dispatch:
 
 concurrency:

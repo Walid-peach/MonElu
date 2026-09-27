@@ -1471,6 +1471,10 @@ Every authenticated request costs one extra hop; that is the price of keeping th
 `PyJWT` joins `requirements.txt`; `@supabase/supabase-js` and `@supabase/ssr` join `frontend/package.json`.
 No other auth dependency is warranted.
 
+**Amended by ADR-041 (2026-09-28) for native clients.** Everything above still governs the browser.
+A native app has no cookie jar shared with the site and no XSS surface of that kind, so the iOS app holds its Supabase session in the Keychain and sends the access token straight to FastAPI, which already verifies it.
+See ADR-041 §6 for what that changes on the API (a per-account rate limit) and what it does not (CORS, the trust boundary).
+
 ### 5. A private schema and a restricted role, because RLS as used today is theatre
 
 MON-248 requires RLS on every new `public` table, and that rule is sound - but the API, ingestion and dbt all connect **as the table owner**, which bypasses RLS entirely.
@@ -1573,6 +1577,115 @@ Each of the cheaper options fails one of those: Google-only excludes citizens wi
 
 ---
 
+## ADR-041 - A native iPhone app in SwiftUI, built by agents, with Android on the web (#437)
+
+**Date:** 2026-09-28
+**Status:** Final
+
+**Decision:** MonÉlu ships a native iPhone app written in SwiftUI, kept in `ios/` in this repository.
+Android users keep the website and its PWA until the trigger in §2 is met.
+The app is a client of the existing public API and computes nothing the API already computes.
+
+| Layer | Choice |
+|-------|--------|
+| UI | SwiftUI, Swift 6 strict concurrency, iOS 17 minimum |
+| Project | Tuist manifest; the `.xcodeproj` is generated and git-ignored |
+| API client | Swift OpenAPI Generator, from a committed `openapi.json` snapshot |
+| Auth | supabase-swift with email codes; session in the Keychain (§6) |
+| Tests | Swift Testing, snapshot tests, Maestro flows in the Simulator |
+| Release | fastlane on GitHub Actions with an App Store Connect API key |
+| Errors | Sentry Cocoa; no analytics SDK |
+
+### 1. SwiftUI rather than Expo, a WebView wrapper, or Flutter
+
+The app is written by Claude Code agents, and the owner reads neither Swift nor React Native, so familiarity decides nothing.
+What decides it is what happens around the code.
+Swift 6's type system and concurrency checks reject whole classes of bugs before a test runs, which matters more when no human reviews the source line by line.
+There is no JavaScript framework to upgrade between the app and iOS, and widgets, Live Activities, App Intents, Dynamic Type and VoiceOver are first class.
+
+Expo's main argument was shared TypeScript, and it is weaker than it looks: the portable modules in `frontend/src/lib` total about 535 lines across seven files, because scorecards, quiz matching, RAG answers and verdicts already live in the API.
+A WebView wrapper around the site was rejected because App Store guideline 4.2 turns away repackaged websites, and because the site is server-rendered with ISR rather than a static export.
+Flutter and Kotlin Multiplatform add a third language to a Python and TypeScript repository for a cross-platform benefit this plan does not use yet.
+
+**Cost, stated plainly:** an Android app, if one is ever built, is a second native app rather than another build of this one.
+§4's parity scheme is what keeps a second client affordable.
+
+### 2. iPhone first, Android on the web until a measured trigger
+
+Android is where the web app is already closest to native: Chrome offers installation of the existing PWA, its share target works there, and Web Push is unrestricted.
+iOS is where the web is weakest, and where users expect an App Store listing.
+
+**Trigger for an Android app:** Android visitors to the website exceed half the iPhone app's weekly active devices (App Store Connect App Analytics) for two consecutive months, or a prioritized feature cannot be delivered by the PWA on Android.
+The first step is then a Trusted Web Activity listing of the existing PWA; a Kotlin and Jetpack Compose app follows only if that is not enough.
+
+### 3. One repository, and iOS changes never redeploy the web or the API
+
+`ios/` sits beside `frontend/` so an API change and the app change that follows land in one history, one backlog and one PR when they must.
+Three deploy triggers are kept blind to it:
+
+- Vercel already builds only when `frontend/` changes (#356).
+- `railway.json` declares `watchPatterns` of `**` then `!/ios/**`, so a change confined to `ios/` creates no Railway deployment.
+  The include-everything-then-exclude form keeps every current trigger, rather than enumerating the paths the API image reads and silently missing one.
+- `deploy.yml` ignores `ios/**`, so an iOS-only merge does not run `dbt run` against production.
+
+`ci.yml` is left as it is until the iOS workflow exists, because its jobs may be required checks and a path-filtered required check never reports.
+
+### 4. The API computes, the app shows, and shared tables have one source
+
+A rule that lives in three languages drifts unless something fails when it does:
+
+- API shapes come from `/openapi.json`; the app builds from a committed snapshot and CI fails when `api/` changes without it.
+- Departments, groups and themes are exported from `api/*_data.py` to `data/reference/*.json`; the app bundles that JSON and tests on both clients compare their copies against it.
+- The caveats and the data horizon the app displays are served by `GET /app/config`, so their wording can change without an app release.
+- Share URLs are the ones the API returns; the app never builds one.
+
+### 5. The API contract for a client that cannot be redeployed
+
+Phones keep an installed version for months, and a release waits for App Review, so the API changes its habits:
+
+- **Additive only** for any field or route the app reads: add, never rename or retype.
+  A necessary break ships as a new field or route first, and the old one goes only after `GET /app/config`'s minimum supported version has moved past every build that reads it.
+- **operationIds are handler names in camelCase**, and generated clients call them by name, so renaming a handler is an API change.
+- **`GET /app/config`** carries the minimum supported app version and remote switches (chat first, since it runs on Groq's free tier), so an emergency does not wait for review.
+- **No Railway hostname in a public App Store binary.** TestFlight builds may use it; the public release waits for the API to be served from a subdomain of the site's domain (#419), so the backend can move without stranding installed apps.
+- **Public reads are cacheable.** App traffic does not pass through Vercel's ISR cache, so public `GET` responses carry `Cache-Control` for a CDN and the app's `URLCache`, and account routes never do.
+
+### 6. Native sign-in (amends ADR-040 §4)
+
+ADR-040 keeps the access token out of the browser because an XSS on the site could otherwise read it.
+A native app has no such surface, and the Keychain is the platform's store for exactly this.
+So the app signs in with supabase-swift using the same email codes, keeps the session in the Keychain, and calls FastAPI with the access token as a bearer.
+
+What does not change: FastAPI still verifies every token itself (the trust boundary stays at the API), the browser rule stands, CORS stays `allow_credentials=False` (native clients are not subject to CORS), and reading never requires an account (ADR-040 §6).
+What does change: `/account/*` requests stop arriving only from the Next server, so they are rate-limited **per verified account** rather than per IP; an IP bucket would throttle every signed-in user together behind Next, and every phone together behind a carrier's shared address.
+Email codes are not a third-party social login, so App Store guideline 4.8 (Sign in with Apple) does not apply; adding a social provider later would bring it in, and needs an ADR-040 amendment anyway.
+In-app account deletion is required by guideline 5.1.1(v) and is built on the existing `/account/*` endpoints.
+
+### 7. Push is out of v1
+
+ADR-002 forbids scheduled dispatch and #359's hold stands.
+The app stores its APNs device token once accounts ship, and sends nothing, so lifting the hold later is a backend decision rather than an app release.
+
+### 8. Code nobody reads line by line must prove itself
+
+Every app PR carries its own evidence: the compiler, Swift Testing, snapshot images of each changed screen in light and dark and at a large text size, and Maestro flows in the Simulator.
+The owner using each TestFlight build on a real iPhone is part of acceptance, not an extra.
+
+**Reason (summary):** SwiftUI gives the best iPhone app with the strictest compiler and no framework upgrade treadmill, the shared-code case for Expo is small in this codebase, and the API is already the place where MonÉlu's logic lives.
+Keeping Android on the PWA matches where the web is already good, with a written trigger instead of a feeling.
+
+**Impact:**
+- #430 prepares the API (operationIds, `/app/config`, `Cache-Control`, the per-account limit) and the shared fixtures before any Swift is written.
+- #433 moves the API behind a CDN on a subdomain of the site's domain before the public release, and depends on #419.
+- `railway.json` and `deploy.yml` ignore `ios/`; `ci.yml` is revisited with the iOS workflow in #431.
+- Do **not** put business logic in the app that the API already computes.
+- Do **not** rename, retype or remove an API field or route the app reads without the §5 sequence.
+- Do **not** ship a public build that talks to a Railway hostname.
+
+**Trigger to revisit:** the Android trigger in §2 firing; Apple or Swift changes that make the Tuist or OpenAPI-generator choices untenable; a second maintainer joining who reviews TypeScript but not Swift; or the #359 hold being lifted (§7).
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1600,3 +1713,5 @@ Each of the cheaper options fails one of those: Google-only excludes citizens wi
 23. Cache invalidation is scoped, and over-purges on doubt (ADR-039, #353) - `/api/revalidate` with no body is the full purge and must stay the fallback for anything unrecognised; never make a workflow send `{}` or `{"families":[]}` when it failed to build a scope, and never attach the `health` tag to a family other than `votes` (the root layout reads `/health`, so it purges the whole site)
 24. `ingested_at` and `changed_at` mean different things and must not be merged (ADR-039, #353, migration 011) - `ingested_at` is "the last run that wrote this row" and is dbt's `loaded_at_field`, the cron-death detector and the marts' `updated_at`; `changed_at` is "the last run that wrote something different" and is what the cache-invalidation scope reads. Never guard an upsert's `DO UPDATE` with a `WHERE` that skips unchanged rows, and never make `ingested_at` conditional: either one silently turns the daily ingestion job red about a week into a recess
 25. Accounts are Supabase Auth with email codes, a Next-held session and a restricted DB role (ADR-040, #411/#365) - never store a password or add a social sign-in without amending that ADR, never let the browser hold the access token (Next route handlers read the session server-side and forward it; FastAPI verifies the JWT itself rather than trusting an asserted user id), never use the owner connection or a session-scoped `SET` on an account route (PgBouncer transaction pooling leaks it to the next caller - `SET LOCAL` inside an explicit transaction is the only safe form), and never put a public read behind sign-in: reading deputies, votes and every other public surface stays anonymous permanently
+26. The iPhone app is SwiftUI in `ios/`, and the API is its source of truth (ADR-041, #429) - never put business logic in the app that the API already computes, never rename, retype or remove an API field, route or operationId the app reads without ADR-041 §5's add-first sequence and a raised minimum version in `GET /app/config`, never ship a public App Store build that talks to a Railway hostname, and keep `railway.json`'s `!/ios/**` watch pattern and `deploy.yml`'s `ios/**` ignore so iOS-only commits never redeploy the API or re-run dbt against production
+27. Native clients keep the Supabase session in the Keychain and call FastAPI with the bearer token directly (ADR-041 §6, amending ADR-040 §4) - the browser rule in rule 25 is unchanged; `/account/*` is rate-limited per verified account, never per IP, and CORS stays `allow_credentials=False`
