@@ -40,7 +40,8 @@ from datetime import datetime, timezone
 from typing import Literal, Optional
 
 import psycopg2
-from fastapi import APIRouter, Body, Depends, HTTPException, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
+from fastapi.routing import APIRoute
 from psycopg2 import sql
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -58,7 +59,29 @@ from api.schemas import (
 )
 from api.themes_data import THEME_NAMES
 
-router = APIRouter()
+
+class _PrivateRoute(APIRoute):
+    """Marks every successful account response `Cache-Control: private, no-store`.
+
+    These bodies are one person's data. Nothing in the chain is meant to cache
+    them (the Next route handlers are uncached by ADR-040 §4), and this header
+    makes that hold for any proxy or browser in between too - including the
+    export, which is a file download. Applied at the route class rather than
+    per handler, so the 204s and the export's hand-built Response get it too.
+    """
+
+    def get_route_handler(self):
+        handler = super().get_route_handler()
+
+        async def private_handler(request: Request) -> Response:
+            response = await handler(request)
+            response.headers["Cache-Control"] = "private, no-store"
+            return response
+
+        return private_handler
+
+
+router = APIRouter(route_class=_PrivateRoute)
 
 _UNAUTHENTICATED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
@@ -105,6 +128,15 @@ SQL_UPDATE_PROFILE = f"""
     SET {{assignments}}
     WHERE id = %(profile_id)s
     RETURNING {_PROFILE_COLUMNS}
+"""
+
+# Appended to the SET list when the department changes without a new
+# circonscription (see update_my_profile).
+SQL_CLEAR_STALE_CIRCONSCRIPTION = """
+    circonscription = CASE
+        WHEN department_code IS DISTINCT FROM %(department_code)s THEN NULL
+        ELSE circonscription
+    END
 """
 
 # ON DELETE CASCADE on every child table (migration 013) makes this one
@@ -269,7 +301,9 @@ class ProfileFields(BaseModel):
             return None
         value = value.strip()
         if not value:
-            return None
+            # Clearing is explicit (`null`); a blank string is more likely a
+            # client bug than a request to erase the name.
+            raise ValueError("must not be blank; send null to clear it")
         if len(value) > DISPLAY_NAME_MAX_LEN:
             raise ValueError(f"at most {DISPLAY_NAME_MAX_LEN} characters")
         if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
@@ -351,10 +385,24 @@ def _gone() -> HTTPException:
     )
 
 
+def _unprocessable(loc: tuple[str, ...], msg: str) -> HTTPException:
+    """A 422 in the same shape FastAPI gives a request-validation failure.
+
+    One shape for every 422 on these routes, so a client (#416) parses a single
+    format: `detail` is a list of `{loc, msg, type}`.
+    """
+    return HTTPException(
+        status_code=422,
+        detail=[{"loc": list(loc), "msg": msg, "type": "value_error"}],
+    )
+
+
 def _check_territory(row: dict) -> None:
     """A circonscription number only means something inside a department."""
     if row.get("circonscription") and not row.get("department_code"):
-        raise HTTPException(status_code=422, detail="circonscription requires a department_code")
+        raise _unprocessable(
+            ("body", "circonscription"), "circonscription requires a department_code"
+        )
 
 
 def _read_profile(profile_id: uuid.UUID) -> dict | None:
@@ -462,20 +510,28 @@ def update_my_profile(body: ProfileFields, account: Account = Depends(require_ac
     is `fr` or `en` and cannot be cleared. `department_code` is a code as
     `GET /departments/{code}` takes it (`"83"`, `"2A"`, `"971"`), and
     `circonscription` a bare number within it (`"1"`); a circonscription left
-    without a department is 422. Territory is department + circonscription only
-    (ADR-040 §6): no address or commune is collected. Returns the updated
+    without a department is 422. Changing `department_code` without also
+    sending `circonscription` clears the stored circonscription, since the
+    number belongs to the old department. A blank `display_name` is 422.
+    Territory is department + circonscription only (ADR-040 §6): no address or
+    commune is collected. Returns the updated
     profile. 401 without a valid access token or profile.
     """
     changes = body.changes()
     if not changes:
         row = _read_profile(account.profile_id)
     else:
-        query = sql.SQL(SQL_UPDATE_PROFILE).format(
-            assignments=sql.SQL(", ").join(
-                sql.SQL("{} = {}").format(sql.Identifier(name), sql.Placeholder(name))
-                for name in sorted(changes)
-            )
-        )
+        assignments = [
+            sql.SQL("{} = {}").format(sql.Identifier(name), sql.Placeholder(name))
+            for name in sorted(changes)
+        ]
+        if "department_code" in changes and "circonscription" not in changes:
+            # Circonscription numbers are per department, so one carried over
+            # from the old department names a different seat - or none at all.
+            # SET expressions read the pre-update row, so this compares the
+            # stored department with the new one.
+            assignments.append(sql.SQL(SQL_CLEAR_STALE_CIRCONSCRIPTION))
+        query = sql.SQL(SQL_UPDATE_PROFILE).format(assignments=sql.SQL(", ").join(assignments))
         with _transaction(account.profile_id) as cur:
             cur.execute(query, _params(account, **changes))
             row = cur.fetchone()
@@ -605,7 +661,7 @@ def follow_deputy(deputy_id: str, account: Account = Depends(require_account)):
     with _transaction(account.profile_id) as cur:
         cur.execute(SQL_DEPUTY_EXISTS, {"deputy_id": deputy_id})
         if cur.fetchone() is None:
-            raise HTTPException(status_code=422, detail="Unknown deputy_id")
+            raise _unprocessable(("path", "deputy_id"), "Unknown deputy_id")
         cur.execute(SQL_FOLLOW_DEPUTY, _params(account, deputy_id=deputy_id))
     return Response(status_code=204)
 
@@ -671,7 +727,7 @@ def follow_theme(slug: str, account: Account = Depends(require_account)):
     is stored. 204 on success; 401 without a valid access token or profile.
     """
     if slug not in THEME_NAMES:
-        raise HTTPException(status_code=422, detail="Unknown theme slug")
+        raise _unprocessable(("path", "slug"), "Unknown theme slug")
     with _transaction(account.profile_id) as cur:
         cur.execute(SQL_FOLLOW_THEME, _params(account, theme_slug=slug))
     return Response(status_code=204)
@@ -732,7 +788,7 @@ def add_bookmark(vote_id: str, account: Account = Depends(require_account)):
     with _transaction(account.profile_id) as cur:
         cur.execute(SQL_VOTE_EXISTS, {"vote_id": vote_id})
         if cur.fetchone() is None:
-            raise HTTPException(status_code=422, detail="Unknown vote_id")
+            raise _unprocessable(("path", "vote_id"), "Unknown vote_id")
         cur.execute(SQL_ADD_BOOKMARK, _params(account, vote_id=vote_id))
     return Response(status_code=204)
 
