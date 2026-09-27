@@ -845,3 +845,189 @@ class AccountProfile(_Base):
     circonscription: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class AccountFollowedDeputy(_Base):
+    """A deputy the caller follows, with the public fields needed to render it."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "party_short": "LFI",
+                "department": "Val-de-Marne",
+                "circonscription": "10",
+                "photo_url": (
+                    "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
+                    "carre/720892.jpg"
+                ),
+                "followed_at": "2026-09-25T08:31:00Z",
+            }
+        }
+    )
+
+    deputy_id: Optional[str] = None
+    full_name: Optional[str] = None
+    party: Optional[str] = None
+    party_short: Optional[str] = None
+    department: Optional[str] = None
+    circonscription: Optional[str] = None
+    photo_url: Optional[str] = None
+    followed_at: Optional[datetime] = None
+
+
+class AccountFollowedTheme(_Base):
+    """A theme the caller follows. `slug` is one of the ten in /themes/{slug}."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "slug": "energie-environnement",
+                "name": "Énergie & Environnement",
+                "followed_at": "2026-09-25T08:32:00Z",
+            }
+        }
+    )
+
+    slug: Optional[str] = None
+    name: Optional[str] = None
+    followed_at: Optional[datetime] = None
+
+
+class AccountBookmark(_Base):
+    """A vote the caller saved, with the public fields needed to render it."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "vote_id": "VTANR5L17V1234",
+                "vote_title": "l'ensemble du projet de loi de finances pour 2026",
+                "voted_at": "2026-09-18T15:04:00Z",
+                "result": "adopté",
+                "bookmarked_at": "2026-09-25T08:33:00Z",
+            }
+        }
+    )
+
+    vote_id: Optional[str] = None
+    vote_title: Optional[str] = None
+    voted_at: Optional[datetime] = None
+    result: Optional[str] = None
+    bookmarked_at: Optional[datetime] = None
+
+
+class AccountNotificationPreferences(_Base):
+    """Stored notification choices. Nothing is sent on their basis (ADR-040).
+
+    `updated_at` is absent until the caller first saves a preference; until then
+    every flag reads as its default, false.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "followed_deputy_votes": True,
+                "followed_theme_votes": False,
+                "weekly_digest": False,
+                "updated_at": "2026-09-25T08:34:00Z",
+            }
+        }
+    )
+
+    followed_deputy_votes: Optional[bool] = None
+    followed_theme_votes: Optional[bool] = None
+    weekly_digest: Optional[bool] = None
+    updated_at: Optional[datetime] = None
+
+
+class AccountExportProfile(AccountProfile):
+    """The stored profile row, including the Supabase user id it is linked to."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "7c1d9a52-3f0e-4c1b-9a7e-2b8f6d4e1a30",
+                "auth_user_id": "0b6f3c5e-1111-4a2b-9c3d-000000000001",
+                "display_name": "Camille",
+                "preferred_language": "fr",
+                "department_code": "83",
+                "circonscription": "1",
+                "created_at": "2026-09-25T08:30:00Z",
+                "updated_at": "2026-09-25T08:30:00Z",
+            }
+        }
+    )
+
+    auth_user_id: Optional[str] = None
+
+
+class AccountExportFollowedDeputy(_Base):
+    deputy_id: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class AccountExportFollowedTheme(_Base):
+    theme_slug: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class AccountExportBookmark(_Base):
+    vote_id: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class AccountExportNotificationPreferences(_Base):
+    followed_deputy_votes: Optional[bool] = None
+    followed_theme_votes: Optional[bool] = None
+    weekly_digest: Optional[bool] = None
+    updated_at: Optional[datetime] = None
+
+
+class AccountExport(_Base):
+    """Every row MonÉlu stores about the caller, as stored (RGPD article 20).
+
+    Column names match the `app_private` tables, and no public data is joined
+    in: this is the caller's data, not a rendering of it.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "exported_at": "2026-09-25T09:00:00Z",
+                "profile": {
+                    "id": "7c1d9a52-3f0e-4c1b-9a7e-2b8f6d4e1a30",
+                    "auth_user_id": "0b6f3c5e-1111-4a2b-9c3d-000000000001",
+                    "display_name": "Camille",
+                    "preferred_language": "fr",
+                    "department_code": "83",
+                    "circonscription": "1",
+                    "created_at": "2026-09-25T08:30:00Z",
+                    "updated_at": "2026-09-25T08:30:00Z",
+                },
+                "followed_deputies": [
+                    {"deputy_id": "PA720892", "created_at": "2026-09-25T08:31:00Z"}
+                ],
+                "followed_themes": [
+                    {"theme_slug": "energie-environnement", "created_at": "2026-09-25T08:32:00Z"}
+                ],
+                "bookmarks": [{"vote_id": "VTANR5L17V1234", "created_at": "2026-09-25T08:33:00Z"}],
+                "notification_preferences": {
+                    "followed_deputy_votes": True,
+                    "followed_theme_votes": False,
+                    "weekly_digest": False,
+                    "updated_at": "2026-09-25T08:34:00Z",
+                },
+            }
+        }
+    )
+
+    exported_at: Optional[datetime] = None
+    profile: Optional[AccountExportProfile] = None
+    followed_deputies: list[AccountExportFollowedDeputy] = []
+    followed_themes: list[AccountExportFollowedTheme] = []
+    bookmarks: list[AccountExportBookmark] = []
+    # None when the caller never saved a preference: nothing is stored, so
+    # nothing is exported.
+    notification_preferences: Optional[AccountExportNotificationPreferences] = None
