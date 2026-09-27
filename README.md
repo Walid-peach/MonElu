@@ -59,6 +59,8 @@ The API tier is fully stateless. All state lives in Supabase (managed Postgres w
 
 Full interactive reference at `/docs`; the raw spec agents and generated clients should read is at `/openapi.json`.
 Every route carries a summary and a description written for that reader - what it returns, in what units, and the domain caveat that applies (MON-260).
+Each operationId is the handler's name in camelCase (`listDeputies`, `getVote`), so generated clients get readable method names; renaming a handler is therefore an API change (ADR-041 §5).
+Successful public `GET` responses carry `Cache-Control: public, max-age=300`, so a CDN or a client cache may keep them for five minutes; `/account/*`, `/keys/*`, `/health`, writes and errors never do.
 Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting).
 
 ### Core data
@@ -120,10 +122,17 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | POST | `/feedback/report` | 10 | Report an error on a data page (MON-101) |
 | GET | `/keys/usage` | 10 | Per-endpoint, per-day usage for the calling API key |
 
+### Mobile app (ADR-041)
+
+| Method | Endpoint | rpm | Description |
+|--------|----------|-----|-------------|
+| GET | `/app/config` | 30 | Minimum supported app version, remote feature switches (`chat`, `verify`), data horizon and caveat texts; overridable with `APP_MIN_IOS_VERSION`, `APP_FEATURE_CHAT`, `APP_FEATURE_VERIFY` |
+
 ### Account (ADR-040)
 
-Requires `Authorization: Bearer <Supabase access token>`, forwarded by the Next.js server - the API verifies the signature itself and never trusts an asserted user id.
+Requires `Authorization: Bearer <Supabase access token>`, forwarded by the Next.js server or sent by the iOS app from its Keychain (ADR-041 §6) - the API verifies the signature itself and never trusts an asserted user id.
 There are no sign-up, sign-in or password endpoints: Supabase Auth owns that flow.
+The *rpm* column reads `-` because these routes carry no per-IP limit: every verified request counts against a 120 req/min allowance per account, keyed on the token's subject, and a rejected token counts against nothing.
 
 | Method | Endpoint | rpm | Description |
 |--------|----------|-----|-------------|
@@ -157,6 +166,7 @@ Implemented with [slowapi](https://github.com/laurentS/slowapi). Anonymous reque
 | Expensive reads (scorecards, CSV exports) | 10 req / min |
 | LLM-backed (`POST /search/`, `POST /verify/`) | 10 req / min |
 | Stored-snapshot reads (share URLs) | 300 req / min |
+| Account routes (`/account/*`) | 120 req / min per verified account, not per IP |
 
 API keys are issued manually (`api_keys` table, sha256-hashed) and sent in the `X-API-Key` header; usage is counted per key, per endpoint, per day in `api_key_usage`.
 

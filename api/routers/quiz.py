@@ -836,7 +836,7 @@ def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
 # (X, WhatsApp, Facebook, Telegram) and Vercel edge egress funnel through few
 # IPs, so the base per-IP limit was tripping during viral spikes.
 @limiter.limit(tiered_limit(300))
-def get_share(request: Request, share_id: uuid.UUID) -> QuizShareResponse:
+def get_quiz_share(request: Request, share_id: uuid.UUID) -> QuizShareResponse:
     """Read back a stored quiz result by id. Nothing is recomputed.
 
     The snapshot is frozen as it was created, so scores reflect the deputies'

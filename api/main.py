@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.routing import APIRoute
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
@@ -73,6 +74,7 @@ from starlette.concurrency import run_in_threadpool  # noqa: E402
 
 from api import groq_health  # noqa: E402
 from api.auth import API_KEY_HEADER, record_usage, resolve_api_key  # noqa: E402
+from api.cache_headers import add_public_cache_control  # noqa: E402
 from api.config import frontend_base_url  # noqa: E402
 from api.db import (  # noqa: E402
     close_account_pool,
@@ -225,12 +227,35 @@ OPENAPI_TAGS = [
         ),
     },
     {
+        "name": "App",
+        "description": (
+            "Launch configuration for the MonÉlu mobile app (ADR-041): minimum supported "
+            "version, remote feature switches, data horizon and caveat texts. Public and "
+            "anonymous."
+        ),
+    },
+    {
         "name": "Health",
         "description": (
             "Service status and data freshness. Check this before trusting a stale answer."
         ),
     },
 ]
+
+
+def _operation_id(route: APIRoute) -> str:
+    """Name each operation after its handler, in camelCase (ADR-041 §5, #438).
+
+    FastAPI's default joins the handler name, path and method
+    (`list_deputies_deputies__get`), and generated clients - the iOS app's Swift
+    OpenAPI Generator, ChatGPT Actions, MCP bridges - expose that string as the
+    method name. Handler names are unique across the API, and
+    tests/unit/test_operation_ids.py keeps them so: renaming a handler is now an
+    API change for any generated client.
+    """
+    head, *rest = route.name.split("_")
+    return head + "".join(part.capitalize() for part in rest)
+
 
 app = FastAPI(
     title="MonÉlu API",
@@ -242,6 +267,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
+    generate_unique_id_function=_operation_id,
 )
 
 # ---------------------------------------------------------------------------
@@ -311,6 +337,13 @@ async def _log_api_key_usage(request: Request, call_next):
 
 
 # ---------------------------------------------------------------------------
+# Cache-Control on public reads (ADR-041 §5, #438) - see api/cache_headers.py
+# for what is excluded and why.
+# ---------------------------------------------------------------------------
+app.middleware("http")(add_public_cache_control)
+
+
+# ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
 ALLOWED_ORIGINS = [o for o in os.getenv("CORS_ORIGINS", "").split(",") if o]
@@ -334,6 +367,7 @@ app.add_middleware(
 from api.routers import (  # noqa: E402
     account,
     agenda,
+    app_config,
     departments,
     deputies,
     feedback,
@@ -358,6 +392,7 @@ app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
 app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
 app.include_router(agenda.router, prefix="/agenda", tags=["Agenda"])
 app.include_router(account.router, prefix="/account", tags=["Account"])
+app.include_router(app_config.router, prefix="/app", tags=["App"])
 
 
 # ---------------------------------------------------------------------------

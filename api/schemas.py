@@ -1031,3 +1031,50 @@ class AccountExport(_Base):
     # None when the caller never saved a preference: nothing is stored, so
     # nothing is exported.
     notification_preferences: Optional[AccountExportNotificationPreferences] = None
+
+
+# ---------------------------------------------------------------------------
+# Native app configuration (ADR-041 §5, #438)
+# ---------------------------------------------------------------------------
+
+
+class AppFeatures(_Base):
+    """Remote switches for features that depend on a third party."""
+
+    chat: bool = True
+    verify: bool = True
+
+
+class AppCaveat(_Base):
+    """One caveat, keyed by a stable id so the app can place it by the number it qualifies."""
+
+    id: str
+    text: str
+
+
+class AppConfig(_Base):
+    """Configuration a native app reads at launch instead of hardcoding it."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "min_ios_version": "1.0.0",
+                "features": {"chat": True, "verify": True},
+                "data_horizon": "2025-07-01",
+                "caveats": [
+                    {
+                        "id": "vote_result",
+                        "text": (
+                            "Le résultat d'un scrutin (adopté / rejeté) est repris tel quel "
+                            "de l'Assemblée nationale, jamais recalculé."
+                        ),
+                    }
+                ],
+            }
+        }
+    )
+
+    min_ios_version: str
+    features: AppFeatures
+    data_horizon: date
+    caveats: list[AppCaveat] = []
