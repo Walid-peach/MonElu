@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 from unittest.mock import patch
 
+import psycopg2.errors
 import psycopg2.sql
 import pytest
 
@@ -303,3 +304,53 @@ def test_saving_preferences_only_writes_the_preferences_row(client, profile_exis
     assert len(writes) == 1
     assert writes[0].startswith("INSERT INTO app_private.notification_preferences")
     conn.commit.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Concurrent first requests
+# ---------------------------------------------------------------------------
+
+
+def test_concurrent_creation_returns_the_winners_profile(client, account_pool):
+    """Two first requests race: the loser's INSERT hits the auth_user_id unique
+    key, is rolled back, and it answers 200 with the profile the winner made."""
+    _pool, conn, cursor = account_pool
+    ok = None
+    cursor.execute.side_effect = [
+        ok,  # SET LOCAL app.user_id (the loser's own new id)
+        ok,  # SET LOCAL statement_timeout
+        psycopg2.errors.UniqueViolation("duplicate key value"),
+        ok,  # SET LOCAL app.user_id (the winner's id), for the read-back
+        ok,
+        ok,  # SELECT the profile
+    ]
+    with patch.object(account_auth, "resolve_profile_id", side_effect=[None, PROFILE_ID]):
+        r = client.post("/account/me", headers=AUTH)
+
+    assert r.status_code == 200
+    assert r.json()["id"] == str(PROFILE_ID)
+    conn.rollback.assert_called()
+    read_back_identity = cursor.execute.call_args_list[3]
+    assert read_back_identity.args == ("SET LOCAL app.user_id = %s", (str(PROFILE_ID),))
+
+
+def test_unique_violation_without_a_winner_is_not_swallowed(client, account_pool):
+    _pool, _conn, cursor = account_pool
+    cursor.execute.side_effect = [None, None, psycopg2.errors.UniqueViolation("duplicate")]
+
+    with (
+        patch.object(account_auth, "resolve_profile_id", return_value=None),
+        pytest.raises(psycopg2.errors.UniqueViolation),
+    ):
+        client.post("/account/me", headers=AUTH)
+
+
+def test_empty_preferences_body_stores_nothing(client, profile_exists, account_pool):
+    _pool, conn, cursor = account_pool
+    cursor.fetchone.return_value = None
+
+    r = client.patch("/account/preferences", headers=AUTH, json={})
+
+    assert r.status_code == 200
+    assert r.json()["weekly_digest"] is False
+    assert not any("INSERT" in s for s in _statements(cursor))

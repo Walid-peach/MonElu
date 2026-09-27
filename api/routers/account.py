@@ -503,8 +503,9 @@ def delete_my_account(account: Account = Depends(require_account)):
 
     Afterwards the same access token answers 401 on every account route, since
     it no longer resolves to a profile. The sign-in identity itself (the email
-    address) is held by Supabase Auth, not in these tables, and is removed there
-    by the sign-in layer. 204 on success.
+    address) is held by Supabase Auth, outside these tables, and this endpoint
+    does not remove it: the API holds no Supabase admin credential. 204 on
+    success.
     """
     with _transaction(account.profile_id) as cur:
         cur.execute(SQL_DELETE_PROFILE, _params(account))
@@ -527,8 +528,9 @@ def export_my_data(account: Account = Depends(require_account)):
     profile or label from what a caller follows.
 
     Served with `Content-Disposition: attachment`, so a browser saves it as a
-    file. The email address used to sign in is held by Supabase Auth rather
-    than in these tables. 401 without a valid access token or profile.
+    file. The email address used to sign in is held by Supabase Auth, outside
+    these tables, and is not part of this export. 401 without a valid access
+    token or profile.
     """
     params = _params(account)
     with _transaction(account.profile_id) as cur:
@@ -772,9 +774,9 @@ def get_preferences(account: Account = Depends(require_account)):
     MonÉlu sends no notifications, digests or alerts today: ADR-040 permits
     only the transactional sign-in email, and the alerts work (#359) is on hold.
     These flags are stored so a later feature can honour them, and a client
-    must say so rather than imply delivery. Every flag is false until the caller
-    saves one, and `updated_at` is then absent. 401 without a valid access token
-    or profile.
+    must say so rather than imply delivery. Until the caller first saves one,
+    every flag reads false and `updated_at` is null. 401 without a valid access
+    token or profile.
     """
     with _transaction(account.profile_id) as cur:
         cur.execute(SQL_SELECT_PREFERENCES, _params(account))
@@ -797,6 +799,10 @@ def update_preferences(
     schedules nothing and enqueues nothing (ADR-040; #359's hold stands).
     Returns the stored preferences. 401 without a valid access token or profile.
     """
+    if not body.model_fields_set:
+        # Nothing to store: an empty body must not create a row the export
+        # would then report as a saved choice.
+        return get_preferences(account)
     with _transaction(account.profile_id) as cur:
         cur.execute(SQL_UPSERT_PREFERENCES, _params(account, **body.model_dump()))
         return cur.fetchone()
