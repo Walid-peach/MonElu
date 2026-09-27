@@ -26,6 +26,7 @@ import pytest
 from api.limiter import limiter
 from api.main import app
 from api.routers import (
+    account,
     agenda,
     departments,
     deputies,
@@ -58,6 +59,7 @@ ROUTER_PREFIXES = [
     ("/keys", keys.router),
     ("/feedback", feedback.router),
     ("/agenda", agenda.router),
+    ("/account", account.router),
 ]
 
 # Routes kept out of the OpenAPI schema but still worth documenting for a
