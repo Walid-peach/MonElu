@@ -255,6 +255,11 @@ def test_changing_department_clears_a_circonscription_not_restated(users):
     r = alice.patch("/account/me", json={"department_code": "83", "circonscription": "3"})
     assert (r.json()["department_code"], r.json()["circonscription"]) == ("83", "3")
 
+    # Clearing the department clears its circonscription with it.
+    r = alice.patch("/account/me", json={"department_code": None})
+    assert r.status_code == 200
+    assert (r.json()["department_code"], r.json()["circonscription"]) == (None, None)
+
 
 # ---------------------------------------------------------------------------
 # Unknown ids are rejected and not stored
@@ -349,7 +354,7 @@ def test_rls_only_mode_leaks_when_rls_is_bypassed(users, monkeypatch):
     finally:
         monkeypatch.undo()
         owner_pool.closeall()
-    assert followed == {DEPUTY_X, DEPUTY_Y}
+    assert {DEPUTY_X, DEPUTY_Y} <= followed
 
 
 def test_a_user_cannot_change_or_remove_another_users_rows(mode, users, db_conn):

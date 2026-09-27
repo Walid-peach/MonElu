@@ -512,7 +512,8 @@ def update_my_profile(body: ProfileFields, account: Account = Depends(require_ac
     `circonscription` a bare number within it (`"1"`); a circonscription left
     without a department is 422. Changing `department_code` without also
     sending `circonscription` clears the stored circonscription, since the
-    number belongs to the old department. A blank `display_name` is 422.
+    number belongs to the old department - so clearing `department_code` with
+    `null` clears the circonscription too. A blank `display_name` is 422.
     Territory is department + circonscription only (ADR-040 §6): no address or
     commune is collected. Returns the updated
     profile. 401 without a valid access token or profile.
