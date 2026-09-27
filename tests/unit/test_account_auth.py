@@ -179,6 +179,17 @@ def test_token_without_kid_is_rejected():
         account_auth.verify_access_token(token)
 
 
+def test_kidless_token_against_a_legacy_key_set_is_unavailable(_supabase):
+    """A project still on the legacy HS256 secret publishes an empty key set and
+    may issue tokens with no `kid`. The key set is checked first, so that
+    misconfiguration is 503 whatever the token looks like - never the 401 that
+    would sign every visitor out."""
+    _supabase.return_value = {"keys": []}
+    legacy = jwt.encode(_claims(), "legacy-shared-secret-of-32-bytes!", algorithm="HS256")
+    with pytest.raises(account_auth.AuthUnavailable):
+        account_auth.verify_access_token(legacy)
+
+
 def test_small_clock_skew_is_tolerated():
     """A token whose `iat` is a few seconds ahead of this host still verifies."""
     token = _token(iat=int(time.time()) + 10)
@@ -292,6 +303,29 @@ def test_auth_outage_is_503_not_401(client, profile_exists, account_pool, _supab
     assert r.status_code == 503
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [
+        psycopg2.OperationalError("server closed the connection unexpectedly"),
+        psycopg2.extensions.QueryCanceledError("canceling statement due to statement timeout"),
+    ],
+    ids=["connection-lost", "statement-timeout"],
+)
+def test_query_phase_connection_failure_is_503_not_500(
+    client, profile_exists, account_pool, failure
+):
+    """A failure after SET LOCAL succeeded must still land on 503, not fall
+    through to the global handler as a 500."""
+    _pool, conn, cursor = account_pool
+    ok = MagicMock()
+    cursor.execute.side_effect = [ok, ok, failure]  # the two SET LOCALs, then the read
+
+    r = client.get("/account/me", headers={"Authorization": f"Bearer {_token()}"})
+
+    assert r.status_code == 503
+    account_pool[0].putconn.assert_called_once_with(conn, close=True)
+
+
 def test_unconfigured_account_pool_is_503(client, profile_exists):
     with patch.object(_db, "_account_pool", None):
         r = client.get("/account/me", headers={"Authorization": f"Bearer {_token()}"})
@@ -402,11 +436,46 @@ def test_transaction_rolls_back_on_error():
 
 def test_transaction_discards_a_broken_connection():
     pool, conn, _cursor = _mock_pool()
-    with _restricted(pool), pytest.raises(psycopg2.OperationalError):
+    with _restricted(pool), pytest.raises(_db.AccountStoreUnavailable):
         with _db.account_transaction(PROFILE_ID):
             raise psycopg2.OperationalError("server closed the connection")
 
     pool.putconn.assert_called_once_with(conn, close=True)
+    # Not retried: the caller's statements may already have run.
+    pool.getconn.assert_called_once()
+
+
+def test_stale_pooled_connection_is_replaced_before_the_caller_runs():
+    """The pool hands its idle connection back unchecked, so a pooler that
+    dropped it is only discovered at SET LOCAL - where nothing of the caller's
+    has run yet and a fresh connection is safe to use instead."""
+    pool, fresh_conn, fresh_cursor = _mock_pool()
+    _stale_pool, stale_conn, stale_cursor = _mock_pool()
+    stale_cursor.execute.side_effect = psycopg2.OperationalError("server closed the connection")
+    pool.getconn.side_effect = [stale_conn, fresh_conn]
+
+    with _restricted(pool):
+        with _db.account_transaction(PROFILE_ID) as cur:
+            cur.execute("SELECT 1")
+
+    assert pool.putconn.call_args_list == [
+        ((stale_conn,), {"close": True}),
+        ((fresh_conn,), {"close": False}),
+    ]
+    assert _statements(fresh_cursor)[0] == "SET LOCAL app.user_id = %s"
+    fresh_conn.commit.assert_called_once()
+
+
+def test_connection_unusable_after_reconnect_is_unavailable():
+    pool, _conn, cursor = _mock_pool()
+    cursor.execute.side_effect = psycopg2.OperationalError("server closed the connection")
+
+    with _restricted(pool), pytest.raises(_db.AccountStoreUnavailable):
+        with _db.account_transaction(PROFILE_ID):
+            pass
+
+    assert pool.getconn.call_count == 2
+    assert all(c.kwargs == {"close": True} for c in pool.putconn.call_args_list)
 
 
 @pytest.mark.parametrize("bad", ["", "not-a-uuid", None])

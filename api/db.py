@@ -104,7 +104,11 @@ def get_conn():
 # connections and *closes* every other one it is handed back, so minconn=0
 # would open a fresh connection - a TLS handshake to Supabase - per request.
 # Connecting is retried briefly for the proxy drops PgBouncer produces (the
-# lesson of MON-255).
+# lesson of MON-255). That retry only covers *opening* a connection: the idle
+# one the pool keeps is handed back unchecked, so a pooler that dropped it
+# overnight is only discovered at the first statement. `account_transaction`
+# therefore treats a failure at `SET LOCAL` - before anything of the caller's
+# has run - as a dead connection and retries once on a fresh one.
 
 _account_pool: psycopg2.pool.ThreadedConnectionPool | None = None
 _account_pool_lock = threading.Lock()
@@ -113,6 +117,9 @@ _ACCOUNT_POOL_MINCONN = 1
 _ACCOUNT_POOL_MAXCONN = 5
 _ACCOUNT_CONNECT_ATTEMPTS = 3
 _ACCOUNT_CONNECT_BACKOFF_SECONDS = 0.25
+# A dead pooled connection is replaced once; a second failure at `SET LOCAL`
+# on a freshly opened connection is an outage, not staleness.
+_ACCOUNT_BEGIN_ATTEMPTS = 2
 # libpq waits forever by default. Pool creation runs under a lock, so a stalled
 # pooler would otherwise queue every account request behind it and, through the
 # shared threadpool, starve the public sync routes too.
@@ -124,7 +131,12 @@ _ACCOUNT_STATEMENT_TIMEOUT = "5s"
 
 
 class AccountStoreUnavailable(Exception):
-    """The restricted-role pool is unconfigured or cannot connect."""
+    """The restricted-role pool is unconfigured, cannot connect, or lost its connection.
+
+    Account routes answer it with 503. Connection-level failures inside a
+    transaction (a severed socket, a `statement_timeout` cancellation) are raised
+    as this too, so no route can let one fall through to a 500.
+    """
 
 
 def _with_connect_retry(connect):
@@ -187,6 +199,40 @@ def _get_account_conn(pool: psycopg2.pool.ThreadedConnectionPool):
         raise AccountStoreUnavailable("account pool exhausted") from exc
 
 
+def _begin_account_transaction(pool: psycopg2.pool.ThreadedConnectionPool, profile_id: uuid.UUID):
+    """Check out a connection and open the identity-scoped transaction on it.
+
+    Returns `(conn, cursor)` with `app.user_id` already set. A connection that
+    fails here has run nothing of the caller's yet, so it is discarded and the
+    transaction is begun again on a fresh one.
+    """
+    for attempt in range(_ACCOUNT_BEGIN_ATTEMPTS):
+        conn = _get_account_conn(pool)
+        try:
+            # psycopg2 opens a transaction implicitly on the first statement
+            # when autocommit is off; with autocommit on, SET LOCAL would be a
+            # no-op warning and every statement would run with no identity.
+            conn.autocommit = False
+            cur = conn.cursor()
+            cur.execute("SET LOCAL app.user_id = %s", (str(profile_id),))
+            cur.execute("SET LOCAL statement_timeout = %s", (_ACCOUNT_STATEMENT_TIMEOUT,))
+            return conn, cur
+        except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
+            pool.putconn(conn, close=True)
+            if attempt == _ACCOUNT_BEGIN_ATTEMPTS - 1:
+                raise AccountStoreUnavailable("account connection unusable") from None
+            # Class name only: a libpq connection error can quote the DSN.
+            logger.warning("Stale account DB connection (%s), reconnecting", type(exc).__name__)
+        except BaseException:
+            try:
+                conn.rollback()
+                pool.putconn(conn, close=False)
+            except Exception:
+                pool.putconn(conn, close=True)
+            raise
+    raise AssertionError("unreachable")
+
+
 @contextmanager
 def account_transaction(profile_id: uuid.UUID):
     """Yield a cursor on the restricted pool, inside one transaction scoped to a profile.
@@ -194,7 +240,8 @@ def account_transaction(profile_id: uuid.UUID):
     The transaction opens with `SET LOCAL app.user_id`, which is what the
     migration 013 policies read, so every statement in the block sees only that
     profile's rows even without a `WHERE` of its own. Commits on success, rolls
-    back on any exception.
+    back on any exception. Connection-level failures, at any point, surface as
+    AccountStoreUnavailable (503), never as a raw psycopg2 error.
 
     `SET LOCAL`, never `SET`: Supabase sits behind PgBouncer in transaction
     pooling mode, so a session-scoped `SET` would outlive this request and hand
@@ -210,25 +257,24 @@ def account_transaction(profile_id: uuid.UUID):
     profile_id = uuid.UUID(str(profile_id))
 
     pool = _get_account_pool()
-    conn = _get_account_conn(pool)
+    conn, cur = _begin_account_transaction(pool, profile_id)
     broken = False
     try:
-        # psycopg2 opens a transaction implicitly on the first statement when
-        # autocommit is off; with autocommit on, SET LOCAL would be a no-op
-        # warning and every statement would run with no identity at all.
-        conn.autocommit = False
-        with conn.cursor() as cur:
-            cur.execute("SET LOCAL app.user_id = %s", (str(profile_id),))
-            cur.execute("SET LOCAL statement_timeout = %s", (_ACCOUNT_STATEMENT_TIMEOUT,))
+        with cur:
             yield cur
         conn.commit()
-    except (psycopg2.OperationalError, psycopg2.InterfaceError):
+    except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
+        # A severed socket, or a `statement_timeout` cancellation
+        # (QueryCanceledError is an OperationalError). Not retried: the
+        # caller's statements may already have run. Always discard, since
+        # rollback() can succeed on a dead socket.
         broken = True
         try:
             conn.rollback()
         except Exception:
             pass
-        raise
+        logger.warning("Account DB transaction failed (%s)", type(exc).__name__)
+        raise AccountStoreUnavailable("account transaction failed") from None
     except BaseException:
         try:
             conn.rollback()

@@ -111,13 +111,6 @@ def verify_access_token(token: str) -> VerifiedUser:
     if issuer is None:
         raise AuthUnavailable("SUPABASE_URL is not set")
 
-    try:
-        kid = jwt.get_unverified_header(token).get("kid")
-    except jwt.PyJWTError as exc:
-        raise InvalidAccessToken(type(exc).__name__) from None
-    if not kid:
-        raise InvalidAccessToken("no kid")
-
     client = _jwks_client(f"{issuer}/.well-known/jwks.json")
 
     # Two failure classes that must not be confused. A key set that cannot be
@@ -126,10 +119,22 @@ def verify_access_token(token: str) -> VerifiedUser:
     # run: 503. Only a token naming a key the set does not hold is the
     # caller's fault: 401. Answering 401 to the first would sign every visitor
     # out over a misconfiguration.
+    #
+    # Checked before anything is read from the token, so that guarantee does
+    # not depend on the token's shape: a legacy-secret project may issue
+    # tokens with no `kid`, and those must still answer 503, not "no kid".
+    # The set is cached, so this costs nothing per request.
     try:
         client.get_jwk_set()
     except (jwt.PyJWKClientError, jwt.PyJWKSetError, ValueError) as exc:
         raise AuthUnavailable(type(exc).__name__) from None
+
+    try:
+        kid = jwt.get_unverified_header(token).get("kid")
+    except jwt.PyJWTError as exc:
+        raise InvalidAccessToken(type(exc).__name__) from None
+    if not kid:
+        raise InvalidAccessToken("no kid")
 
     try:
         # An unknown kid forces at most one refetch per cooldown window
