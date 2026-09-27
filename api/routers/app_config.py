@@ -28,8 +28,10 @@ def get_app_config(request: Request):
     `min_ios_version` is the oldest app version (`MAJOR.MINOR.PATCH`) this API
     still serves correctly: an older app must ask its user to update rather than
     call the API. `features` are remote switches, `true` unless the operator has
-    turned one off; `chat` gates `POST /search/` and `verify` gates
-    `POST /verify/`, both of which depend on a third-party model provider.
+    turned one off: `chat` says whether the app should offer `POST /search/`, and
+    `verify` whether it should offer `POST /verify/`, both of which depend on a
+    third-party model provider. They are advice to the app, not enforcement -
+    both endpoints keep answering whatever the switches say.
     `data_horizon` is the first date production holds scrutins for (ISO date).
     `caveats` are the reading notes the website prints next to its figures,
     in French, with inline Markdown, each under a stable `id`.
