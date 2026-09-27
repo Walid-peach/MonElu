@@ -6,6 +6,7 @@ The failure modes that matter are the silent ones: a malformed override that
 the app cannot parse, or a missing variable that quietly disables a feature.
 """
 
+import pathlib
 import re
 
 import pytest
@@ -57,3 +58,21 @@ def test_caveat_ids_are_unique_and_stable_slugs():
     ids = [cid for cid, _ in cfg.CAVEATS]
     assert len(ids) == len(set(ids))
     assert all(re.fullmatch(r"[a-z][a-z_]*", cid) for cid in ids)
+
+
+def test_caveats_match_the_websites_llms_txt():
+    """The app and the website must print the same caveats (ADR-041 §4).
+
+    Parsed out of the TypeScript source rather than imported, since the two live
+    in different runtimes; the list is plain single-quoted strings, and the
+    parse asserts it found them all rather than silently comparing nothing.
+    """
+    source = (
+        pathlib.Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "llms.ts"
+    ).read_text(encoding="utf-8")
+    start = source.index("export const CAVEATS = [")
+    block = source[start : source.index("\n]", start)]
+    web = [text.replace("\\'", "'") for text in re.findall(r"'((?:[^'\\]|\\.)*)'", block)]
+
+    assert len(web) == len(cfg.CAVEATS), "CAVEATS in llms.ts changed length or shape"
+    assert web == [text for _, text in cfg.CAVEATS]

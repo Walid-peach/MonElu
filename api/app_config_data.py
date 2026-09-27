@@ -14,8 +14,8 @@ so three things the app would otherwise hardcode live here instead:
 
 The caveat texts are the ones the website prints through `CAVEATS` in
 `frontend/src/lib/llms.ts`, keyed by a stable id so the app can place each one
-next to the number it qualifies. Keep the two in step: #439 adds a drift test
-between them.
+next to the number it qualifies. tests/unit/test_app_config.py fails when the
+two lists differ, so a wording change lands on both clients or on neither.
 
 Every value has a code default; the operator overrides the switches and the
 minimum version through environment variables on Railway, which takes effect
