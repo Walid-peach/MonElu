@@ -271,3 +271,77 @@ UPDATE api_keys SET revoked_at = now() WHERE id = <id>;
 -- Or just drop back to the free-tier default:
 UPDATE api_keys SET rate_limit_multiplier = 4 WHERE id = <id>;
 ```
+
+## 6. Account database role: `monelu_app_user` (#422, ADR-040)
+
+The account routes (`/account/*`) read and write personal data through a second connection pool that logs in as `monelu_app_user`, a non-owner role with no `BYPASSRLS`, so the migration 013 RLS policies actually apply.
+Migration 013 creates that role `NOLOGIN`, so no credential for it ever lives in the repository.
+Its password is operator-managed: set in Supabase by hand, stored in a password manager, and handed to the API through one Railway variable.
+
+| Where | What |
+|---|---|
+| Supabase SQL Editor | `ALTER ROLE monelu_app_user WITH LOGIN PASSWORD '…'` - the only place the password is set |
+| Railway, API service | `ACCOUNT_DATABASE_URL` - the only place the API reads it |
+| Password manager | The only other copy |
+
+Never paste the password into an issue, a PR, a chat, a log or a shell whose history is kept.
+Generate it with `openssl rand -hex 32 | pbcopy`: hex needs no URL-encoding in the DSN, and piping to the clipboard keeps it off the screen.
+
+### Connection string
+
+Use the same Supavisor pooler host and port as `DATABASE_URL` (transaction mode, port 6543), with the project ref appended to the role name.
+The pooler routes on that suffix; a bare `monelu_app_user` has no tenant to route to.
+
+```
+postgresql://monelu_app_user.<project-ref>:<password>@aws-1-eu-west-3.pooler.supabase.com:6543/postgres?sslmode=require
+```
+
+Transaction pooling is safe here because `api/db.py`'s `account_transaction()` never relies on session state: it sets the identity with `SET LOCAL app.user_id` and the statement timeout with `SET LOCAL`, both inside the request's own transaction.
+Never point `ACCOUNT_DATABASE_URL` at the owner DSN - the owner bypasses RLS, and every account query would then run with no isolation at all.
+
+### Verifying the role
+
+Run from a normal terminal (not one whose output is shared), pasting the value of `ACCOUNT_DATABASE_URL`:
+
+```bash
+psql "<ACCOUNT_DATABASE_URL>" <<'SQL'
+select current_user;
+show is_superuser;
+select count(*) from app_private.profiles;
+select count(*) from public.vote_positions;
+SQL
+```
+
+| Query | Expected | Proves |
+|---|---|---|
+| `current_user` | `monelu_app_user` | the pooler username format works |
+| `is_superuser` | `off` | the session is not a superuser |
+| `app_private.profiles` | `0` | RLS fails closed when no `app.user_id` is set |
+| `public.vote_positions` | `permission denied for table vote_positions` | the role holds nothing in `public` beyond `SELECT` on `deputies` and `votes` |
+
+Check the role's flags from the owner side, in the Supabase SQL Editor:
+
+```sql
+SELECT rolname, rolsuper, rolbypassrls, rolcanlogin FROM pg_roles WHERE rolname = 'monelu_app_user';
+```
+
+Expected: `false | false | true`.
+Run this as the owner, not as the role: on 2026-09-27 the same query run as `monelu_app_user` through the pooler returned no row at all, while the owner saw the expected flags, so the role-side result proves nothing either way.
+
+Then `curl -i https://monelu-production.up.railway.app/account/me` without a token must answer 401, not 503.
+
+### Rotating the password
+
+1. Generate a new password as above and store it in the password manager.
+2. Run the `ALTER ROLE … WITH LOGIN PASSWORD` in the Supabase SQL Editor.
+3. Update `ACCOUNT_DATABASE_URL` in Railway, which redeploys the API.
+4. Re-run the verification above.
+
+Between steps 2 and 3, a new connection with the old password fails, so account routes may answer 503 for the length of a deploy; public routes use the owner pool and are unaffected.
+Do steps 2 and 3 back to back.
+Rotate after any suspected exposure, and whenever someone who held the password loses access.
+
+### Disabling account routes in an emergency
+
+`ALTER ROLE monelu_app_user NOLOGIN;` refuses every new login as the role, but a connection the API already holds stays open.
+Unset `ACCOUNT_DATABASE_URL` in Railway as well: the redeploy drops the held connections, and from then on `/account/*` answers 503 while the rest of the API keeps serving.

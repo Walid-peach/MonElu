@@ -304,6 +304,9 @@ CORS_ORIGINS=*
 # Phase 2 — required for POST /search
 OPENAI_API_KEY=sk-...
 GROQ_API_KEY=gsk_...
+# Accounts (ADR-040) - optional; /account/* answers 503 while unset
+SUPABASE_URL=https://<project-ref>.supabase.co
+ACCOUNT_DATABASE_URL=postgresql://monelu_app_user.<project-ref>:<password>@<pooler-host>:6543/postgres
 ```
 
 Production uses Supabase (managed Postgres + pgvector). Local uses Docker (`docker-compose.yml` starts Postgres 15 + pgAdmin 8).
@@ -321,7 +324,7 @@ Health check: `GET /health` — returns DB status, record counts, `last_ingestio
 
 **Moving to a new domain** takes two environment variables, not one (MON-254, MON-274): `FRONTEND_BASE_URL` on Railway (backend — the `GET /` redirect and every share URL) and `NEXT_PUBLIC_SITE_URL` on Vercel (frontend — `metadataBase`, canonicals, sitemap, robots, OG cards). Same origin under two names; the Vercel one is inlined at build time, so it only takes effect on the next build. Every frontend route builds its `alternates.canonical` from `canonicalUrl()` in `frontend/src/lib/site.ts` (MON-269), so the move carries the canonicals with it; `frontend/__tests__/app/canonical.test.ts` fails if a new `page.tsx` ships without one or hardcodes the origin instead. The only allowlisted exceptions are `~offline` (service-worker fallback) and `embed/votes/[id]` (already `robots: noindex`). The reuse-attribution line that `/donnees`, `/licence-donnees` and `/llms.txt` all print is `DATA_ATTRIBUTION` in the same file (MON-261) - it is built from `SITE_HOST`, so the move cannot leave the site asking reusers to credit a host it no longer answers on.
 
-**Account routes need two Railway variables and one database step** (#413, ADR-040): `SUPABASE_URL` (tokens are verified against its JWKS, so the Supabase project must use asymmetric JWT signing keys, not the legacy HS256 secret) and `ACCOUNT_DATABASE_URL` (the `monelu_app_user` role, after `ALTER ROLE monelu_app_user WITH LOGIN PASSWORD …`). Until all three are in place `/account/*` answers 503 and every public route is unaffected.
+**Account routes need two Railway variables and one database step** (#413, ADR-040): `SUPABASE_URL` (tokens are verified against its JWKS, so the Supabase project must use asymmetric JWT signing keys, not the legacy HS256 secret) and `ACCOUNT_DATABASE_URL` (the `monelu_app_user` role, after `ALTER ROLE monelu_app_user WITH LOGIN PASSWORD …`; through the Supavisor pooler the username is `monelu_app_user.<project-ref>`, not the bare role name - #422). Until all three are in place `/account/*` answers 503 and every public route is unaffected. The password is operator-managed: setting, verifying and rotating it is `docs/monitoring.md` section 6.
 
 **Vercel only builds when `frontend/` changes** (#356).
 The Vercel project's Root Directory is `frontend/`, and `ignoreCommand` in `frontend/vercel.json` runs `frontend/scripts/vercel-ignore-build.sh` - the repository copy overrides whatever the dashboard's Ignored Build Step field says, so the policy lives in git rather than drifting in project settings.

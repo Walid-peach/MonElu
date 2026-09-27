@@ -180,6 +180,9 @@ CORS_ORIGINS=*
 # Phase 2 — required for POST /search
 OPENAI_API_KEY=sk-...
 GROQ_API_KEY=gsk_...
+# Accounts (ADR-040) - optional; /account/* answers 503 while unset
+SUPABASE_URL=https://<project-ref>.supabase.co
+ACCOUNT_DATABASE_URL=postgresql://monelu_app_user.<project-ref>:<password>@<pooler-host>:6543/postgres
 ```
 
 Production uses Supabase (managed Postgres + pgvector). Local uses Docker (`docker-compose.yml` starts Postgres 15 + pgAdmin 8).
