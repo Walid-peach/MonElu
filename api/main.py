@@ -164,6 +164,15 @@ OPENAPI_TAGS = [
         ),
     },
     {
+        "name": "Lois",
+        "description": (
+            "Bills (dossiers législatifs): where one stands, from deposit to "
+            "promulgation, with its headline scrutins attached. Only bills with at "
+            "least one scrutin have a page; the AN linked scrutins to bills only from "
+            "March 2026, so older stages carry no vote."
+        ),
+    },
+    {
         "name": "Groups",
         "description": (
             "Parliamentary groups: roster, cohesion, and the votes that split the "
@@ -339,6 +348,7 @@ from api.routers import (  # noqa: E402
     feedback,
     groups,
     keys,
+    lois,
     quiz,
     themes,
     votes,
@@ -352,6 +362,7 @@ app.include_router(groups.router, prefix="/groups", tags=["Groups"])
 app.include_router(themes.router, prefix="/themes", tags=["Themes"])
 app.include_router(quiz.router, prefix="/quiz", tags=["Quiz"])
 app.include_router(votes.router, prefix="/votes", tags=["Votes"])
+app.include_router(lois.router, prefix="/lois", tags=["Lois"])
 app.include_router(search_router, prefix="/search", tags=["Search"])
 app.include_router(verify_router, prefix="/verify", tags=["Verify"])
 app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
