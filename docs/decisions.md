@@ -1532,6 +1532,22 @@ Commune-level lookup is deferred until such a dataset is verified and ingested -
 **Notification preferences are stored and nothing is sent.** The UI says so.
 This is the ADR-002 line, held on the product surface as well as in the code.
 
+**Amended by #423 (2026-09-28): v1 ships no notification-preferences UI.**
+The `app_private.notification_preferences` table (#412) and the `/account/preferences` endpoints (#414) stay, and the RGPD export keeps returning the row; `/mon-compte` (#416) shows no form for them.
+A settings screen for notifications that never arrive is the part of an account a user reads as broken, and "the UI says so" does not fix a control that does nothing.
+The account in v1 therefore promises exactly what it delivers: follows, bookmarks, territory and a dashboard across devices.
+The endpoints are kept rather than removed because they are already built, tested under RLS, and cost nothing idle; when alerts are designed, the stored shape is a starting point, not a commitment.
+
+Rejected: **re-opening #359 now, rewritten on top of accounts.**
+Three reasons, each sufficient on its own.
+The Resend free tier's 100 emails a day is shared with sign-in codes, so a weekly digest to a few dozen subscribers would use up that day's quota and lock people out of signing in; a digest needs its own sending budget first.
+The domain (#419) that any sender needs is not acquired yet.
+And no account exists yet, so there is no evidence of who would subscribe or to what - alerts should be designed from how accounts are actually used, not ahead of it.
+Meanwhile, #424's RSS feed lets anyone follow new votes with no email and no account.
+
+#359 stays on hold with a new re-evaluation date: **no earlier than 2027-03-01, and not before sign-in (#415) has been live for three months.**
+When it is re-evaluated it is rewritten on this ADR's identity model, not on ADR-002's email-and-token design, and it needs a sending budget separate from the sign-in codes.
+
 **Retention:** deletion is self-serve, immediate and total, and is tested with a second account's data present in the fixture.
 Dormant accounts are **not** auto-purged today; that follows ADR-032's precedent of building the purge when a size alert actually fires, not preemptively.
 
@@ -1564,7 +1580,7 @@ Each of the cheaper options fails one of those: Google-only excludes citizens wi
 3. Kafka is not part of this project (ADR-001, ADR-005)
 4. Airflow is local only (ADR-006) — do not write Railway/cloud Airflow config
 5. Terraform IaC is archived, not live (ADR-004, ADR-021) — do not add terraform apply steps or resurrect infra/
-6. Phase 5 alerts are deferred (ADR-002) — do not build scheduled or bulk email dispatch. Transactional authentication mail (the ADR-040 sign-in code) is explicitly permitted and does not unblock #359
+6. Phase 5 alerts are deferred (ADR-002) — do not build scheduled or bulk email dispatch. Transactional authentication mail (the ADR-040 sign-in code) is explicitly permitted and does not unblock #359. Accounts v1 ships no notification-preferences UI (ADR-040 as amended by #423) - the stored preferences stay, but no form offers them until alerts exist
 7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
 8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never trust client-computed percentages; answers may be persisted only via the opt-in path in ADR-028 (see rule 11), never by default
 9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
