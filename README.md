@@ -128,6 +128,22 @@ There are no sign-up, sign-in or password endpoints: Supabase Auth owns that flo
 | Method | Endpoint | rpm | Description |
 |--------|----------|-----|-------------|
 | GET | `/account/me` | - | The caller's own profile, read through the restricted role under RLS (#413) |
+| POST | `/account/me` | - | Create the caller's MonÉlu profile on first sign-in; idempotent (201 new, 200 existing) (#414) |
+| PATCH | `/account/me` | - | Update display name, language, department and circonscription (#414) |
+| DELETE | `/account/me` | - | Delete the account and, by cascade, every follow, bookmark and preference - irreversible (#414) |
+| GET | `/account/export` | - | Every stored row about the caller as a JSON download (RGPD export, #414) |
+| GET | `/account/follows/deputies` | - | Followed deputies, with their public identity fields (#414) |
+| PUT | `/account/follows/deputies/{id}` | - | Follow a deputy; unknown id is 422 (#414) |
+| DELETE | `/account/follows/deputies/{id}` | - | Unfollow a deputy; idempotent (#414) |
+| GET | `/account/follows/themes` | - | Followed themes (#414) |
+| PUT | `/account/follows/themes/{slug}` | - | Follow one of the ten themes; unknown slug is 422 (#414) |
+| DELETE | `/account/follows/themes/{slug}` | - | Unfollow a theme; idempotent (#414) |
+| GET | `/account/bookmarks` | - | Bookmarked votes, with title, date and result (#414) |
+| PUT | `/account/bookmarks/{vote_id}` | - | Bookmark a vote; unknown id is 422 (#414) |
+| DELETE | `/account/bookmarks/{vote_id}` | - | Remove a bookmark; idempotent (#414) |
+| GET | `/account/preferences` | - | Stored notification preferences - nothing is ever sent (#414) |
+| PATCH | `/account/preferences` | - | Store notification preferences - nothing is ever sent (#414) |
+| DELETE | `/account/preferences` | - | Reset notification preferences to defaults (#414) |
 
 ---
 
@@ -430,7 +446,7 @@ design.
 | `routers/quiz.py` | `/quiz/*` - questions, weekly scrutin, stateless matching, share snapshots (ADR-025) |
 | `routers/feedback.py` | Chat thumbs and data-page error reports (MON-70, MON-101) |
 | `routers/keys.py` | `GET /keys/usage` - usage accounting for the calling key |
-| `routers/account.py` | `GET /account/me` - the signed-in caller's own profile, read under RLS (ADR-040) |
+| `routers/account.py` | `/account/*` - the signed-in caller's profile, follows, bookmarks, stored notification preferences, RGPD export and deletion, all under RLS (ADR-040) |
 | `quiz_data.py` | Curated, versioned quiz question set - updated quarterly by PR (ADR-025) |
 | `departments_data.py` · `groups_data.py` · `themes_data.py` | Canonical code/slug ↔ label maps, mirrored in `frontend/src/lib/` |
 | `schemas.py` | Pydantic response models (all fields `Optional` to match DB NULLs) |

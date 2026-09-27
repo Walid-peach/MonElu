@@ -217,8 +217,11 @@ OPENAPI_TAGS = [
     {
         "name": "Account",
         "description": (
-            "The signed-in caller's own account (ADR-040). Requires a Supabase access "
-            "token as a bearer; not needed for any public data, which stays anonymous."
+            "The signed-in caller's own account (ADR-040): profile, followed deputies "
+            "and themes, bookmarked votes, notification preferences (stored only - "
+            "nothing is ever sent), data export and deletion. Requires a Supabase "
+            "access token as a bearer; not needed for any public data, which stays "
+            "anonymous."
         ),
     },
     {
