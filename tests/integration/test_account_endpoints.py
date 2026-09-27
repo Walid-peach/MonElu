@@ -232,9 +232,28 @@ def test_circonscription_without_department_is_rolled_back(users):
     alice, _ = users
     alice.post("/account/me", json={"department_code": "83", "circonscription": "2"})
 
-    r = alice.patch("/account/me", json={"department_code": None})
+    r = alice.patch("/account/me", json={"department_code": None, "circonscription": "2"})
     assert r.status_code == 422
-    assert alice.get("/account/me").json()["department_code"] == "83"
+    assert r.json()["detail"][0]["loc"] == ["body", "circonscription"]
+    profile = alice.get("/account/me").json()
+    assert (profile["department_code"], profile["circonscription"]) == ("83", "2")
+
+
+def test_changing_department_clears_a_circonscription_not_restated(users):
+    alice, _ = users
+    alice.post("/account/me", json={"department_code": "59", "circonscription": "18"})
+
+    # Same department restated: the circonscription stands.
+    r = alice.patch("/account/me", json={"department_code": "59"})
+    assert r.json()["circonscription"] == "18"
+
+    # Corse-du-Sud has two circonscriptions; Nord's 18th must not survive.
+    r = alice.patch("/account/me", json={"department_code": "2A"})
+    assert r.status_code == 200
+    assert (r.json()["department_code"], r.json()["circonscription"]) == ("2A", None)
+
+    r = alice.patch("/account/me", json={"department_code": "83", "circonscription": "3"})
+    assert (r.json()["department_code"], r.json()["circonscription"]) == ("83", "3")
 
 
 # ---------------------------------------------------------------------------
@@ -253,6 +272,18 @@ def test_unknown_ids_are_rejected_and_not_stored(users, db_conn):
 
     counts = _counts(db_conn, profile_id)
     assert counts["followed_deputies"] == counts["followed_themes"] == counts["bookmarks"] == 0
+
+
+def test_account_responses_are_never_cacheable(users):
+    alice, _ = users
+    alice.post("/account/me")
+    for method, path in (
+        ("get", "/account/me"),
+        ("get", "/account/export"),
+        ("put", f"/account/bookmarks/{VOTE_X}"),
+    ):
+        r = getattr(alice, method)(path)
+        assert r.headers["cache-control"] == "private, no-store", path
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +328,28 @@ def test_export_contains_only_the_callers_data(mode, users):
     assert export["notification_preferences"]["weekly_digest"] is True
     for foreign in (bob_id, str(bob.auth_user_id), DEPUTY_Y, VOTE_Y, "international"):
         assert foreign not in r.text
+
+
+def test_rls_only_mode_leaks_when_rls_is_bypassed(users, monkeypatch):
+    """Negative control for the `rls-only` runs above: on the table owner's
+    connection, which RLS does not apply to, stripping the ownership clause
+    must expose another account's rows. If this ever stops failing open, the
+    rewrite has stopped removing the filter and the RLS proof is a no-op."""
+    alice, bob = users
+    _populate(alice, DEPUTY_X, VOTE_X, "agriculture")
+    _populate(bob, DEPUTY_Y, VOTE_Y, "international")
+    _strip_owner_clauses(monkeypatch)
+
+    owner_pool = psycopg2.pool.ThreadedConnectionPool(
+        1, 1, dsn=_owner_url(), cursor_factory=psycopg2.extras.RealDictCursor
+    )
+    monkeypatch.setattr(_db, "_account_pool", owner_pool)
+    try:
+        followed = {d["deputy_id"] for d in alice.get("/account/follows/deputies").json()}
+    finally:
+        monkeypatch.undo()
+        owner_pool.closeall()
+    assert followed == {DEPUTY_X, DEPUTY_Y}
 
 
 def test_a_user_cannot_change_or_remove_another_users_rows(mode, users, db_conn):
