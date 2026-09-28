@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
+import { AccountLink } from './AccountLink'
 import { ThemeToggle } from './ThemeToggle'
 import { useTheme } from './ThemeProvider'
 import { isLightOnlyPath } from '@/lib/theme'
@@ -107,6 +108,7 @@ export function Nav() {
       <div className="flex items-center gap-4 shrink-0">
         <ThemeToggle />
         <FollowedDeputyChip />
+        <AccountLink />
       </div>
     </nav>
   )

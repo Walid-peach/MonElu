@@ -68,7 +68,9 @@ function header(): string {
 
 > Le registre complet des votes des députés de l'Assemblée nationale française, XVIIe législature (depuis le 7 juillet 2024). Chaque scrutin, chaque député, chaque position - en français clair, avec la méthode de calcul publiée et les données brutes téléchargeables. Site : ${SITE_URL}
 
-MonÉlu ingère quotidiennement l'open data de l'Assemblée nationale, en dérive des statistiques de présence et d'alignement de groupe, et les expose sur des pages publiques, via une API REST et en CSV. Le projet ne produit aucune donnée de vote : il structure et redistribue celle de l'Assemblée.`
+MonÉlu ingère quotidiennement l'open data de l'Assemblée nationale, en dérive des statistiques de présence et d'alignement de groupe, et les expose sur des pages publiques, via une API REST et en CSV. Le projet ne produit aucune donnée de vote : il structure et redistribue celle de l'Assemblée.
+
+Un compte facultatif (connexion par code envoyé par e-mail, sans mot de passe) permet de retrouver ses députés et thèmes suivis d'un appareil à l'autre. Il n'ouvre l'accès à aucune donnée supplémentaire : chaque page publique, l'API et les exports restent lisibles sans compte, sans cookie et sans identification.`
 }
 
 function caveats(): string {

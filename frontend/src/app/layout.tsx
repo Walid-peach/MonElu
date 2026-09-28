@@ -15,6 +15,7 @@ import { HideOnEmbed } from '@/components/HideOnEmbed'
 import { MainFrame } from '@/components/MainFrame'
 import { JsonLd } from '@/components/JsonLd'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { SessionProvider } from '@/components/SessionProvider'
 import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
@@ -80,19 +81,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {`(function(){try{if(window.location.pathname==='/')return;var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`}
         </Script>
         <ThemeProvider>
-          {/* Organization first: WebSite.publisher references it by @id (MON-273). */}
-          <JsonLd data={[buildOrganizationJsonLd(), buildWebsiteJsonLd()]} />
-          <Suspense fallback={null}>
-            <Nav />
-          </Suspense>
-          {/* Triggerless: the nav menus and the mobile sheet open it, plus ⌘K. */}
-          <HideOnEmbed><GlobalSearch hideTrigger /></HideOnEmbed>
-          <HideOnEmbed><FreshnessBadge /></HideOnEmbed>
-          <MainFrame><PageTransition>{children}</PageTransition></MainFrame>
-          <Footer />
-          <Suspense fallback={null}>
-            <BottomNav />
-          </Suspense>
+          {/* Client-side session read (#415): a server read here would make every page dynamic (GH #354). */}
+          <SessionProvider>
+            {/* Organization first: WebSite.publisher references it by @id (MON-273). */}
+            <JsonLd data={[buildOrganizationJsonLd(), buildWebsiteJsonLd()]} />
+            <Suspense fallback={null}>
+              <Nav />
+            </Suspense>
+            {/* Triggerless: the nav menus and the mobile sheet open it, plus ⌘K. */}
+            <HideOnEmbed><GlobalSearch hideTrigger /></HideOnEmbed>
+            <HideOnEmbed><FreshnessBadge /></HideOnEmbed>
+            <MainFrame><PageTransition>{children}</PageTransition></MainFrame>
+            <Footer />
+            <Suspense fallback={null}>
+              <BottomNav />
+            </Suspense>
+          </SessionProvider>
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

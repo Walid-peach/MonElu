@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 
 import { MobileMenu } from '@/components/MobileMenu'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { SessionProvider } from '@/components/SessionProvider'
 
 let pathname = '/'
 jest.mock('next/navigation', () => ({
@@ -15,7 +16,9 @@ jest.mock('@/lib/api', () => ({
 function renderMenu(open: boolean, onClose = jest.fn()) {
   return render(
     <ThemeProvider>
-      <MobileMenu open={open} onClose={onClose} />
+      <SessionProvider>
+        <MobileMenu open={open} onClose={onClose} />
+      </SessionProvider>
     </ThemeProvider>
   )
 }
@@ -49,14 +52,18 @@ describe('MobileMenu', () => {
 
     rerender(
       <ThemeProvider>
-        <MobileMenu open onClose={jest.fn()} />
+        <SessionProvider>
+          <MobileMenu open onClose={jest.fn()} />
+        </SessionProvider>
       </ThemeProvider>
     )
     expect(document.body.style.overflow).toBe('hidden')
 
     rerender(
       <ThemeProvider>
-        <MobileMenu open={false} onClose={jest.fn()} />
+        <SessionProvider>
+          <MobileMenu open={false} onClose={jest.fn()} />
+        </SessionProvider>
       </ThemeProvider>
     )
     expect(document.body.style.overflow).toBe('')
