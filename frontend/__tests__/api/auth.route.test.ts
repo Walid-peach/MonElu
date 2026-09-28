@@ -121,6 +121,28 @@ describe('POST /api/auth/code', () => {
     expect(await res.json()).toEqual({ error: 'unavailable' })
   })
 
+  it('refuses a request a browser marks as cross-site, even without Origin', async () => {
+    const { POST } = await load()
+    const req = new Request(`${ORIGIN}/api/auth/code`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'cross-site' },
+      body: JSON.stringify({ email: 'a@b.fr' }),
+    })
+    expect((await POST(req)).status).toBe(403)
+    expect(auth.signInWithOtp).not.toHaveBeenCalled()
+  })
+
+  it('ignores a body not sent as application/json', async () => {
+    const { POST } = await load()
+    const req = new Request(`${ORIGIN}/api/auth/code`, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain', origin: ORIGIN },
+      body: JSON.stringify({ email: 'a@b.fr' }),
+    })
+    expect((await POST(req)).status).toBe(400)
+    expect(auth.signInWithOtp).not.toHaveBeenCalled()
+  })
+
   it('refuses a cross-origin request', async () => {
     const { POST } = await load()
     const res = await POST(post('/api/auth/code', { email: 'a@b.fr' }, { origin: 'https://evil.example' }))

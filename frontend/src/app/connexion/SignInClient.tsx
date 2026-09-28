@@ -172,7 +172,8 @@ export function SignInClient() {
     setNotice(null)
     const { ok, data } = await postJson('/api/auth/verify', { email: email.trim(), code: digits })
     if (ok) {
-      await session.refresh()
+      const user = data.user as { email?: unknown } | undefined
+      session.confirmSignedIn(typeof user?.email === 'string' ? user.email : email.trim())
       setCode('')
       setStep('email')
       clearCooldown()

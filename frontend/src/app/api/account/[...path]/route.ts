@@ -16,6 +16,12 @@ import {
  * this handler never tells it who the caller is. `GET /api/account/export`
  * becomes `GET /account/export`, and so on for every account route.
  *
+ * Error bodies: a 401 or 5xx is replaced by this layer's own code
+ * (`signed_out`, `unavailable`); any other 4xx - a 422 on an unknown deputy,
+ * for instance - is relayed as the API wrote it, because the account page
+ * (#416) needs its detail to say which field is wrong. That page must map it
+ * to French rather than render it; `lib/auth.ts` covers the sign-in errors only.
+ *
  * Per-user: never cached, no `revalidate`, and every response `private,
  * no-store` (GH #352).
  */
@@ -53,7 +59,7 @@ async function proxy(req: Request, { params }: Context): Promise<Response> {
   }
   if (!accessToken) return authError('signed_out')
 
-  const hasBody = !['GET', 'HEAD', 'DELETE'].includes(req.method)
+  const hasBody = !['GET', 'DELETE'].includes(req.method)
   let upstream: Response
   try {
     upstream = await accountApiFetch(`/${path.join('/')}`, accessToken, {

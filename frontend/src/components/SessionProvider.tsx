@@ -26,8 +26,14 @@ export type SessionStatus = 'loading' | 'disabled' | 'signed-out' | 'signed-in'
 type SessionContextValue = {
   status: SessionStatus
   email: string | null
-  /** Re-read the session, e.g. after the verify step set the cookie. */
+  /** Re-read the session. A failed read keeps the state already known. */
   refresh: () => Promise<void>
+  /**
+   * Record a sign-in the verify handler just confirmed. Its answer is
+   * authoritative, so no second read is needed - and a failed second read
+   * must not tell someone who just signed in that sign-in is unavailable.
+   */
+  confirmSignedIn: (email: string | null) => void
   /** Sign this browser out. Resolves once the cookie is cleared. */
   signOut: () => Promise<void>
 }
@@ -43,20 +49,33 @@ async function fetchSession(): Promise<SessionPayload | null> {
   }
 }
 
-function toState(payload: SessionPayload | null): Pick<SessionContextValue, 'status' | 'email'> {
-  if (!payload?.enabled) return { status: 'disabled', email: null }
+type State = Pick<SessionContextValue, 'status' | 'email'>
+
+/**
+ * `null` is a failed read, not an answer. Before anything is known it hides
+ * the sign-in entry (`disabled`); once a state is known it is kept, so one
+ * dropped request does not sign the visitor out on screen or hide sign-in.
+ */
+function toState(payload: SessionPayload | null, previous: State): State {
+  if (payload === null) return previous.status === 'loading' ? { status: 'disabled', email: null } : previous
+  if (!payload.enabled) return { status: 'disabled', email: null }
   if (!payload.user) return { status: 'signed-out', email: null }
   return { status: 'signed-in', email: payload.user.email }
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<Pick<SessionContextValue, 'status' | 'email'>>({
+  const [state, setState] = useState<State>({
     status: 'loading',
     email: null,
   })
 
   const refresh = useCallback(async () => {
-    setState(toState(await fetchSession()))
+    const payload = await fetchSession()
+    setState(previous => toState(payload, previous))
+  }, [])
+
+  const confirmSignedIn = useCallback((email: string | null) => {
+    setState({ status: 'signed-in', email })
   }, [])
 
   useEffect(() => {
@@ -70,7 +89,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     let cancelled = false
     fetchSession().then(payload => {
-      if (!cancelled) setState(toState(payload))
+      if (!cancelled) setState(previous => toState(payload, previous))
     })
     return () => {
       cancelled = true
@@ -78,16 +97,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
+    let cleared = false
     try {
-      await fetch('/api/auth/signout', { method: 'POST', credentials: 'same-origin' })
-    } finally {
-      // Re-read rather than assume: if the request failed, the cookie may
-      // still be there and the page must not claim otherwise.
-      await refresh()
+      const res = await fetch('/api/auth/signout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: '{}',
+      })
+      cleared = res.ok
+    } catch {
+      cleared = false
     }
+    if (cleared) setState(previous => (previous.status === 'disabled' ? previous : { status: 'signed-out', email: null }))
+    // Not confirmed: the cookie may still be there, so ask rather than assume.
+    else await refresh()
   }, [refresh])
 
-  const value = useMemo(() => ({ ...state, refresh, signOut }), [state, refresh, signOut])
+  const value = useMemo(
+    () => ({ ...state, refresh, confirmSignedIn, signOut }),
+    [state, refresh, confirmSignedIn, signOut]
+  )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
 

@@ -39,6 +39,10 @@ function MailLink() {
  * export and deletion rights. Keep it in step with `app_private` (migration
  * 013) - a new column is a new line here.
  */
+// When `/mon-compte` (#416) ships the export, edit and delete controls, the
+// "Vos droits" and "Durée de conservation" sections must say they are
+// self-serve there - until then they are honoured by email, and the page says
+// only that.
 export default function ConfidentialitePage() {
   return (
     <LegalPageLayout eyebrow="RGPD" title="Politique de confidentialité">
@@ -148,9 +152,9 @@ export default function ConfidentialitePage() {
       <LegalSection id="conservation" title="Durée de conservation">
         <ul style={{ ...listStyle, margin: 0 }}>
           <li>
-            Les données du compte sont conservées tant que le compte existe. La suppression est à votre main,
-            immédiate et totale : profil, territoire, suivis, votes enregistrés et préférences sont effacés en
-            une fois, sans délai de grâce ni copie conservée.
+            Les données du compte sont conservées tant que le compte existe. Sa suppression est immédiate et
+            totale : profil, territoire, suivis, votes enregistrés et préférences sont effacés en une fois,
+            sans délai de grâce ni copie conservée.
           </li>
           <li>
             Votre adresse e-mail est détenue par le service d&apos;authentification, distinct de ces tables :
@@ -214,10 +218,9 @@ export default function ConfidentialitePage() {
         <p style={pStyle}>
           Vous disposez d&apos;un droit d&apos;accès, de rectification, d&apos;effacement, de portabilité et
           d&apos;opposition sur les données vous concernant, et du droit de retirer votre consentement à tout
-          moment. Chaque information du compte se modifie depuis votre espace, qui permet aussi de
-          télécharger dans un fichier l&apos;intégralité de ce qui est stocké et de supprimer le compte. Pour
-          exercer ces droits autrement, ou pour toute autre demande - dont l&apos;effacement de votre adresse
-          e-mail - écrivez à <MailLink />.
+          moment. Pour les exercer - obtenir une copie de tout ce qui est stocké, corriger une information,
+          supprimer votre compte ou effacer votre adresse e-mail - écrivez à <MailLink /> depuis
+          l&apos;adresse de votre compte.
         </p>
         <p style={pSpaced}>
           Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL

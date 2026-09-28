@@ -5,8 +5,10 @@
  * Deliberately free of any Supabase import: this module ships to the client,
  * and the browser never talks to Supabase. It holds no token, no key and no
  * cookie name - only the error codes the route handlers answer with and the
- * French sentence each one renders as. A raw Supabase or API error body never
- * reaches the page; the handler reduces it to one of these codes first.
+ * French sentence each one renders as. A raw Supabase error never reaches the
+ * page: the auth handlers reduce it to one of these codes first. The account
+ * proxy does the same for a 401 or 5xx and relays other 4xx bodies for the
+ * account page to map (see `app/api/account/[...path]/route.ts`).
  */
 
 /** Length of the emailed code. Supabase's default OTP length. */

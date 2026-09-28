@@ -158,10 +158,15 @@ export function retryAfterSeconds(message: string | undefined): number | undefin
  *
  * The `lax` session cookie already stays off cross-site POSTs; this closes the
  * same-site-but-cross-origin gap and any browser that does not honour
- * SameSite. A request without an `Origin` header (a non-browser client) carries
- * no ambient cookie to abuse, so it is let through.
+ * SameSite. A browser states where a request came from twice - `Origin`, and
+ * `Sec-Fetch-Site` on every modern engine - and either one naming another
+ * origin is refused. A request with neither (a non-browser client) carries no
+ * ambient cookie to abuse, so it is let through: what bounds a script calling
+ * `/api/auth/code` directly is Supabase's own rate limit, not this check.
  */
 export function isSameOrigin(req: Request): boolean {
+  const site = req.headers.get('sec-fetch-site')
+  if (site && site !== 'same-origin' && site !== 'none') return false
   const origin = req.headers.get('origin')
   if (!origin) return true
   try {
@@ -171,8 +176,13 @@ export function isSameOrigin(req: Request): boolean {
   }
 }
 
-/** Read a JSON body, or `null` for anything that is not a JSON object. */
+/**
+ * Read a JSON body, or `null` for anything that is not a JSON object sent as
+ * `application/json`. Requiring the content type means a cross-origin page can
+ * only reach these handlers through a CORS preflight, which it cannot pass.
+ */
 export async function readJsonObject(req: Request): Promise<Record<string, unknown> | null> {
+  if (!req.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return null
   try {
     const body = await req.json()
     return body && typeof body === 'object' && !Array.isArray(body) ? body : null

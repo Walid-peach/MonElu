@@ -159,6 +159,24 @@ describe('SessionProvider', () => {
     expect(screen.queryByRole('link', { name: /Se connecter|Mon compte/ })).toBeNull()
   })
 
+  it('keeps a confirmed sign-in when the session endpoint then fails', async () => {
+    const user = userEvent.setup()
+    reply('/api/auth/code', { status: 200, body: { sent: true } })
+    reply('/api/auth/verify', { status: 200, body: { user: { email: 'a@b.fr' } } })
+    renderSignIn()
+    await submitEmail(user)
+    // From here on every session read fails; the verify answer must stand.
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
+      url === '/api/auth/session' ? respond(503, { error: 'unavailable' }) : base(url, init)
+    )
+    await user.type(await screen.findByLabelText('Code de connexion'), '123456')
+    await user.click(screen.getByRole('button', { name: 'Valider' }))
+
+    expect(await screen.findByText('Vous êtes connecté·e')).toBeInTheDocument()
+    expect(screen.queryByText('Connexion indisponible')).toBeNull()
+  })
+
   it('reads the session once for every consumer', async () => {
     renderSignIn()
     await screen.findByLabelText('Adresse e-mail')
