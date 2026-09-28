@@ -126,7 +126,7 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 
 | Method | Endpoint | rpm | Description |
 |--------|----------|-----|-------------|
-| GET | `/app/config` | 30 | Minimum supported app version, remote feature switches (`chat`, `verify`), data horizon and caveat texts; overridable with `APP_MIN_IOS_VERSION`, `APP_FEATURE_CHAT`, `APP_FEATURE_VERIFY` |
+| GET | `/app/config` | 300 | Minimum supported app version, remote feature switches (`chat`, `verify`), data horizon and caveat texts; overridable with `APP_MIN_IOS_VERSION`, `APP_FEATURE_CHAT`, `APP_FEATURE_VERIFY` |
 
 ### Account (ADR-040)
 

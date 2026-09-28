@@ -15,13 +15,18 @@ from api.schemas import AppConfig
 
 router = APIRouter()
 
+# The app calls this at every launch, phones behind a carrier's NAT share one
+# address, and the handler touches no database - so it sits on the 300/min tier
+# the snapshot reads use, not the 30/min tier of the database-backed reads.
+APP_CONFIG_RPM = 300
+
 
 @router.get(
     "/config",
     response_model=AppConfig,
     summary="Launch configuration for the MonÉlu mobile app",
 )
-@limiter.limit(tiered_limit(30))
+@limiter.limit(tiered_limit(APP_CONFIG_RPM))
 def get_app_config(request: Request):
     """What a MonÉlu mobile app reads at launch instead of hardcoding it.
 
