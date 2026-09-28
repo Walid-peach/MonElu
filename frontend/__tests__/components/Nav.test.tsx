@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 
 import { Nav } from '@/components/Nav'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { SessionProvider } from '@/components/SessionProvider'
 
 let pathname = '/'
 jest.mock('next/navigation', () => ({
@@ -15,7 +16,9 @@ jest.mock('@/lib/api', () => ({
 function renderNav() {
   return render(
     <ThemeProvider>
-      <Nav />
+      <SessionProvider>
+        <Nav />
+      </SessionProvider>
     </ThemeProvider>
   )
 }

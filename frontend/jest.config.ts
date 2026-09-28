@@ -8,6 +8,9 @@ const config: Config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Next aliases `server-only` inside its own compiler; Jest needs the same
+    // no-op so the server modules that import it can be unit-tested.
+    '^server-only$': '<rootDir>/node_modules/next/dist/compiled/server-only/empty.js',
   },
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}'],
 }

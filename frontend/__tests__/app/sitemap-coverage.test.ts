@@ -12,8 +12,11 @@ const SITEMAP = readFileSync(join(APP, 'sitemap.ts'), 'utf8')
  * enumerated from the API (`/deputes/[id]`, `/votes/[id]`, …), generated from
  * a slug table (`/themes`, `/groupes`), or share snapshots that stay out by
  * decision (`/chat/s`, `/quiz/s`, `/verifier/v` — MON-264).
+ *
+ * `/connexion` is an account page (#415, ADR-040): `noindex`, and nothing a
+ * search result should lead to. `account-routes.test.ts` holds that policy.
  */
-const NOT_IN_SITEMAP = ['/~offline']
+const NOT_IN_SITEMAP = ['/~offline', '/connexion']
 
 function pageRoutes(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

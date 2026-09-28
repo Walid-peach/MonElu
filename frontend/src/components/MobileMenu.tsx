@@ -7,6 +7,7 @@ import { MonEluLogo } from './MonEluLogo'
 import { ThemeToggle } from './ThemeToggle'
 import { useTheme } from './ThemeProvider'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
+import { AccountLink } from './AccountLink'
 import { MenuEntry } from './nav/MenuEntry'
 import { aboutSections, exploreSections, isEntryActive } from './nav/navigation'
 import { isLightOnlyPath } from '@/lib/theme'
@@ -108,8 +109,9 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
           </div>
         </div>
 
-        <div className="px-5 pt-4">
+        <div className="px-5 pt-4 flex flex-wrap items-center gap-2">
           <FollowedDeputyChip />
+          <AccountLink onNavigate={onClose} />
         </div>
 
         {sections.map((section, i) => (

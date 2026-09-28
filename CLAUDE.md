@@ -224,6 +224,14 @@ It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` f
 `/chat` shipped with a private `monelu-dark` localStorage flag instead, so the nav toggle darkened the chrome and left the whole conversation panel white - the two systems shared no state and no key, and neither toggle moved the other half.
 The chat page still computes its colors as inline styles rather than Tailwind classes (it is the largest file in the app), which is fine: what matters is that the `dk` boolean feeding them comes from `useTheme()`.
 `__tests__/app/chat-theme.test.tsx` fails if `'monelu-dark'` reappears in `ChatClient.tsx` or if the panel background stops tracking the stored site theme.
+- **The browser never holds a Supabase token** (#415, ADR-040 §4).
+`src/lib/supabase/*` is the only code that imports `@supabase/*`, and each module starts with `import 'server-only'`; there is no browser client and no `NEXT_PUBLIC_SUPABASE_*` variable (`SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are server-only Vercel variables, and unset means sign-in stays hidden).
+The session is an httpOnly cookie on the Next origin, capped at 13 months because `/confidentialite` says so.
+Sign-in is `/api/auth/{code,verify,signout,session}`; every call to FastAPI's `/account/*` goes through the `/api/account/[...path]` proxy, which forwards the access token as a bearer and never asserts an identity of its own.
+Those handlers are `force-dynamic` with no `revalidate` and answer `private, no-store`, and they reduce every Supabase or API error to a code in `src/lib/auth.ts` - a raw body never reaches the page.
+`SessionProvider` is the single session source (the `ThemeProvider` rule, MON-168), read client-side after hydration: a cookie read in the root layout would make every page dynamic (GH #354).
+Account pages apply `SNAPSHOT_ROBOTS` and stay out of `sitemap.ts`.
+`__tests__/app/account-routes.test.ts` enforces all of it.
 - **Every static route must appear in `sitemap.ts`** (MON-265).
 `/deputes/comparer` shipped as a client-only page with no metadata and no sitemap entry, reachable only by clicking through from inside the app - a finished feature invisible to search and to LLM crawlers, with nothing reporting it.
 `__tests__/app/sitemap-coverage.test.ts` now enumerates every non-dynamic `page.tsx` and fails if its path is absent from `sitemap.ts`; `~offline` is the single allowlisted exclusion, and dynamic routes are out of scope (they are enumerated from the API, from a slug table, or are snapshot URLs kept out by decision - MON-264).
