@@ -79,7 +79,10 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | GET | `/deputies/{id}/diverging-votes` | 10 | Votes where the deputy diverged from the chamber majority |
 | GET | `/votes` | 30 | List votes (`result` filter) |
 | GET | `/votes/latest` | 30 | Last 10 votes |
-| GET | `/votes/{id}` | 30 | Vote detail + all individual positions |
+| GET | `/votes/{id}` | 30 | Vote detail + all individual positions, and a `dossier` block linking the bill page (#369) |
+| GET | `/lois` | 30 | Bills with at least one scrutin, newest scrutin first, `status`/`theme` filters (#369, ADR-035) |
+| GET | `/lois/{dossier_uid}` | 30 | One bill's acte parcours with headline scrutins attached and amendment counts per acte (#369) |
+| GET | `/lois/{dossier_uid}/amendements` | 30 | A bill's amendment and article scrutins on demand, optional `acte_uid` filter (#369) |
 | GET | `/departments/{code}` | 30 | Department page data - deputies, aggregates, split votes (MON-107) |
 | GET | `/groups/{slug}` | 30 | Parliamentary group page data - members, dissidence, divided votes (ADR-026) |
 | GET | `/themes/{slug}` | 30 | Theme hub - per-theme stats, party positioning, vote list (MON-106) |
@@ -455,6 +458,7 @@ design.
 | `routers/verify.py` | `POST /verify/` + `GET /verify/{id}` - fact-check verdicts (ADR-022) |
 | `routers/quiz.py` | `/quiz/*` - questions, weekly scrutin, stateless matching, share snapshots (ADR-025) |
 | `routers/feedback.py` | Chat thumbs and data-page error reports (MON-70, MON-101) |
+| `routers/lois.py` | `/lois/*` - bill parcours, headline scrutins bound to AN séance actes, amendment counts (ADR-035) |
 | `routers/keys.py` | `GET /keys/usage` - usage accounting for the calling key |
 | `routers/account.py` | `/account/*` - the signed-in caller's profile, follows, bookmarks, stored notification preferences, RGPD export and deletion, all under RLS (ADR-040) |
 | `quiz_data.py` | Curated, versioned quiz question set - updated quarterly by PR (ADR-025) |

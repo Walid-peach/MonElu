@@ -122,6 +122,8 @@ def test_unknown_deputy_or_vote_is_422_and_rolled_back(client, profile_exists, a
     r = client.put(path, headers=AUTH)
 
     assert r.status_code == 422
+    # The same shape as FastAPI's own validation errors.
+    assert r.json()["detail"][0]["loc"][0] == "path"
     assert not any(s.startswith("INSERT") for s in _statements(cursor))
     conn.commit.assert_not_called()
     conn.rollback.assert_called()
@@ -137,6 +139,7 @@ def test_unknown_deputy_or_vote_is_422_and_rolled_back(client, profile_exists, a
         {"circonscription": "123"},
         {"display_name": "x" * 81},
         {"display_name": "a\nb"},
+        {"display_name": "   "},
         {"preferred_language": "de"},
         {"preferred_language": None},
         {"birthdate": "1990-01-01"},
@@ -150,6 +153,7 @@ def test_unknown_deputy_or_vote_is_422_and_rolled_back(client, profile_exists, a
         "circonscription-too-long",
         "name-too-long",
         "name-control-char",
+        "name-blank",
         "unsupported-language",
         "null-language",
         "birthdate-not-collected",
@@ -354,3 +358,25 @@ def test_empty_preferences_body_stores_nothing(client, profile_exists, account_p
     assert r.status_code == 200
     assert r.json()["weekly_digest"] is False
     assert not any("INSERT" in s for s in _statements(cursor))
+
+
+def test_department_change_clears_an_unrestated_circonscription(
+    client, profile_exists, account_pool
+):
+    _pool, _conn, cursor = account_pool
+    client.patch("/account/me", headers=AUTH, json={"department_code": "2A"})
+    update = cursor.execute.call_args_list[-1].args[0]
+    assert "CASE" in repr(update) and "IS DISTINCT FROM" in repr(update)
+
+    cursor.execute.reset_mock()
+    client.patch(
+        "/account/me", headers=AUTH, json={"department_code": "2A", "circonscription": "1"}
+    )
+    assert "CASE" not in repr(cursor.execute.call_args_list[-1].args[0])
+
+
+def test_every_account_response_is_private_no_store(client, profile_exists, account_pool):
+    for method, path in (("GET", "/account/me"), ("DELETE", "/account/bookmarks/x")):
+        r = client.request(method, path, headers=AUTH)
+        assert r.status_code < 300
+        assert r.headers["cache-control"] == "private, no-store", path

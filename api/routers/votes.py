@@ -11,7 +11,14 @@ from starlette.requests import Request
 from api.csv_export import csv_response
 from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter, tiered_limit
-from api.schemas import VoteDetail, VoteListResponse, VotePosition, VoteSummary
+from api.routers.lois import SQL_DOSSIER_REF, lois_url
+from api.schemas import (
+    VoteDetail,
+    VoteDossierRef,
+    VoteListResponse,
+    VotePosition,
+    VoteSummary,
+)
 
 router = APIRouter()
 
@@ -266,7 +273,10 @@ def get_vote(request: Request, vote_id: str):
 
     `dossier_id` links the scrutin to its bill, but is present on a minority of
     votes: the Assemblée only began tagging scrutins with a dossier in March 2026.
-    Its absence says nothing about the vote.
+    Its absence says nothing about the vote. When it is set, `dossier` carries
+    the bill's title and status and `lois_url`, its MonÉlu bill page - null when
+    that bill has no page (a legislature-16 dossier, for one). `dossier` is null
+    when `dossier_id` is.
 
     404 when the id is unknown.
     """
@@ -293,10 +303,32 @@ def get_vote(request: Request, vote_id: str):
                     (vote_id,),
                 )
                 position_rows = cur.fetchall()
+
+                dossier = None
+                if vote.get("dossier_id"):
+                    cur.execute(SQL_DOSSIER_REF, {"dossier_uid": vote["dossier_id"]})
+                    dossier = _dossier_ref(vote["dossier_id"], cur.fetchone())
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
 
     return VoteDetail(
         **vote,
+        dossier=dossier,
         positions=[VotePosition(**r) for r in position_rows],
+    )
+
+
+def _dossier_ref(dossier_id: str, row: Optional[dict]) -> VoteDossierRef:
+    """The vote's bill block. A ref with no dossiers row still names its uid.
+
+    Four legislature-16 refs have no row at all (ADR-035 §6); like a dossier
+    without scrutins, they get no bill page, so `lois_url` is null.
+    """
+    if row is None:
+        return VoteDossierRef(dossier_uid=dossier_id)
+    return VoteDossierRef(
+        dossier_uid=row["dossier_uid"],
+        titre=row["titre"],
+        status=row["status"],
+        lois_url=lois_url(row["dossier_uid"]) if row["has_scrutins"] else None,
     )
