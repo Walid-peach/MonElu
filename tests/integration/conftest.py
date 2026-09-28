@@ -88,8 +88,11 @@ CREATE TABLE IF NOT EXISTS analytics_marts.mart_vote_summary (
     abstentions   INTEGER,
     total_voters  INTEGER,
     summary_plain TEXT,
-    theme         TEXT
+    theme         TEXT,
+    dossier_id    TEXT
 );
+-- Added for GET /votes/{vote_id}'s dossier block (#369); the real mart carries it.
+ALTER TABLE analytics_marts.mart_vote_summary ADD COLUMN IF NOT EXISTS dossier_id TEXT;
 
 CREATE TABLE IF NOT EXISTS analytics_marts.mart_party_alignment (
     deputy_id             TEXT PRIMARY KEY,

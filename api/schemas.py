@@ -22,6 +22,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from api.config import DEFAULT_FRONTEND_BASE_URL
+
 # ---------------------------------------------------------------------------
 # Shared config — all response models are read from DB rows (dicts/mappings)
 # ---------------------------------------------------------------------------
@@ -636,6 +638,18 @@ class VotePosition(_Base):
     position: str
 
 
+class VoteDossierRef(_Base):
+    """The bill a scrutin belongs to, embedded in GET /votes/{vote_id} (#369)."""
+
+    dossier_uid: str
+    titre: Optional[str] = None
+    status: Optional[str] = None
+    lois_url: Optional[str] = Field(
+        default=None,
+        description="MonÉlu bill page; null when the dossier has no page (no row, or no scrutin)",
+    )
+
+
 class VoteDetail(VoteSummary):
     """Full vote — used in GET /votes/{vote_id}."""
 
@@ -658,6 +672,12 @@ class VoteDetail(VoteSummary):
                 "theme": "Justice & Sécurité",
                 "vote_type": "sps",
                 "dossier_id": "DLR5L17N53980",
+                "dossier": {
+                    "dossier_uid": "DLR5L17N53980",
+                    "titre": "Réponses immédiates aux phénomènes troublant l'ordre public",
+                    "status": "promulguee",
+                    "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N53980",
+                },
                 "ingested_at": "2026-07-22T06:12:03Z",
                 "positions": [
                     {
@@ -679,6 +699,9 @@ class VoteDetail(VoteSummary):
 
     vote_type: Optional[str] = None
     dossier_id: Optional[str] = None
+    dossier: Optional[VoteDossierRef] = Field(
+        default=None, description="The scrutin's bill; null when dossier_id is absent"
+    )
     ingested_at: Optional[datetime] = None
     positions: list[VotePosition] = []
 
@@ -810,6 +833,254 @@ class AgendaResponse(_Base):
     from_date: date
     to_date: date
     days: list[AgendaDay]
+
+
+# ---------------------------------------------------------------------------
+# Bills - "où en est cette loi ?" (#369, ADR-035)
+# ---------------------------------------------------------------------------
+
+_LOI_SCRUTIN_EXAMPLE = {
+    "vote_id": "VTANR5L17V7894",
+    "voted_at": "2026-06-30T00:00:00Z",
+    "vote_title": (
+        "l'ensemble de la proposition de loi relative au droit à l'aide à mourir "
+        "(nouvelle lecture)."
+    ),
+    "scrutin_kind": "ensemble",
+    "result": "adopté",
+    "votes_for": 295,
+    "votes_against": 232,
+    "abstentions": 35,
+    "total_voters": 562,
+    "summary_plain": "La proposition de loi sur l'aide à mourir est adoptée en nouvelle lecture.",
+    "theme": "Santé",
+}
+
+
+class LoiScrutin(_Base):
+    """A headline scrutin - a vote on the whole text, a motion, or another non-amendment vote."""
+
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: Optional[str] = None
+    scrutin_kind: Optional[str] = Field(
+        default=None,
+        description="ensemble | motion | autre (amendment kinds are never listed here)",
+    )
+    result: Optional[str] = None
+    votes_for: Optional[int] = None
+    votes_against: Optional[int] = None
+    abstentions: Optional[int] = None
+    total_voters: Optional[int] = None
+    summary_plain: Optional[str] = None
+    theme: Optional[str] = None
+
+
+class LoiActe(_Base):
+    """One step of the parcours. The tree is flat: rebuild it from parent_uid / depth."""
+
+    acte_uid: str
+    parent_uid: Optional[str] = None
+    depth: int
+    ordinal: int
+    code_acte: str
+    libelle: Optional[str] = None
+    date_acte: Optional[date] = Field(
+        default=None, description="Null on grouping nodes such as a reading stage"
+    )
+    statut_label: Optional[str] = Field(
+        default=None, description="The AN's verbatim outcome, on decision actes"
+    )
+    scrutins: list[LoiScrutin] = []
+    amendement_count: int = 0
+    article_count: int = 0
+
+
+class LoiDetail(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "dossier_uid": "DLR5L17N51670",
+                "titre": "Fin de vie",
+                "procedure_label": "Proposition de loi ordinaire",
+                "initiateur": "PA605694",
+                "status": "promulguee",
+                "status_label": "adoptée",
+                "current_stage": "PROM",
+                "parcours_start": "2025-03-11",
+                "parcours_end": "2026-08-18",
+                "an_dossier_url": (
+                    "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N51670"
+                ),
+                "scrutin_coverage_start": "2026-03-26",
+                "parcours_predates_coverage": True,
+                "first_scrutin_at": "2026-06-22",
+                "amendement_count": 358,
+                "article_count": 19,
+                "parcours": [
+                    {
+                        "acte_uid": "L17-VD224407DI",
+                        "parent_uid": "L17-AN1-51670",
+                        "depth": 1,
+                        "ordinal": 1,
+                        "code_acte": "AN1-DEPOT",
+                        "libelle": "1er dépôt d'une initiative.",
+                        "date_acte": "2025-03-11",
+                        "scrutins": [],
+                        "amendement_count": 0,
+                        "article_count": 0,
+                    },
+                    {
+                        "acte_uid": "L17-VD232853DEC",
+                        "parent_uid": "L17-ANNLEC-DEBATS-51670",
+                        "depth": 2,
+                        "ordinal": 133,
+                        "code_acte": "ANNLEC-DEBATS-DEC",
+                        "libelle": "Décision",
+                        "date_acte": "2026-06-30",
+                        "statut_label": "adoptée",
+                        "scrutins": [_LOI_SCRUTIN_EXAMPLE],
+                        "amendement_count": 0,
+                        "article_count": 0,
+                    },
+                ],
+                "unattached_scrutins": [],
+                "unattached_collapsed_count": 0,
+            }
+        }
+    )
+
+    dossier_uid: str
+    titre: Optional[str] = None
+    procedure_label: Optional[str] = None
+    initiateur: Optional[str] = None
+    status: Optional[str] = Field(default=None, description="Derived by ADR-035 §5's rules")
+    status_label: Optional[str] = Field(
+        default=None, description="The AN's verbatim wording of the deciding acte"
+    )
+    current_stage: Optional[str] = None
+    parcours_start: Optional[date] = None
+    parcours_end: Optional[date] = None
+    an_dossier_url: Optional[str] = None
+    scrutin_coverage_start: Optional[date] = Field(
+        default=None, description="First date the AN linked scrutins to their bill"
+    )
+    parcours_predates_coverage: Optional[bool] = Field(
+        default=None,
+        description="True when earlier stages cannot carry scrutins - an upstream gap",
+    )
+    first_scrutin_at: Optional[date] = None
+    amendement_count: int = 0
+    article_count: int = 0
+    parcours: list[LoiActe] = []
+    unattached_scrutins: list[LoiScrutin] = Field(
+        default=[], description="Headline scrutins no AN séance acte precedes; normally empty"
+    )
+    unattached_collapsed_count: int = Field(
+        default=0,
+        description="Amendment and article scrutins no AN séance acte precedes; normally 0",
+    )
+
+
+class LoiListItem(_Base):
+    dossier_uid: str
+    titre: Optional[str] = None
+    status: Optional[str] = None
+    status_label: Optional[str] = None
+    current_stage: Optional[str] = None
+    parcours_start: Optional[date] = None
+    parcours_end: Optional[date] = None
+    last_scrutin_at: Optional[datetime] = None
+    scrutin_count: Optional[int] = None
+    headline_scrutin_count: Optional[int] = None
+    theme: Optional[str] = None
+    lois_url: Optional[str] = None
+
+
+class LoiListResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 70,
+                "limit": 50,
+                "offset": 0,
+                "items": [
+                    {
+                        "dossier_uid": "DLR5L17N51670",
+                        "titre": "Fin de vie",
+                        "status": "promulguee",
+                        "status_label": "adoptée",
+                        "current_stage": "PROM",
+                        "parcours_start": "2025-03-11",
+                        "parcours_end": "2026-08-18",
+                        "last_scrutin_at": "2026-07-15T00:00:00Z",
+                        "scrutin_count": 380,
+                        "headline_scrutin_count": 3,
+                        "theme": "Santé",
+                        "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N51670",
+                    }
+                ],
+            }
+        }
+    )
+
+    total: int
+    limit: int
+    offset: int
+    items: list[LoiListItem]
+
+
+class LoiAmendementScrutin(_Base):
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    vote_title: Optional[str] = None
+    scrutin_kind: Optional[str] = Field(default=None, description="amendement | article")
+    result: Optional[str] = Field(
+        default=None, description="The fate of the amendment or article, not of the bill"
+    )
+    votes_for: Optional[int] = None
+    votes_against: Optional[int] = None
+    abstentions: Optional[int] = None
+    total_voters: Optional[int] = None
+    acte_uid: Optional[str] = Field(default=None, description="The parcours step it falls under")
+
+
+class LoiAmendementsResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "dossier_uid": "DLR5L17N51670",
+                "acte_uid": "L17-VD232363S52856",
+                "total": 21,
+                "limit": 100,
+                "offset": 0,
+                "items": [
+                    {
+                        "vote_id": "VTANR5L17V7433",
+                        "voted_at": "2026-06-22T00:00:00Z",
+                        "vote_title": (
+                            "l'amendement n° 31 de M. Bentz et les amendements "
+                            "identiques suivants de suppression de l'article premier (...)."
+                        ),
+                        "scrutin_kind": "amendement",
+                        "result": "rejeté",
+                        "votes_for": 88,
+                        "votes_against": 110,
+                        "abstentions": 2,
+                        "total_voters": 200,
+                        "acte_uid": "L17-VD232363S52856",
+                    }
+                ],
+            }
+        }
+    )
+
+    dossier_uid: str
+    acte_uid: Optional[str] = None
+    total: int
+    limit: int
+    offset: int
+    items: list[LoiAmendementScrutin]
 
 
 # ---------------------------------------------------------------------------
