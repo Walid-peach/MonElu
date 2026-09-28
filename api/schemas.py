@@ -945,7 +945,7 @@ class LoiDetail(_Base):
                     },
                 ],
                 "unattached_scrutins": [],
-                "unattached_amendement_count": 0,
+                "unattached_collapsed_count": 0,
             }
         }
     )
@@ -976,7 +976,10 @@ class LoiDetail(_Base):
     unattached_scrutins: list[LoiScrutin] = Field(
         default=[], description="Headline scrutins no AN séance acte precedes; normally empty"
     )
-    unattached_amendement_count: int = 0
+    unattached_collapsed_count: int = Field(
+        default=0,
+        description="Amendment and article scrutins no AN séance acte precedes; normally 0",
+    )
 
 
 class LoiListItem(_Base):

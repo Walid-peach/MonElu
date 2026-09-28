@@ -400,7 +400,7 @@ def get_loi(request: Request, dossier_uid: str):
         article_count=sum(c["article"] for c in counts.values()),
         parcours=parcours,
         unattached_scrutins=unattached,
-        unattached_amendement_count=unattached_collapsed,
+        unattached_collapsed_count=unattached_collapsed,
     )
 
 
