@@ -229,7 +229,7 @@ def share_answer(request: Request, body: ShareRequest):
 # (X, WhatsApp, Facebook, Telegram) and Vercel edge egress funnel through few
 # IPs, so the base per-IP limit was tripping during viral spikes.
 @limiter.limit(tiered_limit(300))
-def get_share(request: Request, share_id: uuid.UUID):
+def get_chat_share(request: Request, share_id: uuid.UUID):
     """Read back a stored chat answer by id. No LLM call.
 
     Snapshots are immutable and frozen at their creation time, so an answer may

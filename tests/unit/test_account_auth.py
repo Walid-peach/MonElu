@@ -566,3 +566,57 @@ def test_failed_pool_creation_is_retried_by_the_next_request(monkeypatch):
         with _db.account_transaction(PROFILE_ID):
             pass
         assert _db._account_pool is pool
+
+
+# ---------------------------------------------------------------------------
+# Per-account rate limit (ADR-041 §6, #438)
+# ---------------------------------------------------------------------------
+
+OTHER_AUTH_USER_ID = uuid.UUID("0b6f3c5e-1111-4a2b-9c3d-000000000002")
+
+
+@pytest.fixture
+def two_per_minute(monkeypatch):
+    monkeypatch.setattr(account_auth, "ACCOUNT_RATE_LIMIT", account_auth.parse("2/minute"))
+
+
+def _me(client, token: str):
+    return client.get("/account/me", headers={"Authorization": f"Bearer {token}"})
+
+
+def test_account_requests_are_limited_per_verified_account(
+    client, profile_exists, account_pool, two_per_minute
+):
+    assert _me(client, _token()).status_code == 200
+    assert _me(client, _token()).status_code == 200
+
+    r = _me(client, _token())
+
+    assert r.status_code == 429
+    assert 1 <= int(r.headers["retry-after"]) <= 60
+    # The limit is spent before the profile lookup, so a throttled caller
+    # costs neither the owner connection nor the restricted pool.
+    assert profile_exists.call_count == 2
+
+
+def test_two_accounts_behind_one_address_do_not_share_a_bucket(
+    client, profile_exists, account_pool, two_per_minute
+):
+    """Every TestClient request comes from the same address - exactly the Next
+    server's situation, and a carrier NAT's."""
+    for _ in range(2):
+        assert _me(client, _token()).status_code == 200
+    assert _me(client, _token()).status_code == 429
+
+    assert _me(client, _token(sub=str(OTHER_AUTH_USER_ID))).status_code == 200
+
+
+def test_rejected_tokens_do_not_spend_the_victims_allowance(
+    client, profile_exists, account_pool, two_per_minute
+):
+    """A forged token naming someone's `sub` never verifies, so it is never counted."""
+    for _ in range(5):
+        assert _me(client, _token(key=_ATTACKER_KEY)).status_code == 401
+
+    assert _me(client, _token()).status_code == 200
+    assert _me(client, _token()).status_code == 200

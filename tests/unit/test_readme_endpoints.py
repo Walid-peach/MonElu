@@ -28,11 +28,13 @@ from api.main import app
 from api.routers import (
     account,
     agenda,
+    app_config,
     departments,
     deputies,
     feedback,
     groups,
     keys,
+    lois,
     quiz,
     search,
     themes,
@@ -54,12 +56,14 @@ ROUTER_PREFIXES = [
     ("/themes", themes.router),
     ("/quiz", quiz.router),
     ("/votes", votes.router),
+    ("/lois", lois.router),
     ("/search", search.router),
     ("/verify", verify.router),
     ("/keys", keys.router),
     ("/feedback", feedback.router),
     ("/agenda", agenda.router),
     ("/account", account.router),
+    ("/app", app_config.router),
 ]
 
 # Routes kept out of the OpenAPI schema but still worth documenting for a
