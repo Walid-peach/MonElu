@@ -1,0 +1,42 @@
+[
+  {
+    "slug": "economie-budget",
+    "name": "Économie & Budget"
+  },
+  {
+    "slug": "sante-social",
+    "name": "Santé & Social"
+  },
+  {
+    "slug": "justice-securite",
+    "name": "Justice & Sécurité"
+  },
+  {
+    "slug": "energie-environnement",
+    "name": "Énergie & Environnement"
+  },
+  {
+    "slug": "education-culture",
+    "name": "Éducation & Culture"
+  },
+  {
+    "slug": "agriculture",
+    "name": "Agriculture"
+  },
+  {
+    "slug": "transport-logement",
+    "name": "Transport & Logement"
+  },
+  {
+    "slug": "institutions",
+    "name": "Institutions"
+  },
+  {
+    "slug": "international",
+    "name": "International"
+  },
+  {
+    "slug": "autre",
+    "name": "Autre"
+  }
+]

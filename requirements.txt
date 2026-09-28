@@ -1,5 +1,8 @@
 fastapi>=0.115.0
 slowapi==0.1.9
+# Per-account rate limit on /account/* (ADR-041 §6); already installed by slowapi,
+# declared because api/account_auth.py imports it directly
+limits>=4.0
 uvicorn[standard]>=0.34.0
 psycopg2-binary>=2.9.10
 requests==2.32.2

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+import api.account_auth as _account_auth
 import api.db as _db
 import api.groq_health as _groq_health
 import api.main as _main
@@ -23,6 +24,18 @@ def _stub_groq_catalog():
     ):
         yield
     _groq_health.reset_cache()
+
+
+@pytest.fixture(autouse=True)
+def _fresh_account_rate_limit():
+    """Start every test with empty per-account buckets (ADR-041 §6).
+
+    The account suites send many requests under one test identity; without this
+    they would share one 120/minute allowance across the whole run.
+    """
+    _account_auth.reset_account_rate_limit()
+    yield
+    _account_auth.reset_account_rate_limit()
 
 
 @pytest.fixture(scope="module")

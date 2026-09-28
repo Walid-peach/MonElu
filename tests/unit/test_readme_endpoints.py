@@ -28,6 +28,7 @@ from api.main import app
 from api.routers import (
     account,
     agenda,
+    app_config,
     departments,
     deputies,
     feedback,
@@ -62,6 +63,7 @@ ROUTER_PREFIXES = [
     ("/feedback", feedback.router),
     ("/agenda", agenda.router),
     ("/account", account.router),
+    ("/app", app_config.router),
 ]
 
 # Routes kept out of the OpenAPI schema but still worth documenting for a

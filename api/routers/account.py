@@ -27,10 +27,11 @@ and nothing here derives a political label from what a caller follows.
 Notification preferences are stored and returned only - nothing in this API
 sends or enqueues a message, and #359's hold stands.
 
-No per-route rate limit: `rate_limit_key` buckets anonymous callers by IP, and
-every request here arrives from the Next.js server, so an IP bucket would throttle
-all signed-in users together. A per-account limit, if one is needed, keys on the
-verified identity instead.
+No per-route slowapi limit: `rate_limit_key` buckets anonymous callers by IP,
+and requests here arrive from the Next.js server or from phones behind a
+carrier's shared addresses, so an IP bucket would throttle unrelated users
+together. `require_verified_user` counts every verified request against a
+per-account limit keyed on the token's `sub` instead (ADR-041 §6).
 """
 
 import re

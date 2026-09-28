@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "rassemblement-national",
+    "name": "Rassemblement National"
+  },
+  {
+    "slug": "ensemble-pour-la-republique",
+    "name": "Ensemble pour la République"
+  },
+  {
+    "slug": "lfi-nfp",
+    "name": "La France insoumise - Nouveau Front Populaire"
+  },
+  {
+    "slug": "socialistes-et-apparentes",
+    "name": "Socialistes et apparentés"
+  },
+  {
+    "slug": "droite-republicaine",
+    "name": "Droite Républicaine"
+  },
+  {
+    "slug": "ecologiste-et-social",
+    "name": "Écologiste et Social"
+  },
+  {
+    "slug": "les-democrates",
+    "name": "Les Démocrates"
+  },
+  {
+    "slug": "horizons-independants",
+    "name": "Horizons & Indépendants"
+  },
+  {
+    "slug": "liot",
+    "name": "Libertés, Indépendants, Outre-mer et Territoires"
+  },
+  {
+    "slug": "union-des-droites",
+    "name": "Union des droites pour la République"
+  },
+  {
+    "slug": "gauche-democrate-republicaine",
+    "name": "Gauche Démocrate et Républicaine"
+  },
+  {
+    "slug": "non-inscrits",
+    "name": "Non inscrit"
+  }
+]
