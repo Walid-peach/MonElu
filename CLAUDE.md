@@ -37,6 +37,7 @@ Production API: https://monelu-production.up.railway.app
 | Phase 4 | Live | dbt transform layer — staging → intermediate → marts; lineage docs on GitHub Pages |
 | Phase 5 | Deferred | AWS infrastructure — Terraform IaC was written and validate-passing but modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app; archived to `archive/infra-aws/` (MON-46). Managed services (Railway + Supabase) cover current load; a real AWS migration would start fresh with a state backend and an App Runner/ECS module. |
 | Phase 6 | Live | CI/CD — PR gates (ruff, pytest, dbt test bot), deploy workflow |
+| Phase 7 | Planned | Native iPhone app in SwiftUI under `ios/`, built by agents; Android stays on the web/PWA until a measured trigger (ADR-041, epic #429). Phase 0 (#430) prepares the API and repo before any Swift |
 
 ---
 
@@ -44,7 +45,7 @@ Production API: https://monelu-production.up.railway.app
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| API hosting | Railway | Auto-deploys on push to `master`; `migrate.py` runs as start hook |
+| API hosting | Railway | Auto-deploys on push to `master` except commits confined to `ios/` (`watchPatterns`, ADR-041); `migrate.py` runs as start hook |
 | Database | Supabase (PostgreSQL 15 + pgvector) | Managed; free tier limits prod data to votes from 2025-07-01 onward |
 | Local database | Docker — Postgres 15 + pgAdmin 8 | Full legislature from 2024-07-07 |
 | API framework | FastAPI + uvicorn | Direct psycopg2, no ORM |
@@ -114,7 +115,7 @@ Assemblée Nationale Open Data (ZIPs)
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
 | `ci.yml` | Every PR to `master` | ruff lint + pytest (unit) + dbt compile + dbt test + frontend lint/typecheck/jest/build + Playwright smoke tier (MON-241: no-horizontal-overflow and nav-visibility checks on `/`, `/deputes`, `/deputes/[id]`, `/votes`, `/votes/[id]`, `/chat`, `/quiz` at 390px/1280px, light/dark, against a `next build`, plus canonical-link and 404-status checks on `desktop-light` only - MON-269, MON-275, and a single-`h1`/server-rendered-summary check on `/` at both viewports - MON-270); posts dbt results as PR comment |
-| `deploy.yml` | Merge to `master` | dbt deps → run → test against prod Supabase |
+| `deploy.yml` | Merge to `master`, except iOS-only merges (`paths-ignore: ios/**`, ADR-041) | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index, then `dbt run` → operational tail. Every step after `dbt run` is `continue-on-error` + `!cancelled()`, and a final **data-quality gate** re-fails the job on `dbt snapshot`/`dbt test`/`dbt source freshness`/quiz-validation outcomes (MON-250) plus a failed cache revalidation (GH #352 — with every ISR interval a one-day fallback, a missed purge is a day of stale pages, and the `curl` retries first). The revalidation `curl` POSTs the run's **cache scope** (GH #353, ADR-039): the data families and the individual scrutins/deputies this run actually changed, so a no-op run purges nothing — a failing assertion must never skip cache revalidation or the monitoring probes. The DB-size probe is deliberately outside the gate. |
 | `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window - the actual retry backstop (MON-221). `check_summary_yield()` exits 1 when the run attempted work and generated nothing (GH #384 - six green runs against an expired Groq key); a partial failure stays green and retries tomorrow. Its revalidation is scoped to the `summaries` family plus the vote ids it wrote (GH #353) — never the `votes` family, which carries the `health` tag the root layout reads. The `Run summarizer` step captures that exit code (`|| status=$?`) and re-raises it only after writing `generated`/`errors` to `$GITHUB_OUTPUT` - `shell: bash` runs with `-eo pipefail`, so letting the pipeline fail on its own would abort the step before the counts are parsed and the job summary would report 0/0 on exactly the runs that need them. |
 | `dbt_docs.yml` | Push to `master` touching `transform/` | Generate + deploy lineage docs to GitHub Pages |
@@ -317,7 +318,7 @@ Production uses Supabase (managed Postgres + pgvector). Local uses Docker (`dock
 
 ## Deployment
 
-Hosted on Railway. Every push to `master` triggers an auto-deploy. The start command runs:
+Hosted on Railway. Every push to `master` triggers an auto-deploy, unless every changed file is under `ios/`: `railway.json` declares `watchPatterns` of `**` then `!/ios/**` (ADR-041 §3), and `tests/unit/test_ios_deploy_isolation.py` pins both that and `deploy.yml`'s matching `paths-ignore`. The start command runs:
 ```
 python scripts/migrate.py && uvicorn api.main:app --host 0.0.0.0 --port $PORT
 ```
