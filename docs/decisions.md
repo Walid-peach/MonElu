@@ -1628,7 +1628,8 @@ Three deploy triggers are kept blind to it:
   The include-everything-then-exclude form keeps every current trigger, rather than enumerating the paths the API image reads and silently missing one.
 - `deploy.yml` ignores `ios/**`, so an iOS-only merge does not run `dbt run` against production.
 
-`ci.yml` is left as it is until the iOS workflow exists, because its jobs may be required checks and a path-filtered required check never reports.
+`ci.yml` is left as it is until the iOS workflow exists (#431), so that the jobs an iOS-only PR skips are replaced in the same change by the jobs that do test it.
+`master` has no branch protection or ruleset today; if checks are ever made required, a workflow-level path filter becomes unsafe, because a required check that never runs never reports, and the filter must then move into the jobs.
 
 ### 4. The API computes, the app shows, and shared tables have one source
 
