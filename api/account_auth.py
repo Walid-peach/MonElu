@@ -22,17 +22,29 @@ signing keys in the Supabase dashboard before accounts can work.
 
 Never log a token, a claim payload or a hash of either - failures are logged by
 exception class only, and every rejection carries the same generic detail.
+
+Every verified request is also counted against a per-account rate limit
+(ADR-041 §6, #438). It keys on the verified `sub`, never on the IP: requests
+from the Next server all share its addresses, and phones on a carrier's NAT
+share theirs, so an IP bucket would throttle unrelated users together. Only a
+request whose token verified is counted, so an unauthenticated caller cannot
+spend someone else's allowance.
 """
 
 import functools
 import logging
+import math
 import os
+import time
 import uuid
 from dataclasses import dataclass
 
 import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from limits import parse
+from limits.storage import MemoryStorage
+from limits.strategies import MovingWindowRateLimiter
 
 from api.db import get_conn
 
@@ -52,6 +64,13 @@ _JWKS_CACHE_SECONDS = 600
 _CLOCK_SKEW_SECONDS = 30
 
 _UNAUTHENTICATED_HEADERS = {"WWW-Authenticate": "Bearer"}
+
+# Generous on purpose: one dashboard render in the Next layer reads several
+# account routes, and the limit exists to stop a runaway client, not to ration
+# a person. In-process storage, like slowapi's, which fits one Railway instance.
+ACCOUNT_RATE_LIMIT = parse("120/minute")
+_rate_limit_storage = MemoryStorage()
+_rate_limiter = MovingWindowRateLimiter(_rate_limit_storage)
 
 # auto_error=False: FastAPI's own error for a missing header has been a 403 in
 # some versions, and a protected route must answer 401 (the issue's criterion).
@@ -192,7 +211,7 @@ def require_verified_user(
         )
 
     try:
-        return verify_access_token(credentials.credentials)
+        user = verify_access_token(credentials.credentials)
     except InvalidAccessToken as exc:
         # The reason is an exception class name or a fixed string, never the
         # token or anything decoded from it.
@@ -207,6 +226,28 @@ def require_verified_user(
         raise HTTPException(
             status_code=503, detail="Account authentication is temporarily unavailable"
         ) from None
+
+    _enforce_account_rate_limit(user)
+    return user
+
+
+def _enforce_account_rate_limit(user: VerifiedUser) -> None:
+    """Count one request against the caller's own bucket, or answer 429."""
+    key = f"account:{user.auth_user_id}"
+    if _rate_limiter.hit(ACCOUNT_RATE_LIMIT, key):
+        return
+    reset_at = _rate_limiter.get_window_stats(ACCOUNT_RATE_LIMIT, key).reset_time
+    retry_after = max(1, math.ceil(reset_at - time.time()))
+    raise HTTPException(
+        status_code=429,
+        detail=f"Too many account requests. Retry after {retry_after} seconds.",
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
+def reset_account_rate_limit() -> None:
+    """Forget every bucket. For tests only - production never resets."""
+    _rate_limit_storage.reset()
 
 
 @dataclass(frozen=True)
