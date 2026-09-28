@@ -1,0 +1,18 @@
+[
+  {
+    "key": "pour",
+    "label": "Pour"
+  },
+  {
+    "key": "contre",
+    "label": "Contre"
+  },
+  {
+    "key": "abstention",
+    "label": "Abstention"
+  },
+  {
+    "key": "nonVotant",
+    "label": "Non votant"
+  }
+]
