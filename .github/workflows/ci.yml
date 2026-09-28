@@ -82,7 +82,9 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Matches the Vercel project's runtime (24.x). @supabase/* (#415)
+          # declares node >=22, and Node 20 is end-of-life.
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -159,7 +161,9 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Matches the Vercel project's runtime (24.x). @supabase/* (#415)
+          # declares node >=22, and Node 20 is end-of-life.
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
