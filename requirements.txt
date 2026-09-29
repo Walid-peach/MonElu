@@ -1,4 +1,9 @@
-fastapi>=0.115.0
+# Exact pins: the iOS app's client is generated from the OpenAPI document these
+# two render (scripts/export_openapi.py, #448), and a new release can change that
+# rendering with no code change - tests/unit/test_openapi_snapshot.py would then
+# fail on an unrelated PR. Bump both deliberately and re-export the snapshot.
+fastapi==0.142.1
+pydantic==2.13.5
 slowapi==0.1.9
 # Per-account rate limit on /account/* (ADR-041 §6); already installed by slowapi,
 # declared because api/account_auth.py imports it directly
