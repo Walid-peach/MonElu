@@ -37,7 +37,7 @@ Production API: https://monelu-production.up.railway.app
 | Phase 4 | Live | dbt transform layer — staging → intermediate → marts; lineage docs on GitHub Pages |
 | Phase 5 | Deferred | AWS infrastructure — Terraform IaC was written and validate-passing but modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app; archived to `archive/infra-aws/` (MON-46). Managed services (Railway + Supabase) cover current load; a real AWS migration would start fresh with a state backend and an App Runner/ECS module. |
 | Phase 6 | Live | CI/CD — PR gates (ruff, pytest, dbt test bot), deploy workflow |
-| Phase 7 | Planned | Native iPhone app in SwiftUI under `ios/`, built by agents; Android stays on the web/PWA until a measured trigger (ADR-041, epic #429). Phase 0 (#430) prepares the API and repo before any Swift |
+| Phase 7 | In progress | Native iPhone app in SwiftUI under `ios/`, built by agents; Android stays on the web/PWA until a measured trigger (ADR-041, epic #429). Phase 0 (#430) is done; Phase 1 (#431) builds the skeleton, harness and TestFlight pipeline. Rules for agents: [`ios/CLAUDE.md`](ios/CLAUDE.md) |
 
 ---
 
@@ -87,6 +87,12 @@ make rag-clear      # Truncate document_chunks only
 make rag-test       # Run 3 test questions through the full RAG chain
 make rag-eval       # Run MLflow k=3 vs k=5 evaluation
 make mlflow-ui      # Open MLflow UI at http://localhost:5001
+
+# iPhone app (ADR-041) - the only build entry points for ios/, see ios/CLAUDE.md
+make ios-generate   # Generate the Xcode workspace from ios/Project.swift (Tuist, pinned via mise)
+make ios-build      # Build the app for the iOS Simulator
+make ios-test       # App tests + every package's Swift Testing tests on the Simulator
+make ios-run        # Build, install and launch in the Simulator
 
 # Linting
 ruff check .        # Lint
@@ -249,6 +255,11 @@ Never add these routes to `sitemap.ts`, and never add `ClaimReview`/`QAPage` or 
 Notion, Slack, Substack, Ghost, WordPress and Discourse read the link tag off the page before they will ever call the endpoint, so an embeddable route that ships without it unfurls as a blue link and nothing reports an error.
 Making a new route embeddable therefore takes three edits, not one: an `/embed/...` page, an entry in `EMBEDDABLE_PATHS` in `src/lib/oembed.ts`, and the discovery link on the canonical page.
 The endpoint validates the caller's `url` against that allowlist before building an iframe `src` out of it - the same discipline `src/lib/portraits.ts` applies to the portrait proxy - and rebuilds every URL it emits from `SITE_URL`, so a domain move carries the provider with it.
+
+**`ios/`** - SwiftUI iPhone app (ADR-041, epic #429)
+- **Read [`ios/CLAUDE.md`](ios/CLAUDE.md) before touching anything under `ios/`.** It carries the app's rules: the API computes and the app shows, generated files (the Tuist-generated `.xcodeproj`/`.xcworkspace`, the OpenAPI client) are never edited by hand, and `make ios-*` are the only build entry points.
+- A Tuist project (`Project.swift`, Tuist pinned in `ios/mise.toml`) with an app target and four local packages: `MonEluCore`, `MonEluAPI`, `MonEluUI`, `MonEluAccount`.
+- Changes confined to `ios/` never redeploy the API or re-run dbt (`railway.json` `watchPatterns`, `deploy.yml` `paths-ignore`).
 
 **`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.

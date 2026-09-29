@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start ios-generate ios-build ios-test ios-run
 
 start:
 	docker compose up -d
@@ -100,3 +100,16 @@ frontend-build:
 
 frontend-start:
 	cd frontend && npm start
+
+# iPhone app (ADR-041). The only build entry points for ios/; see ios/CLAUDE.md.
+ios-generate:
+	ios/scripts/ios.sh generate
+
+ios-build:
+	ios/scripts/ios.sh build
+
+ios-test:
+	ios/scripts/ios.sh test
+
+ios-run:
+	ios/scripts/ios.sh run
