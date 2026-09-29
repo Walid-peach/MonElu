@@ -1,0 +1,10 @@
+// Values the App Store record fixes. The bundle id cannot change once the app
+// exists in App Store Connect, so it is set here once the publisher
+// (individual or organization) is decided (#431, #451). Until then this
+// placeholder only ever signs Simulator builds.
+MONELU_BUNDLE_ID = fr.monelu.app.dev
+
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+TARGETED_DEVICE_FAMILY = 1
