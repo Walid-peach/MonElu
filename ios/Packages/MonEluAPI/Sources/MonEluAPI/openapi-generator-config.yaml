@@ -1,0 +1,8 @@
+# Swift OpenAPI Generator build plugin (ADR-041 §4, #448). The spec next to
+# this file is a committed snapshot written by scripts/export_openapi.py;
+# never edit it or the generated code by hand.
+generate:
+  - types
+  - client
+accessModifier: public
+namingStrategy: idiomatic

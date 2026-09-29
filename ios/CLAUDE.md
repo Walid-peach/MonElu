@@ -37,6 +37,21 @@ The work is tracked under epic #429, one phase epic at a time.
 9. **Every PR proves itself** (ADR-041 §8).
    `make ios-test` must pass, and a PR that changes a screen carries screenshots in light and dark mode.
 
+## Talking to the API
+
+- `MonEluAPI.client(baseURL:)` returns the client Swift OpenAPI Generator builds from `Packages/MonEluAPI/Sources/MonEluAPI/openapi.json`.
+  Its methods are the API's operationIds (`listVotes`, `getDeputy`, `getAppConfig`, …); call those, never `URLSession` by hand.
+- The snapshot is written by `python scripts/export_openapi.py` from `api.main:app.openapi()`, in-process, with no network.
+  `tests/unit/test_openapi_snapshot.py` fails when an API change lands without a refreshed snapshot, so change `api/` and the snapshot in the same PR.
+- The exporter rewrites FastAPI's `anyOf: [T, {"type": "null"}]` as an optional `T`, because the generator drops any property whose schema includes `null`.
+  A nullable field is therefore always a Swift optional, even when the API always sends it.
+- `APIDateTranscoder` reads every timestamp shape the API emits (`Z`, `+00:00`, no zone, microseconds); a missing zone means UTC.
+- `RetryMiddleware` retries `429` for any method (honouring `Retry-After`, capped at 10 s) and `502`/`503`/`504` or a dropped connection only for `GET`/`HEAD`.
+- The base URL is `MONELU_API_BASE_URL` in `Configs/App.xcconfig`, never a literal in Swift.
+- `LaunchGate` opens on the cached `GET /app/config` (or `AppConfiguration.defaults` on a first launch), refreshes it, and shows `UpdateRequiredScreen` when `CFBundleShortVersionString` is below `min_ios_version`.
+  Views read the feature switches and caveats from `@Environment(\.appConfiguration)`.
+- `ReferenceData` decodes `data/reference/*.json`, which `MonEluCore` bundles through the symlink `Sources/MonEluCore/Reference`.
+
 ## Layout
 
 | Path | What it is |
@@ -44,11 +59,11 @@ The work is tracked under epic #429, one phase epic at a time.
 | `Project.swift`, `Tuist.swift` | Tuist manifests; the only place the project structure is defined |
 | `mise.toml` | Pins the Tuist version; `scripts/ios.sh` installs it through mise |
 | `Configs/App.xcconfig` | Bundle id, version numbers. The bundle id is a placeholder until the publisher is decided (#451) |
-| `MonElu/Sources` | The app target: app entry point and the root tab bar only |
+| `MonElu/Sources` | The app target: entry point, `LaunchGate`, the root tab bar, and Info.plist reads |
 | `MonElu/Tests` | Tests of the app target |
-| `Packages/MonEluCore` | Plain Swift models and domain types, no UI and no networking |
-| `Packages/MonEluAPI` | The API client (#448) |
-| `Packages/MonEluUI` | Design tokens and shared SwiftUI components (#447) |
+| `Packages/MonEluCore` | Plain Swift models and domain types, no UI and no networking: `AppVersion`, `AppConfiguration`, `ReferenceData` |
+| `Packages/MonEluAPI` | The generated client, its retry middleware and date transcoder, and `AppConfigService` |
+| `Packages/MonEluUI` | Shared SwiftUI components and environment values; design tokens arrive with #447 |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
 

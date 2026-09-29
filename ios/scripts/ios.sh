@@ -56,7 +56,10 @@ simulator_id() {
 
 xcb() {
     # -quiet keeps the log to warnings and errors; failures still print in full.
-    xcodebuild -quiet "$@"
+    # -skipPackagePluginValidation lets Swift OpenAPI Generator's build plugin
+    # run without the interactive trust prompt Xcode shows for it (#448); the
+    # plugin's version is pinned exactly in Packages/MonEluAPI/Package.swift.
+    xcodebuild -quiet -skipPackagePluginValidation "$@"
 }
 
 xcb_test() {
