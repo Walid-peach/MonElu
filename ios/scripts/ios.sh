@@ -20,7 +20,6 @@ cd "$IOS_DIR"
 # allowed"). Keyed by checkout path so parallel worktrees never share one.
 BUILD_ROOT="${IOS_BUILD_ROOT:-$HOME/Library/Caches/MonElu-ios/$(printf '%s' "$IOS_DIR" | shasum | cut -c1-12)}"
 DERIVED_DATA="$BUILD_ROOT/DerivedData"
-PACKAGES=(MonEluAPI MonEluCore MonEluUI MonEluAccount)
 
 tuist() {
     if ! command -v mise >/dev/null 2>&1; then
@@ -91,7 +90,11 @@ test_all() {
         -scheme MonElu \
         -destination "$dest" \
         -derivedDataPath "$DERIVED_DATA"
-    for package in "${PACKAGES[@]}"; do
+    # Every package under Packages/ is tested, so one added to Project.swift
+    # cannot ship without its tests running here.
+    local manifest package
+    for manifest in Packages/*/Package.swift; do
+        package="$(basename "$(dirname "$manifest")")"
         echo "==> $package"
         (cd "Packages/$package" && xcb_test \
             -scheme "$package" \
