@@ -19,6 +19,13 @@ struct RouterTests {
         #expect(router.paths[.deputies] == [.deputy(id: "PA1"), .deputy(id: "PA2")])
     }
 
+    @Test func openingTheTopRouteAgainDoesNotStackIt() {
+        let router = Router()
+        router.open(.deputy(id: "PA1"))
+        router.open(.deputy(id: "PA1"))
+        #expect(router.paths[.deputies] == [.deputy(id: "PA1")])
+    }
+
     @Test func linkOpensTheRoute() throws {
         let router = Router()
         #expect(router.open(url: try #require(URL(string: "monelu://deputes/PA1008"))))

@@ -28,7 +28,14 @@ public struct LoadStateView<Value: Sendable, Content: View>: View {
             case .idle, .loading:
                 LoadingStateView()
             case .empty:
-                empty
+                // Scrollable so pull-to-refresh works on an empty screen too:
+                // it has no retry button, and what was empty may not stay so.
+                GeometryReader { proxy in
+                    ScrollView {
+                        empty.frame(minHeight: proxy.size.height)
+                    }
+                    .refreshable { await loader.load() }
+                }
             case .failed(let failure):
                 FailureStateView(failure: failure) { await loader.load() }
             case .loaded(let value):

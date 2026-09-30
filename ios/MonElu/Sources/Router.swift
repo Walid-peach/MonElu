@@ -14,8 +14,10 @@ final class Router {
     var paths: [AppTab: [AppRoute]] = [:]
 
     /// Shows `route` in its own tab, on top of whatever that tab had open.
+    /// Opening the screen that is already on top does not stack it twice.
     func open(_ route: AppRoute) {
         selection = route.tab
+        guard paths[route.tab]?.last != route else { return }
         paths[route.tab, default: []].append(route)
     }
 
