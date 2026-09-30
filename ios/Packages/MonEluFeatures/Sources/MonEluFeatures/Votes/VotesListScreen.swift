@@ -20,7 +20,7 @@ public struct VotesListScreen: View {
                 systemImage: "magnifyingglass"
             )
         ) { votes in
-            VotesList(votes: votes, isLoadingMore: model.isLoadingMore) {
+            VotesList(votes: votes, isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure) {
                 await model.loadMore()
             }
         }
@@ -53,6 +53,7 @@ public struct VotesListScreen: View {
 struct VotesList: View {
     let votes: [VoteItem]
     let isLoadingMore: Bool
+    var loadMoreFailure: LoadFailure?
     let loadMore: () async -> Void
 
     var body: some View {
@@ -64,8 +65,27 @@ struct VotesList: View {
                 .listRowBackground(Palette.cardBackground)
                 .accessibilityIdentifier("vote.row")
                 .task {
-                    if vote.id == votes.last?.id { await loadMore() }
+                    // Not after a failure: the footer's retry decides, so a
+                    // dead connection is not retried on every scroll.
+                    if vote.id == votes.last?.id, loadMoreFailure == nil { await loadMore() }
                 }
+            }
+            if let loadMoreFailure {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(
+                        loadMoreFailure == .offline
+                            ? "Hors connexion : la suite n'a pas pu être chargée."
+                            : "La suite n'a pas pu être chargée."
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    Button("Charger la suite") { Task { await loadMore() } }
+                        .buttonStyle(.bordered)
+                        .tint(Palette.accent)
+                }
+                .listRowBackground(Palette.pageBackground)
+                .accessibilityIdentifier("votes.load-more-failed")
             }
             if isLoadingMore {
                 ProgressView()

@@ -32,6 +32,8 @@ public final class VotesListModel {
     public var searchText = ""
     public var filter: ResultFilter = .all
     public private(set) var isLoadingMore = false
+    /// Set when the next page failed to load; the list offers a retry.
+    public private(set) var loadMoreFailure: LoadFailure?
     public let loader: Loader<[VoteItem]>
 
     private let service: any VotesService
@@ -67,13 +69,18 @@ public final class VotesListModel {
     public func loadMore() async {
         guard let cursor = nextCursor, !isLoadingMore, loader.state.value != nil else { return }
         isLoadingMore = true
+        loadMoreFailure = nil
         defer { isLoadingMore = false }
         let criteria = applied
-        guard let page = try? await service.votes(query(criteria, cursor: cursor)), criteria == applied else {
-            return
+        do {
+            let page = try await service.votes(query(criteria, cursor: cursor))
+            // The search or filter changed while this page was loading.
+            guard criteria == applied else { return }
+            nextCursor = page.nextCursor
+            loader.update { $0 += page.items }
+        } catch {
+            loadMoreFailure = LoadFailure(error)
         }
-        nextCursor = page.nextCursor
-        loader.update { $0 += page.items }
     }
 
     fileprivate func firstPage() async throws -> [VoteItem] {
@@ -81,6 +88,7 @@ public final class VotesListModel {
         let page = try await service.votes(query(criteria, cursor: nil))
         applied = criteria
         nextCursor = page.nextCursor
+        loadMoreFailure = nil
         return page.items
     }
 

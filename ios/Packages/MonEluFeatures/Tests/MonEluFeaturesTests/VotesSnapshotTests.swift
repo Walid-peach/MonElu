@@ -37,6 +37,17 @@ struct VotesSnapshotTests {
     }
 
     @Test(arguments: Variant.all)
+    func votesListNextPageFailed(_ variant: Variant) {
+        checkSnapshot(
+            NavigationStack {
+                VotesList(votes: [item("V1")], isLoadingMore: false, loadMoreFailure: .offline) {}
+            },
+            variant,
+            height: 420
+        )
+    }
+
+    @Test(arguments: Variant.all)
     func voteDetail(_ variant: Variant) async throws {
         let full = try await LiveVotesService(client: stubClient(try fixture("vote_detail"))).vote(id: "VTANR5L17V8434")
         // Three groups show every layout case (one position, two, with

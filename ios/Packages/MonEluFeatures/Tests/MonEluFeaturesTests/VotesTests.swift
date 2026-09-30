@@ -46,6 +46,24 @@ struct VotesListModelTests {
         #expect(model.loader.state.value?.map(\.id) == ["V1", "V2"])
     }
 
+    @Test func failedNextPageKeepsTheListAndCanBeRetried() async {
+        let service = RecordingVotesService(pages: [
+            .success(VotePage(items: [item("V1")], nextCursor: "c1")),
+            .failure(URLError(.networkConnectionLost)),
+            .success(VotePage(items: [item("V2")], nextCursor: nil)),
+        ])
+        let model = VotesListModel(service: service)
+        await model.reload()
+        await model.loadMore()
+        #expect(model.loadMoreFailure == .offline)
+        #expect(model.loader.state.value?.map(\.id) == ["V1"])
+
+        await model.loadMore() // the retry asks for the same page again
+        #expect(model.loadMoreFailure == nil)
+        #expect(service.queries.map(\.cursor) == [nil, "c1", "c1"])
+        #expect(model.loader.state.value?.map(\.id) == ["V1", "V2"])
+    }
+
     @Test func offlineShowsTheOfflineState() async {
         let model = VotesListModel(service: RecordingVotesService(pages: [.failure(URLError(.notConnectedToInternet))]))
         await model.reload()
