@@ -6,12 +6,14 @@
 #   ios.sh build      build the app for the Simulator
 #   ios.sh test       run the app's tests and every package's tests on the Simulator
 #   ios.sh run        build, install and launch the app in the Simulator
-#   ios.sh flow NAME  build, install, and run maestro/NAME.yaml in light and
-#                     dark mode, saving its screenshots to build/screenshots/NAME/
-#   ios.sh smoke      every smoke flow (tabs, routes, votes), as ios.yml runs them
+#   ios.sh flow NAME  build, install, and run maestro/NAME.yaml in each
+#                     appearance, saving its screenshots to build/screenshots/NAME/
+#   ios.sh smoke      every flow in SMOKE_FLOWS, as ios.yml runs them
 #
-# IOS_SIMULATOR_ID picks a Simulator by UDID; otherwise the first available
-# iPhone on the newest installed iOS runtime is used.
+# IOS_SIMULATOR_ID picks a Simulator by UDID. Otherwise each checkout gets its
+# own, named after it and cloned on first use from a per-machine template, so
+# parallel worktrees never install over each other's app (#469).
+# IOS_APPEARANCES lists the appearances flows run in: "light dark" by default.
 set -euo pipefail
 
 IOS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,8 +23,14 @@ cd "$IOS_DIR"
 # iCloud-synced folder, whose extended attributes make codesign refuse the
 # bundle ("resource fork, Finder information, or similar detritus not
 # allowed"). Keyed by checkout path so parallel worktrees never share one.
-BUILD_ROOT="${IOS_BUILD_ROOT:-$HOME/Library/Caches/MonElu-ios/$(printf '%s' "$IOS_DIR" | shasum | cut -c1-12)}"
+CHECKOUT_KEY="$(printf '%s' "$IOS_DIR" | shasum | cut -c1-12)"
+BUILD_ROOT="${IOS_BUILD_ROOT:-$HOME/Library/Caches/MonElu-ios/$CHECKOUT_KEY}"
 DERIVED_DATA="$BUILD_ROOT/DerivedData"
+
+# The device and runtime the snapshot references are rendered on (ios.yml
+# pins the same pair); another one renders text differently.
+SIMULATOR_DEVICE="${IOS_SIMULATOR_DEVICE:-iPhone 18 Pro}"
+SIMULATOR_RUNTIME="${IOS_SIMULATOR_RUNTIME:-com.apple.CoreSimulator.SimRuntime.iOS-27-0}"
 
 tuist() {
     if ! command -v mise >/dev/null 2>&1; then
@@ -33,26 +41,80 @@ tuist() {
     mise exec -- tuist "$@"
 }
 
+# Prints the UDID of the available Simulator named $1, if any.
+simulator_named() {
+    xcrun simctl list devices available | awk -v name="$1" '
+        index($0, "    " name " (") == 1 {
+            if (match($0, /[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/)) {
+                print substr($0, RSTART, RLENGTH)
+                exit
+            }
+        }'
+}
+
+# True when the Simulator $1 has reached its home screen at least once. A
+# device that has only been created, or booted briefly, still has minutes of
+# first-boot work ahead, and so do its clones.
+has_finished_first_boot() {
+    [[ -e "$HOME/Library/Developer/CoreSimulator/Devices/$1/data/Library/Preferences/com.apple.springboard.plist" ]]
+}
+
+# One Simulator per machine that has finished its first boot; each checkout's
+# own Simulator is a clone of it, which boots in seconds. A brand-new device
+# spends many minutes on that first boot, and on this runtime a clone of one
+# that has not finished it does the same work again.
+template_id() {
+    local name="MonElu template" id candidate
+    id="$(simulator_named "$name")"
+    [[ -n "$id" ]] && { echo "$id"; return; }
+    if ! xcrun simctl list runtimes | grep -q "$SIMULATOR_RUNTIME"; then
+        echo "The iOS runtime the snapshots need is missing ($SIMULATOR_RUNTIME)." >&2
+        echo "Install it with: xcodebuild -downloadPlatform iOS" >&2
+        exit 1
+    fi
+    # Prefer a device of the snapshot model that has already been used.
+    for candidate in $(xcrun simctl list devices available "$SIMULATOR_RUNTIME" 2>/dev/null \
+        | awk -v device="$SIMULATOR_DEVICE" 'index($0, "    " device " (") == 1' \
+        | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}'); do
+        if has_finished_first_boot "$candidate"; then
+            xcrun simctl shutdown "$candidate" 2>/dev/null || true
+            id="$(xcrun simctl clone "$candidate" "$name")"
+            echo "Created the template Simulator from $SIMULATOR_DEVICE ($candidate)." >&2
+            echo "$id"
+            return
+        fi
+    done
+    # None: boot a new one until it reaches its home screen, once per machine.
+    id="$(xcrun simctl create "$name" "$SIMULATOR_DEVICE" "$SIMULATOR_RUNTIME")"
+    echo "Creating the template Simulator ($SIMULATOR_DEVICE); its first boot is slow, once per machine." >&2
+    xcrun simctl boot "$id"
+    local waited=0
+    until has_finished_first_boot "$id"; do
+        sleep 10
+        waited=$((waited + 10))
+        if [[ "$waited" -ge 1800 ]]; then
+            echo "The template Simulator did not reach its home screen in 30 minutes." >&2
+            exit 1
+        fi
+    done
+    xcrun simctl shutdown "$id"
+    echo "$id"
+}
+
 simulator_id() {
     if [[ -n "${IOS_SIMULATOR_ID:-}" ]]; then
         echo "$IOS_SIMULATOR_ID"
         return
     fi
-    # Runtimes are listed oldest first; keep the first iPhone of the last one.
-    local id
-    id="$(xcrun simctl list devices available | awk '
-        /^-- iOS / { section = 1; first = ""; next }
-        /^-- / { section = 0; next }
-        section && first == "" && /iPhone/ {
-            if (match($0, /[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/)) {
-                first = substr($0, RSTART, RLENGTH)
-                last = first
-            }
-        }
-        END { print last }')"
+    # This checkout's own Simulator, found by name or cloned from the template.
+    local name="MonElu $CHECKOUT_KEY" id template
+    id="$(simulator_named "$name")"
     if [[ -z "$id" ]]; then
-        echo "No iPhone Simulator found. Install one with: xcodebuild -downloadPlatform iOS" >&2
-        exit 1
+        template="$(template_id)"
+        # A clone needs its source shut down.
+        xcrun simctl shutdown "$template" 2>/dev/null || true
+        id="$(xcrun simctl clone "$template" "$name")"
+        echo "Created Simulator \"$name\" for this checkout: $id" >&2
     fi
     echo "$id"
 }
@@ -97,7 +159,9 @@ test_all() {
         -destination "$dest" \
         -derivedDataPath "$DERIVED_DATA"
     # Every package under Packages/ is tested, so one added to Project.swift
-    # cannot ship without its tests running here.
+    # cannot ship without its tests running here. Each package keeps its own
+    # build folder: a shared one compiles shared dependencies once, but hung
+    # the MonEluFeatures tests indefinitely when tried (#469).
     local manifest package
     for manifest in Packages/*/Package.swift; do
         package="$(basename "$(dirname "$manifest")")"
@@ -147,8 +211,9 @@ maestro() {
     "$("$IOS_DIR/scripts/install-maestro.sh")" "$@"
 }
 
-# Runs the given flows in light then dark mode, in one Maestro launch per
-# appearance (each launch costs about a minute of driver start-up).
+# Runs the given flows in each of IOS_APPEARANCES ("light dark" by default),
+# in one Maestro launch per appearance (each launch costs about a minute of
+# driver start-up).
 # Screenshots land in build/screenshots/<flow>/, prefixed `light-` and
 # `dark-`, replacing any from a previous run, so an agent always knows where
 # to find them.
@@ -170,8 +235,9 @@ run_flows() {
     rm -rf "$debug"
     # A failing flow must not skip what follows: the screenshots taken up to
     # the failure are the evidence, and the Simulator goes back to light mode.
-    local status=0
-    for appearance in light dark; do
+    local status=0 appearances
+    read -r -a appearances <<< "${IOS_APPEARANCES:-light dark}"
+    for appearance in "${appearances[@]}"; do
         xcrun simctl ui "$id" appearance "$appearance"
         maestro --device "$id" test --test-output-dir "$debug/$appearance" \
             -e APP_ID="$bundle_id" -e SCREENSHOT_PREFIX="$appearance-" "${files[@]}" || status=$?

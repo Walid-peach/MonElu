@@ -90,13 +90,46 @@ def test_ios_workflow_pins_the_snapshot_toolchain():
     assert workflow["env"]["SIMULATOR_RUNTIME"].endswith("iOS-27-0")
 
 
-def test_ios_workflow_runs_the_smoke_flow_and_keeps_its_screenshots():
-    """The smoke flow is ADR-041 §8's evidence for a reviewer who does not
-    read Swift, so its screenshots are uploaded on every run, not only on
-    failure (#450)."""
-    steps = yaml.safe_load((WORKFLOWS / "ios.yml").read_text())["jobs"]["ios"]["steps"]
-    runs = [step.get("run", "") for step in steps]
-    assert "make ios-smoke" in runs
+def _jobs() -> dict:
+    return yaml.safe_load((WORKFLOWS / "ios.yml").read_text())["jobs"]
+
+
+def test_tests_and_smoke_run_as_parallel_jobs():
+    """#469: the smoke flows do not wait for the unit and snapshot tests."""
+    jobs = _jobs()
+    assert set(jobs) == {"changes", "test", "smoke"}
+    assert "make ios-test" in [step.get("run", "") for step in jobs["test"]["steps"]]
+    assert jobs["smoke"]["needs"] == "changes"
+    assert "test" not in str(jobs["smoke"].get("needs"))
+
+
+def test_no_build_cache():
+    """Restoring it cost 4 to 7 minutes and made the build no faster (#469)."""
+    for job in _jobs().values():
+        assert all("actions/cache" not in step.get("uses", "") for step in job["steps"])
+
+
+def test_smoke_runs_only_when_the_app_changed():
+    """The smoke flows hit the production API, so an API-only PR cannot be
+    tested by them; it still builds and tests the app."""
+    jobs = _jobs()
+    assert jobs["smoke"]["if"] == "needs.changes.outputs.app == 'true'"
+    detect = next(step for step in jobs["changes"]["steps"] if step.get("id") == "diff")["run"]
+    assert "^(ios/|data/reference/|\\.github/workflows/ios\\.yml$)" in detect
+
+
+def test_smoke_is_light_only_on_pull_requests():
+    """The snapshot tests cover dark mode on every PR; both appearances run
+    after a merge to master."""
+    appearances = _jobs()["smoke"]["env"]["IOS_APPEARANCES"]
+    assert appearances == "${{ github.event_name == 'pull_request' && 'light' || 'light dark' }}"
+
+
+def test_smoke_runs_the_flows_and_keeps_their_screenshots():
+    """The smoke flows are ADR-041 §8's evidence for a reviewer who does not
+    read Swift, so their screenshots are uploaded on every run (#450)."""
+    steps = _jobs()["smoke"]["steps"]
+    assert "make ios-smoke" in [step.get("run", "") for step in steps]
     upload = next(step for step in steps if step.get("name") == "Upload smoke screenshots")
     assert upload["if"] == "always()"
     assert upload["with"]["path"] == "ios/build/screenshots"

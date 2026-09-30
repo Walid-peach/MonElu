@@ -93,8 +93,19 @@ The work is tracked under epic #429, one phase epic at a time.
 ## CI
 
 `.github/workflows/ios.yml` runs on every PR touching `ios/`, `api/` or `data/reference/`, and `ci.yml` skips PRs confined to `ios/` - except one touching the OpenAPI snapshot, whose drift test lives in `ci.yml`.
-It pins Xcode 27.0 and an iPhone 18 Pro on iOS 27.0, the only combination the snapshot references match; moving to a new Xcode or Simulator means re-recording every snapshot in the same PR.
-When a snapshot fails, the run's `snapshot-diffs` artifact holds the image the test produced and the `xcresult` artifact holds the reference, failure and difference images; compare them before re-recording anything.
+It has two parallel jobs: `test` (build, unit and snapshot tests) and `smoke` (the Maestro flows).
+`smoke` runs in light mode only on a PR, since the snapshots already cover dark mode, and in both appearances after a merge; it is skipped when a change touches neither `ios/` nor `data/reference/`, because it runs against the production API.
+Both jobs pin Xcode 27.0 and an iPhone 18 Pro on iOS 27.0, the only combination the snapshot references match; moving to a new Xcode or Simulator means re-recording every snapshot in the same PR.
+There is deliberately no build cache: restoring one cost more time than it saved (#469).
+When a snapshot fails, the `snapshot-diffs` artifact holds the image the test produced and the `xcresult` artifact holds the reference, failure and difference images; compare them before re-recording anything.
+
+## Simulators and parallel worktrees
+
+Each checkout gets its own Simulator, named `MonElu <checkout hash>`, so two worktrees running tests or flows at once never install over each other's app.
+It is cloned from `MonElu template`, one per machine on the snapshot device and runtime, created and booted once: a brand-new device spends many minutes on its first boot, and a clone of a booted one does not.
+`IOS_SIMULATOR_ID` overrides it (CI sets it); `xcrun simctl delete "MonElu <hash>"` removes one you no longer need.
+Build products are keyed by checkout the same way, under `~/Library/Caches/MonElu-ios/`.
+Expect the first build in a new worktree to be slow: nothing is shared between checkouts.
 
 ## Layout
 
