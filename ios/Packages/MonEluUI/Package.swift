@@ -7,8 +7,11 @@ let package = Package(
     products: [
         .library(name: "MonEluUI", targets: ["MonEluUI"]),
     ],
+    dependencies: [
+        .package(path: "../MonEluCore"),
+    ],
     targets: [
-        .target(name: "MonEluUI"),
-        .testTarget(name: "MonEluUITests", dependencies: ["MonEluUI"]),
+        .target(name: "MonEluUI", dependencies: ["MonEluCore"]),
+        .testTarget(name: "MonEluUITests", dependencies: ["MonEluUI", "MonEluCore"]),
     ]
 )

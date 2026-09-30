@@ -4,7 +4,14 @@
 // placeholder only ever signs Simulator builds.
 MONELU_BUNDLE_ID = fr.monelu.app.dev
 
-MARKETING_VERSION = 0.1.0
+// The first App Store version. GET /app/config's min_ios_version defaults to
+// 1.0.0, and a lower version here would lock the app on its update screen.
+MARKETING_VERSION = 1.0.0
 CURRENT_PROJECT_VERSION = 1
 
 TARGETED_DEVICE_FAMILY = 1
+
+// The API the app calls. TestFlight builds may use the Railway host; the public
+// release waits for the API's own subdomain (ADR-041 §5, #419, #433).
+// `$()` keeps xcconfig from reading `//` as the start of a comment.
+MONELU_API_BASE_URL = https:/$()/monelu-production.up.railway.app

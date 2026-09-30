@@ -37,6 +37,7 @@ let project = Project(
                 "CFBundleDisplayName": "MonÉlu",
                 "CFBundleShortVersionString": "$(MARKETING_VERSION)",
                 "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
+                "MonEluAPIBaseURL": "$(MONELU_API_BASE_URL)",
                 "UILaunchScreen": [:],
                 "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
             ]),
