@@ -73,9 +73,14 @@ template_id() {
         exit 1
     fi
     # Prefer a device of the snapshot model that has already been used.
-    for candidate in $(xcrun simctl list devices available "$SIMULATOR_RUNTIME" 2>/dev/null \
-        | awk -v device="$SIMULATOR_DEVICE" 'index($0, "    " device " (") == 1' \
-        | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}'); do
+    # simctl's text listing cannot be filtered by runtime; its JSON is keyed by it.
+    for candidate in $(xcrun simctl list devices available -j | /usr/bin/python3 -c '
+import json, sys
+runtime, device = sys.argv[1], sys.argv[2]
+for d in json.load(sys.stdin)["devices"].get(runtime, []):
+    if d["name"] == device:
+        print(d["udid"])
+' "$SIMULATOR_RUNTIME" "$SIMULATOR_DEVICE"); do
         if has_finished_first_boot "$candidate"; then
             xcrun simctl shutdown "$candidate" 2>/dev/null || true
             id="$(xcrun simctl clone "$candidate" "$name")"
