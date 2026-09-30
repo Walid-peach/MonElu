@@ -100,7 +100,8 @@ def test_tokens_match_the_website_palette():
 LITERAL_COLOR = re.compile(
     r"Color\((red|white|hue|\.sRGB|\.displayP3|uiColor)"
     r"|UIColor\("
-    r"|(?<![\w.])\.(red|blue|green|black|white|gray|orange|yellow|pink|purple|mint|teal|cyan|indigo|brown)\b"
+    r"|(?<![\w.])\.(red|blue|green|black|white|gray|orange|yellow|pink|purple|mint|teal|cyan|indigo|brown"
+    r"|primary|secondary|tertiary|quaternary)\b"
     r"|Color\.(red|blue|green|black|white|gray|orange|yellow|pink|purple|primary|secondary)\b"
 )
 
@@ -121,6 +122,8 @@ def test_literal_color_pattern_catches_the_usual_forms():
         "Color(red: 0.1, green: 0.2, blue: 0.3)",
         'UIColor(named: "x")',
         "background(Color.secondary)",
+        ".foregroundStyle(.secondary)",
+        ".foregroundStyle(.primary)",
     ]:
         assert LITERAL_COLOR.search(line), line
     for line in [".foregroundStyle(Palette.negative)", "Color(name, bundle: .module)"]:
