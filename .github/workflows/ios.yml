@@ -1,7 +1,8 @@
 name: iOS
 
-# The iPhone app's checks (ADR-041 §8, #449): build, Swift Testing and the
-# component snapshot tests, on a pinned Xcode and Simulator. ci.yml skips
+# The iPhone app's checks (ADR-041 §8, #449, #450): build, Swift Testing, the
+# component snapshot tests and the Maestro smoke flow, on a pinned Xcode and
+# Simulator. ci.yml skips
 # PRs confined to ios/, so this workflow is what tests them.
 #
 # The path list is pinned by tests/unit/test_ios_ci_paths.py. `api/**` is in it
@@ -40,7 +41,9 @@ jobs:
   ios:
     # Xcode 27 is served only on this image (a GitHub public preview label).
     runs-on: xcode-27
-    timeout-minutes: 45
+    timeout-minutes: 60
+    env:
+      IOS_BUILD_ROOT: ${{ runner.temp }}/ios-build
     steps:
       - uses: actions/checkout@v4
 
@@ -91,12 +94,40 @@ jobs:
 
       - name: Build and test
         env:
-          IOS_BUILD_ROOT: ${{ runner.temp }}/ios-build
           # xcodebuild forwards TEST_RUNNER_* variables into the test process
           # without the prefix: swift-snapshot-testing writes a failing
           # snapshot's actual image there.
           TEST_RUNNER_SNAPSHOT_ARTIFACTS: ${{ runner.temp }}/snapshot-artifacts
         run: make ios-test
+
+      # Maestro runs on Java; ios/scripts/install-maestro.sh installs the
+      # pinned CLI and checks its SHA-256.
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Smoke flow (every tab, light and dark)
+        run: make ios-smoke
+
+      # Every run, not only failures: these are what a reviewer who does not
+      # read Swift looks at (ios-run skill).
+      - name: Upload smoke screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshots
+          path: ios/build/screenshots
+          if-no-files-found: ignore
+
+      - name: Upload Maestro output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-output
+          path: ${{ runner.temp }}/ios-build/maestro
+          if-no-files-found: ignore
 
       - name: Upload snapshot diffs
         if: failure()

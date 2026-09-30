@@ -88,3 +88,15 @@ def test_ios_workflow_pins_the_snapshot_toolchain():
     assert workflow["env"]["XCODE_APP"] == "/Applications/Xcode_27.0.app"
     assert workflow["env"]["SIMULATOR_DEVICE"] == "iPhone 18 Pro"
     assert workflow["env"]["SIMULATOR_RUNTIME"].endswith("iOS-27-0")
+
+
+def test_ios_workflow_runs_the_smoke_flow_and_keeps_its_screenshots():
+    """The smoke flow is ADR-041 §8's evidence for a reviewer who does not
+    read Swift, so its screenshots are uploaded on every run, not only on
+    failure (#450)."""
+    steps = yaml.safe_load((WORKFLOWS / "ios.yml").read_text())["jobs"]["ios"]["steps"]
+    runs = [step.get("run", "") for step in steps]
+    assert "make ios-smoke" in runs
+    upload = next(step for step in steps if step.get("name") == "Upload smoke screenshots")
+    assert upload["if"] == "always()"
+    assert upload["with"]["path"] == "ios/build/screenshots"

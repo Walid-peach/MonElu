@@ -1,0 +1,28 @@
+# Smoke flow (#450): launch the app and visit every tab, screenshotting each.
+# Run it through `make ios-flow FLOW=tabs` (or `make ios-smoke`), which passes
+# APP_ID and SCREENSHOT_PREFIX and runs it once in light and once in dark mode.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Mon député"
+    timeout: 15000
+- assertVisible: "Bientôt disponible."
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-mon-depute
+
+- tapOn: "Députés"
+- assertVisible: "Députés"
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-deputes
+
+- tapOn: "Votes"
+- assertVisible: "Votes"
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-votes
+
+- tapOn: "Demander"
+- assertVisible: "Demander"
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-demander
+
+- tapOn: "Quiz"
+- assertVisible: "Quiz"
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz
