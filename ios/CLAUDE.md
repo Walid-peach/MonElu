@@ -105,3 +105,4 @@ Requirements: Xcode 27 with an iOS Simulator runtime (`xcodebuild -downloadPlatf
 
 `IOS_SIMULATOR_ID=<udid>` picks a Simulator; otherwise the first iPhone on the newest runtime is used.
 Build products go to `~/Library/Caches/MonElu-ios/<checkout hash>/`, outside the repository: the checkout may live in an iCloud-synced folder, and codesign refuses a bundle carrying the extended attributes iCloud adds.
+
