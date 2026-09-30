@@ -57,10 +57,16 @@ jobs:
       # Design-token and path checks that read ios/ files. ci.yml runs them too,
       # but skips PRs confined to ios/, which are exactly the ones that change
       # a color set. --noconftest: tests/conftest.py imports the whole API.
+      # The runner's own Python is Homebrew-managed and refuses pip (PEP 668).
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: Design token checks
         run: |
-          python3 -m pip install --quiet pytest pyyaml
-          python3 -m pytest --noconftest -q tests/unit/test_ios_design_tokens.py tests/unit/test_ios_ci_paths.py
+          python -m pip install --quiet pytest pyyaml
+          python -m pytest --noconftest -q tests/unit/test_ios_design_tokens.py tests/unit/test_ios_ci_paths.py
 
       - name: Create the Simulator
         run: |
