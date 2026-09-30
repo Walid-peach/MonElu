@@ -1,0 +1,101 @@
+name: iOS
+
+# The iPhone app's checks (ADR-041 §8, #449): build, Swift Testing and the
+# component snapshot tests, on a pinned Xcode and Simulator. ci.yml skips
+# PRs confined to ios/, so this workflow is what tests them.
+#
+# The path list is pinned by tests/unit/test_ios_ci_paths.py. `api/**` is in it
+# because the app's client is generated from the API's spec, and
+# `data/reference/**` because the app bundles that JSON.
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "ios/**"
+      - "api/**"
+      - "data/reference/**"
+      - ".github/workflows/ios.yml"
+  push:
+    branches: [master]
+    paths:
+      - "ios/**"
+      - "api/**"
+      - "data/reference/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The snapshot reference images are rendered on exactly this Xcode, device and
+  # runtime; another one renders text differently and every snapshot fails.
+  XCODE_APP: /Applications/Xcode_27.0.app
+  SIMULATOR_DEVICE: iPhone 18 Pro
+  SIMULATOR_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-27-0
+
+jobs:
+  ios:
+    # Xcode 27 is served only on this image (a GitHub public preview label).
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      - name: Install the pinned Tuist (ios/mise.toml)
+        uses: jdx/mise-action@v2
+        with:
+          working_directory: ios
+
+      # Design-token and path checks that read ios/ files. ci.yml runs them too,
+      # but skips PRs confined to ios/, which are exactly the ones that change
+      # a color set. --noconftest: tests/conftest.py imports the whole API.
+      - name: Design token checks
+        run: |
+          python3 -m pip install --quiet pytest pyyaml
+          python3 -m pytest --noconftest -q tests/unit/test_ios_design_tokens.py tests/unit/test_ios_ci_paths.py
+
+      - name: Create the Simulator
+        run: |
+          id=$(xcrun simctl create "CI $SIMULATOR_DEVICE" "$SIMULATOR_DEVICE" "$SIMULATOR_RUNTIME")
+          xcrun simctl boot "$id"
+          echo "IOS_SIMULATOR_ID=$id" >> "$GITHUB_ENV"
+
+      - name: Cache Swift packages and build products
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ios-build
+          key: ios-build-${{ runner.os }}-xcode-27.0-${{ hashFiles('ios/.package.resolved', 'ios/Packages/*/Package.resolved', 'ios/Packages/*/Package.swift') }}
+          restore-keys: ios-build-${{ runner.os }}-xcode-27.0-
+
+      - name: Build and test
+        env:
+          IOS_BUILD_ROOT: ${{ runner.temp }}/ios-build
+          # xcodebuild forwards TEST_RUNNER_* variables into the test process
+          # without the prefix: swift-snapshot-testing writes a failing
+          # snapshot's actual image there.
+          TEST_RUNNER_SNAPSHOT_ARTIFACTS: ${{ runner.temp }}/snapshot-artifacts
+        run: make ios-test
+
+      - name: Upload snapshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-diffs
+          path: ${{ runner.temp }}/snapshot-artifacts
+          if-no-files-found: ignore
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcresult
+          path: ${{ runner.temp }}/ios-build/**/Logs/Test/*.xcresult
+          if-no-files-found: ignore
