@@ -52,6 +52,19 @@ The work is tracked under epic #429, one phase epic at a time.
   Views read the feature switches and caveats from `@Environment(\.appConfiguration)`.
 - `ReferenceData` decodes `data/reference/*.json`, which `MonEluCore` bundles through the symlink `Sources/MonEluCore/Reference`.
 
+## Design
+
+- Colors come only from `Palette` (`MonEluUI`), whose tokens are color sets in `Colors.xcassets` with a light and a dark value each, mirroring the website's `--dp-*` variables in `frontend/src/app/globals.css`.
+  Never write a literal or system color (`.red`, `Color(red:…)`, `UIColor(…)`): `tests/unit/test_ios_design_tokens.py` fails on one, on a token missing its dark value, and on a token that drifts from the web palette.
+  A new token means a new color set and a row in that test's `WEB_SOURCES`.
+- Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
+- Text that can grow with Dynamic Type must wrap, not truncate.
+- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
+  A new component gets the same four snapshots.
+  A missing reference is recorded and the test fails once: look at the new image, commit it, re-run.
+  A changed reference is a visual change: re-record by deleting the old image, and say so in the PR.
+  Reference images are rendered on the iPhone 18 Pro Simulator (iOS 27.0); another device or OS renders differently.
+
 ## Layout
 
 | Path | What it is |
@@ -63,7 +76,7 @@ The work is tracked under epic #429, one phase epic at a time.
 | `MonElu/Tests` | Tests of the app target |
 | `Packages/MonEluCore` | Plain Swift models and domain types, no UI and no networking: `AppVersion`, `AppConfiguration`, `ReferenceData` |
 | `Packages/MonEluAPI` | The generated client, its retry middleware and date transcoder, and `AppConfigService` |
-| `Packages/MonEluUI` | Shared SwiftUI components and environment values; design tokens arrive with #447 |
+| `Packages/MonEluUI` | Design tokens (`Palette`, `Typography`), shared components and their snapshot tests, environment values |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
 
