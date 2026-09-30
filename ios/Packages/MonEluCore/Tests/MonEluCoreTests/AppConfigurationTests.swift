@@ -1,3 +1,4 @@
+import Foundation
 import MonEluCore
 import Testing
 
@@ -46,5 +47,12 @@ struct ForcedUpdateTests {
     @Test func defaultsBlockNothing() {
         #expect(AppConfiguration.defaults.requiresUpdate(appVersion: "0.0.1") == false)
         #expect(AppConfiguration.defaults.features == .init(chat: true, verify: true))
+    }
+}
+
+struct MonEluFormatTests {
+    @Test func daysAreWrittenInFrenchInParisTime() {
+        // 2026-07-20T22:30:00Z is already 21 July in Paris.
+        #expect(MonEluFormat.day(Date(timeIntervalSince1970: 1_784_586_600)) == "21 juillet 2026")
     }
 }

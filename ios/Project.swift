@@ -3,7 +3,7 @@ import ProjectDescription
 // The Xcode project is generated from this file by `make ios-generate` and is
 // git-ignored (ADR-041). Change the app's structure here, never in Xcode.
 
-let packageNames = ["MonEluAPI", "MonEluCore", "MonEluUI", "MonEluAccount"]
+let packageNames = ["MonEluAPI", "MonEluCore", "MonEluUI", "MonEluFeatures", "MonEluAccount"]
 
 let swiftSettings: SettingsDictionary = [
     "SWIFT_VERSION": "6.0",

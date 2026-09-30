@@ -115,6 +115,14 @@ public final class Loader<Value: Sendable> {
         }
     }
 
+    /// Changes the loaded content in place, for a list appending its next
+    /// page. Does nothing unless content is loaded.
+    public func update(_ transform: (inout Value) -> Void) {
+        guard case .loaded(var value) = state else { return }
+        transform(&value)
+        state = .loaded(value)
+    }
+
     private func settle(_ value: Value) -> LoadState<Value> {
         isEmpty(value) ? .empty : .loaded(value)
     }

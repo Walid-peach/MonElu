@@ -84,6 +84,15 @@ struct LoaderTests {
         #expect(loader.refreshFailure == .offline)
     }
 
+    @Test func updateAppendsToLoadedContentOnly() async {
+        let loader = loader([.success([1])])
+        loader.update { $0.append(9) } // idle: ignored
+        #expect(loader.state.isIdle)
+        await loader.load()
+        loader.update { $0.append(2) }
+        #expect(loader.state.value == [1, 2])
+    }
+
     @Test func refreshWithoutContentIsAFullLoad() async {
         let loader = loader([.success([5])])
         await loader.refresh()

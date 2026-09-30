@@ -95,7 +95,7 @@ make ios-build      # Build the app for the iOS Simulator
 make ios-test       # App tests + every package's Swift Testing tests on the Simulator
 make ios-run        # Build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # Run a Maestro flow in light and dark; screenshots in ios/build/screenshots/<flow>/ (ios-run skill)
-make ios-smoke      # The smoke flows ios.yml runs: every tab, then link routing
+make ios-smoke      # The smoke flows ios.yml runs: tabs, link routing, votes
 
 # Linting
 ruff check .        # Lint
@@ -263,7 +263,7 @@ The endpoint validates the caller's `url` against that allowlist before building
 
 **`ios/`** - SwiftUI iPhone app (ADR-041, epic #429)
 - **Read [`ios/CLAUDE.md`](ios/CLAUDE.md) before touching anything under `ios/`.** It carries the app's rules: the API computes and the app shows, generated files (the Tuist-generated `.xcodeproj`/`.xcworkspace`, the OpenAPI client) are never edited by hand, and `make ios-*` are the only build entry points.
-- A Tuist project (`Project.swift`, Tuist pinned in `ios/mise.toml`) with an app target and four local packages: `MonEluCore`, `MonEluAPI`, `MonEluUI`, `MonEluAccount`.
+- A Tuist project (`Project.swift`, Tuist pinned in `ios/mise.toml`) with an app target and five local packages: `MonEluCore`, `MonEluAPI`, `MonEluUI`, `MonEluFeatures` (the screens), `MonEluAccount`.
 - Changes confined to `ios/` never redeploy the API or re-run dbt (`railway.json` `watchPatterns`, `deploy.yml` `paths-ignore`).
 
 **`archive/infra-aws/`** — Archived AWS Terraform IaC (not live)
