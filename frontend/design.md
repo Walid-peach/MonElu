@@ -150,3 +150,4 @@ Interactive search, filtering, and stateful UI live in the client island; data f
 - French locale throughout (`lang="fr"`, French copy).
 - Accessibility: ARIA labels, `sr-only` helper text, and semantic HTML.
 - PWA support via service-worker caching and a web manifest.
+
