@@ -4,12 +4,17 @@ on:
   pull_request:
     branches: [master]
     # A PR confined to ios/ cannot change the API, the website or the data
-    # pipeline, and ios.yml tests it instead (ADR-041 §3, #449). master has no
-    # required checks; if these jobs ever become required, move this filter
-    # into the jobs, since a required check that never runs never reports.
+    # pipeline, and ios.yml tests it instead (ADR-041 §3, #449). The one ios/
+    # file kept in scope is the OpenAPI snapshot: its drift test lives here,
+    # and a hand edit to it must not merge unchecked. Order matters: a later
+    # pattern overrides an earlier one. master has no required checks; if these
+    # jobs ever become required, move this filter into the jobs, since a
+    # required check that never runs never reports.
     # Pinned by tests/unit/test_ios_ci_paths.py.
-    paths-ignore:
-      - "ios/**"
+    paths:
+      - "**"
+      - "!ios/**"
+      - "ios/Packages/MonEluAPI/Sources/MonEluAPI/openapi.json"
   workflow_dispatch:
 
 concurrency:

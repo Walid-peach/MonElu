@@ -27,17 +27,30 @@ def _triggers(name: str) -> dict:
     return workflow.get("on", workflow.get(True))
 
 
+SNAPSHOT = "ios/Packages/MonEluAPI/Sources/MonEluAPI/openapi.json"
+
+
 def _matches(path: str, patterns: list[str]) -> bool:
-    # GitHub's `**` spans directories; fnmatch's `*` already does, which is
-    # close enough for these top-level prefixes.
-    return any(fnmatch.fnmatch(path, pattern) for pattern in patterns)
+    """GitHub's `paths` semantics: patterns apply in order, a `!` pattern
+    excludes, and the last pattern that matches decides. fnmatch's `*` spans
+    directories like GitHub's `**`, which is close enough for these prefixes."""
+    included = False
+    for pattern in patterns:
+        if pattern.startswith("!"):
+            if fnmatch.fnmatch(path, pattern[1:]):
+                included = False
+        elif fnmatch.fnmatch(path, pattern):
+            included = True
+    return included
 
 
-def test_ci_skips_prs_confined_to_ios():
+def test_ci_skips_prs_confined_to_ios_except_the_openapi_snapshot():
     pull_request = _triggers("ci.yml")["pull_request"]
     assert pull_request["branches"] == ["master"]
-    assert pull_request["paths-ignore"] == ["ios/**"]
-    assert "paths" not in pull_request, "`paths` and `paths-ignore` cannot be combined on one event"
+    assert pull_request["paths"] == ["**", "!ios/**", SNAPSHOT]
+    assert "paths-ignore" not in pull_request, (
+        "`paths` and `paths-ignore` cannot be combined on one event"
+    )
 
 
 def test_ios_workflow_runs_on_prs_that_can_affect_the_app():
@@ -56,13 +69,15 @@ def test_ios_workflow_runs_on_prs_that_can_affect_the_app():
         (["api/routers/votes.py"], True, True),
         (["data/reference/groups.json"], True, True),
         (["ios/Project.swift", "frontend/src/lib/api.ts"], True, True),
+        # The snapshot's drift test lives in ci.yml, so a hand edit runs it.
+        ([SNAPSHOT], True, True),
     ],
 )
 def test_a_pr_runs_the_right_workflows(changed, runs_ci, runs_ios):
-    ci_ignored = _triggers("ci.yml")["pull_request"]["paths-ignore"]
+    ci_paths = _triggers("ci.yml")["pull_request"]["paths"]
     ios_paths = _triggers("ios.yml")["pull_request"]["paths"]
-    # paths-ignore skips the workflow only when every changed file is ignored.
-    assert (not all(_matches(path, ci_ignored) for path in changed)) is runs_ci
+    # A workflow runs when any changed file is in scope.
+    assert any(_matches(path, ci_paths) for path in changed) is runs_ci
     assert any(_matches(path, ios_paths) for path in changed) is runs_ios
 
 
