@@ -68,14 +68,14 @@ The work is tracked under epic #429, one phase epic at a time.
 - Screen snapshots in `MonEluFeaturesTests` render at 2x, and at 1x for the accessibility variants (`checkSnapshot` in `Support.swift`): the repository refuses files over 500 KB, and a whole screen at 3x passes that. Keep a fixture to what shows each layout case rather than a full response.
 - A Maestro flow on live data asserts on accessibility ids and fixed labels, never on content that changes with the day's scrutins, and calls `waitForAnimationToEnd` before a screenshot.
   A screen-level accessibility id masks ids nested inside it, so target an element inside a screen by its visible text or accessibility label.
-  Never use an `optional` tap for something that may not appear: it waits out a long timeout. Use `runFlow` with `when: visible`, as `confirm-open-link.yaml` does.
+  Never use an `optional` tap for something that may not appear: it waits out a long timeout. Use `runFlow` with `when: visible`.
 - A screen gets its data through a `Loader` (`MonEluCore`) rendered by `LoadStateView` (`MonEluUI`), never by calling the client from a view.
   That one pattern gives every screen the same loading, empty, offline and error states, a retry, and pull-to-refresh; the content must be a `List` or `ScrollView`.
 - Offline and server failures are different states with different wording (`LoadFailure`); a failed refresh keeps the content and shows `RefreshFailureBanner`.
 - Navigation to a deputy or a vote goes through `Router.open(_:)` with an `AppRoute`, from any tab.
   `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
-- A Maestro flow that follows a `monelu://` link runs the `confirm-open-link.yaml` subflow after `openLink`: iOS asks before opening a custom-scheme link.
+- A Maestro flow opens a `monelu://` link by launching the app with `MonEluOpenURL` in `arguments` (debug builds, `Router.launchLink`), never with `openLink`: iOS may or may not show an "Open in MonÉlu?" prompt in front of it, and tapping that prompt did not reliably deliver the link in CI.
 
 ## Design
 

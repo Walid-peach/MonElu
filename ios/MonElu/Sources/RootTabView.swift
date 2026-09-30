@@ -28,6 +28,11 @@ struct RootTabView: View {
             }
         }
         .onOpenURL { router.open(url: $0) }
+        #if DEBUG
+        .task {
+            if let link = Router.launchLink() { router.open(url: link) }
+        }
+        #endif
     }
 
     /// Each root screen carries the `screen.<tab>` accessibility id Maestro

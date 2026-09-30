@@ -29,6 +29,21 @@ final class Router {
         return true
     }
 
+    #if DEBUG
+    /// A link passed at launch as `MonEluOpenURL <link>`, for Maestro flows
+    /// (`ios/maestro/routes.yaml`). They cannot rely on `openLink`: iOS may or
+    /// may not put an "Open in MonÉlu?" prompt in front of a custom-scheme
+    /// link, and whether tapping it delivers the link varied between machines.
+    /// Debug builds only; the link goes through the same `open(url:)` as
+    /// `onOpenURL`.
+    static func launchLink(arguments: [String] = ProcessInfo.processInfo.arguments) -> URL? {
+        guard let index = arguments.firstIndex(where: { $0 == "MonEluOpenURL" || $0 == "-MonEluOpenURL" }),
+              arguments.indices.contains(index + 1)
+        else { return nil }
+        return URL(string: arguments[index + 1])
+    }
+    #endif
+
     func path(for tab: AppTab) -> Binding<[AppRoute]> {
         Binding(get: { self.paths[tab] ?? [] }, set: { self.paths[tab] = $0 })
     }
