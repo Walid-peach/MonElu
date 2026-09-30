@@ -13,7 +13,13 @@ public enum Hemicycle {
         case pour, contre, abstention, nonVotant, absent
 
         public init(_ raw: String?) {
-            self = raw.flatMap(SeatPosition.init(rawValue:)).flatMap { $0 == .absent ? nil : $0 } ?? .absent
+            switch raw {
+            case "pour": self = .pour
+            case "contre": self = .contre
+            case "abstention": self = .abstention
+            case "nonVotant": self = .nonVotant
+            default: self = .absent
+            }
         }
     }
 

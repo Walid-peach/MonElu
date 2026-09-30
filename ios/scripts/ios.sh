@@ -168,21 +168,28 @@ run_flows() {
     # each flow's screenshots are moved out of it afterwards.
     debug="$BUILD_ROOT/maestro"
     rm -rf "$debug"
+    # A failing flow must not skip what follows: the screenshots taken up to
+    # the failure are the evidence, and the Simulator goes back to light mode.
+    local status=0
     for appearance in light dark; do
         xcrun simctl ui "$id" appearance "$appearance"
         maestro --device "$id" test --test-output-dir "$debug/$appearance" \
-            -e APP_ID="$bundle_id" -e SCREENSHOT_PREFIX="$appearance-" "${files[@]}"
+            -e APP_ID="$bundle_id" -e SCREENSHOT_PREFIX="$appearance-" "${files[@]}" || status=$?
         while IFS= read -r png; do
             # .../<flow>/takeScreenshot/<name>.png
             flow_name="$(basename "$(dirname "$(dirname "$png")")")"
-            [[ -d "$IOS_DIR/build/screenshots/$flow_name" ]] && mv "$png" "$IOS_DIR/build/screenshots/$flow_name/"
-        done < <(find "$debug/$appearance" -name '*.png' -path '*takeScreenshot*')
+            if [[ -d "$IOS_DIR/build/screenshots/$flow_name" ]]; then
+                mv "$png" "$IOS_DIR/build/screenshots/$flow_name/"
+            fi
+        done < <(find "$debug/$appearance" -name '*.png' -path '*takeScreenshot*' 2>/dev/null)
+        [[ "$status" -eq 0 ]] || break
     done
     xcrun simctl ui "$id" appearance light
     for name in "$@"; do
         echo "Screenshots: $IOS_DIR/build/screenshots/$name"
         ls "$IOS_DIR/build/screenshots/$name"
     done
+    return "$status"
 }
 
 flow() {
