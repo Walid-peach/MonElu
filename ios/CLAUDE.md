@@ -65,6 +65,12 @@ The work is tracked under epic #429, one phase epic at a time.
   A changed reference is a visual change: re-record by deleting the old image, and say so in the PR.
   Reference images are rendered on the iPhone 18 Pro Simulator (iOS 27.0); another device or OS renders differently.
 
+## CI
+
+`.github/workflows/ios.yml` runs on every PR touching `ios/`, `api/` or `data/reference/`, and `ci.yml` skips PRs confined to `ios/` - except one touching the OpenAPI snapshot, whose drift test lives in `ci.yml`.
+It pins Xcode 27.0 and an iPhone 18 Pro on iOS 27.0, the only combination the snapshot references match; moving to a new Xcode or Simulator means re-recording every snapshot in the same PR.
+When a snapshot fails, the run's `snapshot-diffs` artifact holds the image the test produced and the `xcresult` artifact holds the reference, failure and difference images; compare them before re-recording anything.
+
 ## Layout
 
 | Path | What it is |
