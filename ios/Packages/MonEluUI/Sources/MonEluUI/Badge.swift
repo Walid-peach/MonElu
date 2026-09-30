@@ -11,7 +11,7 @@ struct Badge: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(foreground)
             .fixedSize()
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 14)
             .padding(.vertical, 3)
             .background(background, in: Capsule())
     }
