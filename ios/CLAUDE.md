@@ -85,6 +85,8 @@ When a snapshot fails, the run's `snapshot-diffs` artifact holds the image the t
 | `Packages/MonEluUI` | Design tokens (`Palette`, `Typography`), shared components and their snapshot tests, environment values |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
+| `maestro/` | Maestro flows; `tabs.yaml` is the smoke flow |
+| `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 
 Feature code goes in a package, not in the app target, so it can be tested on its own.
 Every package has at least one Swift Testing test (`import Testing`, `@Test`, `#expect`); do not add XCTest.
@@ -99,7 +101,13 @@ make ios-generate   # generate the Xcode workspace from Project.swift
 make ios-build      # build the app for the Simulator
 make ios-test       # app tests + every package's tests on the Simulator
 make ios-run        # build, install and launch in the Simulator
+make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
+make ios-smoke      # the smoke flow ios.yml runs (every tab)
 ```
+
+To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.
+A PR that changes a screen names the flow it ran and the screenshots that show the change; CI uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.
+Maestro is pinned by version and SHA-256 in `scripts/install-maestro.sh` and needs Java 17 (`brew install openjdk@17`).
 
 Requirements: Xcode 27 with an iOS Simulator runtime (`xcodebuild -downloadPlatform iOS`), and mise (`brew install mise`), which installs the pinned Tuist on first use.
 

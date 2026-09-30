@@ -6,6 +6,9 @@
 #   ios.sh build      build the app for the Simulator
 #   ios.sh test       run the app's tests and every package's tests on the Simulator
 #   ios.sh run        build, install and launch the app in the Simulator
+#   ios.sh flow NAME  build, install, and run maestro/NAME.yaml in light and
+#                     dark mode, saving its screenshots to build/screenshots/NAME/
+#   ios.sh smoke      the `tabs` flow, as ios.yml runs it
 #
 # IOS_SIMULATOR_ID picks a Simulator by UDID; otherwise the first available
 # iPhone on the newest installed iOS runtime is used.
@@ -107,18 +110,68 @@ test_all() {
     echo "All iOS tests passed."
 }
 
-run() {
-    build
-    local id app bundle_id
+APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/MonElu.app"
+
+# Builds the app and installs it on the booted Simulator; prints its bundle id.
+install_app() {
+    build >&2
+    local id
     id="$(simulator_id)"
-    app="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/MonElu.app"
-    bundle_id="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")"
     xcrun simctl boot "$id" 2>/dev/null || true
     # The window is for a human watching; a headless run carries on without it.
     open -b com.apple.iphonesimulator --args -CurrentDeviceUDID "$id" 2>/dev/null || true
     xcrun simctl bootstatus "$id" -b >/dev/null
-    xcrun simctl install "$id" "$app"
-    xcrun simctl launch "$id" "$bundle_id"
+    xcrun simctl install "$id" "$APP"
+    /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist"
+}
+
+run() {
+    local bundle_id
+    bundle_id="$(install_app)"
+    xcrun simctl launch "$(simulator_id)" "$bundle_id"
+}
+
+maestro() {
+    # macOS ships a /usr/bin/java stub with no runtime behind it, so ask java
+    # to run rather than whether it exists.
+    if [[ -z "${JAVA_HOME:-}" ]] && ! java -version >/dev/null 2>&1; then
+        # Homebrew's keg-only JDK is not on PATH by default.
+        local brew_java=/opt/homebrew/opt/openjdk@17
+        if [[ -x "$brew_java/bin/java" ]]; then
+            export JAVA_HOME="$brew_java" PATH="$brew_java/bin:$PATH"
+        else
+            echo "Maestro needs Java 17 or newer (brew install openjdk@17)." >&2
+            exit 1
+        fi
+    fi
+    "$("$IOS_DIR/scripts/install-maestro.sh")" "$@"
+}
+
+# Runs maestro/NAME.yaml in light then dark mode. Screenshots are written to
+# build/screenshots/NAME/, prefixed `light-` and `dark-`, replacing any from a
+# previous run, so an agent always knows where to find them.
+flow() {
+    local name="${1:?usage: ios.sh flow NAME}"
+    local file="$IOS_DIR/maestro/$name.yaml"
+    [[ -f "$file" ]] || { echo "No such flow: maestro/$name.yaml" >&2; exit 2; }
+    local bundle_id id out debug appearance
+    bundle_id="$(install_app)"
+    id="$(simulator_id)"
+    out="$IOS_DIR/build/screenshots/$name"
+    # Maestro's own output (logs, view hierarchy, screenshots) per run; ios.yml
+    # uploads it when a flow fails. It ignores the working directory, so the
+    # screenshots are moved out of it into $out.
+    debug="$BUILD_ROOT/maestro/$name"
+    rm -rf "$out" "$debug" && mkdir -p "$out"
+    for appearance in light dark; do
+        xcrun simctl ui "$id" appearance "$appearance"
+        maestro --device "$id" test --test-output-dir "$debug/$appearance" \
+            -e APP_ID="$bundle_id" -e SCREENSHOT_PREFIX="$appearance-" "$file"
+        find "$debug/$appearance" -name '*.png' -path '*takeScreenshot*' -exec mv {} "$out/" \;
+    done
+    xcrun simctl ui "$id" appearance light
+    echo "Screenshots: $out"
+    ls "$out"
 }
 
 case "${1:-}" in
@@ -126,8 +179,10 @@ case "${1:-}" in
     build) build ;;
     test) test_all ;;
     run) run ;;
+    flow) flow "${2:-}" ;;
+    smoke) flow tabs ;;
     *)
-        echo "usage: $0 {generate|build|test|run}" >&2
+        echo "usage: $0 {generate|build|test|run|flow NAME|smoke}" >&2
         exit 2
         ;;
 esac

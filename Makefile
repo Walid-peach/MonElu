@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start ios-generate ios-build ios-test ios-run
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start ios-generate ios-build ios-test ios-run ios-flow ios-smoke
 
 start:
 	docker compose up -d
@@ -113,3 +113,12 @@ ios-test:
 
 ios-run:
 	ios/scripts/ios.sh run
+
+# Runs ios/maestro/$(FLOW).yaml in light and dark mode; screenshots land in
+# ios/build/screenshots/$(FLOW)/ (#450).
+FLOW ?= tabs
+ios-flow:
+	ios/scripts/ios.sh flow $(FLOW)
+
+ios-smoke:
+	ios/scripts/ios.sh smoke

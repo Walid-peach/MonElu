@@ -6,6 +6,8 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        # Maestro flows (ios/maestro/) are a config document plus a steps document.
+        args: [--allow-multiple-documents]
       - id: check-json
       - id: check-merge-conflict
       - id: check-added-large-files
