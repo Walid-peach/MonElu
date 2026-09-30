@@ -39,6 +39,14 @@ let project = Project(
                 "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
                 "MonEluAPIBaseURL": "$(MONELU_API_BASE_URL)",
                 "UILaunchScreen": [:],
+                // monelu://deputes/<id> and monelu://votes/<id> open a screen
+                // (AppRoute); universal links will reuse the same parser.
+                "CFBundleURLTypes": [
+                    [
+                        "CFBundleURLName": "$(MONELU_BUNDLE_ID)",
+                        "CFBundleURLSchemes": ["monelu"],
+                    ],
+                ],
                 "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
             ]),
             sources: ["MonElu/Sources/**"],

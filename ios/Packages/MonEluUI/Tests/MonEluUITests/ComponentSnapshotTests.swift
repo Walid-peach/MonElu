@@ -1,3 +1,4 @@
+import MonEluCore
 import MonEluUI
 import SnapshotTesting
 import SwiftUI
@@ -69,6 +70,31 @@ struct ComponentSnapshotTests {
     @Test(arguments: variants)
     func sectionHeader(_ variant: Variant) {
         check(SectionHeader("Derniers scrutins", subtitle: "Les votes de la semaine à l'Assemblée"), variant)
+    }
+
+    @Test(arguments: variants)
+    func loadingState(_ variant: Variant) {
+        check(LoadingStateView().frame(height: 160), variant)
+    }
+
+    @Test(arguments: variants)
+    func emptyState(_ variant: Variant) {
+        check(EmptyStateView(title: "Aucun scrutin", message: "Aucun vote ne correspond à cette recherche.", systemImage: "magnifyingglass"), variant)
+    }
+
+    @Test(arguments: variants)
+    func offlineState(_ variant: Variant) {
+        check(FailureStateView(failure: .offline) {}, variant)
+    }
+
+    @Test(arguments: variants)
+    func errorState(_ variant: Variant) {
+        check(FailureStateView(failure: .server) {}, variant)
+    }
+
+    @Test(arguments: variants)
+    func refreshFailureBanner(_ variant: Variant) {
+        check(RefreshFailureBanner(failure: .offline), variant)
     }
 
     private func check<V: View>(_ view: V, _ variant: Variant, testName: String = #function) {
