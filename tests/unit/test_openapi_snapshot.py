@@ -10,6 +10,7 @@ result, never by editing the JSON by hand.
 
 import json
 
+from api.config import DEFAULT_FRONTEND_BASE_URL
 from scripts.export_openapi import DEFAULT_OUT, for_swift_generator, main, render, spec, write
 
 
@@ -57,7 +58,7 @@ def test_snapshot_does_not_depend_on_the_frontend_origin(monkeypatch):
     monkeypatch.setattr(
         api.main.app,
         "description",
-        api.main.app.description.replace("https://mon-elu.vercel.app", "https://example.test"),
+        api.main.app.description.replace(DEFAULT_FRONTEND_BASE_URL, "https://example.test"),
     )
     assert render(spec()) == baseline
 
