@@ -1,12 +1,13 @@
 import MonEluCore
+import MonEluFeatures
 import MonEluUI
 import SwiftUI
 
-/// The screen for a route. Stubs until the deputy (#462) and vote (#460)
-/// screens replace them; they exist so navigation can be built and tested
-/// before any real screen.
+/// The screen for a route. The deputy screen is a stub until the Députés tab
+/// lands (#462).
 struct RouteDestination: View {
     let route: AppRoute
+    let services: AppServices
 
     var body: some View {
         switch route {
@@ -15,9 +16,7 @@ struct RouteDestination: View {
                 .navigationTitle("Député")
                 .accessibilityIdentifier("route.deputy.\(id)")
         case .vote(let id):
-            PlaceholderScreen(title: "Scrutin \(id)", systemImage: "checkmark.seal")
-                .navigationTitle("Scrutin")
-                .accessibilityIdentifier("route.vote.\(id)")
+            VoteDetailScreen(id: id, service: services.votes)
         }
     }
 }

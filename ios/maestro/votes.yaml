@@ -1,0 +1,40 @@
+# Votes tab (#460): the list loads from the API, and a row opens its detail.
+# Asserts on structure, not on wording: the scrutins themselves change daily.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Mon député"
+    timeout: 15000
+
+- tapOn: "Votes"
+- extendedWaitUntil:
+    visible:
+      id: "vote.row"
+    timeout: 20000
+- assertVisible: "Tous"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-votes-list
+
+- tapOn: "Adoptés"
+- extendedWaitUntil:
+    visible:
+      id: "vote.row"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-votes-adopted
+
+- tapOn:
+    id: "vote.row"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "vote.detail"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-vote-detail
+- scrollUntilVisible:
+    element: "Positions par groupe"
+    direction: DOWN
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-vote-positions

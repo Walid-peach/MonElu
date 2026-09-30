@@ -1,0 +1,44 @@
+{
+  "total": 5561,
+  "limit": 3,
+  "offset": 0,
+  "items": [
+    {
+      "vote_id": "VTANR5L17V8434",
+      "voted_at": "2026-07-21T00:00:00",
+      "vote_title": "l'ensemble de la proposition de loi visant à moderniser la gestion du patrimoine immobilier de l'État (texte de la commission mixte paritaire).",
+      "result": "adopté",
+      "votes_for": 276,
+      "votes_against": 86,
+      "abstentions": 2,
+      "total_voters": 364,
+      "summary_plain": "Le texte adopte un dispositif visant à moderniser la gestion du patrimoine immobilier de l'État, en simplifiant les procédures de vente, de location et d'exploi",
+      "theme": "Institutions"
+    },
+    {
+      "vote_id": "VTANR5L17V8433",
+      "voted_at": "2026-07-21T00:00:00",
+      "vote_title": "l'ensemble du projet de loi visant à offrir des réponses immédiates aux phénomènes troublant l'ordre public, la sécurité et la tranquilité de nos concitoyens (texte de la commission mixte paritaire).",
+      "result": "adopté",
+      "votes_for": 351,
+      "votes_against": 179,
+      "abstentions": 7,
+      "total_voters": 537,
+      "summary_plain": "Le texte adopté vise à renforcer les mesures législatives pour répondre rapidement aux troubles de l'ordre public, à la sécurité et à la tranquillité des citoye",
+      "theme": "Justice & Sécurité"
+    },
+    {
+      "vote_id": "VTANR5L17V8432",
+      "voted_at": "2026-07-21T00:00:00",
+      "vote_title": "la motion de rejet préalable, déposée par Mme Cyrielle Chatelain, du projet de loi visant à offrir des réponses immédiates aux phénomènes troublant l'ordre public, la sécurité et la tranquilité de nos concitoyens (texte de la commission mixte paritaire).",
+      "result": "rejeté",
+      "votes_for": 85,
+      "votes_against": 207,
+      "abstentions": 1,
+      "total_voters": 293,
+      "summary_plain": "Cette motion de rejet préalable vise à bloquer le texte de la commission mixte paritaire portant sur le projet de loi relatif aux réponses immédiates aux troubl",
+      "theme": "Institutions"
+    }
+  ],
+  "next_cursor": "MjAyNi0wNy0yMVQwMDowMDowMHxWVEFOUjVMMTdWODQzMg=="
+}

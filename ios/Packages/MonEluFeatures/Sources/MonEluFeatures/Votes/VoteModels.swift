@@ -1,0 +1,123 @@
+import Foundation
+
+/// A scrutin as the list shows it.
+public struct VoteItem: Identifiable, Hashable, Sendable {
+    public let id: String
+    public let title: String
+    public let date: Date?
+    /// `adopté` or `rejeté`, exactly as the API states it.
+    public let result: String?
+    public let summary: String?
+    public let theme: String?
+
+    public init(id: String, title: String, date: Date?, result: String?, summary: String?, theme: String?) {
+        self.id = id
+        self.title = title
+        self.date = date
+        self.result = result
+        self.summary = summary
+        self.theme = theme
+    }
+}
+
+/// One page of the vote list and the cursor for the next one.
+public struct VotePage: Sendable {
+    public let items: [VoteItem]
+    public let nextCursor: String?
+
+    public init(items: [VoteItem], nextCursor: String?) {
+        self.items = items
+        self.nextCursor = nextCursor
+    }
+}
+
+/// What the list asks the API for.
+public struct VoteQuery: Hashable, Sendable {
+    public var search: String
+    /// `adopté`, `rejeté`, or nil for both.
+    public var result: String?
+    /// `next_cursor` of the previous page; nil for the first page.
+    public var cursor: String?
+
+    public init(search: String = "", result: String? = nil, cursor: String? = nil) {
+        self.search = search
+        self.result = result
+        self.cursor = cursor
+    }
+}
+
+/// One deputy's position on a scrutin.
+public struct DeputyPosition: Hashable, Sendable {
+    public let deputyID: String
+    public let name: String
+    /// The group's short label (`EPR`, `LFI`, …); nil for a non-inscrit.
+    public let group: String?
+    /// `pour`, `contre`, `abstention` or `nonVotant`.
+    public let position: String
+
+    public init(deputyID: String, name: String, group: String?, position: String) {
+        self.deputyID = deputyID
+        self.name = name
+        self.group = group
+        self.position = position
+    }
+}
+
+/// A scrutin's detail.
+public struct VoteDetail: Hashable, Sendable {
+    public let item: VoteItem
+    public let votesFor: Int?
+    public let votesAgainst: Int?
+    public let abstentions: Int?
+    public let positions: [DeputyPosition]
+    public let dossierTitle: String?
+    /// The bill's page on the website, when it has one (the API's `lois_url`).
+    public let dossierURL: URL?
+
+    public init(
+        item: VoteItem, votesFor: Int?, votesAgainst: Int?, abstentions: Int?,
+        positions: [DeputyPosition], dossierTitle: String?, dossierURL: URL?
+    ) {
+        self.item = item
+        self.votesFor = votesFor
+        self.votesAgainst = votesAgainst
+        self.abstentions = abstentions
+        self.positions = positions
+        self.dossierTitle = dossierTitle
+        self.dossierURL = dossierURL
+    }
+
+    /// The positions tallied per group, largest group first. A display
+    /// grouping of what the API returned, as the website does; the scrutin's
+    /// own totals and result always come from the API.
+    public var positionsByGroup: [GroupPositions] {
+        Dictionary(grouping: positions, by: { $0.group ?? GroupPositions.nonInscrit })
+            .map { group, members in
+                GroupPositions(
+                    group: group,
+                    counts: Dictionary(members.map { ($0.position, 1) }, uniquingKeysWith: +)
+                )
+            }
+            .sorted { ($0.total, $1.group) > ($1.total, $0.group) }
+    }
+}
+
+/// How one group split on a scrutin.
+public struct GroupPositions: Identifiable, Hashable, Sendable {
+    public static let nonInscrit = "Non inscrit"
+    /// Display order of the positions, matching `vote_positions.json`.
+    public static let positionOrder = ["pour", "contre", "abstention", "nonVotant"]
+
+    public let group: String
+    public let counts: [String: Int]
+
+    public var id: String { group }
+    public var total: Int { counts.values.reduce(0, +) }
+
+    /// The positions this group took, in display order, with their counts.
+    public var ordered: [(position: String, count: Int)] {
+        Self.positionOrder.compactMap { position in
+            counts[position].map { (position, $0) }
+        }
+    }
+}

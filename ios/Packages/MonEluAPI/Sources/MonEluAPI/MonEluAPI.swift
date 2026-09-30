@@ -26,8 +26,13 @@ public enum MonEluAPI {
         )
     }
 
-    /// A generated client over any transport; tests use a stub.
-    static func client(baseURL: URL, transport: any ClientTransport, retry: RetryMiddleware) -> Client {
+    /// A generated client over any transport; tests use a stub that returns
+    /// recorded responses.
+    public static func client(
+        baseURL: URL,
+        transport: any ClientTransport,
+        retry: RetryMiddleware = RetryMiddleware(maxAttempts: 1)
+    ) -> Client {
         Client(
             serverURL: baseURL,
             configuration: Configuration(dateTranscoder: APIDateTranscoder()),

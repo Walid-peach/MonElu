@@ -1,0 +1,167 @@
+{
+  "vote_id": "VTANR5L17V8434",
+  "voted_at": "2026-07-21T00:00:00",
+  "vote_title": "l'ensemble de la proposition de loi visant à moderniser la gestion du patrimoine immobilier de l'État (texte de la commission mixte paritaire).",
+  "result": "adopté",
+  "votes_for": 276,
+  "votes_against": 86,
+  "abstentions": 2,
+  "total_voters": 364,
+  "summary_plain": "Le texte adopte un dispositif visant à moderniser la gestion du patrimoine immobilier de l'État, en simplifiant les procédures de vente, de location et d'exploitation des biens publics afin d’optimiser leur utilisation et leurs revenus.",
+  "theme": "Institutions",
+  "vote_type": "sps",
+  "dossier_id": "DLR5L17N52746",
+  "dossier": {
+    "dossier_uid": "DLR5L17N52746",
+    "titre": "Moderniser la gestion du patrimoine immobilier de l'État",
+    "status": "promulguee",
+    "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N52746"
+  },
+  "ingested_at": null,
+  "positions": [
+    {
+      "deputy_id": "PA841633",
+      "full_name": "Peio Dufau",
+      "party_short": "SOC",
+      "position": "abstention"
+    },
+    {
+      "deputy_id": "PA794854",
+      "full_name": "Iñaki Echaniz",
+      "party_short": "SOC",
+      "position": "abstention"
+    },
+    {
+      "deputy_id": "PA643143",
+      "full_name": "Christian Baptiste",
+      "party_short": "SOC",
+      "position": "pour"
+    },
+    {
+      "deputy_id": "PA606793",
+      "full_name": "Laurent Baumel",
+      "party_short": "SOC",
+      "position": "pour"
+    },
+    {
+      "deputy_id": "PA795228",
+      "full_name": "Nadège Abomangoli",
+      "party_short": "LFI",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA793262",
+      "full_name": "Laurent Alexandre",
+      "party_short": "LFI",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA794906",
+      "full_name": "Gabriel Amard",
+      "party_short": "LFI",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA794138",
+      "full_name": "Ségolène Amiot",
+      "party_short": "LFI",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA588884",
+      "full_name": "Clémentine Autain",
+      "party_short": "ECS",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA841701",
+      "full_name": "Léa Balage El Mariky",
+      "party_short": "ECS",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA795362",
+      "full_name": "Lisa Belluco",
+      "party_short": "ECS",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA795454",
+      "full_name": "Karim Ben Cheikh",
+      "party_short": "ECS",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA795998",
+      "full_name": "Émeline K/Bidi",
+      "party_short": "GDR",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA774962",
+      "full_name": "Karine Lebon",
+      "party_short": "GDR",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA335612",
+      "full_name": "Jean-Paul Lecoq",
+      "party_short": "GDR",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA796010",
+      "full_name": "Frédéric Maillot",
+      "party_short": "GDR",
+      "position": "contre"
+    },
+    {
+      "deputy_id": "PA721908",
+      "full_name": "Yaël Braun-Pivet",
+      "party_short": "EPR",
+      "position": "nonVotant"
+    },
+    {
+      "deputy_id": "PA721158",
+      "full_name": "Pieyre-Alexandre Anglade",
+      "party_short": "EPR",
+      "position": "pour"
+    },
+    {
+      "deputy_id": "PA722190",
+      "full_name": "Gabriel Attal",
+      "party_short": "EPR",
+      "position": "pour"
+    },
+    {
+      "deputy_id": "PA642935",
+      "full_name": "Olivier Becht",
+      "party_short": "EPR",
+      "position": "pour"
+    },
+    {
+      "deputy_id": "PA795270",
+      "full_name": "Marie-Agnès Poussier-Winsback",
+      "party_short": "HOR",
+      "position": "nonVotant"
+    },
+    {
+      "deputy_id": "PA332228",
+      "full_name": "Thierry Benoit",
+      "party_short": "HOR",
+      "position": "pour"
+    },
+    {
+      "deputy_id": "PA687214",
+      "full_name": "Sylvain Berrios",
+      "party_short": "HOR",
+      "position": "pour"
+    },
+    {
+      "deputy_id": "PA842183",
+      "full_name": "Benoît Blanchard",
+      "party_short": "HOR",
+      "position": "pour"
+    }
+  ]
+}

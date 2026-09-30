@@ -7,8 +7,8 @@ things a reviewer who does not read Swift cannot check by eye:
 - every token has a light and a dark value;
 - both match the `--dp-*` variables the website uses in globals.css, so the
   two clients cannot drift apart;
-- no Swift file in MonEluUI writes a literal or system color instead of a
-  token.
+- no Swift file that draws (the UI kit, the screens, the app target) writes a
+  literal or system color instead of a token.
 """
 
 import json
@@ -17,6 +17,12 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 UI = ROOT / "ios" / "Packages" / "MonEluUI" / "Sources" / "MonEluUI"
+# Everything that draws: the UI kit, the screens, and the app target.
+SWIFT_UI_SOURCES = [
+    UI,
+    ROOT / "ios" / "Packages" / "MonEluFeatures" / "Sources",
+    ROOT / "ios" / "MonElu" / "Sources",
+]
 CATALOG = UI / "Resources" / "Colors.xcassets"
 GLOBALS_CSS = ROOT / "frontend" / "src" / "app" / "globals.css"
 
@@ -109,7 +115,8 @@ LITERAL_COLOR = re.compile(
 def test_components_use_no_literal_color():
     offenders = [
         f"{path.name}:{number}: {line.strip()}"
-        for path in UI.rglob("*.swift")
+        for root in SWIFT_UI_SOURCES
+        for path in root.rglob("*.swift")
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
         if LITERAL_COLOR.search(line)
     ]

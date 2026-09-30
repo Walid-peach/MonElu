@@ -1,6 +1,6 @@
 # Navigation flow (#459): a link opens a deputy and a vote in their own tabs.
-# The screens are stubs until the Députés (#462) and Votes (#460) tabs land;
-# this proves the routing they will plug into.
+# The deputy screen is a stub until the Députés tab lands (#462); the vote
+# opens the real detail screen, loaded from the API.
 appId: ${APP_ID}
 ---
 - launchApp:
@@ -22,8 +22,10 @@ appId: ${APP_ID}
 # iOS asks before following a custom-scheme link; confirm it when it shows.
 - runFlow:
     file: confirm-open-link.yaml
-- assertVisible:
-    id: "route.vote.VTANR5L17V8434"
+- extendedWaitUntil:
+    visible:
+      id: "vote.detail"
+    timeout: 20000
 - takeScreenshot: ${SCREENSHOT_PREFIX}2-vote-route
 
 # Back returns to the tab's root screen.

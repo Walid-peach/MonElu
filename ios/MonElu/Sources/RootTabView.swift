@@ -1,13 +1,16 @@
 import MonEluCore
+import MonEluFeatures
 import MonEluUI
 import SwiftUI
 
 /// The five top-level tabs, each with its own navigation stack driven by the
-/// `Router`. Each tab is a placeholder until its feature ships (#432).
+/// `Router`. A tab without its feature yet shows a placeholder (#432).
 struct RootTabView: View {
+    let services: AppServices
     @State private var router: Router
 
-    init(router: Router = Router()) {
+    init(services: AppServices, router: Router = Router()) {
+        self.services = services
         _router = State(initialValue: router)
     }
 
@@ -15,13 +18,10 @@ struct RootTabView: View {
         TabView(selection: $router.selection) {
             ForEach(AppTab.allCases) { tab in
                 NavigationStack(path: router.path(for: tab)) {
-                    PlaceholderScreen(title: tab.title, systemImage: tab.systemImage)
-                        .navigationTitle(tab.title)
-                        // What Maestro flows assert after tapping a tab: the
-                        // tab bar shows every label all the time, so a label
-                        // alone cannot prove the screen changed.
-                        .accessibilityIdentifier("screen.\(tab.rawValue)")
-                        .navigationDestination(for: AppRoute.self) { RouteDestination(route: $0) }
+                    root(for: tab)
+                        .navigationDestination(for: AppRoute.self) {
+                            RouteDestination(route: $0, services: services)
+                        }
                 }
                 .tabItem { Label(tab.title, systemImage: tab.systemImage) }
                 .tag(tab)
@@ -29,8 +29,19 @@ struct RootTabView: View {
         }
         .onOpenURL { router.open(url: $0) }
     }
-}
 
-#Preview {
-    RootTabView()
+    /// Each root screen carries the `screen.<tab>` accessibility id Maestro
+    /// flows assert after tapping a tab: the tab bar shows every label all the
+    /// time, so a label alone cannot prove the screen changed.
+    @ViewBuilder
+    private func root(for tab: AppTab) -> some View {
+        switch tab {
+        case .votes:
+            VotesListScreen(service: services.votes)
+        case .myDeputy, .deputies, .ask, .quiz:
+            PlaceholderScreen(title: tab.title, systemImage: tab.systemImage)
+                .navigationTitle(tab.title)
+                .accessibilityIdentifier("screen.\(tab.rawValue)")
+        }
+    }
 }

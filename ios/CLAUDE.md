@@ -54,6 +54,14 @@ The work is tracked under epic #429, one phase epic at a time.
 
 ## Building a screen
 
+- A feature lives in `MonEluFeatures` as four parts, after `Votes/`: plain models, a `…Service` protocol with a `Live…Service` on the generated client, an `@Observable` model when the screen has state beyond loading, and views whose content is a separate view taking plain models.
+  That last split is what makes a screen snapshot-testable without a network: snapshot the content view, built from a recorded API response in `Tests/…/Fixtures/`.
+  The app target only maps tabs and routes to screens (`RootTabView`, `RouteDestination`) and hands each its service from `AppServices`.
+- Dates are written with `MonEluFormat` (French, Paris time), never with the device's locale or zone.
+- Tallying what the API returned for display (positions per group) is fine; a scrutin's result, totals and any rate always come from the API.
+- A snapshot of a view containing `NavigationLink` hosts it in a `NavigationStack`, or the link renders disabled and dimmed.
+- Screen snapshots in `MonEluFeaturesTests` render at 2x, and at 1x for the accessibility variants (`checkSnapshot` in `Support.swift`): the repository refuses files over 500 KB, and a whole screen at 3x passes that. Keep a fixture to what shows each layout case rather than a full response.
+- A Maestro flow on live data asserts on accessibility ids and fixed labels, never on content that changes with the day's scrutins, and calls `waitForAnimationToEnd` before a screenshot.
 - A screen gets its data through a `Loader` (`MonEluCore`) rendered by `LoadStateView` (`MonEluUI`), never by calling the client from a view.
   That one pattern gives every screen the same loading, empty, offline and error states, a retry, and pull-to-refresh; the content must be a `List` or `ScrollView`.
 - Offline and server failures are different states with different wording (`LoadFailure`); a failed refresh keeps the content and shows `RefreshFailureBanner`.
@@ -93,9 +101,10 @@ When a snapshot fails, the run's `snapshot-diffs` artifact holds the image the t
 | `Packages/MonEluCore` | Plain Swift models and domain types, no UI and no networking: `AppVersion`, `AppConfiguration`, `ReferenceData` |
 | `Packages/MonEluAPI` | The generated client, its retry middleware and date transcoder, and `AppConfigService` |
 | `Packages/MonEluUI` | Design tokens (`Palette`, `Typography`), shared components and their snapshot tests, environment values |
+| `Packages/MonEluFeatures` | The screens: each feature's models, its service protocol with a live implementation on the generated client, and its views. Depends on Core, API and UI |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
-| `maestro/` | Maestro flows; `tabs.yaml` and `routes.yaml` are the smoke flows |
+| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml` and `votes.yaml` are the smoke flows |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 
 Feature code goes in a package, not in the app target, so it can be tested on its own.
@@ -112,7 +121,7 @@ make ios-build      # build the app for the Simulator
 make ios-test       # app tests + every package's tests on the Simulator
 make ios-run        # build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
-make ios-smoke      # the smoke flows ios.yml runs (every tab, then link routing)
+make ios-smoke      # the smoke flows ios.yml runs (tabs, link routing, votes)
 ```
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.

@@ -111,7 +111,7 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Smoke flows (tabs and link routing, light and dark)
+      - name: Smoke flows (light and dark)
         run: make ios-smoke
 
       # Every run, not only failures: these are what a reviewer who does not

@@ -1,5 +1,6 @@
 import MonEluAPI
 import MonEluCore
+import MonEluFeatures
 import MonEluUI
 import SwiftUI
 
@@ -13,13 +14,15 @@ import SwiftUI
 /// switched-off feature must reach it without waiting for the process to die.
 struct LaunchGate: View {
     let service: AppConfigService
+    let services: AppServices
     let appVersion: String
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var configuration: AppConfiguration
 
-    init(service: AppConfigService, appVersion: String) {
+    init(service: AppConfigService, services: AppServices, appVersion: String) {
         self.service = service
+        self.services = services
         self.appVersion = appVersion
         _configuration = State(initialValue: service.cached())
     }
@@ -29,7 +32,7 @@ struct LaunchGate: View {
             if configuration.requiresUpdate(appVersion: appVersion) {
                 UpdateRequiredScreen()
             } else {
-                RootTabView()
+                RootTabView(services: services)
             }
         }
         .environment(\.appConfiguration, configuration)

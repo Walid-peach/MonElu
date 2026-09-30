@@ -8,7 +8,7 @@
 #   ios.sh run        build, install and launch the app in the Simulator
 #   ios.sh flow NAME  build, install, and run maestro/NAME.yaml in light and
 #                     dark mode, saving its screenshots to build/screenshots/NAME/
-#   ios.sh smoke      the `tabs` and `routes` flows, as ios.yml runs them
+#   ios.sh smoke      every smoke flow (tabs, routes, votes), as ios.yml runs them
 #
 # IOS_SIMULATOR_ID picks a Simulator by UDID; otherwise the first available
 # iPhone on the newest installed iOS runtime is used.
@@ -180,7 +180,7 @@ case "${1:-}" in
     test) test_all ;;
     run) run ;;
     flow) flow "${2:-}" ;;
-    smoke) flow tabs && flow routes ;;
+    smoke) flow tabs && flow routes && flow votes ;;
     *)
         echo "usage: $0 {generate|build|test|run|flow NAME|smoke}" >&2
         exit 2
