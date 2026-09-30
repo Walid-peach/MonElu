@@ -21,6 +21,9 @@ public enum Palette {
     public static let negativeBackground = token("negativeBackground")
     /// Neutral fill behind abstention and non-votant badges and bar tracks.
     public static let trackBackground = token("trackBackground")
+    /// An abstention's seat in the hemicycle: the website's amber, the same in
+    /// both themes (`POSITION_COLORS` in `HemicycleChart.tsx`).
+    public static let seatAbstention = token("seatAbstention")
     /// Civic red, for calls to action.
     public static let accent = token("accent")
 

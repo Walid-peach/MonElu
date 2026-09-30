@@ -1,0 +1,8834 @@
+{
+ "cases": [
+  {
+   "name": "empty",
+   "deputies": [],
+   "seats": [],
+   "arcs": []
+  },
+  {
+   "name": "single",
+   "deputies": [
+    {
+     "deputy_id": "PA1000",
+     "full_name": "Noël Lefèvre",
+     "party": "RN",
+     "position": "contre"
+    }
+   ],
+   "seats": [
+    {
+     "deputy_id": "PA1000",
+     "position": "contre",
+     "x": 500,
+     "y": 20,
+     "ring": 2
+    }
+   ],
+   "arcs": [
+    {
+     "group": "RN",
+     "seatCount": 1,
+     "counts": {
+      "pour": 0,
+      "contre": 1,
+      "abstention": 0,
+      "nonVotant": 0,
+      "absent": 0
+     },
+     "startAngle": 3.141592653589793,
+     "endAngle": 0
+    }
+   ]
+  },
+  {
+   "name": "small",
+   "deputies": [
+    {
+     "deputy_id": "PA1000",
+     "full_name": "Loïc Abad",
+     "party": "LFI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1001",
+     "full_name": "Émilie Lefevre",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1002",
+     "full_name": "Zoé Müller",
+     "party": "GDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1003",
+     "full_name": "Éric Martin-Dupré",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1004",
+     "full_name": "Émilie Abad",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1005",
+     "full_name": "jean O'Neil",
+     "party": "DEM",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1006",
+     "full_name": "Inès Martin-Dupré",
+     "party": "XYZ",
+     "position": "nonVotant"
+    }
+   ],
+   "seats": [
+    {
+     "deputy_id": "PA1004",
+     "position": "absent",
+     "x": 150,
+     "y": 510,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1000",
+     "position": "abstention",
+     "x": 10,
+     "y": 510,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1002",
+     "position": "contre",
+     "x": 255,
+     "y": 85.6,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1001",
+     "position": "nonVotant",
+     "x": 500,
+     "y": 300,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1005",
+     "position": "pour",
+     "x": 745,
+     "y": 85.6,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1003",
+     "position": "absent",
+     "x": 850,
+     "y": 510,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1006",
+     "position": "nonVotant",
+     "x": 990,
+     "y": 510,
+     "ring": 2
+    }
+   ],
+   "arcs": [
+    {
+     "group": "LFI",
+     "seatCount": 2,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 1,
+      "nonVotant": 0,
+      "absent": 1
+     },
+     "startAngle": 3.141592653589793,
+     "endAngle": 2.243994752564138
+    },
+    {
+     "group": "GDR",
+     "seatCount": 1,
+     "counts": {
+      "pour": 0,
+      "contre": 1,
+      "abstention": 0,
+      "nonVotant": 0,
+      "absent": 0
+     },
+     "startAngle": 2.243994752564138,
+     "endAngle": 1.7951958020513104
+    },
+    {
+     "group": "ECS",
+     "seatCount": 1,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 0,
+      "nonVotant": 1,
+      "absent": 0
+     },
+     "startAngle": 1.7951958020513104,
+     "endAngle": 1.3463968515384828
+    },
+    {
+     "group": "DEM",
+     "seatCount": 1,
+     "counts": {
+      "pour": 1,
+      "contre": 0,
+      "abstention": 0,
+      "nonVotant": 0,
+      "absent": 0
+     },
+     "startAngle": 1.3463968515384828,
+     "endAngle": 0.8975979010256552
+    },
+    {
+     "group": "HOR",
+     "seatCount": 1,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 0,
+      "nonVotant": 0,
+      "absent": 1
+     },
+     "startAngle": 0.8975979010256552,
+     "endAngle": 0.4487989505128276
+    },
+    {
+     "group": "Non inscrit",
+     "seatCount": 1,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 0,
+      "nonVotant": 1,
+      "absent": 0
+     },
+     "startAngle": 0.4487989505128276,
+     "endAngle": 0
+    }
+   ]
+  },
+  {
+   "name": "medium",
+   "deputies": [
+    {
+     "deputy_id": "PA1000",
+     "full_name": "Élodie Müller",
+     "party": "NI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1001",
+     "full_name": "Anne-Laure Zola",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1002",
+     "full_name": "Émilie Lefevre",
+     "party": "UDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1003",
+     "full_name": "Jean Zola",
+     "party": "LIOT",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1004",
+     "full_name": "Zoé Lefèvre",
+     "party": "DEM",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1005",
+     "full_name": "Inès N'Diaye",
+     "party": "DR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1006",
+     "full_name": "Émilie Élie",
+     "party": "NI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1007",
+     "full_name": "Ségolène Le Gall",
+     "party": "LIOT",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1008",
+     "full_name": "Zoé Élie",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1009",
+     "full_name": "Élodie Abad",
+     "party": "RN",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1010",
+     "full_name": "André Martin-Dupré",
+     "party": "EPR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1011",
+     "full_name": "Anne-Laure Müller",
+     "party": "LFI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1012",
+     "full_name": "André Étienne",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1013",
+     "full_name": "Zoé Étienne",
+     "party": "UDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1014",
+     "full_name": "Maël d'Aubigny",
+     "party": "SOC",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1015",
+     "full_name": "jean d'Aubigny",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1016",
+     "full_name": "Anne-Laure Zola",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1017",
+     "full_name": "Élodie Martin-Dupré",
+     "party": "DEM",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1018",
+     "full_name": "Agnès d'Aubigny",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1019",
+     "full_name": "Jean de La Tour",
+     "party": "HOR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1020",
+     "full_name": "Élodie Lefevre",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1021",
+     "full_name": "Émilie Lefèvre",
+     "party": "UDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1022",
+     "full_name": "Anne-Laure Étienne",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1023",
+     "full_name": "Loïc de La Tour",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1024",
+     "full_name": "Agnès Müller",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1025",
+     "full_name": "Élodie Lefèvre",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1026",
+     "full_name": "Élodie Müller",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1027",
+     "full_name": "Maël Müller",
+     "party": "DEM",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1028",
+     "full_name": "Éric Élie",
+     "party": "HOR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1029",
+     "full_name": "Éric O'Neil",
+     "party": "UDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1030",
+     "full_name": "Zoé Dupont",
+     "party": "LIOT",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1031",
+     "full_name": "Maël d'Aubigny",
+     "party": "SOC",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1032",
+     "full_name": "Maël Étienne",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1033",
+     "full_name": "jean Çelik",
+     "party": "UDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1034",
+     "full_name": "jean Abad",
+     "party": "LFI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1035",
+     "full_name": "Anne-Laure d'Aubigny",
+     "party": "EPR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1036",
+     "full_name": "Maël Zola",
+     "party": "XYZ",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1037",
+     "full_name": "André Lefèvre",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1038",
+     "full_name": "André Lefevre",
+     "party": "LFI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1039",
+     "full_name": "Noël Zola",
+     "party": "SOC",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1040",
+     "full_name": "Inès Çelik",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1041",
+     "full_name": "Émilie Dupont",
+     "party": "RN",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1042",
+     "full_name": "Anne-Laure de La Tour",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1043",
+     "full_name": "Inès Abad",
+     "party": "EPR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1044",
+     "full_name": "Cécile Zola",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1045",
+     "full_name": "Anne-Laure N'Diaye",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1046",
+     "full_name": "Éric Élie",
+     "party": "GDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1047",
+     "full_name": "Zoé Müller",
+     "party": "RN",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1048",
+     "full_name": "Inès Martin-Dupré",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1049",
+     "full_name": "Émilie N'Diaye",
+     "party": "LFI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1050",
+     "full_name": "Agnès Étienne",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1051",
+     "full_name": "Maël Étienne",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1052",
+     "full_name": "jean Abad",
+     "party": "RN",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1053",
+     "full_name": "Zoé N'Diaye",
+     "party": "DEM",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1054",
+     "full_name": "Maël N'Diaye",
+     "party": "RN",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1055",
+     "full_name": "Inès de La Tour",
+     "party": null,
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1056",
+     "full_name": "André Müller",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1057",
+     "full_name": "Émilie Çelik",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1058",
+     "full_name": "Anne-Laure Élie",
+     "party": "LIOT",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1059",
+     "full_name": "Jean Lefevre",
+     "party": "HOR",
+     "position": "excusé"
+    }
+   ],
+   "seats": [
+    {
+     "deputy_id": "PA1038",
+     "position": "absent",
+     "x": 290,
+     "y": 510,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1011",
+     "position": "absent",
+     "x": 196.7,
+     "y": 510,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1016",
+     "position": "absent",
+     "x": 103.3,
+     "y": 510,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1049",
+     "position": "abstention",
+     "x": 10,
+     "y": 510,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1034",
+     "position": "pour",
+     "x": 15.5,
+     "y": 437,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1018",
+     "position": "absent",
+     "x": 112,
+     "y": 427.5,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1050",
+     "position": "absent",
+     "x": 207,
+     "y": 431.5,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1042",
+     "position": "nonVotant",
+     "x": 31.8,
+     "y": 365.6,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1022",
+     "position": "nonVotant",
+     "x": 306,
+     "y": 429.6,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1046",
+     "position": "contre",
+     "x": 137.6,
+     "y": 348.7,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1040",
+     "position": "abstention",
+     "x": 58.5,
+     "y": 297.4,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1056",
+     "position": "nonVotant",
+     "x": 237.3,
+     "y": 358.3,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1015",
+     "position": "abstention",
+     "x": 95.1,
+     "y": 234,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1014",
+     "position": "absent",
+     "x": 179.1,
+     "y": 276.8,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1031",
+     "position": "nonVotant",
+     "x": 140.8,
+     "y": 176.7,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1039",
+     "position": "absent",
+     "x": 351.5,
+     "y": 361.5,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1058",
+     "position": "pour",
+     "x": 285.5,
+     "y": 295.5,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1026",
+     "position": "absent",
+     "x": 234.6,
+     "y": 215.2,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1003",
+     "position": "absent",
+     "x": 194.5,
+     "y": 126.9,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1007",
+     "position": "contre",
+     "x": 348.3,
+     "y": 247.3,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1030",
+     "position": "abstention",
+     "x": 301.7,
+     "y": 166.5,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1017",
+     "position": "pour",
+     "x": 255,
+     "y": 85.6,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1027",
+     "position": "pour",
+     "x": 419.6,
+     "y": 316,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1004",
+     "position": "absent",
+     "x": 321,
+     "y": 53.9,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1053",
+     "position": "contre",
+     "x": 377.4,
+     "y": 132.7,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1010",
+     "position": "abstention",
+     "x": 421.5,
+     "y": 217,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1035",
+     "position": "contre",
+     "x": 391,
+     "y": 32.3,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1057",
+     "position": "absent",
+     "x": 458.5,
+     "y": 115.5,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1043",
+     "position": "abstention",
+     "x": 463.4,
+     "y": 21.4,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1028",
+     "position": "nonVotant",
+     "x": 500,
+     "y": 300,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1019",
+     "position": "nonVotant",
+     "x": 500,
+     "y": 206.7,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1059",
+     "position": "absent",
+     "x": 536.6,
+     "y": 21.4,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1005",
+     "position": "absent",
+     "x": 541.5,
+     "y": 115.5,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1025",
+     "position": "absent",
+     "x": 609,
+     "y": 32.3,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1002",
+     "position": "contre",
+     "x": 578.5,
+     "y": 217,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1021",
+     "position": "abstention",
+     "x": 622.6,
+     "y": 132.7,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1029",
+     "position": "abstention",
+     "x": 679,
+     "y": 53.9,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1048",
+     "position": "nonVotant",
+     "x": 580.4,
+     "y": 316,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1033",
+     "position": "abstention",
+     "x": 651.7,
+     "y": 247.3,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1032",
+     "position": "nonVotant",
+     "x": 698.3,
+     "y": 166.5,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1013",
+     "position": "abstention",
+     "x": 745,
+     "y": 85.6,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1012",
+     "position": "absent",
+     "x": 805.5,
+     "y": 126.9,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1001",
+     "position": "absent",
+     "x": 765.4,
+     "y": 215.2,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1009",
+     "position": "absent",
+     "x": 648.5,
+     "y": 361.5,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1041",
+     "position": "pour",
+     "x": 714.5,
+     "y": 295.5,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1052",
+     "position": "nonVotant",
+     "x": 859.2,
+     "y": 176.7,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1054",
+     "position": "nonVotant",
+     "x": 820.9,
+     "y": 276.8,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1047",
+     "position": "nonVotant",
+     "x": 904.9,
+     "y": 234,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1024",
+     "position": "absent",
+     "x": 762.7,
+     "y": 358.3,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1037",
+     "position": "absent",
+     "x": 941.5,
+     "y": 297.4,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1045",
+     "position": "abstention",
+     "x": 862.4,
+     "y": 348.7,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1044",
+     "position": "abstention",
+     "x": 694,
+     "y": 429.6,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1020",
+     "position": "abstention",
+     "x": 968.2,
+     "y": 365.6,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1000",
+     "position": "nonVotant",
+     "x": 793,
+     "y": 431.5,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1006",
+     "position": "absent",
+     "x": 888,
+     "y": 427.5,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1055",
+     "position": "nonVotant",
+     "x": 984.5,
+     "y": 437,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1023",
+     "position": "absent",
+     "x": 710,
+     "y": 510,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1051",
+     "position": "absent",
+     "x": 803.3,
+     "y": 510,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1036",
+     "position": "absent",
+     "x": 896.7,
+     "y": 510,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1008",
+     "position": "nonVotant",
+     "x": 990,
+     "y": 510,
+     "ring": 3
+    }
+   ],
+   "arcs": [
+    {
+     "group": "LFI",
+     "seatCount": 5,
+     "counts": {
+      "pour": 1,
+      "contre": 0,
+      "abstention": 1,
+      "nonVotant": 0,
+      "absent": 3
+     },
+     "startAngle": 3.141592653589793,
+     "endAngle": 2.8797932657906435
+    },
+    {
+     "group": "GDR",
+     "seatCount": 6,
+     "counts": {
+      "pour": 0,
+      "contre": 1,
+      "abstention": 1,
+      "nonVotant": 2,
+      "absent": 2
+     },
+     "startAngle": 2.8797932657906435,
+     "endAngle": 2.5656340004316642
+    },
+    {
+     "group": "ECS",
+     "seatCount": 1,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 0,
+      "nonVotant": 1,
+      "absent": 0
+     },
+     "startAngle": 2.5656340004316642,
+     "endAngle": 2.5132741228718345
+    },
+    {
+     "group": "SOC",
+     "seatCount": 4,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 1,
+      "nonVotant": 1,
+      "absent": 2
+     },
+     "startAngle": 2.5132741228718345,
+     "endAngle": 2.303834612632515
+    },
+    {
+     "group": "LIOT",
+     "seatCount": 5,
+     "counts": {
+      "pour": 1,
+      "contre": 1,
+      "abstention": 1,
+      "nonVotant": 0,
+      "absent": 2
+     },
+     "startAngle": 2.303834612632515,
+     "endAngle": 2.0420352248333655
+    },
+    {
+     "group": "DEM",
+     "seatCount": 4,
+     "counts": {
+      "pour": 2,
+      "contre": 1,
+      "abstention": 0,
+      "nonVotant": 0,
+      "absent": 1
+     },
+     "startAngle": 2.0420352248333655,
+     "endAngle": 1.832595714594046
+    },
+    {
+     "group": "EPR",
+     "seatCount": 4,
+     "counts": {
+      "pour": 0,
+      "contre": 1,
+      "abstention": 2,
+      "nonVotant": 0,
+      "absent": 1
+     },
+     "startAngle": 1.832595714594046,
+     "endAngle": 1.6231562043547263
+    },
+    {
+     "group": "HOR",
+     "seatCount": 3,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 0,
+      "nonVotant": 2,
+      "absent": 1
+     },
+     "startAngle": 1.6231562043547263,
+     "endAngle": 1.4660765716752366
+    },
+    {
+     "group": "DR",
+     "seatCount": 1,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 0,
+      "nonVotant": 0,
+      "absent": 1
+     },
+     "startAngle": 1.4660765716752366,
+     "endAngle": 1.4137166941154067
+    },
+    {
+     "group": "UDR",
+     "seatCount": 8,
+     "counts": {
+      "pour": 0,
+      "contre": 1,
+      "abstention": 4,
+      "nonVotant": 2,
+      "absent": 1
+     },
+     "startAngle": 1.4137166941154067,
+     "endAngle": 0.9948376736367677
+    },
+    {
+     "group": "RN",
+     "seatCount": 7,
+     "counts": {
+      "pour": 1,
+      "contre": 0,
+      "abstention": 0,
+      "nonVotant": 3,
+      "absent": 3
+     },
+     "startAngle": 0.9948376736367677,
+     "endAngle": 0.6283185307179584
+    },
+    {
+     "group": "Non inscrit",
+     "seatCount": 12,
+     "counts": {
+      "pour": 0,
+      "contre": 0,
+      "abstention": 3,
+      "nonVotant": 3,
+      "absent": 6
+     },
+     "startAngle": 0.6283185307179584,
+     "endAngle": -2.220446049250313e-16
+    }
+   ]
+  },
+  {
+   "name": "chamber",
+   "deputies": [
+    {
+     "deputy_id": "PA1000",
+     "full_name": "Loïc Lefèvre",
+     "party": "EPR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1001",
+     "full_name": "Élodie Abad",
+     "party": "LFI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1002",
+     "full_name": "jean d'Aubigny",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1003",
+     "full_name": "Émilie Lefèvre",
+     "party": "XYZ",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1004",
+     "full_name": "Agnès Abad",
+     "party": "EPR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1005",
+     "full_name": "André Étienne",
+     "party": "EPR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1006",
+     "full_name": "Éric Müller",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1007",
+     "full_name": "Loïc Martin-Dupré",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1008",
+     "full_name": "André O'Neil",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1009",
+     "full_name": "Ségolène de La Tour",
+     "party": "SOC",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1010",
+     "full_name": "Agnès Çelik",
+     "party": "DEM",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1011",
+     "full_name": "Noël Zola",
+     "party": "GDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1012",
+     "full_name": "Élodie Lefèvre",
+     "party": "ECS",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1013",
+     "full_name": "Éric Martin-Dupré",
+     "party": "EPR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1014",
+     "full_name": "Jean Zola",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1015",
+     "full_name": "Élodie N'Diaye",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1016",
+     "full_name": "Zoé Élie",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1017",
+     "full_name": "Éric Abad",
+     "party": "LFI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1018",
+     "full_name": "Anne-Laure Martin-Dupré",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1019",
+     "full_name": "Élodie d'Aubigny",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1020",
+     "full_name": "jean Étienne",
+     "party": "HOR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1021",
+     "full_name": "Élodie O'Neil",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1022",
+     "full_name": "Cécile O'Neil",
+     "party": "NI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1023",
+     "full_name": "Ségolène Zola",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1024",
+     "full_name": "Noël N'Diaye",
+     "party": "RN",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1025",
+     "full_name": "Agnès Zola",
+     "party": "ECS",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1026",
+     "full_name": "Ségolène Martin-Dupré",
+     "party": null,
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1027",
+     "full_name": "Ségolène de La Tour",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1028",
+     "full_name": "Jean Zola",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1029",
+     "full_name": "Éric O'Neil",
+     "party": "LIOT",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1030",
+     "full_name": "Noël Çelik",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1031",
+     "full_name": "Élodie Martin-Dupré",
+     "party": "DR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1032",
+     "full_name": "Élodie Lefevre",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1033",
+     "full_name": "Cécile Étienne",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1034",
+     "full_name": "André Le Gall",
+     "party": "DR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1035",
+     "full_name": "Inès N'Diaye",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1036",
+     "full_name": "Ségolène O'Neil",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1037",
+     "full_name": "Inès Dupont",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1038",
+     "full_name": "Anne-Laure Étienne",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1039",
+     "full_name": "jean d'Aubigny",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1040",
+     "full_name": "Élodie d'Aubigny",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1041",
+     "full_name": "André Lefèvre",
+     "party": "DEM",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1042",
+     "full_name": "Émilie d'Aubigny",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1043",
+     "full_name": "Émilie Abad",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1044",
+     "full_name": "Anne-Laure Abad",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1045",
+     "full_name": "Émilie N'Diaye",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1046",
+     "full_name": "Inès d'Aubigny",
+     "party": "ECS",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1047",
+     "full_name": "Noël d'Aubigny",
+     "party": "LFI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1048",
+     "full_name": "Élodie N'Diaye",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1049",
+     "full_name": "Loïc Zola",
+     "party": "HOR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1050",
+     "full_name": "Anne-Laure Lefèvre",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1051",
+     "full_name": "jean N'Diaye",
+     "party": null,
+     "position": null
+    },
+    {
+     "deputy_id": "PA1052",
+     "full_name": "Agnès Zola",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1053",
+     "full_name": "Noël d'Aubigny",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1054",
+     "full_name": "jean d'Aubigny",
+     "party": "EPR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1055",
+     "full_name": "Cécile Étienne",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1056",
+     "full_name": "Jean Dupont",
+     "party": null,
+     "position": null
+    },
+    {
+     "deputy_id": "PA1057",
+     "full_name": "Cécile d'Aubigny",
+     "party": "LFI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1058",
+     "full_name": "Ségolène d'Aubigny",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1059",
+     "full_name": "Jean Çelik",
+     "party": null,
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1060",
+     "full_name": "Cécile Müller",
+     "party": "XYZ",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1061",
+     "full_name": "Émilie O'Neil",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1062",
+     "full_name": "Agnès Zola",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1063",
+     "full_name": "Loïc Müller",
+     "party": "DEM",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1064",
+     "full_name": "Inès Lefèvre",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1065",
+     "full_name": "Jean Zola",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1066",
+     "full_name": "Noël N'Diaye",
+     "party": "LFI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1067",
+     "full_name": "Anne-Laure Dupont",
+     "party": "NI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1068",
+     "full_name": "Émilie O'Neil",
+     "party": "ECS",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1069",
+     "full_name": "Ségolène Le Gall",
+     "party": "XYZ",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1070",
+     "full_name": "Noël de La Tour",
+     "party": "NI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1071",
+     "full_name": "Noël Étienne",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1072",
+     "full_name": "Maël Élie",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1073",
+     "full_name": "Noël Le Gall",
+     "party": "XYZ",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1074",
+     "full_name": "Noël Çelik",
+     "party": "HOR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1075",
+     "full_name": "Émilie Zola",
+     "party": "HOR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1076",
+     "full_name": "André Abad",
+     "party": "DEM",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1077",
+     "full_name": "Inès d'Aubigny",
+     "party": "UDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1078",
+     "full_name": "Inès Lefèvre",
+     "party": "NI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1079",
+     "full_name": "Élodie Zola",
+     "party": "EPR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1080",
+     "full_name": "Maël Çelik",
+     "party": "ECS",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1081",
+     "full_name": "Loïc Çelik",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1082",
+     "full_name": "Émilie Müller",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1083",
+     "full_name": "Noël Le Gall",
+     "party": "LIOT",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1084",
+     "full_name": "Noël d'Aubigny",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1085",
+     "full_name": "Agnès Dupont",
+     "party": "ECS",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1086",
+     "full_name": "Anne-Laure Le Gall",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1087",
+     "full_name": "Inès Dupont",
+     "party": "LFI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1088",
+     "full_name": "Cécile Lefèvre",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1089",
+     "full_name": "Loïc de La Tour",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1090",
+     "full_name": "Inès Dupont",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1091",
+     "full_name": "Éric Abad",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1092",
+     "full_name": "Anne-Laure Dupont",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1093",
+     "full_name": "Loïc Dupont",
+     "party": "SOC",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1094",
+     "full_name": "Éric O'Neil",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1095",
+     "full_name": "Noël Élie",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1096",
+     "full_name": "Élodie Élie",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1097",
+     "full_name": "Zoé N'Diaye",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1098",
+     "full_name": "Élodie Le Gall",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1099",
+     "full_name": "Émilie Lefevre",
+     "party": "LIOT",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1100",
+     "full_name": "jean Martin-Dupré",
+     "party": "ECS",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1101",
+     "full_name": "jean N'Diaye",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1102",
+     "full_name": "Élodie Dupont",
+     "party": "ECS",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1103",
+     "full_name": "André Martin-Dupré",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1104",
+     "full_name": "Ségolène Abad",
+     "party": "DR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1105",
+     "full_name": "Zoé Zola",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1106",
+     "full_name": "Noël Zola",
+     "party": "RN",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1107",
+     "full_name": "Zoé Lefevre",
+     "party": "EPR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1108",
+     "full_name": "André Le Gall",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1109",
+     "full_name": "André O'Neil",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1110",
+     "full_name": "Émilie Zola",
+     "party": "DR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1111",
+     "full_name": "Jean Zola",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1112",
+     "full_name": "jean Dupont",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1113",
+     "full_name": "Élodie Zola",
+     "party": "DR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1114",
+     "full_name": "Noël d'Aubigny",
+     "party": "LIOT",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1115",
+     "full_name": "Émilie Le Gall",
+     "party": "XYZ",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1116",
+     "full_name": "jean Martin-Dupré",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1117",
+     "full_name": "jean Martin-Dupré",
+     "party": "HOR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1118",
+     "full_name": "Ségolène Müller",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1119",
+     "full_name": "Cécile Lefèvre",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1120",
+     "full_name": "Ségolène de La Tour",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1121",
+     "full_name": "Anne-Laure Lefevre",
+     "party": "LIOT",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1122",
+     "full_name": "Élodie Abad",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1123",
+     "full_name": "Élodie Lefèvre",
+     "party": "RN",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1124",
+     "full_name": "André de La Tour",
+     "party": "LFI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1125",
+     "full_name": "Agnès Dupont",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1126",
+     "full_name": "Noël Élie",
+     "party": "HOR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1127",
+     "full_name": "Loïc Dupont",
+     "party": "NI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1128",
+     "full_name": "Éric O'Neil",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1129",
+     "full_name": "jean Müller",
+     "party": "SOC",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1130",
+     "full_name": "Élodie Müller",
+     "party": "ECS",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1131",
+     "full_name": "Ségolène Martin-Dupré",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1132",
+     "full_name": "Cécile Lefèvre",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1133",
+     "full_name": "Éric O'Neil",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1134",
+     "full_name": "jean Martin-Dupré",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1135",
+     "full_name": "Agnès N'Diaye",
+     "party": "UDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1136",
+     "full_name": "Anne-Laure Abad",
+     "party": "EPR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1137",
+     "full_name": "Anne-Laure Zola",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1138",
+     "full_name": "Noël Le Gall",
+     "party": "LIOT",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1139",
+     "full_name": "Noël Zola",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1140",
+     "full_name": "Zoé N'Diaye",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1141",
+     "full_name": "Maël Lefèvre",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1142",
+     "full_name": "Jean Lefevre",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1143",
+     "full_name": "André Lefevre",
+     "party": "NI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1144",
+     "full_name": "André de La Tour",
+     "party": "DR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1145",
+     "full_name": "jean O'Neil",
+     "party": "EPR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1146",
+     "full_name": "Loïc Étienne",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1147",
+     "full_name": "Jean Müller",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1148",
+     "full_name": "Anne-Laure Étienne",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1149",
+     "full_name": "Anne-Laure Lefevre",
+     "party": "DR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1150",
+     "full_name": "Élodie de La Tour",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1151",
+     "full_name": "Élodie Le Gall",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1152",
+     "full_name": "Éric N'Diaye",
+     "party": "LFI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1153",
+     "full_name": "André Lefèvre",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1154",
+     "full_name": "Loïc Élie",
+     "party": "RN",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1155",
+     "full_name": "Zoé de La Tour",
+     "party": "SOC",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1156",
+     "full_name": "Loïc Élie",
+     "party": "DEM",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1157",
+     "full_name": "Inès Lefèvre",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1158",
+     "full_name": "Zoé Çelik",
+     "party": null,
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1159",
+     "full_name": "André Dupont",
+     "party": "NI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1160",
+     "full_name": "Ségolène Élie",
+     "party": "SOC",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1161",
+     "full_name": "jean N'Diaye",
+     "party": "XYZ",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1162",
+     "full_name": "Inès Lefèvre",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1163",
+     "full_name": "jean O'Neil",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1164",
+     "full_name": "Loïc d'Aubigny",
+     "party": "ECS",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1165",
+     "full_name": "Ségolène O'Neil",
+     "party": "GDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1166",
+     "full_name": "Noël Dupont",
+     "party": "RN",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1167",
+     "full_name": "André d'Aubigny",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1168",
+     "full_name": "Éric Lefevre",
+     "party": "DEM",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1169",
+     "full_name": "Inès de La Tour",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1170",
+     "full_name": "jean Müller",
+     "party": "EPR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1171",
+     "full_name": "Zoé Dupont",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1172",
+     "full_name": "jean Zola",
+     "party": "DEM",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1173",
+     "full_name": "Loïc N'Diaye",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1174",
+     "full_name": "Élodie Lefevre",
+     "party": null,
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1175",
+     "full_name": "jean de La Tour",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1176",
+     "full_name": "jean Çelik",
+     "party": "HOR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1177",
+     "full_name": "Éric Müller",
+     "party": "NI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1178",
+     "full_name": "André Étienne",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1179",
+     "full_name": "Noël Martin-Dupré",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1180",
+     "full_name": "Émilie Élie",
+     "party": "XYZ",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1181",
+     "full_name": "Noël Çelik",
+     "party": "EPR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1182",
+     "full_name": "Agnès d'Aubigny",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1183",
+     "full_name": "Zoé Dupont",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1184",
+     "full_name": "Jean N'Diaye",
+     "party": "DR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1185",
+     "full_name": "Émilie Zola",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1186",
+     "full_name": "Éric Lefevre",
+     "party": "ECS",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1187",
+     "full_name": "Jean Lefevre",
+     "party": "EPR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1188",
+     "full_name": "Élodie Lefèvre",
+     "party": "HOR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1189",
+     "full_name": "Loïc Zola",
+     "party": "ECS",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1190",
+     "full_name": "Jean Çelik",
+     "party": null,
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1191",
+     "full_name": "Loïc Çelik",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1192",
+     "full_name": "Loïc Abad",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1193",
+     "full_name": "Maël Lefevre",
+     "party": "LIOT",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1194",
+     "full_name": "jean O'Neil",
+     "party": "LIOT",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1195",
+     "full_name": "jean Étienne",
+     "party": "DR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1196",
+     "full_name": "Émilie Zola",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1197",
+     "full_name": "André N'Diaye",
+     "party": null,
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1198",
+     "full_name": "Émilie de La Tour",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1199",
+     "full_name": "Cécile Dupont",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1200",
+     "full_name": "Jean Élie",
+     "party": "NI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1201",
+     "full_name": "Ségolène Lefèvre",
+     "party": "EPR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1202",
+     "full_name": "Inès Dupont",
+     "party": "DR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1203",
+     "full_name": "Loïc Müller",
+     "party": "DEM",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1204",
+     "full_name": "Élodie Martin-Dupré",
+     "party": "LIOT",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1205",
+     "full_name": "Élodie d'Aubigny",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1206",
+     "full_name": "Élodie Lefevre",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1207",
+     "full_name": "Jean Zola",
+     "party": "SOC",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1208",
+     "full_name": "Cécile Çelik",
+     "party": "LFI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1209",
+     "full_name": "Zoé Abad",
+     "party": "EPR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1210",
+     "full_name": "Éric Müller",
+     "party": "ECS",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1211",
+     "full_name": "Zoé Martin-Dupré",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1212",
+     "full_name": "Inès Dupont",
+     "party": "RN",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1213",
+     "full_name": "Élodie Dupont",
+     "party": "XYZ",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1214",
+     "full_name": "Jean Martin-Dupré",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1215",
+     "full_name": "Zoé Müller",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1216",
+     "full_name": "André Martin-Dupré",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1217",
+     "full_name": "Agnès N'Diaye",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1218",
+     "full_name": "Élodie Élie",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1219",
+     "full_name": "Zoé N'Diaye",
+     "party": "DEM",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1220",
+     "full_name": "Anne-Laure Lefèvre",
+     "party": "RN",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1221",
+     "full_name": "Zoé Martin-Dupré",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1222",
+     "full_name": "Maël Lefèvre",
+     "party": "XYZ",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1223",
+     "full_name": "Émilie Élie",
+     "party": "EPR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1224",
+     "full_name": "Zoé Çelik",
+     "party": "EPR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1225",
+     "full_name": "Maël d'Aubigny",
+     "party": "RN",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1226",
+     "full_name": "Maël N'Diaye",
+     "party": "XYZ",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1227",
+     "full_name": "Inès Étienne",
+     "party": "ECS",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1228",
+     "full_name": "Inès Élie",
+     "party": null,
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1229",
+     "full_name": "Émilie Martin-Dupré",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1230",
+     "full_name": "Zoé Çelik",
+     "party": "XYZ",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1231",
+     "full_name": "Ségolène O'Neil",
+     "party": "HOR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1232",
+     "full_name": "Élodie Lefevre",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1233",
+     "full_name": "Agnès Élie",
+     "party": "ECS",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1234",
+     "full_name": "André de La Tour",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1235",
+     "full_name": "Ségolène d'Aubigny",
+     "party": "EPR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1236",
+     "full_name": "Maël Lefevre",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1237",
+     "full_name": "Maël Müller",
+     "party": "DEM",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1238",
+     "full_name": "jean Martin-Dupré",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1239",
+     "full_name": "Zoé Martin-Dupré",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1240",
+     "full_name": "Agnès Le Gall",
+     "party": null,
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1241",
+     "full_name": "jean Élie",
+     "party": "UDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1242",
+     "full_name": "André Zola",
+     "party": "NI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1243",
+     "full_name": "Inès Zola",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1244",
+     "full_name": "Zoé N'Diaye",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1245",
+     "full_name": "Agnès Le Gall",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1246",
+     "full_name": "Agnès Çelik",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1247",
+     "full_name": "Élodie de La Tour",
+     "party": "DR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1248",
+     "full_name": "Éric Çelik",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1249",
+     "full_name": "Cécile Élie",
+     "party": "SOC",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1250",
+     "full_name": "Zoé Lefèvre",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1251",
+     "full_name": "Anne-Laure Müller",
+     "party": "UDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1252",
+     "full_name": "Anne-Laure Dupont",
+     "party": null,
+     "position": null
+    },
+    {
+     "deputy_id": "PA1253",
+     "full_name": "Noël Lefèvre",
+     "party": "SOC",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1254",
+     "full_name": "Maël de La Tour",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1255",
+     "full_name": "Zoé N'Diaye",
+     "party": "RN",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1256",
+     "full_name": "Loïc Müller",
+     "party": "DR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1257",
+     "full_name": "Jean Élie",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1258",
+     "full_name": "Inès O'Neil",
+     "party": "DEM",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1259",
+     "full_name": "Maël Müller",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1260",
+     "full_name": "Élodie Zola",
+     "party": "LIOT",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1261",
+     "full_name": "Agnès O'Neil",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1262",
+     "full_name": "Inès Martin-Dupré",
+     "party": "XYZ",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1263",
+     "full_name": "Élodie Le Gall",
+     "party": "GDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1264",
+     "full_name": "Zoé Dupont",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1265",
+     "full_name": "Ségolène Étienne",
+     "party": "ECS",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1266",
+     "full_name": "Élodie Élie",
+     "party": "UDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1267",
+     "full_name": "Ségolène Çelik",
+     "party": "ECS",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1268",
+     "full_name": "Éric Zola",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1269",
+     "full_name": "Élodie N'Diaye",
+     "party": "NI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1270",
+     "full_name": "Agnès Çelik",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1271",
+     "full_name": "Zoé Çelik",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1272",
+     "full_name": "Éric de La Tour",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1273",
+     "full_name": "Ségolène Lefevre",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1274",
+     "full_name": "Noël Le Gall",
+     "party": "SOC",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1275",
+     "full_name": "Loïc Lefèvre",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1276",
+     "full_name": "Agnès Le Gall",
+     "party": "HOR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1277",
+     "full_name": "Anne-Laure Le Gall",
+     "party": "EPR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1278",
+     "full_name": "Ségolène N'Diaye",
+     "party": "LIOT",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1279",
+     "full_name": "Maël Müller",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1280",
+     "full_name": "Émilie Lefevre",
+     "party": "GDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1281",
+     "full_name": "Inès N'Diaye",
+     "party": "LFI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1282",
+     "full_name": "Anne-Laure Çelik",
+     "party": "LIOT",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1283",
+     "full_name": "Agnès Müller",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1284",
+     "full_name": "Noël Lefèvre",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1285",
+     "full_name": "Inès Le Gall",
+     "party": null,
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1286",
+     "full_name": "Ségolène Müller",
+     "party": "LIOT",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1287",
+     "full_name": "jean Martin-Dupré",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1288",
+     "full_name": "Anne-Laure O'Neil",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1289",
+     "full_name": "André Lefèvre",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1290",
+     "full_name": "Élodie Çelik",
+     "party": "LIOT",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1291",
+     "full_name": "jean Lefevre",
+     "party": "ECS",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1292",
+     "full_name": "Élodie Élie",
+     "party": "NI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1293",
+     "full_name": "Jean Müller",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1294",
+     "full_name": "Anne-Laure Élie",
+     "party": null,
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1295",
+     "full_name": "Maël Çelik",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1296",
+     "full_name": "Zoé Élie",
+     "party": "UDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1297",
+     "full_name": "André de La Tour",
+     "party": "RN",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1298",
+     "full_name": "Zoé d'Aubigny",
+     "party": "ECS",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1299",
+     "full_name": "Anne-Laure Élie",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1300",
+     "full_name": "Inès Lefevre",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1301",
+     "full_name": "Jean N'Diaye",
+     "party": "HOR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1302",
+     "full_name": "Émilie Abad",
+     "party": "RN",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1303",
+     "full_name": "Ségolène N'Diaye",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1304",
+     "full_name": "jean Martin-Dupré",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1305",
+     "full_name": "Éric Le Gall",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1306",
+     "full_name": "Cécile Lefevre",
+     "party": "RN",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1307",
+     "full_name": "Noël Çelik",
+     "party": "EPR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1308",
+     "full_name": "Noël Le Gall",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1309",
+     "full_name": "Inès d'Aubigny",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1310",
+     "full_name": "Anne-Laure Zola",
+     "party": "LFI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1311",
+     "full_name": "Jean Élie",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1312",
+     "full_name": "Éric d'Aubigny",
+     "party": "SOC",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1313",
+     "full_name": "André Zola",
+     "party": "LIOT",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1314",
+     "full_name": "Ségolène N'Diaye",
+     "party": "RN",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1315",
+     "full_name": "Zoé N'Diaye",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1316",
+     "full_name": "André Martin-Dupré",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1317",
+     "full_name": "Noël Martin-Dupré",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1318",
+     "full_name": "Anne-Laure Lefèvre",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1319",
+     "full_name": "Noël Dupont",
+     "party": "DR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1320",
+     "full_name": "jean Lefèvre",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1321",
+     "full_name": "Inès Zola",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1322",
+     "full_name": "Zoé Élie",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1323",
+     "full_name": "Noël O'Neil",
+     "party": "RN",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1324",
+     "full_name": "Maël d'Aubigny",
+     "party": "EPR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1325",
+     "full_name": "Maël N'Diaye",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1326",
+     "full_name": "Zoé Çelik",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1327",
+     "full_name": "Agnès Le Gall",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1328",
+     "full_name": "Éric Martin-Dupré",
+     "party": "RN",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1329",
+     "full_name": "Noël Lefevre",
+     "party": null,
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1330",
+     "full_name": "Anne-Laure Müller",
+     "party": "ECS",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1331",
+     "full_name": "Émilie Le Gall",
+     "party": "DR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1332",
+     "full_name": "jean Abad",
+     "party": "EPR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1333",
+     "full_name": "Agnès Martin-Dupré",
+     "party": "SOC",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1334",
+     "full_name": "Inès Étienne",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1335",
+     "full_name": "Jean Zola",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1336",
+     "full_name": "Émilie N'Diaye",
+     "party": "XYZ",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1337",
+     "full_name": "jean Étienne",
+     "party": "GDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1338",
+     "full_name": "Noël de La Tour",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1339",
+     "full_name": "Agnès Élie",
+     "party": "EPR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1340",
+     "full_name": "Ségolène Çelik",
+     "party": "DR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1341",
+     "full_name": "Anne-Laure O'Neil",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1342",
+     "full_name": "Élodie Çelik",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1343",
+     "full_name": "jean Çelik",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1344",
+     "full_name": "Maël Çelik",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1345",
+     "full_name": "Émilie de La Tour",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1346",
+     "full_name": "jean Élie",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1347",
+     "full_name": "Élodie O'Neil",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1348",
+     "full_name": "Inès Étienne",
+     "party": "DR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1349",
+     "full_name": "Noël Çelik",
+     "party": "NI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1350",
+     "full_name": "Émilie Dupont",
+     "party": "RN",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1351",
+     "full_name": "Émilie Müller",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1352",
+     "full_name": "Agnès Le Gall",
+     "party": null,
+     "position": null
+    },
+    {
+     "deputy_id": "PA1353",
+     "full_name": "Anne-Laure Martin-Dupré",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1354",
+     "full_name": "Loïc Çelik",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1355",
+     "full_name": "Cécile Étienne",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1356",
+     "full_name": "Jean d'Aubigny",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1357",
+     "full_name": "jean Müller",
+     "party": "LFI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1358",
+     "full_name": "Inès O'Neil",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1359",
+     "full_name": "Éric Le Gall",
+     "party": "RN",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1360",
+     "full_name": "Émilie Le Gall",
+     "party": "XYZ",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1361",
+     "full_name": "Zoé Étienne",
+     "party": "RN",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1362",
+     "full_name": "Éric Étienne",
+     "party": "GDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1363",
+     "full_name": "Noël de La Tour",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1364",
+     "full_name": "Maël d'Aubigny",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1365",
+     "full_name": "Loïc Abad",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1366",
+     "full_name": "Éric Le Gall",
+     "party": "DEM",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1367",
+     "full_name": "Maël Lefevre",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1368",
+     "full_name": "Maël Martin-Dupré",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1369",
+     "full_name": "Ségolène Élie",
+     "party": "EPR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1370",
+     "full_name": "Cécile Müller",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1371",
+     "full_name": "Émilie Zola",
+     "party": "EPR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1372",
+     "full_name": "Maël d'Aubigny",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1373",
+     "full_name": "Maël d'Aubigny",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1374",
+     "full_name": "Anne-Laure Abad",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1375",
+     "full_name": "Zoé Müller",
+     "party": null,
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1376",
+     "full_name": "Cécile de La Tour",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1377",
+     "full_name": "Ségolène Lefevre",
+     "party": "ECS",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1378",
+     "full_name": "Noël Lefèvre",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1379",
+     "full_name": "Émilie Abad",
+     "party": "ECS",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1380",
+     "full_name": "Inès Le Gall",
+     "party": null,
+     "position": null
+    },
+    {
+     "deputy_id": "PA1381",
+     "full_name": "Cécile Le Gall",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1382",
+     "full_name": "Zoé N'Diaye",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1383",
+     "full_name": "Anne-Laure Martin-Dupré",
+     "party": "SOC",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1384",
+     "full_name": "Ségolène Le Gall",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1385",
+     "full_name": "Noël Müller",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1386",
+     "full_name": "Jean Zola",
+     "party": "HOR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1387",
+     "full_name": "Inès Çelik",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1388",
+     "full_name": "Inès d'Aubigny",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1389",
+     "full_name": "Ségolène Çelik",
+     "party": "LIOT",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1390",
+     "full_name": "Zoé O'Neil",
+     "party": "SOC",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1391",
+     "full_name": "Émilie Élie",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1392",
+     "full_name": "Éric O'Neil",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1393",
+     "full_name": "Émilie Dupont",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1394",
+     "full_name": "Agnès Martin-Dupré",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1395",
+     "full_name": "Loïc Dupont",
+     "party": "LIOT",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1396",
+     "full_name": "Zoé de La Tour",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1397",
+     "full_name": "Élodie Abad",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1398",
+     "full_name": "Jean Lefèvre",
+     "party": "DR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1399",
+     "full_name": "Zoé Lefevre",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1400",
+     "full_name": "Anne-Laure Le Gall",
+     "party": "ECS",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1401",
+     "full_name": "jean Müller",
+     "party": "SOC",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1402",
+     "full_name": "Maël Le Gall",
+     "party": "DEM",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1403",
+     "full_name": "Jean Lefevre",
+     "party": "ECS",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1404",
+     "full_name": "Inès de La Tour",
+     "party": "SOC",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1405",
+     "full_name": "Anne-Laure Çelik",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1406",
+     "full_name": "Agnès Dupont",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1407",
+     "full_name": "Noël Zola",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1408",
+     "full_name": "Éric Lefèvre",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1409",
+     "full_name": "Inès Le Gall",
+     "party": "LFI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1410",
+     "full_name": "Anne-Laure Çelik",
+     "party": "DEM",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1411",
+     "full_name": "Noël Çelik",
+     "party": "DEM",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1412",
+     "full_name": "André Müller",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1413",
+     "full_name": "Ségolène Martin-Dupré",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1414",
+     "full_name": "Agnès Müller",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1415",
+     "full_name": "André Müller",
+     "party": "LIOT",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1416",
+     "full_name": "Inès d'Aubigny",
+     "party": "RN",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1417",
+     "full_name": "Agnès Lefèvre",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1418",
+     "full_name": "Émilie Çelik",
+     "party": null,
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1419",
+     "full_name": "Jean Zola",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1420",
+     "full_name": "Éric Çelik",
+     "party": "DEM",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1421",
+     "full_name": "Maël Martin-Dupré",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1422",
+     "full_name": "Éric Abad",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1423",
+     "full_name": "Noël N'Diaye",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1424",
+     "full_name": "jean Abad",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1425",
+     "full_name": "jean Élie",
+     "party": "XYZ",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1426",
+     "full_name": "Ségolène Abad",
+     "party": "NI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1427",
+     "full_name": "Inès Zola",
+     "party": "ECS",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1428",
+     "full_name": "Inès Çelik",
+     "party": "DR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1429",
+     "full_name": "Inès Étienne",
+     "party": "LFI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1430",
+     "full_name": "Loïc Dupont",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1431",
+     "full_name": "jean Élie",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1432",
+     "full_name": "Élodie de La Tour",
+     "party": "XYZ",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1433",
+     "full_name": "Loïc Élie",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1434",
+     "full_name": "Anne-Laure Lefevre",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1435",
+     "full_name": "Maël Çelik",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1436",
+     "full_name": "Éric de La Tour",
+     "party": "LIOT",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1437",
+     "full_name": "Éric Martin-Dupré",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1438",
+     "full_name": "Éric Le Gall",
+     "party": "RN",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1439",
+     "full_name": "André Lefèvre",
+     "party": "RN",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1440",
+     "full_name": "Loïc d'Aubigny",
+     "party": null,
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1441",
+     "full_name": "jean Abad",
+     "party": "NI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1442",
+     "full_name": "Maël Étienne",
+     "party": "XYZ",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1443",
+     "full_name": "Jean Dupont",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1444",
+     "full_name": "Éric de La Tour",
+     "party": "DR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1445",
+     "full_name": "Agnès Étienne",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1446",
+     "full_name": "Élodie Lefèvre",
+     "party": null,
+     "position": null
+    },
+    {
+     "deputy_id": "PA1447",
+     "full_name": "Jean N'Diaye",
+     "party": "NI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1448",
+     "full_name": "Maël Élie",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1449",
+     "full_name": "Ségolène Abad",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1450",
+     "full_name": "Ségolène Lefèvre",
+     "party": "LFI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1451",
+     "full_name": "Jean Zola",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1452",
+     "full_name": "Émilie Abad",
+     "party": "XYZ",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1453",
+     "full_name": "Ségolène Çelik",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1454",
+     "full_name": "Noël Martin-Dupré",
+     "party": "XYZ",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1455",
+     "full_name": "Zoé d'Aubigny",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1456",
+     "full_name": "Jean Étienne",
+     "party": "LFI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1457",
+     "full_name": "Agnès Zola",
+     "party": "EPR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1458",
+     "full_name": "Zoé de La Tour",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1459",
+     "full_name": "Agnès Çelik",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1460",
+     "full_name": "Inès Étienne",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1461",
+     "full_name": "Cécile Zola",
+     "party": "EPR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1462",
+     "full_name": "Cécile Le Gall",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1463",
+     "full_name": "Zoé Lefèvre",
+     "party": "XYZ",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1464",
+     "full_name": "Agnès Çelik",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1465",
+     "full_name": "Ségolène Dupont",
+     "party": "RN",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1466",
+     "full_name": "Zoé Martin-Dupré",
+     "party": "GDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1467",
+     "full_name": "Élodie Le Gall",
+     "party": "SOC",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1468",
+     "full_name": "Éric d'Aubigny",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1469",
+     "full_name": "Inès N'Diaye",
+     "party": "DR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1470",
+     "full_name": "Inès Abad",
+     "party": "HOR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1471",
+     "full_name": "Émilie Abad",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1472",
+     "full_name": "Éric Abad",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1473",
+     "full_name": "Ségolène d'Aubigny",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1474",
+     "full_name": "Agnès Étienne",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1475",
+     "full_name": "Inès Lefevre",
+     "party": "LIOT",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1476",
+     "full_name": "Jean Zola",
+     "party": "GDR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1477",
+     "full_name": "Élodie Abad",
+     "party": "DEM",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1478",
+     "full_name": "Loïc Étienne",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1479",
+     "full_name": "Maël Zola",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1480",
+     "full_name": "jean Lefèvre",
+     "party": null,
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1481",
+     "full_name": "Maël Le Gall",
+     "party": "SOC",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1482",
+     "full_name": "Élodie Dupont",
+     "party": "HOR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1483",
+     "full_name": "Cécile Abad",
+     "party": "XYZ",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1484",
+     "full_name": "Zoé Müller",
+     "party": "EPR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1485",
+     "full_name": "Zoé Çelik",
+     "party": "NI",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1486",
+     "full_name": "Maël Élie",
+     "party": "LIOT",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1487",
+     "full_name": "Jean Lefèvre",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1488",
+     "full_name": "Noël Martin-Dupré",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1489",
+     "full_name": "Émilie Dupont",
+     "party": "UDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1490",
+     "full_name": "Zoé Élie",
+     "party": "DEM",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1491",
+     "full_name": "Agnès de La Tour",
+     "party": "EPR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1492",
+     "full_name": "André Müller",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1493",
+     "full_name": "Éric Zola",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1494",
+     "full_name": "Inès de La Tour",
+     "party": null,
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1495",
+     "full_name": "Maël Dupont",
+     "party": "LIOT",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1496",
+     "full_name": "Maël Dupont",
+     "party": "LFI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1497",
+     "full_name": "Zoé Çelik",
+     "party": "UDR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1498",
+     "full_name": "Zoé O'Neil",
+     "party": "NI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1499",
+     "full_name": "Agnès Dupont",
+     "party": "DEM",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1500",
+     "full_name": "jean Lefevre",
+     "party": "GDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1501",
+     "full_name": "jean O'Neil",
+     "party": "RN",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1502",
+     "full_name": "Émilie Lefevre",
+     "party": "SOC",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1503",
+     "full_name": "Anne-Laure N'Diaye",
+     "party": "XYZ",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1504",
+     "full_name": "Cécile Abad",
+     "party": "XYZ",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1505",
+     "full_name": "jean de La Tour",
+     "party": "XYZ",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1506",
+     "full_name": "Zoé d'Aubigny",
+     "party": "GDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1507",
+     "full_name": "Ségolène Lefevre",
+     "party": "LIOT",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1508",
+     "full_name": "Noël Martin-Dupré",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1509",
+     "full_name": "Agnès O'Neil",
+     "party": "DEM",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1510",
+     "full_name": "Agnès Zola",
+     "party": null,
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1511",
+     "full_name": "Loïc O'Neil",
+     "party": "XYZ",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1512",
+     "full_name": "Ségolène Dupont",
+     "party": "LIOT",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1513",
+     "full_name": "Éric Étienne",
+     "party": "UDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1514",
+     "full_name": "Noël d'Aubigny",
+     "party": "DR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1515",
+     "full_name": "Agnès N'Diaye",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1516",
+     "full_name": "Inès Zola",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1517",
+     "full_name": "Émilie Zola",
+     "party": "DR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1518",
+     "full_name": "Noël Abad",
+     "party": "NI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1519",
+     "full_name": "Émilie Le Gall",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1520",
+     "full_name": "Jean Çelik",
+     "party": "DEM",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1521",
+     "full_name": "Anne-Laure Martin-Dupré",
+     "party": "DR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1522",
+     "full_name": "André Étienne",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1523",
+     "full_name": "Émilie Lefèvre",
+     "party": null,
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1524",
+     "full_name": "Maël Abad",
+     "party": null,
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1525",
+     "full_name": "Agnès N'Diaye",
+     "party": "RN",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1526",
+     "full_name": "Loïc Martin-Dupré",
+     "party": "DR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1527",
+     "full_name": "André Zola",
+     "party": "ECS",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1528",
+     "full_name": "André Abad",
+     "party": "LIOT",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1529",
+     "full_name": "Ségolène Çelik",
+     "party": "NI",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1530",
+     "full_name": "Loïc Zola",
+     "party": "EPR",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1531",
+     "full_name": "André de La Tour",
+     "party": "HOR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1532",
+     "full_name": "Noël Müller",
+     "party": "EPR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1533",
+     "full_name": "André Étienne",
+     "party": "DEM",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1534",
+     "full_name": "Noël Çelik",
+     "party": "EPR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1535",
+     "full_name": "André O'Neil",
+     "party": "UDR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1536",
+     "full_name": "Cécile Lefèvre",
+     "party": "DEM",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1537",
+     "full_name": "Inès Martin-Dupré",
+     "party": "HOR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1538",
+     "full_name": "Loïc Martin-Dupré",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1539",
+     "full_name": "jean d'Aubigny",
+     "party": "XYZ",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1540",
+     "full_name": "Anne-Laure Martin-Dupré",
+     "party": "DEM",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1541",
+     "full_name": "jean Lefevre",
+     "party": null,
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1542",
+     "full_name": "Maël Étienne",
+     "party": "ECS",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1543",
+     "full_name": "Ségolène Lefevre",
+     "party": "DEM",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1544",
+     "full_name": "Inès Le Gall",
+     "party": "SOC",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1545",
+     "full_name": "Émilie de La Tour",
+     "party": "NI",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1546",
+     "full_name": "Noël Zola",
+     "party": "DEM",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1547",
+     "full_name": "Loïc de La Tour",
+     "party": "NI",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1548",
+     "full_name": "Ségolène O'Neil",
+     "party": "LIOT",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1549",
+     "full_name": "Maël O'Neil",
+     "party": null,
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1550",
+     "full_name": "Élodie Dupont",
+     "party": "ECS",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1551",
+     "full_name": "Jean Müller",
+     "party": null,
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1552",
+     "full_name": "Émilie de La Tour",
+     "party": "LIOT",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1553",
+     "full_name": "Agnès Lefèvre",
+     "party": "XYZ",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1554",
+     "full_name": "Inès Étienne",
+     "party": "EPR",
+     "position": "abstention"
+    },
+    {
+     "deputy_id": "PA1555",
+     "full_name": "jean O'Neil",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1556",
+     "full_name": "Éric N'Diaye",
+     "party": "DEM",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1557",
+     "full_name": "Maël Martin-Dupré",
+     "party": "SOC",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1558",
+     "full_name": "Éric Élie",
+     "party": "RN",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1559",
+     "full_name": "Anne-Laure N'Diaye",
+     "party": "XYZ",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1560",
+     "full_name": "Éric O'Neil",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1561",
+     "full_name": "Agnès O'Neil",
+     "party": "SOC",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1562",
+     "full_name": "André Lefevre",
+     "party": "EPR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1563",
+     "full_name": "Loïc O'Neil",
+     "party": "HOR",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1564",
+     "full_name": "Élodie Lefèvre",
+     "party": "RN",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1565",
+     "full_name": "Inès Zola",
+     "party": "XYZ",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1566",
+     "full_name": "Anne-Laure Abad",
+     "party": "DR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1567",
+     "full_name": "Élodie Zola",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1568",
+     "full_name": "Élodie O'Neil",
+     "party": "UDR",
+     "position": "nonVotant"
+    },
+    {
+     "deputy_id": "PA1569",
+     "full_name": "Loïc Lefèvre",
+     "party": "LFI",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1570",
+     "full_name": "Inès Lefèvre",
+     "party": "UDR",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1571",
+     "full_name": "Agnès O'Neil",
+     "party": null,
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1572",
+     "full_name": "Élodie Dupont",
+     "party": "LFI",
+     "position": "contre"
+    },
+    {
+     "deputy_id": "PA1573",
+     "full_name": "Éric O'Neil",
+     "party": "ECS",
+     "position": "excusé"
+    },
+    {
+     "deputy_id": "PA1574",
+     "full_name": "André Zola",
+     "party": "ECS",
+     "position": null
+    },
+    {
+     "deputy_id": "PA1575",
+     "full_name": "Émilie Lefèvre",
+     "party": "GDR",
+     "position": "pour"
+    },
+    {
+     "deputy_id": "PA1576",
+     "full_name": "Jean Müller",
+     "party": "DR",
+     "position": null
+    }
+   ],
+   "seats": [
+    {
+     "deputy_id": "PA1167",
+     "position": "absent",
+     "x": 290,
+     "y": 510,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1124",
+     "position": "abstention",
+     "x": 262,
+     "y": 510,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1316",
+     "position": "contre",
+     "x": 234,
+     "y": 510,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1492",
+     "position": "absent",
+     "x": 206,
+     "y": 510,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1148",
+     "position": "absent",
+     "x": 178,
+     "y": 510,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1310",
+     "position": "nonVotant",
+     "x": 150,
+     "y": 510,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1208",
+     "position": "absent",
+     "x": 122,
+     "y": 510,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1057",
+     "position": "abstention",
+     "x": 94,
+     "y": 510,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1001",
+     "position": "nonVotant",
+     "x": 66,
+     "y": 510,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1572",
+     "position": "contre",
+     "x": 38,
+     "y": 510,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1393",
+     "position": "contre",
+     "x": 10,
+     "y": 510,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1185",
+     "position": "contre",
+     "x": 10.5,
+     "y": 488.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1017",
+     "position": "nonVotant",
+     "x": 38.5,
+     "y": 489,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1152",
+     "position": "pour",
+     "x": 66.5,
+     "y": 489,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1309",
+     "position": "contre",
+     "x": 94.6,
+     "y": 488.8,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1169",
+     "position": "contre",
+     "x": 122.6,
+     "y": 488.8,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1087",
+     "position": "absent",
+     "x": 150.7,
+     "y": 488.5,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1429",
+     "position": "pour",
+     "x": 178.7,
+     "y": 488.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1409",
+     "position": "nonVotant",
+     "x": 206.8,
+     "y": 488.5,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1281",
+     "position": "abstention",
+     "x": 234.9,
+     "y": 488,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1424",
+     "position": "absent",
+     "x": 11.8,
+     "y": 467.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1112",
+     "position": "absent",
+     "x": 39.9,
+     "y": 468,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1311",
+     "position": "contre",
+     "x": 263,
+     "y": 488,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1456",
+     "position": "nonVotant",
+     "x": 68,
+     "y": 468.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1287",
+     "position": "contre",
+     "x": 291.2,
+     "y": 488,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1357",
+     "position": "abstention",
+     "x": 96.2,
+     "y": 467.6,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1430",
+     "position": "absent",
+     "x": 124.4,
+     "y": 467.7,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1569",
+     "position": "absent",
+     "x": 152.7,
+     "y": 467,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1496",
+     "position": "absent",
+     "x": 14.1,
+     "y": 446.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1367",
+     "position": "contre",
+     "x": 180.9,
+     "y": 467.1,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1368",
+     "position": "absent",
+     "x": 42.3,
+     "y": 447.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1047",
+     "position": "abstention",
+     "x": 70.6,
+     "y": 447.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1363",
+     "position": "absent",
+     "x": 209.1,
+     "y": 467.2,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1378",
+     "position": "contre",
+     "x": 99,
+     "y": 446.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1066",
+     "position": "abstention",
+     "x": 237.6,
+     "y": 466.2,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1450",
+     "position": "nonVotant",
+     "x": 127.3,
+     "y": 446.7,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1396",
+     "position": "contre",
+     "x": 17.2,
+     "y": 426.1,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1459",
+     "position": "absent",
+     "x": 45.6,
+     "y": 426.3,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1182",
+     "position": "absent",
+     "x": 266.1,
+     "y": 466.3,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1217",
+     "position": "absent",
+     "x": 156,
+     "y": 445.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1234",
+     "position": "absent",
+     "x": 74.1,
+     "y": 426.6,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1289",
+     "position": "pour",
+     "x": 184.5,
+     "y": 445.9,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1038",
+     "position": "absent",
+     "x": 294.6,
+     "y": 466.3,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1086",
+     "position": "nonVotant",
+     "x": 102.9,
+     "y": 425.6,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1050",
+     "position": "absent",
+     "x": 21.3,
+     "y": 405.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1341",
+     "position": "pour",
+     "x": 213,
+     "y": 446.1,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1033",
+     "position": "pour",
+     "x": 131.5,
+     "y": 425.9,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1355",
+     "position": "pour",
+     "x": 49.9,
+     "y": 405.7,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1088",
+     "position": "nonVotant",
+     "x": 78.6,
+     "y": 406.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1119",
+     "position": "absent",
+     "x": 160.6,
+     "y": 424.6,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1098",
+     "position": "abstention",
+     "x": 242.1,
+     "y": 444.7,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1263",
+     "position": "contre",
+     "x": 26.2,
+     "y": 384.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1206",
+     "position": "nonVotant",
+     "x": 107.8,
+     "y": 404.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1015",
+     "position": "abstention",
+     "x": 189.4,
+     "y": 424.9,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1048",
+     "position": "nonVotant",
+     "x": 55.1,
+     "y": 385.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1198",
+     "position": "abstention",
+     "x": 271.1,
+     "y": 444.9,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1519",
+     "position": "pour",
+     "x": 136.8,
+     "y": 405.4,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1280",
+     "position": "contre",
+     "x": 84.1,
+     "y": 385.9,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1575",
+     "position": "pour",
+     "x": 218.5,
+     "y": 425.3,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1229",
+     "position": "pour",
+     "x": 32.1,
+     "y": 364.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1272",
+     "position": "pour",
+     "x": 166.5,
+     "y": 403.9,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1362",
+     "position": "contre",
+     "x": 300.3,
+     "y": 445.1,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1408",
+     "position": "absent",
+     "x": 113.9,
+     "y": 384.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1268",
+     "position": "absent",
+     "x": 61.3,
+     "y": 365.2,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1334",
+     "position": "pour",
+     "x": 248.4,
+     "y": 423.6,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1162",
+     "position": "absent",
+     "x": 195.8,
+     "y": 404.4,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1337",
+     "position": "contre",
+     "x": 143.2,
+     "y": 385.2,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1500",
+     "position": "absent",
+     "x": 90.6,
+     "y": 366,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1320",
+     "position": "abstention",
+     "x": 38.8,
+     "y": 344.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1487",
+     "position": "absent",
+     "x": 68.3,
+     "y": 345.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1116",
+     "position": "nonVotant",
+     "x": 225.4,
+     "y": 405,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1335",
+     "position": "nonVotant",
+     "x": 121,
+     "y": 364.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1476",
+     "position": "abstention",
+     "x": 278.1,
+     "y": 424,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1081",
+     "position": "absent",
+     "x": 173.6,
+     "y": 383.6,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1373",
+     "position": "nonVotant",
+     "x": 98,
+     "y": 346.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1254",
+     "position": "absent",
+     "x": 46.3,
+     "y": 324.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1072",
+     "position": "pour",
+     "x": 150.8,
+     "y": 365.3,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1421",
+     "position": "pour",
+     "x": 203.6,
+     "y": 384.3,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1325",
+     "position": "absent",
+     "x": 76.2,
+     "y": 325.9,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1479",
+     "position": "pour",
+     "x": 256.4,
+     "y": 403.1,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1084",
+     "position": "nonVotant",
+     "x": 308.2,
+     "y": 424.6,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1095",
+     "position": "pour",
+     "x": 129.1,
+     "y": 344.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1071",
+     "position": "pour",
+     "x": 54.7,
+     "y": 305.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1284",
+     "position": "pour",
+     "x": 182,
+     "y": 363.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1385",
+     "position": "abstention",
+     "x": 106.4,
+     "y": 327.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1011",
+     "position": "contre",
+     "x": 233.8,
+     "y": 385.2,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1027",
+     "position": "abstention",
+     "x": 159.4,
+     "y": 346,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1118",
+     "position": "abstention",
+     "x": 85.1,
+     "y": 306.8,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1303",
+     "position": "pour",
+     "x": 287,
+     "y": 403.9,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1165",
+     "position": "contre",
+     "x": 212.6,
+     "y": 364.8,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1506",
+     "position": "absent",
+     "x": 138.3,
+     "y": 325.7,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1264",
+     "position": "abstention",
+     "x": 63.9,
+     "y": 286.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1016",
+     "position": "abstention",
+     "x": 115.7,
+     "y": 308.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1399",
+     "position": "pour",
+     "x": 191.6,
+     "y": 344.4,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1239",
+     "position": "abstention",
+     "x": 266.1,
+     "y": 383.4,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1466",
+     "position": "nonVotant",
+     "x": 94.7,
+     "y": 288.2,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1097",
+     "position": "abstention",
+     "x": 169.2,
+     "y": 327.2,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1085",
+     "position": "abstention",
+     "x": 243.6,
+     "y": 366.1,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1233",
+     "position": "pour",
+     "x": 73.9,
+     "y": 268,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1025",
+     "position": "absent",
+     "x": 318.1,
+     "y": 405,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1527",
+     "position": "abstention",
+     "x": 148.4,
+     "y": 307,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1574",
+     "position": "absent",
+     "x": 125.9,
+     "y": 290,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1400",
+     "position": "absent",
+     "x": 223,
+     "y": 345.9,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1330",
+     "position": "contre",
+     "x": 105.3,
+     "y": 270,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1102",
+     "position": "absent",
+     "x": 297.6,
+     "y": 384.7,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1550",
+     "position": "nonVotant",
+     "x": 202.4,
+     "y": 325.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1012",
+     "position": "contre",
+     "x": 84.7,
+     "y": 249.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1130",
+     "position": "absent",
+     "x": 179.9,
+     "y": 308.9,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1021",
+     "position": "nonVotant",
+     "x": 159.5,
+     "y": 288.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1379",
+     "position": "contre",
+     "x": 277.3,
+     "y": 364.5,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1471",
+     "position": "nonVotant",
+     "x": 137,
+     "y": 272.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1068",
+     "position": "contre",
+     "x": 254.8,
+     "y": 347.8,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1248",
+     "position": "nonVotant",
+     "x": 116.6,
+     "y": 252.2,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1186",
+     "position": "pour",
+     "x": 234.5,
+     "y": 327.8,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1210",
+     "position": "pour",
+     "x": 96.3,
+     "y": 232.3,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1573",
+     "position": "absent",
+     "x": 214.3,
+     "y": 307.8,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1046",
+     "position": "pour",
+     "x": 191.7,
+     "y": 291.3,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1227",
+     "position": "absent",
+     "x": 330.1,
+     "y": 386.6,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1427",
+     "position": "absent",
+     "x": 171.5,
+     "y": 271.4,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1002",
+     "position": "nonVotant",
+     "x": 148.9,
+     "y": 254.9,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1291",
+     "position": "pour",
+     "x": 128.7,
+     "y": 235.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1403",
+     "position": "absent",
+     "x": 108.6,
+     "y": 215.2,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1100",
+     "position": "absent",
+     "x": 310.1,
+     "y": 366.6,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1147",
+     "position": "nonVotant",
+     "x": 267.3,
+     "y": 330.3,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1354",
+     "position": "nonVotant",
+     "x": 290.1,
+     "y": 346.6,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1164",
+     "position": "abstention",
+     "x": 247.3,
+     "y": 310.4,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1146",
+     "position": "nonVotant",
+     "x": 204.5,
+     "y": 274.3,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1478",
+     "position": "nonVotant",
+     "x": 161.6,
+     "y": 238.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1189",
+     "position": "absent",
+     "x": 227.3,
+     "y": 290.6,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1080",
+     "position": "absent",
+     "x": 184.5,
+     "y": 254.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1435",
+     "position": "nonVotant",
+     "x": 141.6,
+     "y": 218.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1542",
+     "position": "abstention",
+     "x": 121.6,
+     "y": 198.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1267",
+     "position": "abstention",
+     "x": 175.1,
+     "y": 222.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1265",
+     "position": "absent",
+     "x": 155.3,
+     "y": 202.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1377",
+     "position": "abstention",
+     "x": 218.1,
+     "y": 258.1,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1298",
+     "position": "absent",
+     "x": 281,
+     "y": 313.8,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1464",
+     "position": "contre",
+     "x": 135.4,
+     "y": 182.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1333",
+     "position": "absent",
+     "x": 343.9,
+     "y": 369.5,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1561",
+     "position": "pour",
+     "x": 198.3,
+     "y": 238.3,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1044",
+     "position": "abstention",
+     "x": 261.2,
+     "y": 294,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1383",
+     "position": "absent",
+     "x": 324.1,
+     "y": 349.7,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1249",
+     "position": "absent",
+     "x": 241.3,
+     "y": 274.2,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1055",
+     "position": "pour",
+     "x": 304.3,
+     "y": 329.8,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1467",
+     "position": "nonVotant",
+     "x": 189.4,
+     "y": 206.8,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1042",
+     "position": "contre",
+     "x": 169.6,
+     "y": 187.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1502",
+     "position": "absent",
+     "x": 149.8,
+     "y": 167.3,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1312",
+     "position": "absent",
+     "x": 232.7,
+     "y": 242.7,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1305",
+     "position": "abstention",
+     "x": 212.9,
+     "y": 222.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1437",
+     "position": "contre",
+     "x": 256.4,
+     "y": 258.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1128",
+     "position": "abstention",
+     "x": 276.1,
+     "y": 278.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1493",
+     "position": "contre",
+     "x": 295.9,
+     "y": 298.3,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1404",
+     "position": "nonVotant",
+     "x": 164.9,
+     "y": 152.5,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1037",
+     "position": "pour",
+     "x": 184.7,
+     "y": 172.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1090",
+     "position": "pour",
+     "x": 204.4,
+     "y": 192.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1544",
+     "position": "nonVotant",
+     "x": 319.8,
+     "y": 314.3,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1157",
+     "position": "abstention",
+     "x": 339.7,
+     "y": 334.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1243",
+     "position": "abstention",
+     "x": 359.5,
+     "y": 353.9,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1356",
+     "position": "pour",
+     "x": 228.3,
+     "y": 208.3,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1443",
+     "position": "pour",
+     "x": 248.1,
+     "y": 228.1,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1129",
+     "position": "absent",
+     "x": 180.6,
+     "y": 138.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1401",
+     "position": "nonVotant",
+     "x": 272.3,
+     "y": 244.2,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1065",
+     "position": "pour",
+     "x": 200.4,
+     "y": 158.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1207",
+     "position": "absent",
+     "x": 292.1,
+     "y": 264.1,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1365",
+     "position": "contre",
+     "x": 220.1,
+     "y": 178.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1093",
+     "position": "absent",
+     "x": 311.9,
+     "y": 284,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1295",
+     "position": "abstention",
+     "x": 244.5,
+     "y": 194.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1372",
+     "position": "contre",
+     "x": 264.3,
+     "y": 214.5,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1481",
+     "position": "absent",
+     "x": 196.9,
+     "y": 125,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1557",
+     "position": "contre",
+     "x": 336.6,
+     "y": 300.1,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1274",
+     "position": "nonVotant",
+     "x": 216.7,
+     "y": 145.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1253",
+     "position": "absent",
+     "x": 236.5,
+     "y": 165.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1179",
+     "position": "contre",
+     "x": 356.6,
+     "y": 320.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1317",
+     "position": "pour",
+     "x": 289.1,
+     "y": 230.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1449",
+     "position": "contre",
+     "x": 309,
+     "y": 250.8,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1009",
+     "position": "absent",
+     "x": 376.6,
+     "y": 340.1,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1160",
+     "position": "nonVotant",
+     "x": 261.4,
+     "y": 181.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1131",
+     "position": "pour",
+     "x": 213.7,
+     "y": 112.3,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1271",
+     "position": "contre",
+     "x": 328.9,
+     "y": 270.9,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1155",
+     "position": "absent",
+     "x": 281.3,
+     "y": 201.7,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1250",
+     "position": "abstention",
+     "x": 233.6,
+     "y": 132.6,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1244",
+     "position": "abstention",
+     "x": 253.5,
+     "y": 152.8,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1390",
+     "position": "abstention",
+     "x": 306.7,
+     "y": 218.2,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1394",
+     "position": "absent",
+     "x": 231.1,
+     "y": 100.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1528",
+     "position": "nonVotant",
+     "x": 354.5,
+     "y": 287.3,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1522",
+     "position": "absent",
+     "x": 278.9,
+     "y": 169.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1415",
+     "position": "absent",
+     "x": 251,
+     "y": 120.8,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1313",
+     "position": "contre",
+     "x": 326.7,
+     "y": 238.6,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1282",
+     "position": "absent",
+     "x": 298.9,
+     "y": 189.9,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1121",
+     "position": "contre",
+     "x": 271,
+     "y": 141.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1318",
+     "position": "absent",
+     "x": 374.7,
+     "y": 307.6,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1288",
+     "position": "absent",
+     "x": 346.8,
+     "y": 259,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1290",
+     "position": "absent",
+     "x": 248.9,
+     "y": 89.2,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1204",
+     "position": "nonVotant",
+     "x": 395,
+     "y": 328.1,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1260",
+     "position": "contre",
+     "x": 325,
+     "y": 206.9,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1552",
+     "position": "absent",
+     "x": 297,
+     "y": 158.4,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1099",
+     "position": "absent",
+     "x": 269,
+     "y": 109.9,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1436",
+     "position": "nonVotant",
+     "x": 289.1,
+     "y": 130.7,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1029",
+     "position": "abstention",
+     "x": 317.2,
+     "y": 179.2,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1300",
+     "position": "absent",
+     "x": 345.3,
+     "y": 227.6,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1475",
+     "position": "nonVotant",
+     "x": 373.4,
+     "y": 276.1,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1304",
+     "position": "absent",
+     "x": 267.3,
+     "y": 78.8,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1194",
+     "position": "nonVotant",
+     "x": 287.4,
+     "y": 99.8,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1014",
+     "position": "absent",
+     "x": 365.6,
+     "y": 248.5,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1395",
+     "position": "abstention",
+     "x": 315.7,
+     "y": 148.3,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1495",
+     "position": "contre",
+     "x": 393.9,
+     "y": 297,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1486",
+     "position": "absent",
+     "x": 344,
+     "y": 196.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1193",
+     "position": "abstention",
+     "x": 307.7,
+     "y": 121,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1114",
+     "position": "pour",
+     "x": 286,
+     "y": 69.2,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1083",
+     "position": "abstention",
+     "x": 336,
+     "y": 169.4,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1138",
+     "position": "pour",
+     "x": 364.5,
+     "y": 217.9,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1389",
+     "position": "contre",
+     "x": 306.3,
+     "y": 90.5,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1512",
+     "position": "contre",
+     "x": 414.6,
+     "y": 318.2,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1507",
+     "position": "nonVotant",
+     "x": 334.9,
+     "y": 139.1,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1286",
+     "position": "contre",
+     "x": 393.1,
+     "y": 266.4,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1278",
+     "position": "abstention",
+     "x": 326.7,
+     "y": 112.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1548",
+     "position": "nonVotant",
+     "x": 305.2,
+     "y": 60.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1010",
+     "position": "absent",
+     "x": 385,
+     "y": 239.4,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1499",
+     "position": "contre",
+     "x": 363.6,
+     "y": 187.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1509",
+     "position": "nonVotant",
+     "x": 355.3,
+     "y": 160.8,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1076",
+     "position": "absent",
+     "x": 325.6,
+     "y": 82.2,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1533",
+     "position": "contre",
+     "x": 414,
+     "y": 288.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1041",
+     "position": "absent",
+     "x": 384.3,
+     "y": 209.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1153",
+     "position": "abstention",
+     "x": 354.5,
+     "y": 131,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1412",
+     "position": "abstention",
+     "x": 324.7,
+     "y": 52.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1410",
+     "position": "absent",
+     "x": 346.1,
+     "y": 104.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1540",
+     "position": "abstention",
+     "x": 345.3,
+     "y": 74.7,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1381",
+     "position": "abstention",
+     "x": 383.7,
+     "y": 179.9,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1536",
+     "position": "contre",
+     "x": 375.2,
+     "y": 153.2,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1477",
+     "position": "absent",
+     "x": 413.6,
+     "y": 258.4,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1096",
+     "position": "abstention",
+     "x": 405.1,
+     "y": 231.7,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1420",
+     "position": "nonVotant",
+     "x": 344.6,
+     "y": 45.3,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1366",
+     "position": "contre",
+     "x": 435.1,
+     "y": 310.3,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1168",
+     "position": "absent",
+     "x": 374.5,
+     "y": 123.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1556",
+     "position": "pour",
+     "x": 365.9,
+     "y": 97.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1258",
+     "position": "nonVotant",
+     "x": 404.6,
+     "y": 202.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1520",
+     "position": "pour",
+     "x": 365.3,
+     "y": 68.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1175",
+     "position": "abstention",
+     "x": 395.4,
+     "y": 146.8,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1172",
+     "position": "contre",
+     "x": 364.7,
+     "y": 39,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1156",
+     "position": "nonVotant",
+     "x": 434.9,
+     "y": 281.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1063",
+     "position": "absent",
+     "x": 404.2,
+     "y": 173.4,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1203",
+     "position": "nonVotant",
+     "x": 386,
+     "y": 91.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1402",
+     "position": "absent",
+     "x": 394.9,
+     "y": 117.8,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1237",
+     "position": "contre",
+     "x": 425.6,
+     "y": 225.6,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1411",
+     "position": "nonVotant",
+     "x": 385.5,
+     "y": 62.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1308",
+     "position": "abstention",
+     "x": 434.7,
+     "y": 252.1,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1546",
+     "position": "absent",
+     "x": 385.1,
+     "y": 33.7,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1543",
+     "position": "absent",
+     "x": 425.4,
+     "y": 196.8,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1413",
+     "position": "abstention",
+     "x": 415.9,
+     "y": 141.5,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1326",
+     "position": "abstention",
+     "x": 406.3,
+     "y": 86.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1183",
+     "position": "abstention",
+     "x": 425.1,
+     "y": 168.1,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1490",
+     "position": "nonVotant",
+     "x": 456.3,
+     "y": 304.6,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1219",
+     "position": "contre",
+     "x": 415.6,
+     "y": 112.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1315",
+     "position": "abstention",
+     "x": 406,
+     "y": 57.7,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1004",
+     "position": "pour",
+     "x": 405.7,
+     "y": 29.2,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1491",
+     "position": "abstention",
+     "x": 456.3,
+     "y": 276.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1339",
+     "position": "abstention",
+     "x": 446.6,
+     "y": 220.9,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1474",
+     "position": "absent",
+     "x": 426.9,
+     "y": 82.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1052",
+     "position": "absent",
+     "x": 436.7,
+     "y": 137.3,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1457",
+     "position": "contre",
+     "x": 446.4,
+     "y": 192.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1005",
+     "position": "absent",
+     "x": 456.2,
+     "y": 247.6,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1562",
+     "position": "absent",
+     "x": 426.7,
+     "y": 53.9,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1136",
+     "position": "contre",
+     "x": 436.5,
+     "y": 109,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1277",
+     "position": "absent",
+     "x": 446.3,
+     "y": 164.1,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1018",
+     "position": "absent",
+     "x": 426.5,
+     "y": 25.5,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1199",
+     "position": "absent",
+     "x": 447.7,
+     "y": 79.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1461",
+     "position": "pour",
+     "x": 447.5,
+     "y": 51,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1150",
+     "position": "absent",
+     "x": 457.7,
+     "y": 134.4,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1079",
+     "position": "nonVotant",
+     "x": 467.8,
+     "y": 217.8,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1223",
+     "position": "absent",
+     "x": 447.4,
+     "y": 22.8,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1371",
+     "position": "nonVotant",
+     "x": 478,
+     "y": 301.2,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1013",
+     "position": "nonVotant",
+     "x": 457.6,
+     "y": 106.2,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1554",
+     "position": "abstention",
+     "x": 467.8,
+     "y": 189.6,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1332",
+     "position": "contre",
+     "x": 478,
+     "y": 273,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1054",
+     "position": "abstention",
+     "x": 467.7,
+     "y": 161.5,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1187",
+     "position": "abstention",
+     "x": 478,
+     "y": 244.9,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1134",
+     "position": "absent",
+     "x": 468.6,
+     "y": 77.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1170",
+     "position": "absent",
+     "x": 468.5,
+     "y": 49.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1145",
+     "position": "pour",
+     "x": 468.4,
+     "y": 21,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1000",
+     "position": "absent",
+     "x": 478.8,
+     "y": 132.6,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1530",
+     "position": "contre",
+     "x": 478.8,
+     "y": 104.6,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1324",
+     "position": "contre",
+     "x": 489.3,
+     "y": 216.2,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1181",
+     "position": "abstention",
+     "x": 489.2,
+     "y": 188.2,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1307",
+     "position": "absent",
+     "x": 489.2,
+     "y": 160.2,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1534",
+     "position": "absent",
+     "x": 489.5,
+     "y": 76.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1532",
+     "position": "pour",
+     "x": 489.5,
+     "y": 48.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1235",
+     "position": "contre",
+     "x": 489.5,
+     "y": 20.1,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1369",
+     "position": "pour",
+     "x": 500,
+     "y": 300,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1201",
+     "position": "pour",
+     "x": 500,
+     "y": 272,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1209",
+     "position": "absent",
+     "x": 500,
+     "y": 244,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1224",
+     "position": "contre",
+     "x": 500,
+     "y": 132,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1455",
+     "position": "absent",
+     "x": 500,
+     "y": 104,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1322",
+     "position": "absent",
+     "x": 510.5,
+     "y": 20.1,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1107",
+     "position": "pour",
+     "x": 510.5,
+     "y": 48.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1484",
+     "position": "pour",
+     "x": 510.5,
+     "y": 76.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1276",
+     "position": "contre",
+     "x": 510.8,
+     "y": 160.2,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1531",
+     "position": "absent",
+     "x": 510.8,
+     "y": 188.2,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1405",
+     "position": "pour",
+     "x": 510.7,
+     "y": 216.2,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1137",
+     "position": "absent",
+     "x": 521.2,
+     "y": 104.6,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1462",
+     "position": "pour",
+     "x": 521.2,
+     "y": 132.6,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1205",
+     "position": "pour",
+     "x": 531.6,
+     "y": 21,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1482",
+     "position": "nonVotant",
+     "x": 531.5,
+     "y": 49.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1188",
+     "position": "abstention",
+     "x": 531.4,
+     "y": 77.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1351",
+     "position": "pour",
+     "x": 522,
+     "y": 244.9,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1075",
+     "position": "absent",
+     "x": 522,
+     "y": 273,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1422",
+     "position": "pour",
+     "x": 532.3,
+     "y": 161.5,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1560",
+     "position": "absent",
+     "x": 532.2,
+     "y": 189.6,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1470",
+     "position": "pour",
+     "x": 522,
+     "y": 301.2,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1537",
+     "position": "abstention",
+     "x": 542.4,
+     "y": 106.2,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1035",
+     "position": "absent",
+     "x": 552.6,
+     "y": 22.8,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1176",
+     "position": "absent",
+     "x": 532.2,
+     "y": 217.8,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1020",
+     "position": "absent",
+     "x": 542.3,
+     "y": 134.4,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1142",
+     "position": "absent",
+     "x": 552.5,
+     "y": 51,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1117",
+     "position": "abstention",
+     "x": 552.3,
+     "y": 79.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1301",
+     "position": "absent",
+     "x": 573.5,
+     "y": 25.5,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1111",
+     "position": "pour",
+     "x": 553.7,
+     "y": 164.1,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1386",
+     "position": "contre",
+     "x": 563.5,
+     "y": 109,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1419",
+     "position": "absent",
+     "x": 573.3,
+     "y": 53.9,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1451",
+     "position": "pour",
+     "x": 543.8,
+     "y": 247.6,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1563",
+     "position": "absent",
+     "x": 553.6,
+     "y": 192.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1049",
+     "position": "contre",
+     "x": 563.3,
+     "y": 137.3,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1344",
+     "position": "pour",
+     "x": 573.1,
+     "y": 82.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1074",
+     "position": "abstention",
+     "x": 553.4,
+     "y": 220.9,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1338",
+     "position": "absent",
+     "x": 543.7,
+     "y": 276.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1126",
+     "position": "absent",
+     "x": 594.3,
+     "y": 29.2,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1508",
+     "position": "absent",
+     "x": 594,
+     "y": 57.7,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1058",
+     "position": "absent",
+     "x": 543.7,
+     "y": 304.6,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1231",
+     "position": "contre",
+     "x": 584.4,
+     "y": 112.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1327",
+     "position": "contre",
+     "x": 574.9,
+     "y": 168.1,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1283",
+     "position": "pour",
+     "x": 593.7,
+     "y": 86.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1515",
+     "position": "pour",
+     "x": 584.1,
+     "y": 141.5,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1062",
+     "position": "pour",
+     "x": 574.6,
+     "y": 196.8,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1144",
+     "position": "absent",
+     "x": 614.9,
+     "y": 33.7,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1034",
+     "position": "absent",
+     "x": 565.3,
+     "y": 252.1,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1008",
+     "position": "contre",
+     "x": 614.5,
+     "y": 62.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1566",
+     "position": "nonVotant",
+     "x": 574.4,
+     "y": 225.6,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1149",
+     "position": "absent",
+     "x": 605.1,
+     "y": 117.8,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1521",
+     "position": "pour",
+     "x": 614,
+     "y": 91.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1122",
+     "position": "contre",
+     "x": 565.1,
+     "y": 281.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1247",
+     "position": "absent",
+     "x": 595.8,
+     "y": 173.4,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1151",
+     "position": "pour",
+     "x": 635.3,
+     "y": 39,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1031",
+     "position": "abstention",
+     "x": 604.6,
+     "y": 146.8,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1347",
+     "position": "pour",
+     "x": 634.7,
+     "y": 68.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1113",
+     "position": "nonVotant",
+     "x": 595.4,
+     "y": 202.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1331",
+     "position": "absent",
+     "x": 564.9,
+     "y": 310.3,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1110",
+     "position": "abstention",
+     "x": 625.5,
+     "y": 123.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1517",
+     "position": "absent",
+     "x": 634.1,
+     "y": 97.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1444",
+     "position": "absent",
+     "x": 655.4,
+     "y": 45.3,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1006",
+     "position": "contre",
+     "x": 594.9,
+     "y": 231.7,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1428",
+     "position": "absent",
+     "x": 586.4,
+     "y": 258.4,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1202",
+     "position": "absent",
+     "x": 624.8,
+     "y": 153.2,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1348",
+     "position": "abstention",
+     "x": 616.3,
+     "y": 179.9,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1469",
+     "position": "abstention",
+     "x": 654.7,
+     "y": 74.7,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1195",
+     "position": "nonVotant",
+     "x": 653.9,
+     "y": 104.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1398",
+     "position": "absent",
+     "x": 675.3,
+     "y": 52.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1576",
+     "position": "absent",
+     "x": 645.5,
+     "y": 131,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1184",
+     "position": "absent",
+     "x": 615.7,
+     "y": 209.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1526",
+     "position": "contre",
+     "x": 586,
+     "y": 288.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1256",
+     "position": "absent",
+     "x": 674.4,
+     "y": 82.2,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1030",
+     "position": "contre",
+     "x": 644.7,
+     "y": 160.8,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1514",
+     "position": "nonVotant",
+     "x": 636.4,
+     "y": 187.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1319",
+     "position": "absent",
+     "x": 615,
+     "y": 239.4,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1423",
+     "position": "pour",
+     "x": 694.8,
+     "y": 60.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1139",
+     "position": "pour",
+     "x": 673.3,
+     "y": 112.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1407",
+     "position": "pour",
+     "x": 606.9,
+     "y": 266.4,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1104",
+     "position": "abstention",
+     "x": 585.4,
+     "y": 318.2,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1340",
+     "position": "abstention",
+     "x": 665.1,
+     "y": 139.1,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1458",
+     "position": "contre",
+     "x": 693.7,
+     "y": 90.5,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1221",
+     "position": "contre",
+     "x": 635.5,
+     "y": 217.9,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1140",
+     "position": "contre",
+     "x": 664,
+     "y": 169.4,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1270",
+     "position": "nonVotant",
+     "x": 714,
+     "y": 69.2,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1125",
+     "position": "nonVotant",
+     "x": 692.3,
+     "y": 121,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1406",
+     "position": "nonVotant",
+     "x": 606.1,
+     "y": 297,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1245",
+     "position": "absent",
+     "x": 656,
+     "y": 196.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1414",
+     "position": "nonVotant",
+     "x": 684.3,
+     "y": 148.3,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1135",
+     "position": "contre",
+     "x": 634.4,
+     "y": 248.5,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1103",
+     "position": "absent",
+     "x": 712.6,
+     "y": 99.8,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1216",
+     "position": "pour",
+     "x": 732.7,
+     "y": 78.8,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1535",
+     "position": "absent",
+     "x": 626.6,
+     "y": 276.1,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1353",
+     "position": "absent",
+     "x": 654.7,
+     "y": 227.6,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1251",
+     "position": "contre",
+     "x": 682.8,
+     "y": 179.2,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1397",
+     "position": "absent",
+     "x": 710.9,
+     "y": 130.7,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1040",
+     "position": "pour",
+     "x": 605,
+     "y": 328.1,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1218",
+     "position": "absent",
+     "x": 675,
+     "y": 206.9,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1266",
+     "position": "contre",
+     "x": 703,
+     "y": 158.4,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1032",
+     "position": "pour",
+     "x": 731,
+     "y": 109.9,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1568",
+     "position": "nonVotant",
+     "x": 751.1,
+     "y": 89.2,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1567",
+     "position": "absent",
+     "x": 653.2,
+     "y": 259,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1043",
+     "position": "absent",
+     "x": 625.3,
+     "y": 307.6,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1489",
+     "position": "contre",
+     "x": 729,
+     "y": 141.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1045",
+     "position": "pour",
+     "x": 701.1,
+     "y": 189.9,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1468",
+     "position": "absent",
+     "x": 673.3,
+     "y": 238.6,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1513",
+     "position": "pour",
+     "x": 749,
+     "y": 120.8,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1094",
+     "position": "nonVotant",
+     "x": 721.1,
+     "y": 169.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1387",
+     "position": "pour",
+     "x": 645.5,
+     "y": 287.3,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1077",
+     "position": "abstention",
+     "x": 768.9,
+     "y": 100.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1460",
+     "position": "absent",
+     "x": 693.3,
+     "y": 218.2,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1064",
+     "position": "absent",
+     "x": 746.5,
+     "y": 152.8,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1570",
+     "position": "absent",
+     "x": 766.4,
+     "y": 132.6,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1358",
+     "position": "nonVotant",
+     "x": 718.7,
+     "y": 201.7,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1321",
+     "position": "pour",
+     "x": 671.1,
+     "y": 270.9,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1343",
+     "position": "absent",
+     "x": 786.3,
+     "y": 112.3,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1241",
+     "position": "contre",
+     "x": 623.4,
+     "y": 340.1,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1346",
+     "position": "pour",
+     "x": 738.6,
+     "y": 181.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1431",
+     "position": "nonVotant",
+     "x": 691,
+     "y": 250.8,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1214",
+     "position": "absent",
+     "x": 643.4,
+     "y": 320.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1293",
+     "position": "absent",
+     "x": 710.9,
+     "y": 230.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1028",
+     "position": "absent",
+     "x": 763.5,
+     "y": 165.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1433",
+     "position": "absent",
+     "x": 783.3,
+     "y": 145.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1007",
+     "position": "absent",
+     "x": 663.4,
+     "y": 300.1,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1538",
+     "position": "absent",
+     "x": 803.1,
+     "y": 125,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1173",
+     "position": "absent",
+     "x": 735.7,
+     "y": 214.5,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1448",
+     "position": "pour",
+     "x": 755.5,
+     "y": 194.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1141",
+     "position": "absent",
+     "x": 688.1,
+     "y": 284,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1053",
+     "position": "nonVotant",
+     "x": 779.9,
+     "y": 178.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1453",
+     "position": "nonVotant",
+     "x": 707.9,
+     "y": 264.1,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1473",
+     "position": "absent",
+     "x": 799.6,
+     "y": 158.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1120",
+     "position": "pour",
+     "x": 727.7,
+     "y": 244.2,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1384",
+     "position": "nonVotant",
+     "x": 819.4,
+     "y": 138.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1497",
+     "position": "contre",
+     "x": 751.9,
+     "y": 228.1,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1171",
+     "position": "nonVotant",
+     "x": 640.5,
+     "y": 353.9,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1296",
+     "position": "abstention",
+     "x": 771.7,
+     "y": 208.3,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1211",
+     "position": "absent",
+     "x": 660.3,
+     "y": 334.1,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1215",
+     "position": "absent",
+     "x": 680.2,
+     "y": 314.3,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1525",
+     "position": "abstention",
+     "x": 795.6,
+     "y": 192.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1297",
+     "position": "pour",
+     "x": 815.3,
+     "y": 172.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1439",
+     "position": "abstention",
+     "x": 835.1,
+     "y": 152.5,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1220",
+     "position": "absent",
+     "x": 704.1,
+     "y": 298.3,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1306",
+     "position": "pour",
+     "x": 723.9,
+     "y": 278.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1232",
+     "position": "absent",
+     "x": 743.6,
+     "y": 258.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1123",
+     "position": "contre",
+     "x": 767.3,
+     "y": 242.7,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1564",
+     "position": "pour",
+     "x": 787.1,
+     "y": 222.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1302",
+     "position": "contre",
+     "x": 850.2,
+     "y": 167.3,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1350",
+     "position": "absent",
+     "x": 830.4,
+     "y": 187.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1558",
+     "position": "absent",
+     "x": 810.6,
+     "y": 206.8,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1359",
+     "position": "abstention",
+     "x": 695.7,
+     "y": 329.8,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1438",
+     "position": "pour",
+     "x": 675.9,
+     "y": 349.7,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1328",
+     "position": "nonVotant",
+     "x": 758.7,
+     "y": 274.2,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1133",
+     "position": "absent",
+     "x": 738.8,
+     "y": 294,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1392",
+     "position": "absent",
+     "x": 656.1,
+     "y": 369.5,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1416",
+     "position": "nonVotant",
+     "x": 801.7,
+     "y": 238.3,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1212",
+     "position": "nonVotant",
+     "x": 864.6,
+     "y": 182.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1257",
+     "position": "absent",
+     "x": 719,
+     "y": 313.8,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1163",
+     "position": "absent",
+     "x": 781.9,
+     "y": 258.1,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1501",
+     "position": "pour",
+     "x": 844.7,
+     "y": 202.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1154",
+     "position": "pour",
+     "x": 824.9,
+     "y": 222.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1275",
+     "position": "absent",
+     "x": 878.4,
+     "y": 198.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1225",
+     "position": "nonVotant",
+     "x": 858.4,
+     "y": 218.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1166",
+     "position": "absent",
+     "x": 815.5,
+     "y": 254.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1024",
+     "position": "pour",
+     "x": 772.7,
+     "y": 290.6,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1323",
+     "position": "contre",
+     "x": 838.4,
+     "y": 238.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1106",
+     "position": "absent",
+     "x": 795.5,
+     "y": 274.3,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1465",
+     "position": "absent",
+     "x": 752.7,
+     "y": 310.4,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1314",
+     "position": "absent",
+     "x": 709.9,
+     "y": 346.6,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1361",
+     "position": "nonVotant",
+     "x": 732.7,
+     "y": 330.3,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1255",
+     "position": "absent",
+     "x": 689.9,
+     "y": 366.6,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1382",
+     "position": "absent",
+     "x": 891.4,
+     "y": 215.2,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1246",
+     "position": "nonVotant",
+     "x": 871.3,
+     "y": 235.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1445",
+     "position": "pour",
+     "x": 669.9,
+     "y": 386.6,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1240",
+     "position": "abstention",
+     "x": 828.5,
+     "y": 271.4,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1352",
+     "position": "absent",
+     "x": 851.1,
+     "y": 254.9,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1417",
+     "position": "nonVotant",
+     "x": 808.3,
+     "y": 291.3,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1553",
+     "position": "absent",
+     "x": 785.7,
+     "y": 307.8,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1261",
+     "position": "nonVotant",
+     "x": 903.7,
+     "y": 232.3,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1571",
+     "position": "absent",
+     "x": 765.5,
+     "y": 327.8,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1510",
+     "position": "abstention",
+     "x": 883.4,
+     "y": 252.2,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1159",
+     "position": "pour",
+     "x": 745.2,
+     "y": 347.8,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1178",
+     "position": "pour",
+     "x": 863,
+     "y": 272.2,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1108",
+     "position": "abstention",
+     "x": 722.7,
+     "y": 364.5,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1143",
+     "position": "pour",
+     "x": 840.5,
+     "y": 288.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1197",
+     "position": "nonVotant",
+     "x": 820.1,
+     "y": 308.9,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1109",
+     "position": "absent",
+     "x": 915.3,
+     "y": 249.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1242",
+     "position": "contre",
+     "x": 702.4,
+     "y": 384.7,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1374",
+     "position": "pour",
+     "x": 797.6,
+     "y": 325.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1067",
+     "position": "contre",
+     "x": 894.7,
+     "y": 270,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1092",
+     "position": "absent",
+     "x": 777,
+     "y": 345.9,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1252",
+     "position": "absent",
+     "x": 874.1,
+     "y": 290,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1294",
+     "position": "nonVotant",
+     "x": 681.9,
+     "y": 405,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1299",
+     "position": "abstention",
+     "x": 851.6,
+     "y": 307,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1434",
+     "position": "pour",
+     "x": 926.1,
+     "y": 268,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1503",
+     "position": "absent",
+     "x": 756.4,
+     "y": 366.1,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1559",
+     "position": "nonVotant",
+     "x": 830.8,
+     "y": 327.2,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1483",
+     "position": "contre",
+     "x": 905.3,
+     "y": 288.2,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1504",
+     "position": "absent",
+     "x": 733.9,
+     "y": 383.4,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1376",
+     "position": "nonVotant",
+     "x": 808.4,
+     "y": 344.4,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1132",
+     "position": "pour",
+     "x": 884.3,
+     "y": 308.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1060",
+     "position": "abstention",
+     "x": 936.1,
+     "y": 286.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1370",
+     "position": "nonVotant",
+     "x": 861.7,
+     "y": 325.7,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1022",
+     "position": "absent",
+     "x": 787.4,
+     "y": 364.8,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1342",
+     "position": "abstention",
+     "x": 713,
+     "y": 403.9,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1019",
+     "position": "pour",
+     "x": 914.9,
+     "y": 306.8,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1432",
+     "position": "absent",
+     "x": 840.6,
+     "y": 346,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1213",
+     "position": "contre",
+     "x": 766.2,
+     "y": 385.2,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1292",
+     "position": "absent",
+     "x": 893.6,
+     "y": 327.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1174",
+     "position": "abstention",
+     "x": 818,
+     "y": 363.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1446",
+     "position": "absent",
+     "x": 945.3,
+     "y": 305.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1269",
+     "position": "absent",
+     "x": 691.8,
+     "y": 424.6,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1452",
+     "position": "abstention",
+     "x": 870.9,
+     "y": 344.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1418",
+     "position": "contre",
+     "x": 743.6,
+     "y": 403.1,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1345",
+     "position": "absent",
+     "x": 923.8,
+     "y": 325.9,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1545",
+     "position": "pour",
+     "x": 796.4,
+     "y": 384.3,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1180",
+     "position": "abstention",
+     "x": 849.2,
+     "y": 365.3,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1391",
+     "position": "pour",
+     "x": 953.7,
+     "y": 324.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1115",
+     "position": "abstention",
+     "x": 902,
+     "y": 346.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1360",
+     "position": "abstention",
+     "x": 721.9,
+     "y": 424,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1003",
+     "position": "contre",
+     "x": 826.4,
+     "y": 383.6,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1523",
+     "position": "nonVotant",
+     "x": 879,
+     "y": 364.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1082",
+     "position": "pour",
+     "x": 774.6,
+     "y": 405,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1336",
+     "position": "contre",
+     "x": 931.7,
+     "y": 345.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1061",
+     "position": "abstention",
+     "x": 961.2,
+     "y": 344.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1196",
+     "position": "abstention",
+     "x": 909.4,
+     "y": 366,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1091",
+     "position": "absent",
+     "x": 856.8,
+     "y": 385.2,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1472",
+     "position": "absent",
+     "x": 804.2,
+     "y": 404.4,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1177",
+     "position": "absent",
+     "x": 751.6,
+     "y": 423.6,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1388",
+     "position": "pour",
+     "x": 938.7,
+     "y": 365.2,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1494",
+     "position": "nonVotant",
+     "x": 699.7,
+     "y": 445.1,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1228",
+     "position": "abstention",
+     "x": 886.1,
+     "y": 384.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1285",
+     "position": "contre",
+     "x": 833.5,
+     "y": 403.9,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1380",
+     "position": "absent",
+     "x": 967.9,
+     "y": 364.6,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1078",
+     "position": "absent",
+     "x": 781.5,
+     "y": 425.3,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1262",
+     "position": "absent",
+     "x": 915.9,
+     "y": 385.9,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1516",
+     "position": "nonVotant",
+     "x": 863.2,
+     "y": 405.4,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1565",
+     "position": "pour",
+     "x": 728.9,
+     "y": 444.9,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1441",
+     "position": "contre",
+     "x": 944.9,
+     "y": 385.4,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1059",
+     "position": "abstention",
+     "x": 810.6,
+     "y": 424.9,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1190",
+     "position": "contre",
+     "x": 892.2,
+     "y": 404.9,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1039",
+     "position": "absent",
+     "x": 973.8,
+     "y": 384.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1539",
+     "position": "abstention",
+     "x": 757.9,
+     "y": 444.7,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1505",
+     "position": "absent",
+     "x": 839.4,
+     "y": 424.6,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1056",
+     "position": "absent",
+     "x": 921.4,
+     "y": 406.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1425",
+     "position": "abstention",
+     "x": 950.1,
+     "y": 405.7,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1200",
+     "position": "pour",
+     "x": 868.5,
+     "y": 425.9,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1541",
+     "position": "abstention",
+     "x": 787,
+     "y": 446.1,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1480",
+     "position": "contre",
+     "x": 978.7,
+     "y": 405.4,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1238",
+     "position": "pour",
+     "x": 705.4,
+     "y": 466.3,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1551",
+     "position": "abstention",
+     "x": 897.1,
+     "y": 425.6,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1051",
+     "position": "absent",
+     "x": 815.5,
+     "y": 445.9,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1101",
+     "position": "pour",
+     "x": 925.9,
+     "y": 426.6,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1161",
+     "position": "abstention",
+     "x": 733.9,
+     "y": 466.3,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1447",
+     "position": "nonVotant",
+     "x": 844,
+     "y": 445.7,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1555",
+     "position": "absent",
+     "x": 954.4,
+     "y": 426.3,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1192",
+     "position": "pour",
+     "x": 982.8,
+     "y": 426.1,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1191",
+     "position": "abstention",
+     "x": 872.7,
+     "y": 446.7,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1440",
+     "position": "nonVotant",
+     "x": 762.4,
+     "y": 466.2,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1089",
+     "position": "pour",
+     "x": 901,
+     "y": 446.5,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1547",
+     "position": "absent",
+     "x": 790.9,
+     "y": 467.2,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1127",
+     "position": "absent",
+     "x": 929.4,
+     "y": 447.3,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1511",
+     "position": "absent",
+     "x": 957.7,
+     "y": 447.1,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1524",
+     "position": "pour",
+     "x": 819.1,
+     "y": 467.1,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1364",
+     "position": "abstention",
+     "x": 985.9,
+     "y": 446.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1442",
+     "position": "contre",
+     "x": 847.3,
+     "y": 467,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1236",
+     "position": "nonVotant",
+     "x": 875.6,
+     "y": 467.7,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1222",
+     "position": "absent",
+     "x": 708.8,
+     "y": 488,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1259",
+     "position": "pour",
+     "x": 903.8,
+     "y": 467.6,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1279",
+     "position": "pour",
+     "x": 932,
+     "y": 468.1,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1226",
+     "position": "absent",
+     "x": 737,
+     "y": 488,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1549",
+     "position": "contre",
+     "x": 960.1,
+     "y": 468,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1518",
+     "position": "contre",
+     "x": 988.2,
+     "y": 467.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1349",
+     "position": "nonVotant",
+     "x": 765.1,
+     "y": 488,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1070",
+     "position": "pour",
+     "x": 793.2,
+     "y": 488.5,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1073",
+     "position": "contre",
+     "x": 821.3,
+     "y": 488.5,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1329",
+     "position": "contre",
+     "x": 849.3,
+     "y": 488.5,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1454",
+     "position": "contre",
+     "x": 877.4,
+     "y": 488.8,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1488",
+     "position": "pour",
+     "x": 905.4,
+     "y": 488.8,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1426",
+     "position": "nonVotant",
+     "x": 933.5,
+     "y": 489,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1529",
+     "position": "abstention",
+     "x": 961.5,
+     "y": 489,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1069",
+     "position": "contre",
+     "x": 989.5,
+     "y": 488.9,
+     "ring": 10
+    },
+    {
+     "deputy_id": "PA1273",
+     "position": "nonVotant",
+     "x": 710,
+     "y": 510,
+     "ring": 0
+    },
+    {
+     "deputy_id": "PA1026",
+     "position": "nonVotant",
+     "x": 738,
+     "y": 510,
+     "ring": 1
+    },
+    {
+     "deputy_id": "PA1036",
+     "position": "pour",
+     "x": 766,
+     "y": 510,
+     "ring": 2
+    },
+    {
+     "deputy_id": "PA1023",
+     "position": "pour",
+     "x": 794,
+     "y": 510,
+     "ring": 3
+    },
+    {
+     "deputy_id": "PA1158",
+     "position": "contre",
+     "x": 822,
+     "y": 510,
+     "ring": 4
+    },
+    {
+     "deputy_id": "PA1230",
+     "position": "absent",
+     "x": 850,
+     "y": 510,
+     "ring": 5
+    },
+    {
+     "deputy_id": "PA1485",
+     "position": "nonVotant",
+     "x": 878,
+     "y": 510,
+     "ring": 6
+    },
+    {
+     "deputy_id": "PA1463",
+     "position": "absent",
+     "x": 906,
+     "y": 510,
+     "ring": 7
+    },
+    {
+     "deputy_id": "PA1375",
+     "position": "nonVotant",
+     "x": 934,
+     "y": 510,
+     "ring": 8
+    },
+    {
+     "deputy_id": "PA1498",
+     "position": "pour",
+     "x": 962,
+     "y": 510,
+     "ring": 9
+    },
+    {
+     "deputy_id": "PA1105",
+     "position": "pour",
+     "x": 990,
+     "y": 510,
+     "ring": 10
+    }
+   ],
+   "arcs": [
+    {
+     "group": "LFI",
+     "seatCount": 37,
+     "counts": {
+      "pour": 2,
+      "contre": 11,
+      "abstention": 6,
+      "nonVotant": 6,
+      "absent": 12
+     },
+     "startAngle": 3.141592653589793,
+     "endAngle": 2.940138705266011
+    },
+    {
+     "group": "GDR",
+     "seatCount": 60,
+     "counts": {
+      "pour": 17,
+      "contre": 6,
+      "abstention": 12,
+      "nonVotant": 9,
+      "absent": 16
+     },
+     "startAngle": 2.940138705266011,
+     "endAngle": 2.6134566269031207
+    },
+    {
+     "group": "ECS",
+     "seatCount": 39,
+     "counts": {
+      "pour": 5,
+      "contre": 4,
+      "abstention": 6,
+      "nonVotant": 10,
+      "absent": 14
+     },
+     "startAngle": 2.6134566269031207,
+     "endAngle": 2.401113275967242
+    },
+    {
+     "group": "SOC",
+     "seatCount": 46,
+     "counts": {
+      "pour": 9,
+      "contre": 10,
+      "abstention": 9,
+      "nonVotant": 6,
+      "absent": 12
+     },
+     "startAngle": 2.401113275967242,
+     "endAngle": 2.1506570158890264
+    },
+    {
+     "group": "LIOT",
+     "seatCount": 34,
+     "counts": {
+      "pour": 2,
+      "contre": 7,
+      "abstention": 5,
+      "nonVotant": 7,
+      "absent": 13
+     },
+     "startAngle": 2.1506570158890264,
+     "endAngle": 1.9655371714833887
+    },
+    {
+     "group": "DEM",
+     "seatCount": 37,
+     "counts": {
+      "pour": 2,
+      "contre": 7,
+      "abstention": 11,
+      "nonVotant": 7,
+      "absent": 10
+     },
+     "startAngle": 1.9655371714833887,
+     "endAngle": 1.7640832231596064
+    },
+    {
+     "group": "EPR",
+     "seatCount": 41,
+     "counts": {
+      "pour": 8,
+      "contre": 7,
+      "abstention": 6,
+      "nonVotant": 3,
+      "absent": 17
+     },
+     "startAngle": 1.7640832231596064,
+     "endAngle": 1.5408504696116316
+    },
+    {
+     "group": "HOR",
+     "seatCount": 33,
+     "counts": {
+      "pour": 9,
+      "contre": 4,
+      "abstention": 4,
+      "nonVotant": 1,
+      "absent": 15
+     },
+     "startAngle": 1.5408504696116316,
+     "endAngle": 1.361175326512042
+    },
+    {
+     "group": "DR",
+     "seatCount": 42,
+     "counts": {
+      "pour": 9,
+      "contre": 9,
+      "abstention": 6,
+      "nonVotant": 4,
+      "absent": 14
+     },
+     "startAngle": 1.361175326512042,
+     "endAngle": 1.132497871658019
+    },
+    {
+     "group": "UDR",
+     "seatCount": 54,
+     "counts": {
+      "pour": 10,
+      "contre": 6,
+      "abstention": 2,
+      "nonVotant": 12,
+      "absent": 24
+     },
+     "startAngle": 1.132497871658019,
+     "endAngle": 0.8384840011314179
+    },
+    {
+     "group": "RN",
+     "seatCount": 33,
+     "counts": {
+      "pour": 7,
+      "contre": 3,
+      "abstention": 3,
+      "nonVotant": 5,
+      "absent": 15
+     },
+     "startAngle": 0.8384840011314179,
+     "endAngle": 0.6588088580318283
+    },
+    {
+     "group": "Non inscrit",
+     "seatCount": 121,
+     "counts": {
+      "pour": 27,
+      "contre": 19,
+      "abstention": 23,
+      "nonVotant": 20,
+      "absent": 32
+     },
+     "startAngle": 0.6588088580318283,
+     "endAngle": -1.1102230246251565e-16
+    }
+   ]
+  }
+ ]
+}

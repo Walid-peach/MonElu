@@ -147,31 +147,54 @@ maestro() {
     "$("$IOS_DIR/scripts/install-maestro.sh")" "$@"
 }
 
-# Runs maestro/NAME.yaml in light then dark mode. Screenshots are written to
-# build/screenshots/NAME/, prefixed `light-` and `dark-`, replacing any from a
-# previous run, so an agent always knows where to find them.
-flow() {
-    local name="${1:?usage: ios.sh flow NAME}"
-    local file="$IOS_DIR/maestro/$name.yaml"
-    [[ -f "$file" ]] || { echo "No such flow: maestro/$name.yaml" >&2; exit 2; }
-    local bundle_id id out debug appearance
-    bundle_id="$(install_app)"
+# Runs the given flows in light then dark mode, in one Maestro launch per
+# appearance (each launch costs about a minute of driver start-up).
+# Screenshots land in build/screenshots/<flow>/, prefixed `light-` and
+# `dark-`, replacing any from a previous run, so an agent always knows where
+# to find them.
+run_flows() {
+    local bundle_id="$1"
+    shift
+    local id files=() name appearance debug png flow_name
     id="$(simulator_id)"
-    out="$IOS_DIR/build/screenshots/$name"
+    for name in "$@"; do
+        [[ -f "$IOS_DIR/maestro/$name.yaml" ]] || { echo "No such flow: maestro/$name.yaml" >&2; exit 2; }
+        files+=("$IOS_DIR/maestro/$name.yaml")
+        rm -rf "$IOS_DIR/build/screenshots/$name"
+        mkdir -p "$IOS_DIR/build/screenshots/$name"
+    done
     # Maestro's own output (logs, view hierarchy, screenshots) per run; ios.yml
-    # uploads it when a flow fails. It ignores the working directory, so the
-    # screenshots are moved out of it into $out.
-    debug="$BUILD_ROOT/maestro/$name"
-    rm -rf "$out" "$debug" && mkdir -p "$out"
+    # uploads it when a flow fails. Maestro ignores the working directory, so
+    # each flow's screenshots are moved out of it afterwards.
+    debug="$BUILD_ROOT/maestro"
+    rm -rf "$debug"
     for appearance in light dark; do
         xcrun simctl ui "$id" appearance "$appearance"
         maestro --device "$id" test --test-output-dir "$debug/$appearance" \
-            -e APP_ID="$bundle_id" -e SCREENSHOT_PREFIX="$appearance-" "$file"
-        find "$debug/$appearance" -name '*.png' -path '*takeScreenshot*' -exec mv {} "$out/" \;
+            -e APP_ID="$bundle_id" -e SCREENSHOT_PREFIX="$appearance-" "${files[@]}"
+        while IFS= read -r png; do
+            # .../<flow>/takeScreenshot/<name>.png
+            flow_name="$(basename "$(dirname "$(dirname "$png")")")"
+            [[ -d "$IOS_DIR/build/screenshots/$flow_name" ]] && mv "$png" "$IOS_DIR/build/screenshots/$flow_name/"
+        done < <(find "$debug/$appearance" -name '*.png' -path '*takeScreenshot*')
     done
     xcrun simctl ui "$id" appearance light
-    echo "Screenshots: $out"
-    ls "$out"
+    for name in "$@"; do
+        echo "Screenshots: $IOS_DIR/build/screenshots/$name"
+        ls "$IOS_DIR/build/screenshots/$name"
+    done
+}
+
+flow() {
+    local name="${1:?usage: ios.sh flow NAME}"
+    run_flows "$(install_app)" "$name"
+}
+
+# Every flow ios.yml runs on each PR, against one build and one install.
+SMOKE_FLOWS=(tabs routes votes)
+
+smoke() {
+    run_flows "$(install_app)" "${SMOKE_FLOWS[@]}"
 }
 
 case "${1:-}" in
@@ -180,7 +203,7 @@ case "${1:-}" in
     test) test_all ;;
     run) run ;;
     flow) flow "${2:-}" ;;
-    smoke) flow tabs && flow routes && flow votes ;;
+    smoke) smoke ;;
     *)
         echo "usage: $0 {generate|build|test|run|flow NAME|smoke}" >&2
         exit 2

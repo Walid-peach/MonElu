@@ -14,6 +14,11 @@ let package = Package(
             // (ADR-041 §4): the app bundles it rather than keeping its own.
             resources: [.copy("Reference")]
         ),
-        .testTarget(name: "MonEluCoreTests", dependencies: ["MonEluCore"]),
+        .testTarget(
+            name: "MonEluCoreTests",
+            dependencies: ["MonEluCore"],
+            // hemicycle.json: the golden fixture hemicycle.ts writes (#461).
+            resources: [.copy("Fixtures")]
+        ),
     ]
 )

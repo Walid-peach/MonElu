@@ -26,7 +26,7 @@ ARGUMENTS: a flow name from `ios/maestro/` (without `.yaml`). Default: `tabs`, w
 - One file per journey in `ios/maestro/`, starting with `appId: ${APP_ID}`.
 - Tap by the visible French label (`tapOn: "Votes"`), assert what the user should see, and `takeScreenshot: ${SCREENSHOT_PREFIX}<n>-<step>` at each state worth reviewing, so the light and dark runs do not overwrite each other.
 - Start with `launchApp: clearState: true`, so a flow never depends on a previous run.
-- A flow that `ios.yml` should run on every PR is added to the `smoke` command in `ios/scripts/ios.sh`.
+- A flow that `ios.yml` should run on every PR is added to `SMOKE_FLOWS` in `ios/scripts/ios.sh`.
 
 ## Reporting
 

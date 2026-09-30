@@ -34,7 +34,14 @@ appId: ${APP_ID}
     timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}3-vote-detail
+# The chart is one accessibility element labelled "Hémicycle" (what VoiceOver
+# reads); the screen's own id masks ids nested inside it.
+- scrollUntilVisible:
+    element: "Hémicycle"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-vote-hemicycle
 - scrollUntilVisible:
     element: "Positions par groupe"
     direction: DOWN
-- takeScreenshot: ${SCREENSHOT_PREFIX}4-vote-positions
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-vote-positions

@@ -57,11 +57,18 @@ The work is tracked under epic #429, one phase epic at a time.
 - A feature lives in `MonEluFeatures` as four parts, after `Votes/`: plain models, a `…Service` protocol with a `Live…Service` on the generated client, an `@Observable` model when the screen has state beyond loading, and views whose content is a separate view taking plain models.
   That last split is what makes a screen snapshot-testable without a network: snapshot the content view, built from a recorded API response in `Tests/…/Fixtures/`.
   The app target only maps tabs and routes to screens (`RootTabView`, `RouteDestination`) and hands each its service from `AppServices`.
+- The hemicycle layout (`MonEluCore.Hemicycle`) is a port of `frontend/src/lib/hemicycle.ts`, held to it by a golden fixture: `frontend/scripts/hemicycle-fixture.ts` runs the TypeScript over fixed deputies and writes `Packages/MonEluCore/Tests/MonEluCoreTests/Fixtures/hemicycle.json`, and `HemicycleTests` must reproduce every seat and arc.
+  Change the layout on the website first, run `npm run export:hemicycle-fixture` in `frontend/` (its Jest test fails while the fixture is stale), then make the Swift match. Never edit the fixture by hand.
+  JavaScript's sort is stable and Swift's is not: a ported sort carries the original index as its last key.
+- A `Canvas` has no size of its own and collapses to zero height inside a scroll view; size it from its width (`WidthDrivenAspect` in `HemicycleChart.swift`).
+- A test that reads a view's properties is `@MainActor`, or Swift 6's isolation check aborts the test process.
 - Dates are written with `MonEluFormat` (French, Paris time), never with the device's locale or zone.
 - Tallying what the API returned for display (positions per group) is fine; a scrutin's result, totals and any rate always come from the API.
 - A snapshot of a view containing `NavigationLink` hosts it in a `NavigationStack`, or the link renders disabled and dimmed.
 - Screen snapshots in `MonEluFeaturesTests` render at 2x, and at 1x for the accessibility variants (`checkSnapshot` in `Support.swift`): the repository refuses files over 500 KB, and a whole screen at 3x passes that. Keep a fixture to what shows each layout case rather than a full response.
 - A Maestro flow on live data asserts on accessibility ids and fixed labels, never on content that changes with the day's scrutins, and calls `waitForAnimationToEnd` before a screenshot.
+  A screen-level accessibility id masks ids nested inside it, so target an element inside a screen by its visible text or accessibility label.
+  Never use an `optional` tap for something that may not appear: it waits out a long timeout. Use `runFlow` with `when: visible`, as `confirm-open-link.yaml` does.
 - A screen gets its data through a `Loader` (`MonEluCore`) rendered by `LoadStateView` (`MonEluUI`), never by calling the client from a view.
   That one pattern gives every screen the same loading, empty, offline and error states, a retry, and pull-to-refresh; the content must be a `List` or `ScrollView`.
 - Offline and server failures are different states with different wording (`LoadFailure`); a failed refresh keeps the content and shows `RefreshFailureBanner`.
@@ -121,7 +128,7 @@ make ios-build      # build the app for the Simulator
 make ios-test       # app tests + every package's tests on the Simulator
 make ios-run        # build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
-make ios-smoke      # the smoke flows ios.yml runs (tabs, link routing, votes)
+make ios-smoke      # every flow in SMOKE_FLOWS (scripts/ios.sh), in one Maestro launch per appearance
 ```
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.
