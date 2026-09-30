@@ -74,11 +74,19 @@ jobs:
           xcrun simctl boot "$id"
           echo "IOS_SIMULATOR_ID=$id" >> "$GITHUB_ENV"
 
+      # Not hashFiles(): on this image it once timed out after 120 s and failed
+      # the job before any test ran. The dependency manifests are few and known.
+      - name: Compute the cache key
+        id: cache-key
+        run: |
+          digest=$(cat ios/.package.resolved ios/Packages/*/Package.resolved ios/Packages/*/Package.swift | shasum -a 256 | cut -c1-16)
+          echo "key=ios-build-${{ runner.os }}-xcode-27.0-$digest" >> "$GITHUB_OUTPUT"
+
       - name: Cache Swift packages and build products
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/ios-build
-          key: ios-build-${{ runner.os }}-xcode-27.0-${{ hashFiles('ios/.package.resolved', 'ios/Packages/*/Package.resolved', 'ios/Packages/*/Package.swift') }}
+          key: ${{ steps.cache-key.outputs.key }}
           restore-keys: ios-build-${{ runner.os }}-xcode-27.0-
 
       - name: Build and test
