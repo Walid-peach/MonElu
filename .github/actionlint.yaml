@@ -1,0 +1,5 @@
+# actionlint's runner catalogue predates GitHub's Xcode 27 preview image,
+# which ios.yml runs on (#449).
+self-hosted-runner:
+  labels:
+    - xcode-27

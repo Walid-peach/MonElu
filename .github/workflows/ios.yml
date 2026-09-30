@@ -42,10 +42,13 @@ jobs:
     # Xcode 27 is served only on this image (a GitHub public preview label).
     runs-on: xcode-27
     timeout-minutes: 60
-    env:
-      IOS_BUILD_ROOT: ${{ runner.temp }}/ios-build
     steps:
       - uses: actions/checkout@v4
+
+      # The runner context is not available in job-level `env`, so the build
+      # root shared by the test and smoke steps is exported from a step.
+      - name: Set the build root
+        run: echo "IOS_BUILD_ROOT=$RUNNER_TEMP/ios-build" >> "$GITHUB_ENV"
 
       - name: Select Xcode
         run: |
