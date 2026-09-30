@@ -52,6 +52,16 @@ The work is tracked under epic #429, one phase epic at a time.
   Views read the feature switches and caveats from `@Environment(\.appConfiguration)`.
 - `ReferenceData` decodes `data/reference/*.json`, which `MonEluCore` bundles through the symlink `Sources/MonEluCore/Reference`.
 
+## Building a screen
+
+- A screen gets its data through a `Loader` (`MonEluCore`) rendered by `LoadStateView` (`MonEluUI`), never by calling the client from a view.
+  That one pattern gives every screen the same loading, empty, offline and error states, a retry, and pull-to-refresh; the content must be a `List` or `ScrollView`.
+- Offline and server failures are different states with different wording (`LoadFailure`); a failed refresh keeps the content and shows `RefreshFailureBanner`.
+- Navigation to a deputy or a vote goes through `Router.open(_:)` with an `AppRoute`, from any tab.
+  `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
+- `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
+- A Maestro flow that follows a `monelu://` link runs the `confirm-open-link.yaml` subflow after `openLink`: iOS asks before opening a custom-scheme link.
+
 ## Design
 
 - Colors come only from `Palette` (`MonEluUI`), whose tokens are color sets in `Colors.xcassets` with a light and a dark value each, mirroring the website's `--dp-*` variables in `frontend/src/app/globals.css`.
@@ -85,7 +95,7 @@ When a snapshot fails, the run's `snapshot-diffs` artifact holds the image the t
 | `Packages/MonEluUI` | Design tokens (`Palette`, `Typography`), shared components and their snapshot tests, environment values |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
-| `maestro/` | Maestro flows; `tabs.yaml` is the smoke flow |
+| `maestro/` | Maestro flows; `tabs.yaml` and `routes.yaml` are the smoke flows |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 
 Feature code goes in a package, not in the app target, so it can be tested on its own.
@@ -102,7 +112,7 @@ make ios-build      # build the app for the Simulator
 make ios-test       # app tests + every package's tests on the Simulator
 make ios-run        # build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
-make ios-smoke      # the smoke flow ios.yml runs (every tab)
+make ios-smoke      # the smoke flows ios.yml runs (every tab, then link routing)
 ```
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.

@@ -8,6 +8,7 @@ struct MonEluApp: App {
 
     init() {
         Typography.registerFonts()
+        MonEluAPI.configureURLCache()
     }
 
     var body: some Scene {

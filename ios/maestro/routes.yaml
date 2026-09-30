@@ -1,0 +1,32 @@
+# Navigation flow (#459): a link opens a deputy and a vote in their own tabs.
+# The screens are stubs until the Députés (#462) and Votes (#460) tabs land;
+# this proves the routing they will plug into.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Mon député"
+    timeout: 15000
+
+- openLink: "monelu://deputes/PA1008"
+# iOS asks before following a custom-scheme link; confirm it when it shows.
+- runFlow:
+    file: confirm-open-link.yaml
+- assertVisible:
+    id: "route.deputy.PA1008"
+- assertVisible: "Député PA1008"
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-deputy-route
+
+- openLink: "monelu://votes/VTANR5L17V8434"
+# iOS asks before following a custom-scheme link; confirm it when it shows.
+- runFlow:
+    file: confirm-open-link.yaml
+- assertVisible:
+    id: "route.vote.VTANR5L17V8434"
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-vote-route
+
+# Back returns to the tab's root screen.
+- tapOn: "Votes"
+- assertVisible:
+    id: "screen.votes"
