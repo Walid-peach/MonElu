@@ -41,6 +41,8 @@ WEB_SOURCES = {
     "negativeBackground": ("--dp-badge-neg-bg", "--dp-badge-neg-bg"),
     "trackBackground": ("--dp-track-bg", "--dp-track-bg"),
     "accent": ("#C9302C", "--dp-red"),  # red.civic in tailwind.config.ts
+    # POSITION_COLORS.abstention in HemicycleChart.tsx, not theme-aware there.
+    "seatAbstention": ("#D97706", "#D97706"),
 }
 
 

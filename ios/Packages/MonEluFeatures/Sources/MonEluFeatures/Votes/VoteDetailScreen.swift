@@ -58,6 +58,12 @@ struct VoteDetailContent: View {
             }
             if !vote.positions.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader("Dans l'hémicycle", subtitle: "Un point par député ayant une position enregistrée.")
+                    HemicycleChart(deputies: vote.positions.map {
+                        Hemicycle.Deputy(id: $0.deputyID, name: $0.name, group: $0.group, position: $0.position)
+                    })
+                }
+                VStack(alignment: .leading, spacing: 10) {
                     SectionHeader("Positions par groupe")
                     CaveatNote(id: "non_votant", in: configuration)
                     ForEach(vote.positionsByGroup) { GroupPositionsRow(group: $0) }

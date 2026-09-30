@@ -1,27 +1,28 @@
 # Navigation flow (#459): a link opens a deputy and a vote in their own tabs.
 # The deputy screen is a stub until the Députés tab lands (#462); the vote
 # opens the real detail screen, loaded from the API.
+#
+# The link is passed at launch (`MonEluOpenURL`, read by Router.launchLink in
+# debug builds) rather than with `openLink`: iOS may or may not put an
+# "Open in MonÉlu?" prompt in front of a custom-scheme link, and tapping it
+# did not always deliver the link. Router.open(url:) is the same either way.
 appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
+    arguments:
+      MonEluOpenURL: "monelu://deputes/PA1008"
 - extendedWaitUntil:
-    visible: "Mon député"
-    timeout: 15000
-
-- openLink: "monelu://deputes/PA1008"
-# iOS asks before following a custom-scheme link; confirm it when it shows.
-- runFlow:
-    file: confirm-open-link.yaml
-- assertVisible:
-    id: "route.deputy.PA1008"
+    visible:
+      id: "route.deputy.PA1008"
+    timeout: 20000
 - assertVisible: "Député PA1008"
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-deputy-route
 
-- openLink: "monelu://votes/VTANR5L17V8434"
-# iOS asks before following a custom-scheme link; confirm it when it shows.
-- runFlow:
-    file: confirm-open-link.yaml
+- launchApp:
+    stopApp: true
+    arguments:
+      MonEluOpenURL: "monelu://votes/VTANR5L17V8434"
 - extendedWaitUntil:
     visible:
       id: "vote.detail"

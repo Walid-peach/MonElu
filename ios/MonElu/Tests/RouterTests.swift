@@ -33,6 +33,13 @@ struct RouterTests {
         #expect(router.paths[.deputies] == [.deputy(id: "PA1008")])
     }
 
+    @Test func launchLinkIsReadFromTheArguments() {
+        #expect(Router.launchLink(arguments: ["MonElu", "-MonEluOpenURL", "monelu://votes/V1"])?.absoluteString == "monelu://votes/V1")
+        #expect(Router.launchLink(arguments: ["MonElu", "MonEluOpenURL", "monelu://deputes/PA1"])?.absoluteString == "monelu://deputes/PA1")
+        #expect(Router.launchLink(arguments: ["MonElu"]) == nil)
+        #expect(Router.launchLink(arguments: ["MonElu", "-MonEluOpenURL"]) == nil)
+    }
+
     @Test func unknownLinkChangesNothing() throws {
         let router = Router()
         #expect(router.open(url: try #require(URL(string: "monelu://quiz/abc"))) == false)

@@ -97,6 +97,17 @@ struct ComponentSnapshotTests {
         check(RefreshFailureBanner(failure: .offline), variant)
     }
 
+    @Test(arguments: variants)
+    func hemicycleChart(_ variant: Variant) {
+        // 180 deputies across the chamber, positions cycling by group.
+        let groups = ["LFI", "GDR", "ECS", "SOC", "LIOT", "DEM", "EPR", "HOR", "DR", "UDR", "RN", nil]
+        let positions = ["contre", "contre", "contre", "abstention", "nonVotant", "pour", "pour", "pour", "pour", "contre", "pour", "nonVotant"]
+        let deputies = (0..<180).map { i in
+            Hemicycle.Deputy(id: "PA\(i)", name: "Député \(1000 + i)", group: groups[i % 12], position: positions[i % 12])
+        }
+        check(HemicycleChart(deputies: deputies), variant)
+    }
+
     private func check<V: View>(_ view: V, _ variant: Variant, testName: String = #function) {
         let framed = view
             .padding(16)
