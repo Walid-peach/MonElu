@@ -18,7 +18,9 @@ repos:
     hooks:
       - id: detect-secrets
         args: [--baseline, .secrets.baseline]
-        exclude: \.env\.example$
+        # SwiftPM/Tuist lock files hold public git commit SHAs, which read as
+        # high-entropy strings and are never secrets (#447).
+        exclude: (\.env\.example|[Pp]ackage\.resolved)$
 
   # Ruff — lint + format (replaces flake8, isort, black)
   - repo: https://github.com/astral-sh/ruff-pre-commit
