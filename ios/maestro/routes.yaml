@@ -1,6 +1,5 @@
-# Navigation flow (#459): a link opens a deputy and a vote in their own tabs.
-# The deputy screen is a stub until the Députés tab lands (#462); the vote
-# opens the real detail screen, loaded from the API.
+# Navigation flow (#459): a link opens a deputy and a vote in their own tabs,
+# each on its real screen, loaded from the API.
 #
 # The link is passed at launch (`MonEluOpenURL`, read by Router.launchLink in
 # debug builds) rather than with `openLink`: iOS may or may not put an
@@ -14,9 +13,9 @@ appId: ${APP_ID}
       MonEluOpenURL: "monelu://deputes/PA1008"
 - extendedWaitUntil:
     visible:
-      id: "route.deputy.PA1008"
+      id: "deputy.profile"
     timeout: 20000
-- assertVisible: "Député PA1008"
+- waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-deputy-route
 
 - launchApp:

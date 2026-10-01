@@ -288,7 +288,7 @@ flow() {
 }
 
 # Every flow ios.yml runs on each PR, against one build and one install.
-SMOKE_FLOWS=(tabs routes votes)
+SMOKE_FLOWS=(tabs routes votes deputies)
 
 smoke() {
     run_flows "$(install_app)" "${SMOKE_FLOWS[@]}"

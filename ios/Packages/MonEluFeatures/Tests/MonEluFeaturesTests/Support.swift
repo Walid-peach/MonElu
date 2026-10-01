@@ -32,6 +32,24 @@ func stubClient(_ json: Data, status: HTTPResponse.Status = .ok) -> Client {
     MonEluAPI.client(baseURL: URL(string: "https://api.test")!, transport: StubTransport(status: status, json: json))
 }
 
+/// Answers each operation with its own recorded body, and any other with 500.
+struct OperationTransport: ClientTransport {
+    let responses: [String: Data]
+
+    func send(
+        _ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String
+    ) async throws -> (HTTPResponse, HTTPBody?) {
+        guard let json = responses[operationID] else { return (HTTPResponse(status: .internalServerError), nil) }
+        var response = HTTPResponse(status: .ok)
+        response.headerFields[.contentType] = "application/json"
+        return (response, HTTPBody(json))
+    }
+}
+
+func operationClient(_ responses: [String: Data]) -> Client {
+    MonEluAPI.client(baseURL: URL(string: "https://api.test")!, transport: OperationTransport(responses: responses))
+}
+
 /// A `VotesService` that records its queries and replays scripted pages.
 final class RecordingVotesService: VotesService, @unchecked Sendable {
     private let lock = NSLock()

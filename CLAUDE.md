@@ -95,7 +95,7 @@ make ios-build      # Build the app for the iOS Simulator
 make ios-test       # App tests + every package's Swift Testing tests on the Simulator (PKG="MonEluCore app" for only some)
 make ios-run        # Build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # Run a Maestro flow in light and dark; screenshots in ios/build/screenshots/<flow>/ (ios-run skill)
-make ios-smoke      # The smoke flows ios.yml runs: tabs, link routing, votes
+make ios-smoke      # The smoke flows ios.yml runs: tabs, link routing, votes, deputies
 
 # Linting
 ruff check .        # Lint

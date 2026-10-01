@@ -1,0 +1,43 @@
+{
+  "total": 649,
+  "limit": 4,
+  "offset": 0,
+  "items": [
+    {
+      "deputy_id": "PA793214",
+      "full_name": "Audrey Abadie-Amiel",
+      "party": "Libertés, Indépendants, Outre-mer et Territoires",
+      "party_short": "LIOT",
+      "department": "Ariège",
+      "circonscription": "2",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793214.jpg"
+    },
+    {
+      "deputy_id": "PA795228",
+      "full_name": "Nadège Abomangoli",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Seine-Saint-Denis",
+      "circonscription": "10",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/795228.jpg"
+    },
+    {
+      "deputy_id": "PA794278",
+      "full_name": "Xavier Albertini",
+      "party": "Horizons & Indépendants",
+      "party_short": "HOR",
+      "department": "Marne",
+      "circonscription": "1",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/794278.jpg"
+    },
+    {
+      "deputy_id": "PA793262",
+      "full_name": "Laurent Alexandre",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Aveyron",
+      "circonscription": "2",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793262.jpg"
+    }
+  ]
+}

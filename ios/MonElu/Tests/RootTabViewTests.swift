@@ -4,17 +4,24 @@ import MonEluFeatures
 import SwiftUI
 import Testing
 
-/// Never reaches the network: the root view only needs a service to hold.
+/// Never reach the network: the root view only needs services to hold.
 private struct NoVotes: VotesService {
     func votes(_ query: VoteQuery) async throws -> VotePage { VotePage(items: [], nextCursor: nil) }
     func vote(id: String) async throws -> VoteDetail { throw URLError(.badServerResponse) }
+}
+
+private struct NoDeputies: DeputiesService {
+    func deputies(_ query: DeputyQuery) async throws -> DeputyPage { DeputyPage(items: [], total: 0, offset: 0) }
+    func profile(id: String) async throws -> DeputyProfile { throw URLError(.badServerResponse) }
+    func scorecard(id: String) async throws -> DeputyScorecard { throw URLError(.badServerResponse) }
+    func recentVotes(id: String) async throws -> [DeputyVote] { throw URLError(.badServerResponse) }
 }
 
 @MainActor
 struct RootTabViewTests {
     @Test func rendersInAHostingController() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
-        let controller = UIHostingController(rootView: RootTabView(services: AppServices(votes: NoVotes())))
+        let controller = UIHostingController(rootView: RootTabView(services: AppServices(votes: NoVotes(), deputies: NoDeputies())))
         window.rootViewController = controller
         window.makeKeyAndVisible()
         controller.view.layoutIfNeeded()
