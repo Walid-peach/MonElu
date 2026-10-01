@@ -1,0 +1,51 @@
+# Députés tab (#462): the list loads from the API, the group filter narrows
+# it, and a row opens the deputy's profile. Asserts on structure and fixed
+# labels, not on who is listed: the data changes with each ingestion.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Mon député"
+    timeout: 15000
+
+- tapOn: "Députés"
+- extendedWaitUntil:
+    visible:
+      id: "deputy.row"
+    timeout: 20000
+- assertVisible: "Tous les groupes"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-deputies-list
+
+# The screen's id masks the filter's, so it is tapped by its label.
+- tapOn: "Tous les groupes"
+- tapOn: "Rassemblement National"
+- extendedWaitUntil:
+    visible:
+      id: "deputy.row"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-deputies-group
+
+- tapOn:
+    id: "deputy.row"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "deputy.profile"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-deputy-profile
+# The profile's own id masks ids nested inside it, so sections are found by
+# their visible titles.
+- scrollUntilVisible:
+    element: "Présence aux scrutins"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-deputy-presence
+- scrollUntilVisible:
+    element: "Votes récents"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-deputy-votes

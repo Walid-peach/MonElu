@@ -3,8 +3,7 @@ import MonEluFeatures
 import MonEluUI
 import SwiftUI
 
-/// The screen for a route. The deputy screen is a stub until the Députés tab
-/// lands (#462).
+/// The screen for a route.
 struct RouteDestination: View {
     let route: AppRoute
     let services: AppServices
@@ -12,9 +11,7 @@ struct RouteDestination: View {
     var body: some View {
         switch route {
         case .deputy(let id):
-            PlaceholderScreen(title: "Député \(id)", systemImage: "person.crop.circle")
-                .navigationTitle("Député")
-                .accessibilityIdentifier("route.deputy.\(id)")
+            DeputyProfileScreen(id: id, service: services.deputies)
         case .vote(let id):
             VoteDetailScreen(id: id, service: services.votes)
         }

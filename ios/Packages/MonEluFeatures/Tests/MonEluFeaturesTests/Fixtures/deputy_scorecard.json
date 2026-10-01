@@ -1,0 +1,18 @@
+{
+  "deputy_id": "PA1008",
+  "full_name": "Alain David",
+  "total_votes": 349,
+  "present_votes": 349,
+  "presence_rate": 0.0628,
+  "votes_for": 178,
+  "votes_against": 162,
+  "abstentions": 9,
+  "votes_for_pct": 0.51,
+  "abstention_pct": 0.0258,
+  "eligible_solennels": 50,
+  "solennels_cast": 43,
+  "solennel_participation_rate": 0.86,
+  "eligible_voting_days": 135,
+  "voting_days_present": 43,
+  "voting_days_rate": 0.3185
+}

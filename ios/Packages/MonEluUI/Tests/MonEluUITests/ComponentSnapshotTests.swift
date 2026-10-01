@@ -97,6 +97,16 @@ struct ComponentSnapshotTests {
         check(RefreshFailureBanner(failure: .offline), variant)
     }
 
+    /// Initials only: a snapshot never reaches the network, which is also
+    /// what a missing or failing photo shows.
+    @Test(arguments: variants)
+    func deputyPortrait(_ variant: Variant) {
+        check(HStack(spacing: 12) {
+            DeputyPortrait(name: "Audrey Abadie-Amiel", url: nil)
+            DeputyPortrait(name: "Yaël Braun-Pivet", url: nil, size: 88)
+        }, variant)
+    }
+
     @Test(arguments: variants)
     func hemicycleChart(_ variant: Variant) {
         // 180 deputies across the chamber, positions cycling by group.

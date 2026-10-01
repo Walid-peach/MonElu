@@ -62,7 +62,7 @@ The work is tracked under epic #429, one phase epic at a time.
   JavaScript's sort is stable and Swift's is not: a ported sort carries the original index as its last key.
 - A `Canvas` has no size of its own and collapses to zero height inside a scroll view; size it from its width (`WidthDrivenAspect` in `HemicycleChart.swift`).
 - A test that reads a view's properties is `@MainActor`, or Swift 6's isolation check aborts the test process.
-- Dates are written with `MonEluFormat` (French, Paris time), never with the device's locale or zone.
+- Dates, counts and the API's 0-1 rates are written with `MonEluFormat` (French, Paris time), never with the device's locale or zone; `MonEluFormat.percent` only formats a rate the API returned, it never divides.
 - Tallying what the API returned for display (positions per group) is fine; a scrutin's result, totals and any rate always come from the API.
 - A snapshot of a view containing `NavigationLink` hosts it in a `NavigationStack`, or the link renders disabled and dimmed.
 - Screen snapshots in `MonEluFeaturesTests` render at 2x, and at 1x for the accessibility variants (`checkSnapshot` in `Support.swift`): the repository refuses files over 500 KB, and a whole screen at 3x passes that. Keep a fixture to what shows each layout case rather than a full response.
@@ -124,7 +124,7 @@ Expect the first build in a new worktree to be slow: nothing is shared between c
 | `Packages/MonEluFeatures` | The screens: each feature's models, its service protocol with a live implementation on the generated client, and its views. Depends on Core, API and UI |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
-| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml` and `votes.yaml` are the smoke flows |
+| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 
 Feature code goes in a package, not in the app target, so it can be tested on its own.

@@ -43,7 +43,9 @@ struct RootTabView: View {
         switch tab {
         case .votes:
             VotesListScreen(service: services.votes)
-        case .myDeputy, .deputies, .ask, .quiz:
+        case .deputies:
+            DeputiesListScreen(service: services.deputies)
+        case .myDeputy, .ask, .quiz:
             PlaceholderScreen(title: tab.title, systemImage: tab.systemImage)
                 .navigationTitle(tab.title)
                 .accessibilityIdentifier("screen.\(tab.rawValue)")

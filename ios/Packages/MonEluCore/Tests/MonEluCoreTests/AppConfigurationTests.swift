@@ -55,4 +55,31 @@ struct MonEluFormatTests {
         // 2026-07-20T22:30:00Z is already 21 July in Paris.
         #expect(MonEluFormat.day(Date(timeIntervalSince1970: 1_784_586_600)) == "21 juillet 2026")
     }
+
+    @Test func calendarDateIsTheSameDayInParis() throws {
+        let date = try #require(MonEluFormat.calendarDate("2024-07-07"))
+        #expect(MonEluFormat.day(date) == "7 juillet 2024")
+    }
+
+    @Test(arguments: ["", "2024-07", "2024-02-31", "07/07/2024", "2024-07-07T00:00:00"])
+    func calendarDateRefusesAnythingElse(_ string: String) {
+        #expect(MonEluFormat.calendarDate(string) == nil)
+    }
+
+    @Test func countsAreGroupedTheFrenchWay() {
+        #expect(MonEluFormat.count(349) == "349")
+        let grouped = MonEluFormat.count(5_561)
+        #expect(grouped.filter { !$0.isWhitespace } == "5561")
+        #expect(!grouped.contains(" "))
+    }
+
+    @Test(arguments: [(0.86, "86%"), (0.0628, "6%"), (1, "100%")])
+    func percentIsWholeAndFrench(_ rate: Double, _ expected: String) {
+        let text = MonEluFormat.percent(rate)
+        // French puts a space before "%"; it must be one that never wraps,
+        // and ICU picks U+00A0 or U+202F depending on its version.
+        #expect(text.filter { !$0.isWhitespace } == expected)
+        #expect(!text.contains(" "))
+        #expect(text.contains { $0 == "\u{00A0}" || $0 == "\u{202F}" })
+    }
 }
