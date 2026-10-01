@@ -15,13 +15,22 @@ private struct NoDeputies: DeputiesService {
     func profile(id: String) async throws -> DeputyProfile { throw URLError(.badServerResponse) }
     func scorecard(id: String) async throws -> DeputyScorecard { throw URLError(.badServerResponse) }
     func recentVotes(id: String) async throws -> [DeputyVote] { throw URLError(.badServerResponse) }
+    func votes(id: String, since: Date) async throws -> [DeputyVote] { throw URLError(.badServerResponse) }
+    func departmentDeputies(code: String) async throws -> [DeputyItem] { [] }
+}
+
+private struct NoPostalCodes: PostalCodeService {
+    func departments(forPostalCode code: String) async throws -> [PostalDepartment] { [] }
 }
 
 @MainActor
 struct RootTabViewTests {
     @Test func rendersInAHostingController() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
-        let controller = UIHostingController(rootView: RootTabView(services: AppServices(votes: NoVotes(), deputies: NoDeputies())))
+        let controller = UIHostingController(rootView: RootTabView(services: AppServices(
+            votes: NoVotes(), deputies: NoDeputies(), postalCodes: NoPostalCodes(),
+            followedDeputy: UserDefaultsFollowedDeputyStore(defaults: UserDefaults(suiteName: "RootTabViewTests")!)
+        )))
         window.rootViewController = controller
         window.makeKeyAndVisible()
         controller.view.layoutIfNeeded()

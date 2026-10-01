@@ -75,6 +75,9 @@ The work is tracked under epic #429, one phase epic at a time.
 - Navigation to a deputy or a vote goes through `Router.open(_:)` with an `AppRoute`, from any tab.
   `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
+- What the app keeps about its user stays on the device (ADR-040 §6): the followed deputy and how far they have read live in `UserDefaults` behind `FollowedDeputyStore`.
+  The postal code is never stored, and goes only to geo.api.gouv.fr through an ephemeral session (`LivePostalCodeService`), never the shared one whose cache writes URLs to disk.
+- "Since your last visit" is a scrutin's `voted_at`, not the time of the visit: the API filters `voted_at > since`, and scrutins are dated at midnight and ingested the next morning.
 - A Maestro flow opens a `monelu://` link by launching the app with `MonEluOpenURL` in `arguments` (debug builds, `Router.launchLink`), never with `openLink`: iOS may or may not show an "Open in MonÉlu?" prompt in front of it, and tapping that prompt did not reliably deliver the link in CI.
 
 ## Design
@@ -124,7 +127,7 @@ Expect the first build in a new worktree to be slow: nothing is shared between c
 | `Packages/MonEluFeatures` | The screens: each feature's models, its service protocol with a live implementation on the generated client, and its views. Depends on Core, API and UI |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
-| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows |
+| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `mon-depute.yaml` runs on demand |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 
 Feature code goes in a package, not in the app target, so it can be tested on its own.

@@ -45,7 +45,11 @@ struct RootTabView: View {
             VotesListScreen(service: services.votes)
         case .deputies:
             DeputiesListScreen(service: services.deputies)
-        case .myDeputy, .ask, .quiz:
+        case .myDeputy:
+            MonDeputeScreen(
+                deputies: services.deputies, postalCodes: services.postalCodes, store: services.followedDeputy
+            )
+        case .ask, .quiz:
             PlaceholderScreen(title: tab.title, systemImage: tab.systemImage)
                 .navigationTitle(tab.title)
                 .accessibilityIdentifier("screen.\(tab.rawValue)")

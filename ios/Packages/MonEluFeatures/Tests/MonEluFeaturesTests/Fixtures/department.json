@@ -1,0 +1,87 @@
+{
+  "code": "33",
+  "name": "Gironde",
+  "deputy_count": 3,
+  "deputies": [
+    {
+      "deputy_id": "PA793944",
+      "full_name": "Alexandra Martin (Gironde)",
+      "party": "Ensemble pour la République",
+      "party_short": "EPR",
+      "department": "Gironde",
+      "circonscription": "1",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793944.jpg",
+      "presence_rate": 0.0187,
+      "solennel_participation_rate": 0.5,
+      "party_alignment_rate": 0.9327,
+      "dissident_rate": 0.0673
+    },
+    {
+      "deputy_id": "PA793948",
+      "full_name": "Nicolas Thierry",
+      "party": "Écologiste et Social",
+      "party_short": "ECS",
+      "department": "Gironde",
+      "circonscription": "2",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793948.jpg",
+      "presence_rate": 0.1777,
+      "solennel_participation_rate": 0.92,
+      "party_alignment_rate": 0.9798,
+      "dissident_rate": 0.0202
+    },
+    {
+      "deputy_id": "PA719578",
+      "full_name": "Loïc Prud'homme",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Gironde",
+      "circonscription": "3",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/719578.jpg",
+      "presence_rate": 0.1359,
+      "solennel_participation_rate": 0.84,
+      "party_alignment_rate": 0.9828,
+      "dissident_rate": 0.0172
+    }
+  ],
+  "avg_presence_rate": 0.21341538461538462,
+  "party_distribution": [
+    {
+      "party": "Ensemble pour la République",
+      "count": 4
+    },
+    {
+      "party": "Socialistes et apparentés",
+      "count": 4
+    },
+    {
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "count": 2
+    },
+    {
+      "party": "Écologiste et Social",
+      "count": 1
+    },
+    {
+      "party": "Les Démocrates",
+      "count": 1
+    },
+    {
+      "party": "Rassemblement National",
+      "count": 1
+    }
+  ],
+  "most_dissident": {
+    "deputy_id": "PA1008",
+    "full_name": "Alain David",
+    "party": "Socialistes et apparentés",
+    "party_short": "SOC",
+    "department": "Gironde",
+    "circonscription": "4",
+    "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/1008.jpg",
+    "presence_rate": 0.0628,
+    "solennel_participation_rate": 0.86,
+    "party_alignment_rate": 0.8911,
+    "dissident_rate": 0.1089
+  },
+  "split_votes": []
+}

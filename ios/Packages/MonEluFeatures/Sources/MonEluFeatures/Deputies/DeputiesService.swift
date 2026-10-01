@@ -6,9 +6,19 @@ import MonEluCore
 /// with a stub instead of the network.
 public protocol DeputiesService: Sendable {
     func deputies(_ query: DeputyQuery) async throws -> DeputyPage
+    /// Throws `DeputyNotFound` when the API has no such deputy.
     func profile(id: String) async throws -> DeputyProfile
     func scorecard(id: String) async throws -> DeputyScorecard
     func recentVotes(id: String) async throws -> [DeputyVote]
+    /// The deputy's votes on scrutins held after `since`, newest first.
+    func votes(id: String, since: Date) async throws -> [DeputyVote]
+    /// The current deputies of a département, by INSEE code (`33`, `2A`).
+    func departmentDeputies(code: String) async throws -> [DeputyItem]
+}
+
+/// The API has no deputy with this id (a 404 from `getDeputy`).
+public struct DeputyNotFound: Error, Equatable {
+    public let id: String
 }
 
 extension DeputiesService {
@@ -27,6 +37,8 @@ extension DeputiesService {
 public struct LiveDeputiesService: DeputiesService {
     static let pageSize = 30
     static let recentVotesCount = 10
+    /// The API's ceiling for one call.
+    static let sinceVotesCount = 50
 
     private let client: Client
 
@@ -47,7 +59,10 @@ public struct LiveDeputiesService: DeputiesService {
     }
 
     public func profile(id: String) async throws -> DeputyProfile {
-        let deputy = try await client.getDeputy(path: .init(deputyId: id)).ok.body.json
+        let response = try await client.getDeputy(path: .init(deputyId: id))
+        // A 404 is not in the spec, so the client reports it as undocumented.
+        if case .undocumented(statusCode: 404, _) = response { throw DeputyNotFound(id: id) }
+        let deputy = try response.ok.body.json
         return DeputyProfile(
             deputy: DeputyItem(
                 id: deputy.deputyId, name: deputy.fullName, group: deputy.party, groupShort: deputy.partyShort,
@@ -75,9 +90,31 @@ public struct LiveDeputiesService: DeputiesService {
         let response = try await client.getDeputyVotes(
             path: .init(deputyId: id), query: .init(limit: Self.recentVotesCount)
         )
-        return try response.ok.body.json.items.map {
-            DeputyVote(id: $0.voteId, title: $0.voteTitle, date: $0.votedAt, result: $0.result, position: $0.position)
+        return try response.ok.body.json.items.map(DeputyVote.init)
+    }
+
+    public func votes(id: String, since: Date) async throws -> [DeputyVote] {
+        let response = try await client.getDeputyVotes(
+            path: .init(deputyId: id), query: .init(limit: Self.sinceVotesCount, since: since)
+        )
+        return try response.ok.body.json.items.map(DeputyVote.init)
+    }
+
+    public func departmentDeputies(code: String) async throws -> [DeputyItem] {
+        let department = try await client.getDepartment(path: .init(code: code)).ok.body.json
+        return department.deputies.map {
+            DeputyItem(
+                id: $0.deputyId, name: $0.fullName, group: $0.party, groupShort: $0.partyShort,
+                department: $0.department, circonscription: $0.circonscription,
+                photoURL: $0.photoUrl.flatMap(URL.init(string:))
+            )
         }
+    }
+}
+
+extension DeputyVote {
+    init(_ vote: Components.Schemas.DeputyVoteItem) {
+        self.init(id: vote.voteId, title: vote.voteTitle, date: vote.votedAt, result: vote.result, position: vote.position)
     }
 }
 
