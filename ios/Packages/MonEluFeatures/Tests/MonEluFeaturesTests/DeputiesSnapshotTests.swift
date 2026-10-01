@@ -99,18 +99,4 @@ struct DeputiesSnapshotTests {
             variant
         )
     }
-
-    /// A 100 % presence shows the president's note under the presence one.
-    @Test(arguments: Variant.all)
-    func deputyScorecardFullPresence(_ variant: Variant) {
-        let scorecard = DeputyScorecard(
-            totalVotes: 5_561, presenceRate: 1, votesFor: 0, votesAgainst: 0, abstentions: 0,
-            eligibleSolennels: 50, solennelsCast: 50, solennelParticipationRate: 1,
-            eligibleVotingDays: 135, votingDaysPresent: 135, votingDaysRate: 1
-        )
-        checkSnapshot(
-            DeputyScorecardSection(scorecard: scorecard, configuration: Self.configuration).padding(16),
-            variant
-        )
-    }
 }

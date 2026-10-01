@@ -82,12 +82,12 @@ struct DeputyScorecardSection: View {
                         title: "Présence aux scrutins",
                         detail: "\(MonEluFormat.count(scorecard.totalVotes)) scrutins avec une position enregistrée"
                     )
+                    // Both notes on every profile: the president's 100 % is
+                    // structural, and the app cannot tell who presides
+                    // without copying an id into Swift. Other deputies reach
+                    // 100 % too, so the note is not tied to the figure.
                     CaveatNote(id: "presence_rate", in: configuration)
-                    // The president sits on every scrutin by construction;
-                    // the note explains a 100 % wherever one shows.
-                    if scorecard.presenceRate >= 1 {
-                        CaveatNote(id: "president_presence", in: configuration)
-                    }
+                    CaveatNote(id: "president_presence", in: configuration)
                 }
             }
             .accessibilityIdentifier("deputy.presence")
