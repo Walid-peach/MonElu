@@ -90,13 +90,67 @@ def test_ios_workflow_pins_the_snapshot_toolchain():
     assert workflow["env"]["SIMULATOR_RUNTIME"].endswith("iOS-27-0")
 
 
-def test_ios_workflow_runs_the_smoke_flow_and_keeps_its_screenshots():
-    """The smoke flow is ADR-041 §8's evidence for a reviewer who does not
-    read Swift, so its screenshots are uploaded on every run, not only on
-    failure (#450)."""
-    steps = yaml.safe_load((WORKFLOWS / "ios.yml").read_text())["jobs"]["ios"]["steps"]
-    runs = [step.get("run", "") for step in steps]
-    assert "make ios-smoke" in runs
+def _jobs() -> dict:
+    return yaml.safe_load((WORKFLOWS / "ios.yml").read_text())["jobs"]
+
+
+def test_tests_and_smoke_run_as_parallel_jobs():
+    """#469: the smoke flows do not wait for the unit and snapshot tests."""
+    jobs = _jobs()
+    assert set(jobs) == {"changes", "test", "smoke"}
+    assert any(step.get("run", "").startswith("make ios-test") for step in jobs["test"]["steps"])
+    assert jobs["smoke"]["needs"] == "changes"
+    assert "test" not in str(jobs["smoke"].get("needs"))
+
+
+def test_test_shards_cover_the_app_and_every_package_once():
+    """The tests run in parallel shards (#469); a package added under
+    ios/Packages/ must land in one, or its tests would silently never run."""
+    test = _jobs()["test"]
+    assert test["strategy"]["fail-fast"] is False
+    shards = test["strategy"]["matrix"]["include"]
+    targets = [target for shard in shards for target in shard["targets"].split()]
+    packages = {p.parent.name for p in (ROOT / "ios" / "Packages").glob("*/Package.swift")}
+    assert sorted(targets) == sorted({"app"} | packages)
+    runs = [step.get("run", "") for step in test["steps"]]
+    assert 'make ios-test PKG="${{ matrix.targets }}"' in runs
+
+
+def test_only_the_app_shard_saves_the_build_cache():
+    """Without the cache every package compiles its dependencies from scratch
+    (#469). Every Xcode job restores it; only the app test shard saves it, so
+    parallel jobs do not race to save one key."""
+    jobs = _jobs()
+    saves = [s for s in jobs["test"]["steps"] if s.get("uses") == "actions/cache@v4"]
+    restores = [s for s in jobs["test"]["steps"] if s.get("uses") == "actions/cache/restore@v4"]
+    assert [s["if"] for s in saves] == ["matrix.shard == 'app'"]
+    assert [s["if"] for s in restores] == ["matrix.shard != 'app'"]
+    smoke = [step.get("uses", "") for step in jobs["smoke"]["steps"]]
+    assert "actions/cache/restore@v4" in smoke
+    assert "actions/cache@v4" not in smoke
+
+
+def test_smoke_runs_only_when_the_app_changed():
+    """The smoke flows hit the production API, so an API-only PR cannot be
+    tested by them; it still builds and tests the app."""
+    jobs = _jobs()
+    assert jobs["smoke"]["if"] == "needs.changes.outputs.app == 'true'"
+    detect = next(step for step in jobs["changes"]["steps"] if step.get("id") == "diff")["run"]
+    assert "^(ios/|data/reference/|\\.github/workflows/ios\\.yml$)" in detect
+
+
+def test_smoke_is_light_only_on_pull_requests():
+    """The snapshot tests cover dark mode on every PR; both appearances run
+    after a merge to master."""
+    appearances = _jobs()["smoke"]["env"]["IOS_APPEARANCES"]
+    assert appearances == "${{ github.event_name == 'pull_request' && 'light' || 'light dark' }}"
+
+
+def test_smoke_runs_the_flows_and_keeps_their_screenshots():
+    """The smoke flows are ADR-041 §8's evidence for a reviewer who does not
+    read Swift, so their screenshots are uploaded on every run (#450)."""
+    steps = _jobs()["smoke"]["steps"]
+    assert "make ios-smoke" in [step.get("run", "") for step in steps]
     upload = next(step for step in steps if step.get("name") == "Upload smoke screenshots")
     assert upload["if"] == "always()"
     assert upload["with"]["path"] == "ios/build/screenshots"

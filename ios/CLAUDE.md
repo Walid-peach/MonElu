@@ -93,8 +93,21 @@ The work is tracked under epic #429, one phase epic at a time.
 ## CI
 
 `.github/workflows/ios.yml` runs on every PR touching `ios/`, `api/` or `data/reference/`, and `ci.yml` skips PRs confined to `ios/` - except one touching the OpenAPI snapshot, whose drift test lives in `ci.yml`.
-It pins Xcode 27.0 and an iPhone 18 Pro on iOS 27.0, the only combination the snapshot references match; moving to a new Xcode or Simulator means re-recording every snapshot in the same PR.
-When a snapshot fails, the run's `snapshot-diffs` artifact holds the image the test produced and the `xcresult` artifact holds the reference, failure and difference images; compare them before re-recording anything.
+It has three parallel Xcode jobs: `test (app)` (the app and MonEluFeatures), `test (packages)` (the other packages) and `smoke` (the Maestro flows).
+The two test shards are listed in the workflow's matrix, and `tests/unit/test_ios_ci_paths.py` fails when a package under `Packages/` is in neither.
+`smoke` runs in light mode only on a PR, since the snapshots already cover dark mode, and in both appearances after a merge; it is skipped when a change touches neither `ios/` nor `data/reference/`, because it runs against the production API.
+Every job pins Xcode 27.0 and an iPhone 18 Pro on iOS 27.0, the only combination the snapshot references match; moving to a new Xcode or Simulator means re-recording every snapshot in the same PR.
+Every job restores the build cache and only `test (app)` saves it (#469).
+Restoring costs 5 to 7 minutes, but without it every package compiles its dependencies from scratch and a single test job took 22 to 37 minutes.
+When a snapshot fails, the `snapshot-diffs-<shard>` artifact holds the image the test produced and the `xcresult-<shard>` artifact holds the reference, failure and difference images; compare them before re-recording anything.
+
+## Simulators and parallel worktrees
+
+Each checkout gets its own Simulator, named `MonElu <checkout hash>`, so two worktrees running tests or flows at once never install over each other's app.
+It is cloned from `MonElu template`, one per machine on the snapshot device and runtime, created and booted once: a brand-new device spends many minutes on its first boot, and a clone of a booted one does not.
+`IOS_SIMULATOR_ID` overrides it (CI sets it); `xcrun simctl delete "MonElu <hash>"` removes one you no longer need.
+Build products are keyed by checkout the same way, under `~/Library/Caches/MonElu-ios/`.
+Expect the first build in a new worktree to be slow: nothing is shared between checkouts.
 
 ## Layout
 
@@ -126,6 +139,7 @@ They are the only build entry points: do not call `xcodebuild` or `tuist` direct
 make ios-generate   # generate the Xcode workspace from Project.swift
 make ios-build      # build the app for the Simulator
 make ios-test       # app tests + every package's tests on the Simulator
+make ios-test PKG=MonEluCore   # only the named targets (`app` or package names)
 make ios-run        # build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
 make ios-smoke      # every flow in SMOKE_FLOWS (scripts/ios.sh), in one Maestro launch per appearance

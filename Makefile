@@ -108,8 +108,9 @@ ios-generate:
 ios-build:
 	ios/scripts/ios.sh build
 
+# PKG="MonEluCore MonEluUI" (or app) tests only those targets; every one by default.
 ios-test:
-	ios/scripts/ios.sh test
+	ios/scripts/ios.sh test $(PKG)
 
 ios-run:
 	ios/scripts/ios.sh run
