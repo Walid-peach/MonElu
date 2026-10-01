@@ -1,0 +1,103 @@
+# Quiz tab (#465): the intro, the swipe deck (right pour, left contre, down
+# abstention), "not enough answers", and the result from match, which stores
+# nothing. It stops before sharing: shareResult stores a public snapshot in
+# production, covered by unit and snapshot tests instead.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Mon député"
+    timeout: 15000
+
+- tapOn: "Quiz"
+- extendedWaitUntil:
+    visible: "Quel député vote comme vous ?"
+    timeout: 20000
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-quiz-intro
+- tapOn: "Commencer"
+- extendedWaitUntil:
+    visible: "Question 1 sur 10"
+    timeout: 10000
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-quiz-deck
+
+# Skipping every question ends on "not enough answers".
+- repeat:
+    times: 10
+    commands:
+      - tapOn: "Passer cette question"
+- extendedWaitUntil:
+    visible: "Encore quelques réponses"
+    timeout: 10000
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-quiz-not-enough
+- tapOn: "Reprendre les questions"
+- extendedWaitUntil:
+    visible: "Question 1 sur 10"
+    timeout: 10000
+
+# One answer per direction, then pour and contre in turn. Each swipe starts
+# on the card: Maestro's bare directions start above it, on the header.
+- swipe:
+    start: 25%, 35%
+    end: 90%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 75%, 35%
+    end: 10%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 50%, 35%
+    end: 50%, 70%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 25%, 35%
+    end: 90%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 75%, 35%
+    end: 10%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 25%, 35%
+    end: 90%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 75%, 35%
+    end: 10%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 25%, 35%
+    end: 90%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 75%, 35%
+    end: 10%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: 25%, 35%
+    end: 90%, 35%
+    duration: 400
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Vos résultats"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-quiz-result
+- scrollUntilVisible:
+    element: "Les groupes"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz-groups
+- scrollUntilVisible:
+    element: "Partager mes résultats"
+    direction: DOWN
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-quiz-share

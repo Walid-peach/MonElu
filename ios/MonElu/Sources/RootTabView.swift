@@ -4,7 +4,7 @@ import MonEluUI
 import SwiftUI
 
 /// The five top-level tabs, each with its own navigation stack driven by the
-/// `Router`. A tab without its feature yet shows a placeholder (#432).
+/// `Router`.
 struct RootTabView: View {
     let services: AppServices
     @State private var router: Router
@@ -52,9 +52,7 @@ struct RootTabView: View {
         case .ask:
             AskScreen(service: services.ask)
         case .quiz:
-            PlaceholderScreen(title: tab.title, systemImage: tab.systemImage)
-                .navigationTitle(tab.title)
-                .accessibilityIdentifier("screen.\(tab.rawValue)")
+            QuizScreen(service: services.quiz)
         }
     }
 }

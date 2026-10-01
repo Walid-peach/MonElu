@@ -16,13 +16,14 @@ public struct VotePositionBadge: View {
         Badge(text: Self.label(position), foreground: foreground, background: background)
     }
 
-    static func label(_ position: String) -> String {
+    /// How to show a position, from the bundled table.
+    public static func label(_ position: String) -> String {
         labels[position] ?? position
     }
 
     /// Mirrors `frontend/src/lib/vote-position.ts`: an unknown key renders like
     /// `nonVotant`.
-    static func colors(_ position: String) -> (Color, Color) {
+    public static func colors(_ position: String) -> (Color, Color) {
         switch position {
         case "pour": (Palette.positive, Palette.positiveBackground)
         case "contre": (Palette.negative, Palette.negativeBackground)
