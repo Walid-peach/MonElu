@@ -72,17 +72,18 @@ template_id() {
         echo "Install it with: xcodebuild -downloadPlatform iOS" >&2
         exit 1
     fi
-    # Prefer a device of the snapshot model that has already been used.
-    # simctl's text listing cannot be filtered by runtime; its JSON is keyed by it.
+    # Prefer a device of the snapshot model that has already been used and is
+    # shut down: a clone needs its source shut down, and one that is booted may
+    # be in use. simctl's text listing cannot be filtered by runtime; its JSON
+    # is keyed by it.
     for candidate in $(xcrun simctl list devices available -j | /usr/bin/python3 -c '
 import json, sys
 runtime, device = sys.argv[1], sys.argv[2]
 for d in json.load(sys.stdin)["devices"].get(runtime, []):
-    if d["name"] == device:
+    if d["name"] == device and d["state"] == "Shutdown":
         print(d["udid"])
 ' "$SIMULATOR_RUNTIME" "$SIMULATOR_DEVICE"); do
         if has_finished_first_boot "$candidate"; then
-            xcrun simctl shutdown "$candidate" 2>/dev/null || true
             id="$(xcrun simctl clone "$candidate" "$name")"
             echo "Created the template Simulator from $SIMULATOR_DEVICE ($candidate)." >&2
             echo "$id"
@@ -92,6 +93,7 @@ for d in json.load(sys.stdin)["devices"].get(runtime, []):
     # None: boot a new one until it reaches its home screen, once per machine.
     id="$(xcrun simctl create "$name" "$SIMULATOR_DEVICE" "$SIMULATOR_RUNTIME")"
     echo "Creating the template Simulator ($SIMULATOR_DEVICE); its first boot is slow, once per machine." >&2
+    echo "(Shutting down a used $SIMULATOR_DEVICE first lets it be cloned instead.)" >&2
     xcrun simctl boot "$id"
     local waited=0
     until has_finished_first_boot "$id"; do
