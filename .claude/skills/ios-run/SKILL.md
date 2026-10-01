@@ -17,8 +17,15 @@ ARGUMENTS: a flow name from `ios/maestro/` (without `.yaml`). Default: `tabs`, w
    make ios-flow FLOW=<flow>
    ```
 
-   It builds the Debug app, installs it on the Simulator (`IOS_SIMULATOR_ID` picks one, otherwise the first iPhone on the newest runtime), and runs `ios/maestro/<flow>.yaml` once in light mode and once in dark mode.
-3. The screenshots are in `ios/build/screenshots/<flow>/`, named `light-<step>.png` and `dark-<step>.png`, and replaced on every run.
+   It builds the Debug app, installs it on this checkout's own Simulator (`IOS_SIMULATOR_ID` picks another), and runs `ios/maestro/<flow>.yaml` once in light mode and once in dark mode.
+   While iterating, run light mode only, which halves the time:
+
+   ```bash
+   IOS_APPEARANCES=light make ios-flow FLOW=<flow>
+   ```
+
+   Run both appearances once before pushing a change to a screen, and look at the dark screenshots too (the local loop in `ios/CLAUDE.md`).
+3. The screenshots are in `ios/build/screenshots/<flow>/`, named `light-<step>.png` and `dark-<step>.png` (only the appearances that ran), and replaced on every run.
    Look at every one before reporting: a flow that passes can still show a broken layout.
 
 ## Writing a flow
@@ -31,6 +38,6 @@ ARGUMENTS: a flow name from `ios/maestro/` (without `.yaml`). Default: `tabs`, w
 ## Reporting
 
 - In a PR that changes a screen, say which flow you ran, and list the screenshots that show the change.
-  CI's `ios` job uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run, so link that run rather than pasting local files.
+  CI's `smoke` job uploads the smoke flows' screenshots as the `smoke-screenshots` artifact on every run, in light mode only on a PR, so link that run for light and attach the dark screenshots from your local run.
 - When working with the user, send the relevant screenshots with SendUserFile.
 - If the flow fails, Maestro's logs and view hierarchy are under `~/Library/Caches/MonElu-ios/<checkout hash>/maestro/<flow>/`; read them before changing the flow.
