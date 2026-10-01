@@ -116,6 +116,12 @@ It is cloned from `MonElu template`, one per machine on the snapshot device and 
 Build products are keyed by checkout the same way, under `~/Library/Caches/MonElu-ios/`.
 Expect the first build in a new worktree to be slow: nothing is shared between checkouts.
 
+The iOS 27 runtime's background processes crash-loop in every booted Simulator, so each running one costs the whole machine; two at once turned a 10-second package test into minutes.
+`ios.sh` therefore boots the checkout's Simulator before testing and leaves it running (xcodebuild would shut down one it booted, and the next run would pay the boot again), and warns, with the `xcrun simctl shutdown` command, about any other MonÉlu Simulator still running.
+It never shuts one down itself, since another session may be using it.
+Shut down the Simulator of a worktree you have finished with.
+A freshly booted Simulator needs a couple of minutes to settle before runs are fast, and one booted for hours can climb back past a load of 100: restart it (`xcrun simctl shutdown <udid>`, then run again).
+
 ## Layout
 
 | Path | What it is |

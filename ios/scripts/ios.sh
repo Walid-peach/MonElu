@@ -173,8 +173,10 @@ test_all() {
             exit 1
         fi
     done
-    local dest
-    dest="platform=iOS Simulator,id=$(simulator_id)"
+    local id dest
+    id="$(simulator_id)"
+    ensure_booted "$id"
+    dest="platform=iOS Simulator,id=$id"
     for target in "${targets[@]}"; do
         if [[ "$target" == app ]]; then
             generate
@@ -198,6 +200,29 @@ test_all() {
     echo "iOS tests passed: ${targets[*]}"
 }
 
+# Boots Simulator $1 and waits for it, so it stays up between runs: when
+# xcodebuild boots a Simulator itself it shuts it down after the tests, and
+# the next run pays the boot again. Warns about other checkouts' Simulators
+# still running: on iOS 27 each one's background processes crash-loop, and
+# two at once made a 13-second package test take up to 3 minutes (#469). It
+# never shuts them down, since another session may be using one.
+ensure_booted() {
+    local id="$1" others
+    others="$(xcrun simctl list devices booted -j | /usr/bin/python3 -c '
+import json, sys
+mine = sys.argv[1]
+for devices in json.load(sys.stdin)["devices"].values():
+    for d in devices:
+        if d["name"].startswith("MonElu ") and d["udid"] != mine:
+            print("  " + d["name"] + ": xcrun simctl shutdown " + d["udid"])
+' "$id")"
+    if [[ -n "$others" ]]; then
+        echo "Other MonÉlu Simulators are running and slow this one down; shut them down if no session is using them:" >&2
+        echo "$others" >&2
+    fi
+    xcrun simctl bootstatus "$id" -b >/dev/null
+}
+
 APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/MonElu.app"
 
 # Builds the app and installs it on the booted Simulator; prints its bundle id.
@@ -205,10 +230,9 @@ install_app() {
     build >&2
     local id
     id="$(simulator_id)"
-    xcrun simctl boot "$id" 2>/dev/null || true
+    ensure_booted "$id"
     # The window is for a human watching; a headless run carries on without it.
     open -b com.apple.iphonesimulator --args -CurrentDeviceUDID "$id" 2>/dev/null || true
-    xcrun simctl bootstatus "$id" -b >/dev/null
     xcrun simctl install "$id" "$APP"
     /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist"
 }
