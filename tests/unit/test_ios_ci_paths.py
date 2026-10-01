@@ -98,23 +98,36 @@ def test_tests_and_smoke_run_as_parallel_jobs():
     """#469: the smoke flows do not wait for the unit and snapshot tests."""
     jobs = _jobs()
     assert set(jobs) == {"changes", "test", "smoke"}
-    assert "make ios-test" in [step.get("run", "") for step in jobs["test"]["steps"]]
+    assert any(step.get("run", "").startswith("make ios-test") for step in jobs["test"]["steps"])
     assert jobs["smoke"]["needs"] == "changes"
     assert "test" not in str(jobs["smoke"].get("needs"))
 
 
-def test_only_the_test_job_saves_the_build_cache():
+def test_test_shards_cover_the_app_and_every_package_once():
+    """The tests run in parallel shards (#469); a package added under
+    ios/Packages/ must land in one, or its tests would silently never run."""
+    test = _jobs()["test"]
+    assert test["strategy"]["fail-fast"] is False
+    shards = test["strategy"]["matrix"]["include"]
+    targets = [target for shard in shards for target in shard["targets"].split()]
+    packages = {p.parent.name for p in (ROOT / "ios" / "Packages").glob("*/Package.swift")}
+    assert sorted(targets) == sorted({"app"} | packages)
+    runs = [step.get("run", "") for step in test["steps"]]
+    assert 'make ios-test PKG="${{ matrix.targets }}"' in runs
+
+
+def test_only_the_app_shard_saves_the_build_cache():
     """Without the cache every package compiles its dependencies from scratch
-    (#469). Both Xcode jobs restore it; only the test job saves it, so the two
+    (#469). Every Xcode job restores it; only the app test shard saves it, so
     parallel jobs do not race to save one key."""
     jobs = _jobs()
-
-    def uses(job):
-        return [step.get("uses", "") for step in jobs[job]["steps"]]
-
-    assert "actions/cache@v4" in uses("test")
-    assert "actions/cache/restore@v4" in uses("smoke")
-    assert "actions/cache@v4" not in uses("smoke")
+    saves = [s for s in jobs["test"]["steps"] if s.get("uses") == "actions/cache@v4"]
+    restores = [s for s in jobs["test"]["steps"] if s.get("uses") == "actions/cache/restore@v4"]
+    assert [s["if"] for s in saves] == ["matrix.shard == 'app'"]
+    assert [s["if"] for s in restores] == ["matrix.shard != 'app'"]
+    smoke = [step.get("uses", "") for step in jobs["smoke"]["steps"]]
+    assert "actions/cache/restore@v4" in smoke
+    assert "actions/cache@v4" not in smoke
 
 
 def test_smoke_runs_only_when_the_app_changed():

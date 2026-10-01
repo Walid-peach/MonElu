@@ -4,7 +4,9 @@
 #
 #   ios.sh generate   generate MonElu.xcworkspace from Project.swift
 #   ios.sh build      build the app for the Simulator
-#   ios.sh test       run the app's tests and every package's tests on the Simulator
+#   ios.sh test [TARGET...]
+#                     run the tests of `app` and of each named package on the
+#                     Simulator; every target when none is named
 #   ios.sh run        build, install and launch the app in the Simulator
 #   ios.sh flow NAME  build, install, and run maestro/NAME.yaml in each
 #                     appearance, saving its screenshots to build/screenshots/NAME/
@@ -155,30 +157,45 @@ build() {
         -derivedDataPath "$DERIVED_DATA"
 }
 
+# Tests the given targets, `app` or a package under Packages/, or all of them
+# when none is given. ios.yml splits them across parallel jobs, and
+# tests/unit/test_ios_ci_paths.py checks that those jobs cover every target.
 test_all() {
-    generate
+    local all=(app) manifest target
+    for manifest in Packages/*/Package.swift; do
+        all+=("$(basename "$(dirname "$manifest")")")
+    done
+    local targets=("$@")
+    [[ ${#targets[@]} -eq 0 ]] && targets=("${all[@]}")
+    for target in "${targets[@]}"; do
+        if [[ " ${all[*]} " != *" $target "* ]]; then
+            echo "Unknown test target: $target (one of: ${all[*]})" >&2
+            exit 1
+        fi
+    done
     local dest
     dest="platform=iOS Simulator,id=$(simulator_id)"
-    echo "==> MonElu (app)"
-    xcb_test \
-        -workspace MonElu.xcworkspace \
-        -scheme MonElu \
-        -destination "$dest" \
-        -derivedDataPath "$DERIVED_DATA"
-    # Every package under Packages/ is tested, so one added to Project.swift
-    # cannot ship without its tests running here. Each package keeps its own
-    # build folder: a shared one compiles shared dependencies once, but hung
-    # the MonEluFeatures tests indefinitely when tried (#469).
-    local manifest package
-    for manifest in Packages/*/Package.swift; do
-        package="$(basename "$(dirname "$manifest")")"
-        echo "==> $package"
-        (cd "Packages/$package" && xcb_test \
-            -scheme "$package" \
+    for target in "${targets[@]}"; do
+        if [[ "$target" == app ]]; then
+            generate
+            echo "==> MonElu (app)"
+            xcb_test \
+                -workspace MonElu.xcworkspace \
+                -scheme MonElu \
+                -destination "$dest" \
+                -derivedDataPath "$DERIVED_DATA"
+            continue
+        fi
+        # Each package keeps its own build folder: a shared one compiles shared
+        # dependencies once, but hung the MonEluFeatures tests indefinitely when
+        # tried (#469).
+        echo "==> $target"
+        (cd "Packages/$target" && xcb_test \
+            -scheme "$target" \
             -destination "$dest" \
-            -derivedDataPath "$BUILD_ROOT/Packages/$package")
+            -derivedDataPath "$BUILD_ROOT/Packages/$target")
     done
-    echo "All iOS tests passed."
+    echo "iOS tests passed: ${targets[*]}"
 }
 
 APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/MonElu.app"
@@ -280,7 +297,7 @@ smoke() {
 case "${1:-}" in
     generate) generate ;;
     build) build ;;
-    test) test_all ;;
+    test) shift; test_all "$@" ;;
     run) run ;;
     flow) flow "${2:-}" ;;
     smoke) smoke ;;

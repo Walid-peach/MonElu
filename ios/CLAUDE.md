@@ -93,12 +93,13 @@ The work is tracked under epic #429, one phase epic at a time.
 ## CI
 
 `.github/workflows/ios.yml` runs on every PR touching `ios/`, `api/` or `data/reference/`, and `ci.yml` skips PRs confined to `ios/` - except one touching the OpenAPI snapshot, whose drift test lives in `ci.yml`.
-It has two parallel jobs: `test` (build, unit and snapshot tests) and `smoke` (the Maestro flows).
+It has three parallel Xcode jobs: `test (app)` (the app and MonEluFeatures), `test (packages)` (the other packages) and `smoke` (the Maestro flows).
+The two test shards are listed in the workflow's matrix, and `tests/unit/test_ios_ci_paths.py` fails when a package under `Packages/` is in neither.
 `smoke` runs in light mode only on a PR, since the snapshots already cover dark mode, and in both appearances after a merge; it is skipped when a change touches neither `ios/` nor `data/reference/`, because it runs against the production API.
-Both jobs pin Xcode 27.0 and an iPhone 18 Pro on iOS 27.0, the only combination the snapshot references match; moving to a new Xcode or Simulator means re-recording every snapshot in the same PR.
-Both jobs restore the build cache and only `test` saves it (#469).
-Restoring costs 5 to 7 minutes, but without it every package compiles its dependencies from scratch and the test job took 22 to 37 minutes.
-When a snapshot fails, the `snapshot-diffs` artifact holds the image the test produced and the `xcresult` artifact holds the reference, failure and difference images; compare them before re-recording anything.
+Every job pins Xcode 27.0 and an iPhone 18 Pro on iOS 27.0, the only combination the snapshot references match; moving to a new Xcode or Simulator means re-recording every snapshot in the same PR.
+Every job restores the build cache and only `test (app)` saves it (#469).
+Restoring costs 5 to 7 minutes, but without it every package compiles its dependencies from scratch and a single test job took 22 to 37 minutes.
+When a snapshot fails, the `snapshot-diffs-<shard>` artifact holds the image the test produced and the `xcresult-<shard>` artifact holds the reference, failure and difference images; compare them before re-recording anything.
 
 ## Simulators and parallel worktrees
 
@@ -138,6 +139,7 @@ They are the only build entry points: do not call `xcodebuild` or `tuist` direct
 make ios-generate   # generate the Xcode workspace from Project.swift
 make ios-build      # build the app for the Simulator
 make ios-test       # app tests + every package's tests on the Simulator
+make ios-test PKG=MonEluCore   # only the named targets (`app` or package names)
 make ios-run        # build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
 make ios-smoke      # every flow in SMOKE_FLOWS (scripts/ios.sh), in one Maestro launch per appearance

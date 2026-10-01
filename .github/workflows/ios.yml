@@ -1,7 +1,7 @@
 name: iOS
 
 # The iPhone app's checks (ADR-041 §8): build, Swift Testing and the snapshot
-# tests in one job, the Maestro smoke flows in another, running in parallel.
+# tests in two jobs, the Maestro smoke flows in a third, all in parallel.
 # ci.yml skips PRs confined to ios/, so this workflow is what tests them.
 #
 # The path list is pinned by tests/unit/test_ios_ci_paths.py. `api/**` is in it
@@ -10,9 +10,11 @@ name: iOS
 #
 # Timings behind this shape (#469): restoring the build cache costs 5 to 7
 # minutes, but without it every package compiles its dependencies from scratch
-# and the test job took 22 to 37 minutes, so both jobs restore it and only the
-# test job saves it. The smoke flows run in light mode only on PRs, since the
-# snapshot tests already cover dark mode there.
+# and one test job took 22 to 37 minutes, so every job restores it and only the
+# app test job saves it. One test job behind that restore still took 19
+# minutes, so the tests are split in two of about equal length. The smoke flows
+# run in light mode only on PRs, since the snapshot tests already cover dark
+# mode there.
 
 on:
   pull_request:
@@ -73,9 +75,21 @@ jobs:
           fi
 
   test:
+    name: test (${{ matrix.shard }})
     # Xcode 27 is served only on this image (a GitHub public preview label).
     runs-on: xcode-27
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        # `ios.sh test` targets. The app and MonEluFeatures are the two slow
+        # ones; test_ios_ci_paths.py checks that the shards cover every
+        # package under ios/Packages/.
+        include:
+          - shard: app
+            targets: app MonEluFeatures
+          - shard: packages
+            targets: MonEluAPI MonEluCore MonEluUI MonEluAccount
     steps:
       - uses: actions/checkout@v4
 
@@ -99,11 +113,13 @@ jobs:
       # a color set. --noconftest: tests/conftest.py imports the whole API.
       # The runner's own Python is Homebrew-managed and refuses pip (PEP 668).
       - name: Set up Python
+        if: matrix.shard == 'app'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Design token checks
+        if: matrix.shard == 'app'
         run: |
           python -m pip install --quiet pytest pyyaml
           python -m pytest --noconftest -q tests/unit/test_ios_design_tokens.py tests/unit/test_ios_ci_paths.py
@@ -122,8 +138,19 @@ jobs:
           digest=$(cat ios/.package.resolved ios/Packages/*/Package.resolved ios/Packages/*/Package.swift | shasum -a 256 | cut -c1-16)
           echo "key=ios-build-${{ runner.os }}-xcode-27.0-$digest" >> "$GITHUB_OUTPUT"
 
+      # Saved by the app shard only, so parallel jobs never race to save one
+      # key; it builds the most.
       - name: Cache Swift packages and build products
+        if: matrix.shard == 'app'
         uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ios-build
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: ios-build-${{ runner.os }}-xcode-27.0-
+
+      - name: Restore Swift packages and build products
+        if: matrix.shard != 'app'
+        uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/ios-build
           key: ${{ steps.cache-key.outputs.key }}
@@ -135,13 +162,13 @@ jobs:
           # without the prefix: swift-snapshot-testing writes a failing
           # snapshot's actual image there.
           TEST_RUNNER_SNAPSHOT_ARTIFACTS: ${{ runner.temp }}/snapshot-artifacts
-        run: make ios-test
+        run: make ios-test PKG="${{ matrix.targets }}"
 
       - name: Upload snapshot diffs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: snapshot-diffs
+          name: snapshot-diffs-${{ matrix.shard }}
           path: ${{ runner.temp }}/snapshot-artifacts
           if-no-files-found: ignore
 
@@ -149,7 +176,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: xcresult
+          name: xcresult-${{ matrix.shard }}
           path: ${{ runner.temp }}/ios-build/**/Logs/Test/*.xcresult
           if-no-files-found: ignore
 
@@ -192,8 +219,7 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # The same key as the test job, which saves it; restoring only here keeps
-      # the two jobs from racing to save one key.
+      # The same key as the app test job, which saves it.
       # Not hashFiles(): on this image it once timed out after 120 s and failed
       # the job before any test ran. The dependency manifests are few and known.
       - name: Compute the cache key
