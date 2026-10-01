@@ -1,0 +1,24 @@
+{
+  "id": "9f1c2e4a-0000-4000-8000-000000000001",
+  "claim": "Alain David a voté contre la loi sur la protection des enfants",
+  "verdict": "faux",
+  "explanation": "Alain David s'est abstenu lors du vote sur l'ensemble du projet de loi relatif à la protection des enfants le 21 juillet 2026 ; il n'a pas voté contre.",
+  "deputy": {
+    "deputy_id": "PA1008",
+    "name": "Alain David",
+    "party": "Socialistes et apparentés"
+  },
+  "citations": [
+    {
+      "vote_id": "VTANR5L17V8434",
+      "title": "l'ensemble du projet de loi relatif à la protection des enfants (première lecture)",
+      "voted_at": "2026-07-21",
+      "result": "adopté",
+      "deputy_position": "abstention"
+    }
+  ],
+  "confidence": "ÉLEVÉ",
+  "data_horizon": "2025-07-01",
+  "verified_at": "2026-10-01T18:00:00Z",
+  "share_url": "https://mon-elu.vercel.app/verifier/v/9f1c2e4a-0000-4000-8000-000000000001"
+}

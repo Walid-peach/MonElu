@@ -5,6 +5,7 @@ import MonEluAPI
 public struct AppServices: Sendable {
     public let votes: any VotesService
     public let deputies: any DeputiesService
+    public let ask: any AskService
     public let postalCodes: any PostalCodeService
     /// The followed deputy, on the device only (ADR-040 §6).
     public let followedDeputy: any FollowedDeputyStore
@@ -12,16 +13,18 @@ public struct AppServices: Sendable {
     public init(client: Client) {
         votes = LiveVotesService(client: client)
         deputies = LiveDeputiesService(client: client)
+        ask = LiveAskService(client: client)
         postalCodes = LivePostalCodeService()
         followedDeputy = UserDefaultsFollowedDeputyStore()
     }
 
     public init(
-        votes: any VotesService, deputies: any DeputiesService,
+        votes: any VotesService, deputies: any DeputiesService, ask: any AskService,
         postalCodes: any PostalCodeService, followedDeputy: any FollowedDeputyStore
     ) {
         self.votes = votes
         self.deputies = deputies
+        self.ask = ask
         self.postalCodes = postalCodes
         self.followedDeputy = followedDeputy
     }

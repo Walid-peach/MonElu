@@ -32,7 +32,8 @@ public struct CaveatNote: View {
     }
 
     /// Inline Markdown (bold, code spans) rendered; plain text if it does not parse.
-    static func attributed(_ text: String) -> AttributedString {
+    /// Shared by every view that shows text the API wrote in Markdown.
+    public static func attributed(_ text: String) -> AttributedString {
         let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
     }

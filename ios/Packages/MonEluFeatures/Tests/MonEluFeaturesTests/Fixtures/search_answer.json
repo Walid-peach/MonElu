@@ -1,0 +1,45 @@
+{
+  "answer": "Voici les différents textes relatifs à la protection des enfants qui ont fait l’objet d’un vote au cours des dernières semaines :\n\n| Date du vote | Texte concerné | Nature du vote | Résultat | Détails du scrutin |\n|--------------|----------------|----------------|----------|--------------------|\n| 21 /07 /2026 | **Projet de loi relatif à la protection des enfants** (ensemble du texte, première lecture) | Adoption du texte complet | Adopté | 378 députés pour, 7 contre, 173 abstentions (558 votants)【source】 |\n| 17 /07 /2026 | **Article 12 bis du projet de loi relatif à la protection des enfants** (première lecture) | Adoption d’un article spécifique | Adopté | 59 députés pour, 0 contre, 13 abstentions (72 votants)【source】 |\n| 17 /07 /2026 | **Article 12 du projet de loi relatif à la protection des enfants** (première lecture) | Adoption d’un article spécifique | Adopté | 37 députés pour, 31 contre, 9 abstentions (77 votants)【source】 |\n| 17 /07 /2026 | **Sous‑amendement n° 1251 de Mme Perrine Goulet (et sous‑amendement identique suivant) à l’amendement n° 1250 du Gouvernement à l’article 11 ter du projet de loi relatif à la protection des enfants** (première lecture) | Adoption du sous‑amendement | Adopté | 44 députés pour, 35 contre, 1 abstention (80 votants)【source】 |\n| 17 /07 /2026 | **Amendement n° 936 de Mme Perrine Goulet à l’article 11 du projet de loi relatif à la protection des enfants** (première lecture) | Adoption de l’amendement | Adopté | 35 députés pour, 21 contre, 2 abstentions (58 votants)【source】 |\n\n**Synthèse**  \nTous les votes portent sur le même projet de loi global visant à renforcer la protection des enfants, mais ils concernent soit l’adoption du texte complet (21 /07 /2026), soit l’adoption d’articles ou d’amendements spécifiques (17 /07 /2026). Aucun des extraits fournis ne présente de contradiction entre les différents votes.",
+  "question": "Quels textes sur la protection des enfants ont été votés récemment ?",
+  "chunks_retrieved": 5,
+  "sources": [
+    {
+      "content": "Vote du 21/07/2026 : l'ensemble du projet de loi relatif à la protection des enfants (première lecture)..\nRésultat : adopté.\n378 députés ont voté pour, 7 contre, 173 abstentions sur 558 votants.\nRésumé : Le texte adopte le projet de loi visant à renforcer la protection des enfants, en introduisant ou en améliorant des mesures de prévention, de signalement et d'intervention en cas de maltraitance ou de danger.",
+      "metadata": {
+        "theme": "Santé & Social",
+        "result": "adopté",
+        "vote_id": "VTANR5L17V8430",
+        "voted_at": "2026-07-21 00:00:00+00:00",
+        "chunk_type": "vote"
+      },
+      "similarity": 0.696892970144454
+    },
+    {
+      "content": "Vote du 17/07/2026 : l'article 12 bis du projet de loi relatif à la protection des enfants (première lecture)..\nRésultat : adopté.\n59 députés ont voté pour, 0 contre, 13 abstentions sur 72 votants.\nRésumé : L'article 12 bis du projet de loi relatif à la protection des enfants, adopté en première lecture, introduit de nouvelles dispositions visant à renforcer la prévention et la prise en charge des situations de maltraitance infantile, notamment en élargissant les obligations de signalement pour les professionnels et en créant un dispositif d'intervention rapide.",
+      "metadata": {
+        "theme": "Santé & Social",
+        "result": "adopté",
+        "vote_id": "VTANR5L17V8408",
+        "voted_at": "2026-07-17 00:00:00+00:00",
+        "chunk_type": "vote"
+      },
+      "similarity": 0.703287845368134
+    },
+    {
+      "content": "Vote du 17/07/2026 : l'article 12 du projet de loi relatif à la protection des enfants (première lecture)..\nRésultat : adopté.\n37 députés ont voté pour, 31 contre, 9 abstentions sur 77 votants.\nRésumé : L'article 12 du projet de loi relatif à la protection des enfants, adopté en première lecture, prévoit le renforcement des dispositifs de prévention et d'intervention en faveur des mineurs en danger, notamment en améliorant la coordination entre les services sociaux, éducatifs et judiciaires.",
+      "metadata": {
+        "theme": "Santé & Social",
+        "result": "adopté",
+        "vote_id": "VTANR5L17V8405",
+        "voted_at": "2026-07-17 00:00:00+00:00",
+        "chunk_type": "vote"
+      },
+      "similarity": 0.690454905039048
+    }
+  ],
+  "query_type": "rag",
+  "confidence": "high",
+  "data_source": "RAG",
+  "caveat": null,
+  "suggested_action": null
+}
