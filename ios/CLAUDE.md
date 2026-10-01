@@ -96,7 +96,8 @@ The work is tracked under epic #429, one phase epic at a time.
 It has two parallel jobs: `test` (build, unit and snapshot tests) and `smoke` (the Maestro flows).
 `smoke` runs in light mode only on a PR, since the snapshots already cover dark mode, and in both appearances after a merge; it is skipped when a change touches neither `ios/` nor `data/reference/`, because it runs against the production API.
 Both jobs pin Xcode 27.0 and an iPhone 18 Pro on iOS 27.0, the only combination the snapshot references match; moving to a new Xcode or Simulator means re-recording every snapshot in the same PR.
-There is deliberately no build cache: restoring one cost more time than it saved (#469).
+Both jobs restore the build cache and only `test` saves it (#469).
+Restoring costs 5 to 7 minutes, but without it every package compiles its dependencies from scratch and the test job took 22 to 37 minutes.
 When a snapshot fails, the `snapshot-diffs` artifact holds the image the test produced and the `xcresult` artifact holds the reference, failure and difference images; compare them before re-recording anything.
 
 ## Simulators and parallel worktrees

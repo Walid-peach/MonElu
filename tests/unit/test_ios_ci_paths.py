@@ -103,10 +103,18 @@ def test_tests_and_smoke_run_as_parallel_jobs():
     assert "test" not in str(jobs["smoke"].get("needs"))
 
 
-def test_no_build_cache():
-    """Restoring it cost 4 to 7 minutes and made the build no faster (#469)."""
-    for job in _jobs().values():
-        assert all("actions/cache" not in step.get("uses", "") for step in job["steps"])
+def test_only_the_test_job_saves_the_build_cache():
+    """Without the cache every package compiles its dependencies from scratch
+    (#469). Both Xcode jobs restore it; only the test job saves it, so the two
+    parallel jobs do not race to save one key."""
+    jobs = _jobs()
+
+    def uses(job):
+        return [step.get("uses", "") for step in jobs[job]["steps"]]
+
+    assert "actions/cache@v4" in uses("test")
+    assert "actions/cache/restore@v4" in uses("smoke")
+    assert "actions/cache@v4" not in uses("smoke")
 
 
 def test_smoke_runs_only_when_the_app_changed():
