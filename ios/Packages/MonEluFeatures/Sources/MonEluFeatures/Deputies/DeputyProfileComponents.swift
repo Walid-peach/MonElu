@@ -188,7 +188,8 @@ struct DeputyRecentVotesSection: View {
     }
 }
 
-private struct DeputyVoteRow: View {
+/// A scrutin with the deputy's position and its result, as a card.
+struct DeputyVoteRow: View {
     let vote: DeputyVote
     @Environment(\.dynamicTypeSize) private var typeSize
 

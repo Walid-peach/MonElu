@@ -1,0 +1,307 @@
+import Foundation
+import MonEluCore
+@testable import MonEluFeatures
+import Testing
+
+/// A postal-code lookup that records what it was asked and replays a result.
+final class StubPostalCodes: PostalCodeService, @unchecked Sendable {
+    private let lock = NSLock()
+    private let result: Result<[PostalDepartment], any Error>
+    private(set) var codes: [String] = []
+
+    init(_ result: Result<[PostalDepartment], any Error>) { self.result = result }
+
+    func departments(forPostalCode code: String) async throws -> [PostalDepartment] {
+        try lock.withLock {
+            codes.append(code)
+            return try result.get()
+        }
+    }
+}
+
+/// A `DeputiesService` with a fixed profile, recent votes and rosters, that
+/// records every `since` it is asked for.
+final class MonDeputeDeputies: DeputiesService, @unchecked Sendable {
+    private let lock = NSLock()
+    var profileResult: Result<DeputyProfile, any Error>
+    var recent: [DeputyVote]?
+    var newVotes: [DeputyVote] = []
+    var rosters: [String: [DeputyItem]] = [:]
+    private(set) var sinceDates: [Date] = []
+
+    init(profile: Result<DeputyProfile, any Error> = .success(testProfile), recent: [DeputyVote]? = []) {
+        profileResult = profile
+        self.recent = recent
+    }
+
+    func deputies(_ query: DeputyQuery) async throws -> DeputyPage { DeputyPage(items: [], total: 0, offset: 0) }
+    func profile(id: String) async throws -> DeputyProfile { try profileResult.get() }
+    func scorecard(id: String) async throws -> DeputyScorecard { throw URLError(.badServerResponse) }
+    func recentVotes(id: String) async throws -> [DeputyVote] {
+        guard let recent else { throw URLError(.badServerResponse) }
+        return recent
+    }
+    func votes(id: String, since: Date) async throws -> [DeputyVote] {
+        lock.withLock { sinceDates.append(since) }
+        return newVotes
+    }
+    func departmentDeputies(code: String) async throws -> [DeputyItem] { rosters[code] ?? [] }
+}
+
+let testProfile = DeputyProfile(deputy: deputy("PA1008"), mandateStart: nil, mandateEnd: nil)
+
+/// A scrutin held at midnight UTC on the given day, as the API dates them.
+func vote(_ id: String, day: String, position: String = "pour") -> DeputyVote {
+    DeputyVote(id: id, title: "le scrutin \(id)", date: try! APIDay.date(day), result: "adopté", position: position)
+}
+
+enum APIDay {
+    static func date(_ day: String) throws -> Date {
+        try #require(ISO8601DateFormatter().date(from: day + "T00:00:00Z"))
+    }
+}
+
+/// A store on its own `UserDefaults` suite, which a test can open twice to
+/// play a relaunch.
+func freshDefaults() -> UserDefaults {
+    let name = "MonDeputeTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: name)!
+    defaults.removePersistentDomain(forName: name)
+    return defaults
+}
+
+struct PostalCodeTests {
+    @Test(arguments: ["33000", " 75001 ", "20000", "97100"])
+    func fiveDigitsAreAPostalCode(_ input: String) {
+        #expect(PostalCode.normalized(input) == input.trimmingCharacters(in: .whitespaces))
+    }
+
+    @Test(arguments: ["", "3300", "330000", "33 000", "abcde", "3300a", "٣٣٠٠٠"])
+    func anythingElseIsNot(_ input: String) {
+        #expect(PostalCode.normalized(input) == nil)
+    }
+
+    @Test func aCodeSpanningTwoDepartmentsListsBoth() throws {
+        let departments = try LivePostalCodeService.departments(from: fixture("geo_communes_05110"))
+        #expect(departments == [
+            PostalDepartment(code: "04", name: "Alpes-de-Haute-Provence"),
+            PostalDepartment(code: "05", name: "Hautes-Alpes"),
+        ])
+    }
+
+    @Test func anUnknownCodeHasNoDepartment() throws {
+        #expect(try LivePostalCodeService.departments(from: Data("[]".utf8)).isEmpty)
+    }
+
+    /// The code goes to geo.api.gouv.fr and nowhere else, and nothing about
+    /// the request is kept on disk (#463).
+    @Test func theCodeGoesOnlyToGeoAPIWithNoCache() {
+        let url = LivePostalCodeService.url(forPostalCode: "33000")
+        #expect(url.absoluteString == "https://geo.api.gouv.fr/communes?codePostal=33000&fields=departement&format=json")
+        let configuration = LivePostalCodeService().session.configuration
+        #expect(configuration.urlCache == nil)
+        #expect(configuration.requestCachePolicy == .reloadIgnoringLocalCacheData)
+    }
+}
+
+@MainActor
+struct MonDeputeModelTests {
+    func model(
+        postal: StubPostalCodes = StubPostalCodes(.success([])),
+        deputies: MonDeputeDeputies = MonDeputeDeputies(),
+        defaults: UserDefaults = freshDefaults()
+    ) -> MonDeputeModel {
+        MonDeputeModel(deputies: deputies, postalCodes: postal, store: UserDefaultsFollowedDeputyStore(defaults: defaults))
+    }
+
+    @Test func firstLaunchShowsThePicker() {
+        let model = model()
+        #expect(model.showsPicker)
+        #expect(model.home == nil)
+    }
+
+    @Test func anInvalidCodeIsRefusedWithoutAnyRequest() async {
+        let postal = StubPostalCodes(.success([]))
+        let model = model(postal: postal)
+        model.postalCode = "3300"
+        await model.runSearch()
+        #expect(model.search == .invalid)
+        #expect(postal.codes.isEmpty)
+    }
+
+    @Test func anUnknownCodeSaysSo() async {
+        let model = model(postal: StubPostalCodes(.success([])))
+        model.postalCode = "99999"
+        await model.runSearch()
+        #expect(model.search == .unknown)
+    }
+
+    @Test func aDepartmentWithSeveralDeputiesListsThemAll() async {
+        let deputies = MonDeputeDeputies()
+        deputies.rosters["33"] = [deputy("PA1"), deputy("PA2"), deputy("PA3")]
+        let gironde = PostalDepartment(code: "33", name: "Gironde")
+        let model = model(postal: StubPostalCodes(.success([gironde])), deputies: deputies)
+        model.postalCode = " 33000 "
+        await model.runSearch()
+        #expect(model.search == .found([
+            DepartmentDeputies(department: gironde, deputies: [deputy("PA1"), deputy("PA2"), deputy("PA3")]),
+        ]))
+    }
+
+    @Test func aCodeOverTwoDepartmentsListsEachInOrder() async {
+        let deputies = MonDeputeDeputies()
+        deputies.rosters["04"] = [deputy("PA4")]
+        deputies.rosters["05"] = [deputy("PA5")]
+        let model = model(
+            postal: StubPostalCodes(.success([
+                PostalDepartment(code: "04", name: "Alpes-de-Haute-Provence"),
+                PostalDepartment(code: "05", name: "Hautes-Alpes"),
+            ])),
+            deputies: deputies
+        )
+        model.postalCode = "05110"
+        await model.runSearch()
+        guard case .found(let found) = model.search else { Issue.record("no result"); return }
+        #expect(found.map(\.department.code) == ["04", "05"])
+        #expect(found.map { $0.deputies.map(\.id) } == [["PA4"], ["PA5"]])
+    }
+
+    @Test func anOfflineLookupIsAFailureNotAnUnknownCode() async {
+        let model = model(postal: StubPostalCodes(.failure(URLError(.notConnectedToInternet))))
+        model.postalCode = "33000"
+        await model.runSearch()
+        #expect(model.search == .failed(.offline))
+    }
+
+    @Test func theChoiceSurvivesARelaunchAndThePostalCodeIsNotStored() async {
+        let defaults = freshDefaults()
+        let first = model(defaults: defaults)
+        first.postalCode = "33000"
+        first.choose(deputy("PA1008"))
+        #expect(first.showsPicker == false)
+        #expect(first.postalCode.isEmpty)
+
+        // A relaunch: a new model over the same storage opens on the home.
+        let relaunched = model(defaults: defaults)
+        #expect(relaunched.followedID == "PA1008")
+        #expect(relaunched.showsPicker == false)
+        #expect(relaunched.home != nil)
+        let stored = defaults.dictionaryRepresentation().values.map { "\($0)" }
+        #expect(!stored.contains { $0.contains("33000") })
+    }
+
+    @Test func changingKeepsTheDeputyUntilAnotherIsChosen() {
+        let defaults = freshDefaults()
+        let model = model(defaults: defaults)
+        model.choose(deputy("PA1"))
+        model.startChange()
+        #expect(model.showsPicker)
+        model.cancelChange()
+        #expect(model.followedID == "PA1")
+        model.startChange()
+        model.choose(deputy("PA2"))
+        #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == "PA2")
+    }
+
+    @Test func unfollowingForgetsTheDeputyAndTheirPosition() {
+        let defaults = freshDefaults()
+        let store = UserDefaultsFollowedDeputyStore(defaults: defaults)
+        let model = model(defaults: defaults)
+        model.choose(deputy("PA1"))
+        store.setLastSeenVote(Date(), for: "PA1")
+        model.unfollow()
+        #expect(model.showsPicker)
+        #expect(store.deputyID == nil)
+        #expect(store.lastSeenVote(for: "PA1") == nil)
+    }
+
+    @Test func aDeputyWhoDisappearedSendsBackToThePicker() async {
+        let defaults = freshDefaults()
+        UserDefaultsFollowedDeputyStore(defaults: defaults).follow("PA0")
+        let model = model(
+            deputies: MonDeputeDeputies(profile: .failure(DeputyNotFound(id: "PA0"))), defaults: defaults
+        )
+        await model.home?.load()
+        #expect(model.showsPicker)
+        #expect(model.notice != nil)
+        #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == nil)
+    }
+}
+
+/// "Since your last visit" reads the stored position and then advances it
+/// to the newest vote shown (#463).
+struct SinceLastVisitTests {
+    @Test func aFirstVisitAsksForNothingAndStartsFromTheNewestVote() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let deputies = MonDeputeDeputies(recent: [vote("V2", day: "2026-07-21"), vote("V1", day: "2026-07-20")])
+        let home = try await MonDeputeModel.loadHome(id: "PA1008", deputies: deputies, store: store)
+        #expect(home.sinceLastVisit == .firstVisit)
+        #expect(deputies.sinceDates.isEmpty)
+        #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-07-21")))
+    }
+
+    @Test func aLaterVisitUsesTheStoredPositionThenAdvancesIt() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let seen = try APIDay.date("2026-07-21")
+        store.setLastSeenVote(seen, for: "PA1008")
+        let deputies = MonDeputeDeputies(recent: [vote("V4", day: "2026-07-23"), vote("V2", day: "2026-07-21")])
+        deputies.newVotes = [vote("V4", day: "2026-07-23"), vote("V3", day: "2026-07-22")]
+        let home = try await MonDeputeModel.loadHome(id: "PA1008", deputies: deputies, store: store)
+        #expect(deputies.sinceDates == [seen])
+        #expect(home.sinceLastVisit == .votes(deputies.newVotes, after: seen))
+        #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-07-23")))
+    }
+
+    /// Not the time of the visit: a scrutin held on the day of a visit is
+    /// dated that midnight, before the visit, and would never show.
+    @Test func thePositionIsAVoteDateNotTheClock() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let deputies = MonDeputeDeputies(recent: [vote("V1", day: "2026-07-20")])
+        let visit = try APIDay.date("2026-07-21").addingTimeInterval(15 * 3600)
+        _ = try await MonDeputeModel.loadHome(id: "PA1008", deputies: deputies, store: store, now: visit)
+        #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-07-20")))
+    }
+
+    @Test func aFailedListKeepsThePosition() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let seen = try APIDay.date("2026-07-21")
+        store.setLastSeenVote(seen, for: "PA1008")
+        let deputies = MonDeputeDeputies(recent: nil)
+        deputies.newVotes = [vote("V3", day: "2026-07-22")]
+        _ = try await MonDeputeModel.loadHome(id: "PA1008", deputies: deputies, store: store)
+        #expect(store.lastSeenVote(for: "PA1008") == seen)
+    }
+
+    @Test func aDeputyWithNoVoteStartsFromToday() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let visit = try APIDay.date("2026-07-21").addingTimeInterval(15 * 3600)
+        _ = try await MonDeputeModel.loadHome(id: "PA1", deputies: MonDeputeDeputies(recent: []), store: store, now: visit)
+        let position = try #require(store.lastSeenVote(for: "PA1"))
+        // A scrutin held that day (dated its midnight) is still after it.
+        #expect(position < (try APIDay.date("2026-07-21")))
+        #expect(position > (try APIDay.date("2026-07-20")))
+    }
+
+    @Test func countsAreWrittenInFrench() {
+        #expect(SinceLastVisitSection.count(1) == "1 nouveau vote")
+        #expect(SinceLastVisitSection.count(3) == "3 nouveaux votes")
+        #expect(SinceLastVisitSection.count(50) == "Au moins 50 nouveaux votes")
+    }
+}
+
+/// The live service's two new calls, against recorded responses.
+struct LiveMonDeputeServiceTests {
+    @Test func departmentDeputiesAreTheCurrentRoster() async throws {
+        let service = LiveDeputiesService(client: operationClient(["getDepartment": try fixture("department")]))
+        let deputies = try await service.departmentDeputies(code: "33")
+        #expect(deputies.count == 3)
+        #expect(deputies.allSatisfy { $0.department == "Gironde" })
+        #expect(deputies.first?.id == "PA793944")
+        #expect(deputies.allSatisfy { $0.photoURL != nil })
+    }
+
+    @Test func anUnknownDeputyIsNotFoundRatherThanAServerError() async throws {
+        let service = LiveDeputiesService(client: stubClient(Data("{\"detail\":\"Deputy not found\"}".utf8), status: .notFound))
+        await #expect(throws: DeputyNotFound(id: "PA0")) { try await service.profile(id: "PA0") }
+    }
+}

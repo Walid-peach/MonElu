@@ -1,0 +1,26 @@
+[
+  {
+    "nom": "Claret",
+    "code": "04058",
+    "departement": {
+      "code": "04",
+      "nom": "Alpes-de-Haute-Provence"
+    }
+  },
+  {
+    "nom": "Curbans",
+    "code": "04066",
+    "departement": {
+      "code": "04",
+      "nom": "Alpes-de-Haute-Provence"
+    }
+  },
+  {
+    "nom": "Barcillonnette",
+    "code": "05013",
+    "departement": {
+      "code": "05",
+      "nom": "Hautes-Alpes"
+    }
+  }
+]
