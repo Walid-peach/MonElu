@@ -142,6 +142,7 @@ make ios-test       # app tests + every package's tests on the Simulator
 make ios-test PKG=MonEluCore   # only the named targets (`app` or package names)
 make ios-run        # build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
+IOS_APPEARANCES=light make ios-flow FLOW=tabs  # light only
 make ios-smoke      # every flow in SMOKE_FLOWS (scripts/ios.sh), in one Maestro launch per appearance
 ```
 
@@ -149,7 +150,21 @@ To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrore
 A PR that changes a screen names the flow it ran and the screenshots that show the change; CI uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.
 Maestro is pinned by version and SHA-256 in `scripts/install-maestro.sh` and needs Java 17 (`brew install openjdk@17`).
 
+## The local loop
+
+Run the smallest check that answers the question in front of you, and the full set once, before pushing (#469).
+
+1. **While iterating, test only the package you touched**: `make ios-test PKG=MonEluFeatures` (several names, or `app`, work too).
+   One package takes seconds; the whole suite takes minutes.
+2. **Run only the flow that reaches your change, in light mode**: `IOS_APPEARANCES=light make ios-flow FLOW=<flow>`.
+   The snapshot tests already render every screen in dark mode and at large text sizes, so a dark run while iterating rarely tells you anything new.
+3. **Before the first push, once**:
+   - `make ios-test` with no `PKG`, since a change in one package can break another that depends on it;
+   - for a change to a screen, the touched flow in both appearances (`make ios-flow FLOW=<flow>`), looking at the dark screenshots too: rule 9 asks for both, and CI's smoke job runs light only on PRs;
+   - the `pr-review` skill, so its findings are fixed before CI runs rather than in a second CI round.
+4. **Do not run `make ios-smoke` locally** unless you changed a smoke flow or `scripts/ios.sh`: CI runs it on every PR that touches the app.
+
 Requirements: Xcode 27 with an iOS Simulator runtime (`xcodebuild -downloadPlatform iOS`), and mise (`brew install mise`), which installs the pinned Tuist on first use.
 
-`IOS_SIMULATOR_ID=<udid>` picks a Simulator; otherwise the first iPhone on the newest runtime is used.
+`IOS_SIMULATOR_ID=<udid>` picks a Simulator; otherwise each checkout uses its own (see "Simulators and parallel worktrees").
 Build products go to `~/Library/Caches/MonElu-ios/<checkout hash>/`, outside the repository: the checkout may live in an iCloud-synced folder, and codesign refuses a bundle carrying the extended attributes iCloud adds.
