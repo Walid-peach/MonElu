@@ -66,6 +66,12 @@ struct MonEluFormatTests {
         #expect(MonEluFormat.calendarDate(string) == nil)
     }
 
+    /// The quiz's percentages show exactly the value the API returned.
+    @Test(arguments: [(88.9, "88,9%"), (70.0, "70%"), (11.1, "11,1%"), (100.0, "100%")])
+    func percentagesKeepTheAPIsDecimal(_ value: Double, _ expected: String) {
+        #expect(MonEluFormat.percentage(value).filter { !$0.isWhitespace } == expected)
+    }
+
     @Test func countsAreGroupedTheFrenchWay() {
         #expect(MonEluFormat.count(349) == "349")
         let grouped = MonEluFormat.count(5_561)

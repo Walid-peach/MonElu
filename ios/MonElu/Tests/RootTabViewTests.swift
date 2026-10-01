@@ -26,6 +26,12 @@ private struct NoAsk: AskService {
     func feedback(_ vote: ChatFeedback, on answer: ChatAnswer) async throws {}
 }
 
+private struct NoQuiz: QuizService {
+    func questions() async throws -> [QuizQuestion] { [] }
+    func match(_ answers: [QuizAnswer]) async throws -> QuizResult { throw URLError(.badServerResponse) }
+    func share(_ answers: [QuizAnswer], includeAnswers: Bool) async throws -> URL { throw URLError(.badServerResponse) }
+}
+
 private struct NoPostalCodes: PostalCodeService {
     func departments(forPostalCode code: String) async throws -> [PostalDepartment] { [] }
 }
@@ -35,7 +41,7 @@ struct RootTabViewTests {
     @Test func rendersInAHostingController() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
         let controller = UIHostingController(rootView: RootTabView(services: AppServices(
-            votes: NoVotes(), deputies: NoDeputies(), ask: NoAsk(), postalCodes: NoPostalCodes(),
+            votes: NoVotes(), deputies: NoDeputies(), ask: NoAsk(), quiz: NoQuiz(), postalCodes: NoPostalCodes(),
             followedDeputy: UserDefaultsFollowedDeputyStore(defaults: UserDefaults(suiteName: "RootTabViewTests")!)
         )))
         window.rootViewController = controller

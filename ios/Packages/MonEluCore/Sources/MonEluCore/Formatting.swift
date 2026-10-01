@@ -34,6 +34,12 @@ public enum MonEluFormat {
         value.formatted(.number.locale(french))
     }
 
+    /// A percentage the API already returns on a 0 to 100 scale, written as
+    /// it came: 88.9 is "88,9 %", 70 is "70 %". The quiz's `agreement_pct`.
+    public static func percentage(_ value: Double) -> String {
+        (value / 100).formatted(.percent.precision(.fractionLength(0...1)).locale(french))
+    }
+
     /// A rate the API returns as 0 to 1, written as a whole French
     /// percentage: 0.86 is "86 %". Display only: the rate itself always
     /// comes from the API, never from a division in Swift.

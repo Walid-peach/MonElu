@@ -1,0 +1,125 @@
+{
+  "version": "2026-Q3",
+  "answered": 10,
+  "eligible_deputies": 570,
+  "top_matches": [
+    {
+      "deputy_id": "PA841487",
+      "full_name": "Anthony Boulogne",
+      "party": "Rassemblement National",
+      "party_short": "RN",
+      "department": "Meurthe-et-Moselle",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/841487.jpg",
+      "agreement_pct": 88.9,
+      "matches": 8,
+      "compared": 9,
+      "detail": [
+        {
+          "vote_id": "VTANR5L17V8280",
+          "deputy_position": "pour"
+        },
+        {
+          "vote_id": "VTANR5L17V4758",
+          "deputy_position": "contre"
+        }
+      ]
+    },
+    {
+      "deputy_id": "PA795778",
+      "full_name": "Jean-Philippe Tanguy",
+      "party": "Rassemblement National",
+      "party_short": "RN",
+      "department": "Somme",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/795778.jpg",
+      "agreement_pct": 88.9,
+      "matches": 8,
+      "compared": 9,
+      "detail": null
+    },
+    {
+      "deputy_id": "PA794322",
+      "full_name": "Thomas Ménagé",
+      "party": "Rassemblement National",
+      "party_short": "RN",
+      "department": "Loiret",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/794322.jpg",
+      "agreement_pct": 88.9,
+      "matches": 8,
+      "compared": 9,
+      "detail": null
+    }
+  ],
+  "opposite": {
+    "deputy_id": "PA720976",
+    "full_name": "Max Mathiasin",
+    "party": "Libertés, Indépendants, Outre-mer et Territoires",
+    "party_short": "LIOT",
+    "department": "Guadeloupe",
+    "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720976.jpg",
+    "agreement_pct": 11.1,
+    "matches": 1,
+    "compared": 9,
+    "detail": [
+      {
+        "vote_id": "VTANR5L17V8280",
+        "deputy_position": "abstention"
+      },
+      {
+        "vote_id": "VTANR5L17V4758",
+        "deputy_position": "pour"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "party": "Rassemblement National",
+      "party_short": "RN",
+      "agreement_pct": 70.0,
+      "matches": 7,
+      "compared": 10,
+      "deputy_count": 122
+    },
+    {
+      "party": "Union des droites pour la République",
+      "party_short": "UDR",
+      "agreement_pct": 60.0,
+      "matches": 6,
+      "compared": 10,
+      "deputy_count": 17
+    },
+    {
+      "party": "Gauche Démocrate et Républicaine",
+      "party_short": "GDR",
+      "agreement_pct": 55.6,
+      "matches": 5,
+      "compared": 9,
+      "deputy_count": 17
+    },
+    {
+      "party": "Droite Républicaine",
+      "party_short": "DR",
+      "agreement_pct": 50.0,
+      "matches": 5,
+      "compared": 10,
+      "deputy_count": 49
+    }
+  ],
+  "my_department": null,
+  "focus": null,
+  "themes": {
+    "supported": [
+      "Fin de vie",
+      "Agriculture",
+      "Économie",
+      "Sécurité",
+      "Justice"
+    ],
+    "opposed": [
+      "Protection sociale",
+      "Institutions",
+      "Finances publiques",
+      "Outre-mer",
+      "Logement"
+    ]
+  }
+}

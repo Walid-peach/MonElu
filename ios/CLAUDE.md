@@ -77,8 +77,9 @@ The work is tracked under epic #429, one phase epic at a time.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
 - What the app keeps about its user stays on the device (ADR-040 §6): the followed deputy and how far they have read live in `UserDefaults` behind `FollowedDeputyStore`.
   The postal code is never stored, and goes only to geo.api.gouv.fr through an ephemeral session (`LivePostalCodeService`), never the shared one whose cache writes URLs to disk.
-- `verify`, `shareAnswer` and `submitChatFeedback` each store a row in production (a verdict, a public share snapshot, feedback).
-  Tests use responses written from the schema for them, and no Maestro flow calls them; `search` stores nothing and may be recorded and called.
+- `verify`, `shareAnswer`, `submitChatFeedback` and `shareResult` each store a row in production (a verdict, a public share snapshot, feedback).
+  Tests use responses written from the schema for them, and no Maestro flow calls them; `search`, `getQuestions` and `match` store nothing and may be recorded and called.
+- A gesture is never the only way to act: the quiz deck's swipes have buttons and VoiceOver actions that answer the same way, and Reduce Motion drops the fly-off animation.
 - The assistant's answers are Markdown with tables; `ChatMarkdownView` renders paragraphs, lists, headings and one card per table row, and `CaveatNote.attributed` handles inline styling everywhere.
 - "Since your last visit" is a scrutin's `voted_at`, not the time of the visit: the API filters `voted_at > since`, and scrutins are dated at midnight and ingested the next morning.
 - A Maestro flow opens a `monelu://` link by launching the app with `MonEluOpenURL` in `arguments` (debug builds, `Router.launchLink`), never with `openLink`: iOS may or may not show an "Open in MonÉlu?" prompt in front of it, and tapping that prompt did not reliably deliver the link in CI.
@@ -130,7 +131,7 @@ Expect the first build in a new worktree to be slow: nothing is shared between c
 | `Packages/MonEluFeatures` | The screens: each feature's models, its service protocol with a live implementation on the generated client, and its views. Depends on Core, API and UI |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
-| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `mon-depute.yaml` and `ask.yaml` run on demand |
+| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `mon-depute.yaml`, `ask.yaml` and `quiz.yaml` run on demand |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 
 Feature code goes in a package, not in the app target, so it can be tested on its own.
