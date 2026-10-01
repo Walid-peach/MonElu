@@ -1,0 +1,34 @@
+# Demander tab (#464): a question gets an answer with its sources.
+# It asks the production API, so it stops there: verify, share and feedback
+# each store a row in production, and are covered by snapshot and unit tests
+# instead. Asserts on fixed labels, not on the answer's wording.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Mon député"
+    timeout: 15000
+
+- tapOn: "Demander"
+- extendedWaitUntil:
+    visible: "Posez une question sur vos élus"
+    timeout: 10000
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-ask-intro
+
+- tapOn: "Posez une question sur vos élus…"
+- inputText: "Quels textes sur la protection des enfants ont ete votes ?"
+- tapOn: "Envoyer la question"
+# The answer replaces the waiting line; a long one pushes its actions below
+# the fold, so they are scrolled to rather than waited for.
+- extendedWaitUntil:
+    notVisible: "Recherche dans les votes et profils des députés…"
+    timeout: 90000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-ask-answer
+# Not centred: the actions end the conversation, so they cannot scroll to
+# the middle.
+- scrollUntilVisible:
+    element: "Partager"
+    direction: DOWN
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-ask-sources

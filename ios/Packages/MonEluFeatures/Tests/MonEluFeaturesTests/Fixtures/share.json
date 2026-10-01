@@ -1,0 +1,11 @@
+{
+  "id": "c3d4e5f6-0000-4000-8000-000000000002",
+  "question": "Quels textes sur la protection des enfants ont été votés récemment ?",
+  "answer": "Voici les textes.",
+  "sources": [],
+  "confidence": "high",
+  "data_source": "RAG",
+  "caveat": null,
+  "shared_at": "2026-10-01T18:00:00Z",
+  "share_url": "https://mon-elu.vercel.app/chat/s/c3d4e5f6-0000-4000-8000-000000000002"
+}

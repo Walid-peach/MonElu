@@ -1,0 +1,45 @@
+{
+  "answer": "Je ne dispose pas de cette information dans les sources fournies.",
+  "question": "Alain David a voté contre la loi sur la protection des enfants",
+  "chunks_retrieved": 5,
+  "sources": [
+    {
+      "content": "Vote du 17/07/2026 : l'amendement n° 890 de M. David Magnier à l'article 13 du projet de loi relatif à la protection des enfants (première lecture)..\nRésultat : rejeté.\n11 députés ont voté pour, 54 contre, 0 abstentions sur 65 votants.\nRésumé : L'amendement n° 890 proposé par M. David Magnier visait à modifier l'article 13 du projet de loi relatif à la protection des enfants, mais il a été rejeté, donc le texte de l'article 13 reste inchangé.",
+      "metadata": {
+        "theme": "Justice & Sécurité",
+        "result": "rejeté",
+        "vote_id": "VTANR5L17V8414",
+        "voted_at": "2026-07-17 00:00:00+00:00",
+        "chunk_type": "vote"
+      },
+      "similarity": 0.659198931319646
+    },
+    {
+      "content": "Alain David est député(e) du Gironde, membre du parti Socialistes et apparentés.\nSur 349 votes enregistrés, il/elle a voté pour 178 fois, contre 162 fois, abstention 9 fois.\nTaux de présence : 6.3%.",
+      "metadata": {
+        "party": "Socialistes et apparentés",
+        "deputy_id": "PA1008",
+        "full_name": "Alain David",
+        "chunk_type": "deputy",
+        "department": "Gironde"
+      },
+      "similarity": 0.646464986740785
+    },
+    {
+      "content": "Vote du 01/06/2026 : l'amendement n° 141 de M. Christian Girard à l'article 3 de la proposition de loi visant à protéger les enfants et à lutter contre les violences en milieu scolaire (première lecture)..\nRésultat : rejeté.\n17 députés ont voté pour, 92 contre, 0 abstentions sur 109 votants.\nRésumé : L'amendement visait à modifier l'article 3 de la proposition de loi pour protéger les enfants et lutter contre les violences en milieu scolaire, mais il a été rejeté.",
+      "metadata": {
+        "theme": "Éducation & Culture",
+        "result": "rejeté",
+        "vote_id": "VTANR5L17V7213",
+        "voted_at": "2026-06-01 00:00:00+00:00",
+        "chunk_type": "vote"
+      },
+      "similarity": 0.630170497694623
+    }
+  ],
+  "query_type": "rag",
+  "confidence": "high",
+  "data_source": "RAG",
+  "caveat": null,
+  "suggested_action": "verify"
+}
