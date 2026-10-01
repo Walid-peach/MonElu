@@ -26,6 +26,8 @@ public struct MonDeputeScreen: View {
                             .padding(16)
                     }
                 }
+                // A new deputy is a new loader; a new identity starts its load.
+                .id(model.followedID)
             }
         }
         .background(Palette.pageBackground)
