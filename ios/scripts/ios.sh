@@ -11,6 +11,7 @@
 #   ios.sh flow NAME  build, install, and run maestro/NAME.yaml in each
 #                     appearance, saving its screenshots to build/screenshots/NAME/
 #   ios.sh smoke      every flow in SMOKE_FLOWS, as ios.yml runs them
+#   ios.sh device     sign, build, install and launch on the plugged-in iPhone
 #
 # IOS_SIMULATOR_ID picks a Simulator by UDID. Otherwise each checkout gets its
 # own, named after it and cloned on first use from a per-machine template, so
@@ -259,6 +260,87 @@ maestro() {
     "$("$IOS_DIR/scripts/install-maestro.sh")" "$@"
 }
 
+LOCAL_XCCONFIG="$IOS_DIR/Configs/Local.xcconfig"
+
+# The first iPhone plugged in and ready, as devicectl reports it; empty if none.
+connected_iphone() {
+    local json
+    json="$(mktemp)"
+    xcrun devicectl list devices --json-output "$json" >/dev/null 2>&1 || true
+    /usr/bin/python3 - "$json" <<'PY'
+import json, sys
+try:
+    devices = json.load(open(sys.argv[1]))["result"]["devices"]
+except Exception:
+    devices = []
+for d in devices:
+    hardware = d.get("hardwareProperties", {})
+    if hardware.get("reality") == "physical" and hardware.get("platform") == "iOS":
+        print(hardware.get("udid") or d.get("identifier"))
+        break
+PY
+    rm -f "$json"
+}
+
+# Writes Configs/Local.xcconfig with the team of the Apple ID signed into
+# Xcode, when there is exactly one, and a bundle id of its own: a free
+# (Personal Team) account cannot sign an id another account registered.
+ensure_signing() {
+    [[ -f "$LOCAL_XCCONFIG" ]] && return
+    local teams
+    teams="$(defaults read com.apple.dt.Xcode IDEProvisioningTeamByIdentifier 2>/dev/null \
+        | grep -oE 'teamID = [A-Z0-9]{10}' | awk '{print $3}' | sort -u)"
+    if [[ -z "$teams" ]]; then
+        echo "No Apple ID is signed into Xcode. Open Xcode > Settings > Accounts, add your Apple ID, then run this again." >&2
+        exit 1
+    fi
+    if [[ "$(echo "$teams" | wc -l | tr -d ' ')" != 1 ]]; then
+        echo "Several signing teams are available:" >&2
+        echo "$teams" >&2
+        echo "Create $LOCAL_XCCONFIG with DEVELOPMENT_TEAM = <one of them>, then run this again." >&2
+        exit 1
+    fi
+    local team id_suffix
+    team="$teams"
+    id_suffix="$(echo "$team" | tr '[:upper:]' '[:lower:]')"
+    cat > "$LOCAL_XCCONFIG" <<EOF
+// Written by \`ios.sh device\` for this Mac; git-ignored. Delete it to start over.
+DEVELOPMENT_TEAM = $team
+CODE_SIGN_STYLE = Automatic
+MONELU_BUNDLE_ID = fr.monelu.app.dev.$id_suffix
+EOF
+    echo "Signing with team $team (saved in Configs/Local.xcconfig)." >&2
+}
+
+# Signs, builds, installs and launches the app on the plugged-in iPhone. A free
+# Apple ID works; its installs expire after 7 days, so run this again then.
+device() {
+    local udid
+    udid="$(connected_iphone)"
+    if [[ -z "$udid" ]]; then
+        echo "No iPhone found. Plug it in with a cable, unlock it, tap Trust, and turn on Settings > Privacy & Security > Developer Mode." >&2
+        exit 1
+    fi
+    ensure_signing
+    generate
+    xcodebuild build \
+        -workspace MonElu.xcworkspace \
+        -scheme MonElu \
+        -configuration Debug \
+        -destination "id=$udid" \
+        -derivedDataPath "$BUILD_ROOT/Device" \
+        -allowProvisioningUpdates \
+        -allowProvisioningDeviceRegistration \
+        -skipPackagePluginValidation \
+        -quiet
+    local app="$BUILD_ROOT/Device/Build/Products/Debug-iphoneos/MonElu.app" bundle_id
+    bundle_id="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")"
+    xcrun devicectl device install app --device "$udid" "$app"
+    if ! xcrun devicectl device process launch --device "$udid" "$bundle_id"; then
+        echo "Installed. If iOS refused to open it: on the iPhone, Settings > General > VPN & Device Management, trust your developer certificate, then open MonÉlu." >&2
+    fi
+}
+
 # Runs the given flows in each of IOS_APPEARANCES ("light dark" by default),
 # in one Maestro launch per appearance (each launch costs about a minute of
 # driver start-up).
@@ -323,10 +405,11 @@ case "${1:-}" in
     build) build ;;
     test) shift; test_all "$@" ;;
     run) run ;;
+    device) device ;;
     flow) flow "${2:-}" ;;
     smoke) smoke ;;
     *)
-        echo "usage: $0 {generate|build|test|run|flow NAME|smoke}" >&2
+        echo "usage: $0 {generate|build|test|run|device|flow NAME|smoke}" >&2
         exit 2
         ;;
 esac

@@ -157,7 +157,15 @@ make ios-run        # build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
 IOS_APPEARANCES=light make ios-flow FLOW=tabs  # light only
 make ios-smoke      # every flow in SMOKE_FLOWS (scripts/ios.sh), in one Maestro launch per appearance
+make ios-device     # sign, build, install and launch on the plugged-in iPhone
 ```
+
+### On a real iPhone
+
+`make ios-device` installs the Debug app on the iPhone plugged into the Mac, with the Apple ID signed into Xcode (Settings > Accounts); a free Apple ID is enough, and its installs expire after 7 days.
+The phone needs Developer Mode on (Settings > Privacy & Security), and the first launch needs the developer certificate trusted (Settings > General > VPN & Device Management).
+The first run writes `Configs/Local.xcconfig`, git-ignored and included by `App.xcconfig`, with the team and a bundle id of its own (`fr.monelu.app.dev.<team>`), since a free team cannot sign an id another account registered; delete it to pick another team.
+The app calls the production API, as TestFlight builds may (rule 6).
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.
 A PR that changes a screen names the flow it ran and the screenshots that show the change; CI uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.

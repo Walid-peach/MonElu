@@ -15,3 +15,7 @@ TARGETED_DEVICE_FAMILY = 1
 // release waits for the API's own subdomain (ADR-041 §5, #419, #433).
 // `$()` keeps xcconfig from reading `//` as the start of a comment.
 MONELU_API_BASE_URL = https:/$()/monelu-production.up.railway.app
+
+// A developer's own signing team for installing on their iPhone, kept out of
+// git (`ios.sh device` writes it). Optional: Simulator builds need none.
+#include? "Local.xcconfig"
