@@ -2,8 +2,8 @@ import Foundation
 import MonEluAPI
 import MonEluCore
 
-/// The deputy list's, profiles' and Accueil's data, behind a protocol so models and screens are tested
-/// with a stub instead of the network.
+/// The deputy list's, profiles' and Accueil's data, behind a protocol so
+/// models and screens are tested with a stub instead of the network.
 public protocol DeputiesService: Sendable {
     func deputies(_ query: DeputyQuery) async throws -> DeputyPage
     /// Throws `DeputyNotFound` when the API has no such deputy.
