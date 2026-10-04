@@ -6,6 +6,7 @@ the real script with a local bare repository as the remote, so nothing
 reaches GitHub.
 """
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -15,6 +16,8 @@ import pytest
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "pr-screenshots.sh"
 REPO = "owner/name"
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+# Written on every commit beside the images.
+BRANCH_FILES = ["README.md", "frontend/vercel.json"]
 
 
 def git(cwd: Path, *args: str) -> str:
@@ -77,6 +80,7 @@ def test_publishes_to_an_orphan_branch_and_prints_pinned_links(checkout, tmp_pat
     assert remote_files(checkout, "pr-screenshots") == [
         "478/home-dark-1-accueil.png",
         "478/home-light-1-accueil.png",
+        *BRANCH_FILES,
     ]
     # Orphan: no history shared with the project, nothing but images.
     assert git(checkout, "rev-list", "--count", "FETCH_HEAD") == "1"
@@ -92,10 +96,23 @@ def test_a_later_run_adds_to_the_branch_and_keeps_earlier_links_valid(checkout, 
 
     assert first.returncode == 0 and second.returncode == 0
     first_commit = re.search(r"/name/([0-9a-f]{40})/", first.stdout).group(1)
-    assert remote_files(checkout, "pr-screenshots") == ["1/a-light-1.png", "2/b-light-1.png"]
+    assert remote_files(checkout, "pr-screenshots") == [
+        "1/a-light-1.png",
+        "2/b-light-1.png",
+        *BRANCH_FILES,
+    ]
     # The first PR's links pin a commit that still holds its image.
     assert git(checkout, "cat-file", "-t", f"{first_commit}:1/a-light-1.png") == "blob"
     assert git(checkout, "rev-list", "--count", "FETCH_HEAD") == "2"
+
+
+def test_vercel_cancels_the_branch_instead_of_failing_it(checkout, tmp_path):
+    run(checkout, "4", str(image(tmp_path, "tabs/light-1.png")))
+
+    git(checkout, "fetch", "--quiet", "origin", "pr-screenshots")
+    config = json.loads(git(checkout, "show", "FETCH_HEAD:frontend/vercel.json"))
+    # Vercel skips the build when the ignore command exits 0.
+    assert config == {"ignoreCommand": "exit 0"}
 
 
 def test_the_project_branch_and_working_tree_are_untouched(checkout, tmp_path):

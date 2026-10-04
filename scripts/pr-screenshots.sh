@@ -6,10 +6,15 @@
 #
 # GitHub's CLI cannot attach an image to a PR, so the images go to the
 # `pr-screenshots` branch of this repository: an orphan branch that holds
-# only images, one folder per PR, and is never merged. Each run adds one
+# images, one folder per PR, and is never merged. Each run adds one
 # commit on top of that branch, written with plumbing (no checkout, no
 # working tree touched), and the printed links pin that commit, so a later
 # run can never change what an older PR shows.
+#
+# Every commit also carries two small files at the branch root: a README
+# saying what the branch is, and `frontend/vercel.json`, whose ignoreCommand
+# makes Vercel (which builds every pushed branch from `frontend/`) cancel the
+# deployment instead of failing it.
 #
 # An image is stored as `<pr>/<parent folder>-<file name>`, so the light and
 # dark captures of two Maestro flows (`ios/build/screenshots/home/light-1.png`
@@ -61,6 +66,16 @@ duplicates="$(uniq -d <<<"$names")"
 index="$(mktemp)"
 trap 'rm -f "$index"' EXIT
 
+readme_blob="$(git hash-object -w --stdin <<'EOF'
+# pr-screenshots
+
+Images embedded in pull request descriptions, one folder per PR number.
+Written only by `scripts/pr-screenshots.sh` on the default branch; never
+merge this branch or base work on it.
+EOF
+)"
+vercel_blob="$(git hash-object -w --stdin <<<'{ "ignoreCommand": "exit 0" }')"
+
 # A rejected push means someone else published in between: rebuild on the
 # new tip and try again.
 for attempt in 1 2 3; do
@@ -76,6 +91,8 @@ for attempt in 1 2 3; do
   else
     GIT_INDEX_FILE="$index" git read-tree --empty
   fi
+  GIT_INDEX_FILE="$index" git update-index --add --cacheinfo "100644,$readme_blob,README.md"
+  GIT_INDEX_FILE="$index" git update-index --add --cacheinfo "100644,$vercel_blob,frontend/vercel.json"
   for image in "$@"; do
     blob="$(git hash-object -w "$image")"
     GIT_INDEX_FILE="$index" git update-index --add --cacheinfo "100644,$blob,$pr/$(stored_name "$image")"
