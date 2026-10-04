@@ -37,7 +37,8 @@ ARGUMENTS: a flow name from `ios/maestro/` (without `.yaml`). Default: `tabs`, w
 
 ## Reporting
 
-- In a PR that changes a screen, say which flow you ran, and list the screenshots that show the change.
-  CI's `smoke` job uploads the smoke flows' screenshots as the `smoke-screenshots` artifact on every run, in light mode only on a PR, so link that run for light and attach the dark screenshots from your local run.
+- A PR that changes a screen embeds its screenshots, light and dark: publish the ones that show the change with `scripts/pr-screenshots.sh <pr-number> <image>...` and paste the Markdown it prints into the description (the Screenshots section of the `pr-create` skill).
+  Say which flow you ran under them.
+  CI's `smoke` job also uploads the smoke flows' screenshots as the `smoke-screenshots` artifact, in light mode only on a PR; it complements the embedded images and does not replace them.
 - When working with the user, send the relevant screenshots with SendUserFile.
 - If the flow fails, Maestro's logs and view hierarchy are under `~/Library/Caches/MonElu-ios/<checkout hash>/maestro/<flow>/`; read them before changing the flow.

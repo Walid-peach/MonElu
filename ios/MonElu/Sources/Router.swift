@@ -10,7 +10,7 @@ import SwiftUI
 @MainActor
 @Observable
 final class Router {
-    var selection: AppTab = .myDeputy
+    var selection: AppTab = .home
     var paths: [AppTab: [AppRoute]] = [:]
 
     /// Shows `route` in its own tab, on top of whatever that tab had open.

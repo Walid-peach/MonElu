@@ -1,7 +1,8 @@
-# Smoke flow (#450): launch the app and visit every tab, screenshotting each.
+# Smoke flow (#450, #477): launch the app and visit every tab, screenshotting
+# each, and both of Explorer's lists.
 # Tabs are tapped by their visible label and checked by the screen's
-# accessibility id (`screen.<tab>` in RootTabView): the tab bar shows every
-# label all the time, so a label cannot prove the screen changed.
+# accessibility id (`screen.<name>`): the tab bar shows every label all the
+# time, so a label cannot prove the screen changed.
 # Run it through `make ios-flow FLOW=tabs` (or `make ios-smoke`), which passes
 # APP_ID and SCREENSHOT_PREFIX and runs it once in light and once in dark mode.
 appId: ${APP_ID}
@@ -9,28 +10,29 @@ appId: ${APP_ID}
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: "Mon député"
+    visible: "Accueil"
     timeout: 15000
 - assertVisible:
-    id: "screen.my-deputy"
-- takeScreenshot: ${SCREENSHOT_PREFIX}1-mon-depute
+    id: "screen.home"
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-accueil
+
+- tapOn: "Explorer"
+- assertVisible:
+    id: "screen.votes"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-explorer-votes
 
 - tapOn: "Députés"
 - assertVisible:
     id: "screen.deputies"
-- takeScreenshot: ${SCREENSHOT_PREFIX}2-deputes
-
-- tapOn: "Votes"
-- assertVisible:
-    id: "screen.votes"
-- takeScreenshot: ${SCREENSHOT_PREFIX}3-votes
-
-- tapOn: "Demander"
-- assertVisible:
-    id: "screen.ask"
-- takeScreenshot: ${SCREENSHOT_PREFIX}4-demander
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-explorer-deputes
 
 - tapOn: "Quiz"
 - assertVisible:
     id: "screen.quiz"
-- takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-quiz
+
+- tapOn: "Demander"
+- assertVisible:
+    id: "screen.ask"
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-demander

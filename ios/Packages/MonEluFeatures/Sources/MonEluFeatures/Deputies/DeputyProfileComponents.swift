@@ -2,7 +2,7 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-// The pieces of a deputy's profile. Mon député (#463) shows the same deputy,
+// The pieces of a deputy's profile. Accueil (#463, #477) shows the same deputy,
 // so each section is its own view taking plain models.
 
 /// Portrait, name, group, constituency and mandate.

@@ -315,6 +315,13 @@ class DeputyVoteItem(_Base):
     result: Optional[str] = None
     position: str
     summary_plain: Optional[str] = None
+    scrutin_kind: Optional[str] = Field(
+        default=None,
+        description=(
+            "What the scrutin decided: ensemble | motion | amendement | article | autre; "
+            "null for a scrutin not yet classified"
+        ),
+    )
 
 
 class DeputyVotesResponse(_Base):
@@ -337,6 +344,7 @@ class DeputyVotesResponse(_Base):
                         "summary_plain": (
                             "Le texte issu de la commission mixte paritaire a été adopté."
                         ),
+                        "scrutin_kind": "ensemble",
                     }
                 ],
             }

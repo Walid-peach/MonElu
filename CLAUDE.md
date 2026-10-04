@@ -14,6 +14,7 @@ Use `/po-agent sync` explicitly to reconcile GitHub issues after merge, `/po-age
 for read-only matching, or `/po-agent fill` to draft and create backlog items.
 Read the [shared backlog conventions](.claude/skills/solve-issue/references/github-issues.md)
 before selecting or updating issues. Linear links are historical references, not a writable tracker.
+A PR that adds or changes anything a user sees (`frontend/` or `ios/`) embeds screenshots of each changed state in light and dark mode: publish them with `scripts/pr-screenshots.sh <pr-number> <image>...`, which pushes them to the orphan `pr-screenshots` branch and prints Markdown pinned to that commit (the Screenshots section of the `pr-create` skill).
 
 The four shared workflow skills and their `solve-issue/references/` resources are mirrored
 between `.agents/skills/` and `.claude/skills/`; update both when changing common behavior.

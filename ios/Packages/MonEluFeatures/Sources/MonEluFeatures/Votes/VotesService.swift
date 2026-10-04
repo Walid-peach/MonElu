@@ -1,7 +1,7 @@
 import Foundation
 import MonEluAPI
 
-/// The Votes tab's data, behind a protocol so models and screens are tested
+/// The vote list's and vote detail's data, behind a protocol so models and screens are tested
 /// with a stub instead of the network.
 public protocol VotesService: Sendable {
     func votes(_ query: VoteQuery) async throws -> VotePage

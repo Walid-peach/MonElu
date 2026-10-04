@@ -2,36 +2,39 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// The Députés tab: every deputy, by name, with search and a group filter
-/// (web: `/deputes`).
+/// Explorer's deputy list: every deputy, by name, with search and a group
+/// filter (web: `/deputes`). Explorer owns the model, so the search and
+/// filter survive switching to the votes and back.
 public struct DeputiesListScreen: View {
-    @State private var model: DeputiesListModel
+    @Bindable private var model: DeputiesListModel
 
-    public init(service: any DeputiesService) {
-        _model = State(initialValue: DeputiesListModel(service: service))
+    public init(model: DeputiesListModel) {
+        self.model = model
     }
 
     public var body: some View {
-        LoadStateView(
-            model.loader,
-            empty: EmptyStateView(
-                title: "Aucun député",
-                message: "Aucun député ne correspond à cette recherche.",
-                systemImage: "magnifyingglass"
-            )
-        ) { deputies in
-            DeputiesList(
-                deputies: deputies, isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure
-            ) {
-                await model.loadMore()
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
+        // The filter sits above the list rather than in a top safe-area
+        // inset: an inset over a List leaves the large title blank (#477).
+        VStack(spacing: 0) {
             GroupFilter(groups: model.groups, selection: $model.groupSlug, selectedName: model.groupName)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Palette.pageBackground)
+            LoadStateView(
+                model.loader,
+                empty: EmptyStateView(
+                    title: "Aucun député",
+                    message: "Aucun député ne correspond à cette recherche.",
+                    systemImage: "magnifyingglass"
+                )
+            ) { deputies in
+                DeputiesList(
+                    deputies: deputies, isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure
+                ) {
+                    await model.loadMore()
+                }
+            }
         }
+        .background(Palette.pageBackground)
         .searchable(text: $model.searchText, prompt: "Rechercher un député")
         .autocorrectionDisabled()
         // Reload when the search or group changes, after a pause so typing
@@ -42,7 +45,6 @@ public struct DeputiesListScreen: View {
             guard !Task.isCancelled else { return }
             await model.reload()
         }
-        .navigationTitle("Députés")
         .accessibilityIdentifier("screen.deputies")
     }
 }

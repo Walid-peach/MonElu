@@ -35,7 +35,7 @@ The work is tracked under epic #429, one phase epic at a time.
 8. **No push, no analytics SDK.**
    Push is out of v1 (ADR-041 §7, #359); errors go to Sentry only.
 9. **Every PR proves itself** (ADR-041 §8).
-   `make ios-test` must pass, and a PR that changes a screen carries screenshots in light and dark mode.
+   `make ios-test` must pass, and a PR that changes a screen embeds screenshots in light and dark mode, published with `scripts/pr-screenshots.sh`.
 
 ## Talking to the API
 
@@ -137,7 +137,7 @@ A freshly booted Simulator needs a couple of minutes to settle before runs are f
 | `Packages/MonEluFeatures` | The screens: each feature's models, its service protocol with a live implementation on the generated client, and its views. Depends on Core, API and UI |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
-| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `mon-depute.yaml`, `ask.yaml` and `quiz.yaml` run on demand |
+| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `home.yaml`, `ask.yaml` and `quiz.yaml` run on demand |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 
 Feature code goes in a package, not in the app target, so it can be tested on its own.
@@ -160,7 +160,7 @@ make ios-smoke      # every flow in SMOKE_FLOWS (scripts/ios.sh), in one Maestro
 ```
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.
-A PR that changes a screen names the flow it ran and the screenshots that show the change; CI uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.
+A PR that changes a screen embeds the screenshots that show the change, published with `scripts/pr-screenshots.sh <pr-number> <image>...` (the Screenshots section of the `pr-create` skill), and names the flow it ran; CI also uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.
 Maestro is pinned by version and SHA-256 in `scripts/install-maestro.sh` and needs Java 17 (`brew install openjdk@17`).
 
 ## The local loop

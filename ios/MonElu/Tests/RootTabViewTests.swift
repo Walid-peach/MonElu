@@ -50,7 +50,8 @@ struct RootTabViewTests {
         #expect(controller.view.subviews.isEmpty == false)
     }
 
-    @Test func showsFiveTabs() {
-        #expect(AppTab.allCases.count == 5)
+    /// Accueil, Explorer, Quiz, Demander (#477).
+    @Test func showsFourTabsInOrder() {
+        #expect(AppTab.allCases == [.home, .explore, .quiz, .ask])
     }
 }

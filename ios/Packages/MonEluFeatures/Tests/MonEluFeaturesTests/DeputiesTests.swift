@@ -189,6 +189,19 @@ struct LiveDeputiesServiceTests {
         #expect(votes.allSatisfy { $0.date != nil })
     }
 
+    /// The scope Accueil states under each title (#477), from `scrutin_kind`.
+    @Test func recentVotesCarryTheirScope() async throws {
+        let votes = try await Self.service().recentVotes(id: "PA1008")
+        #expect(votes.map(\.scrutinKind) == ["ensemble", "ensemble", "amendement", "amendement", "motion"])
+        #expect(votes.first?.scope == "Vote sur l'ensemble du texte")
+        #expect(votes.last?.scope == "Vote sur une motion")
+    }
+
+    @Test func anUnclassifiedScrutinHasNoScope() {
+        #expect(DeputyVote(id: "V", title: "t", date: nil, result: nil, position: "pour").scope == nil)
+        #expect(DeputyVote(id: "V", title: "t", date: nil, result: nil, position: "pour", scrutinKind: "autre").scope == nil)
+    }
+
     @Test func profilePageLoadsEverySection() async throws {
         let page = try await Self.service().profilePage(id: "PA1008")
         #expect(page.profile.deputy.id == "PA1008")

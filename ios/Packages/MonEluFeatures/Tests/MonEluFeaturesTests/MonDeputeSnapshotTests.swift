@@ -6,9 +6,9 @@ import SnapshotTesting
 import SwiftUI
 import Testing
 
-/// The Mon député tab in light and dark, at the default and an accessibility
-/// text size (#463): the postal-code picker in each of its states, and the
-/// home's "since your last visit" section.
+/// The postal-code picker in light and dark, at the default and an
+/// accessibility text size (#463), in each of its states. Accueil's home is in
+/// `HomeSnapshotTests`.
 @MainActor
 @Suite(.snapshots(record: .missing))
 struct MonDeputeSnapshotTests {
@@ -68,42 +68,5 @@ struct MonDeputeSnapshotTests {
             ),
         ]
         checkSnapshot(picker(.found(found), code: "05110"), variant)
-    }
-
-    /// The home with new votes since the last visit; rows are links, so they
-    /// sit in a stack and a scroll view as in the app.
-    @Test(arguments: Variant.all)
-    func homeWithNewVotes(_ variant: Variant) async throws {
-        let profile = try await LiveDeputiesServiceTests.service().profile(id: "PA1008")
-        let votes = try await LiveDeputiesServiceTests.service().recentVotes(id: "PA1008")
-        let home = MonDeputeHome(
-            page: DeputyProfilePage(profile: profile, scorecard: nil, recentVotes: nil),
-            sinceLastVisit: .votes(Array(votes.prefix(2)), after: try APIDay.date("2026-07-20"))
-        )
-        checkSnapshot(
-            NavigationStack {
-                ScrollView {
-                    MonDeputeHomeContent(home: home, configuration: AppConfiguration.defaults).padding(16)
-                }
-                .background(Palette.pageBackground)
-            },
-            variant,
-            height: variant.size.isAccessibilityCategory ? 1600 : 700
-        )
-    }
-
-    /// The section's other states: a first visit, nothing new, and a failure.
-    @Test(arguments: Variant.all)
-    func sinceLastVisitStates(_ variant: Variant) throws {
-        let after = try APIDay.date("2026-07-21")
-        checkSnapshot(
-            VStack(alignment: .leading, spacing: 24) {
-                SinceLastVisitSection(since: .firstVisit)
-                SinceLastVisitSection(since: .votes([], after: after))
-                SinceLastVisitSection(since: .unavailable)
-            }
-            .padding(16),
-            variant
-        )
     }
 }

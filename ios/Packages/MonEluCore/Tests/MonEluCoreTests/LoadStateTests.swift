@@ -124,8 +124,8 @@ struct AppRouteTests {
         #expect(AppRoute(url: try #require(URL(string: link))) == nil)
     }
 
-    @Test func routesOpenInTheirTab() {
-        #expect(AppRoute.deputy(id: "PA1").tab == .deputies)
-        #expect(AppRoute.vote(id: "V1").tab == .votes)
+    @Test func routesOpenInExplorer() {
+        #expect(AppRoute.deputy(id: "PA1").tab == .explore)
+        #expect(AppRoute.vote(id: "V1").tab == .explore)
     }
 }

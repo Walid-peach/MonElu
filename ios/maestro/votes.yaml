@@ -1,14 +1,15 @@
-# Votes tab (#460): the list loads from the API, and a row opens its detail.
+# Explorer's votes (#460, #477): the list loads from the API, and a row opens
+# its detail.
 # Asserts on structure, not on wording: the scrutins themselves change daily.
 appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: "Mon député"
+    visible: "Accueil"
     timeout: 15000
 
-- tapOn: "Votes"
+- tapOn: "Explorer"
 - extendedWaitUntil:
     visible:
       id: "vote.row"

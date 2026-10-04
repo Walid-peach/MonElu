@@ -385,6 +385,26 @@ def test_get_deputy_votes_includes_summary_plain(client, mock_cursor):
     assert data["items"][0]["summary_plain"] == "Ce texte prévoit..."
 
 
+def test_get_deputy_votes_includes_scrutin_kind(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [
+        {
+            "vote_id": "VTANR5L17V1",
+            "voted_at": "2024-07-16T15:00:00",
+            "vote_title": "l'ensemble du projet de loi de finances",
+            "result": "adopté",
+            "position": "pour",
+            "summary_plain": None,
+            "scrutin_kind": "ensemble",
+        }
+    ]
+    resp = client.get("/deputies/PA1/votes")
+    assert resp.status_code == 200
+    assert resp.json()["items"][0]["scrutin_kind"] == "ensemble"
+    select_sql = mock_cursor.execute.call_args_list[-1].args[0]
+    assert "scrutin_kind" in str(select_sql)
+
+
 def test_get_deputy_votes_since_filter(client, mock_cursor):
     mock_cursor.fetchone.return_value = {"count": 5}
     mock_cursor.fetchall.return_value = [

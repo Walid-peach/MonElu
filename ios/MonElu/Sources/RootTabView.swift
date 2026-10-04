@@ -3,8 +3,8 @@ import MonEluFeatures
 import MonEluUI
 import SwiftUI
 
-/// The five top-level tabs, each with its own navigation stack driven by the
-/// `Router`.
+/// The four top-level tabs (#477), each with its own navigation stack driven
+/// by the `Router`.
 struct RootTabView: View {
     let services: AppServices
     @State private var router: Router
@@ -27,6 +27,8 @@ struct RootTabView: View {
                 .tag(tab)
             }
         }
+        // Accueil's invitations switch tabs through this, never the router.
+        .environment(\.openTab, OpenTabAction { [router] in router.selection = $0 })
         .onOpenURL { router.open(url: $0) }
         #if DEBUG
         .task {
@@ -35,24 +37,24 @@ struct RootTabView: View {
         #endif
     }
 
-    /// Each root screen carries the `screen.<tab>` accessibility id Maestro
+    /// Each root screen carries a `screen.<name>` accessibility id Maestro
     /// flows assert after tapping a tab: the tab bar shows every label all the
-    /// time, so a label alone cannot prove the screen changed.
+    /// time, so a label alone cannot prove the screen changed. Explorer's are
+    /// its lists' (`screen.votes`, `screen.deputies`).
     @ViewBuilder
     private func root(for tab: AppTab) -> some View {
         switch tab {
-        case .votes:
-            VotesListScreen(service: services.votes)
-        case .deputies:
-            DeputiesListScreen(service: services.deputies)
-        case .myDeputy:
-            MonDeputeScreen(
-                deputies: services.deputies, postalCodes: services.postalCodes, store: services.followedDeputy
+        case .home:
+            HomeScreen(
+                deputies: services.deputies, votes: services.votes, postalCodes: services.postalCodes,
+                store: services.followedDeputy
             )
-        case .ask:
-            AskScreen(service: services.ask)
+        case .explore:
+            ExploreScreen(votes: services.votes, deputies: services.deputies)
         case .quiz:
             QuizScreen(service: services.quiz)
+        case .ask:
+            AskScreen(service: services.ask)
         }
     }
 }

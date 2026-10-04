@@ -24,6 +24,11 @@ public enum Palette {
     /// An abstention's seat in the hemicycle: the website's amber, the same in
     /// both themes (`POSITION_COLORS` in `HemicycleChart.tsx`).
     public static let seatAbstention = token("seatAbstention")
+    /// The followed deputy's identity card: the website's fixed navy
+    /// (`--dp-active-bg`), the same in both themes so white text stays legible.
+    public static let identityBackground = token("identityBackground")
+    /// Text and icons on `identityBackground`.
+    public static let onIdentity = token("onIdentity")
     /// Civic red, for calls to action.
     public static let accent = token("accent")
 
