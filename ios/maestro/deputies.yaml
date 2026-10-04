@@ -1,4 +1,4 @@
-# Députés tab (#462): the list loads from the API, the group filter narrows
+# Explorer's deputies (#462, #477): the list loads from the API, the group filter narrows
 # it, and a row opens the deputy's profile. Asserts on structure and fixed
 # labels, not on who is listed: the data changes with each ingestion.
 appId: ${APP_ID}
@@ -6,9 +6,10 @@ appId: ${APP_ID}
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: "Mon député"
+    visible: "Accueil"
     timeout: 15000
 
+- tapOn: "Explorer"
 - tapOn: "Députés"
 - extendedWaitUntil:
     visible:

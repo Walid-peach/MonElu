@@ -2,13 +2,14 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// The Députés tab: every deputy, by name, with search and a group filter
-/// (web: `/deputes`).
+/// Explorer's deputy list: every deputy, by name, with search and a group
+/// filter (web: `/deputes`). Explorer owns the model, so the search and
+/// filter survive switching to the votes and back.
 public struct DeputiesListScreen: View {
-    @State private var model: DeputiesListModel
+    @Bindable private var model: DeputiesListModel
 
-    public init(service: any DeputiesService) {
-        _model = State(initialValue: DeputiesListModel(service: service))
+    public init(model: DeputiesListModel) {
+        self.model = model
     }
 
     public var body: some View {
@@ -42,7 +43,6 @@ public struct DeputiesListScreen: View {
             guard !Task.isCancelled else { return }
             await model.reload()
         }
-        .navigationTitle("Députés")
         .accessibilityIdentifier("screen.deputies")
     }
 }

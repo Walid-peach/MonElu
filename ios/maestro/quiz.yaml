@@ -7,7 +7,7 @@ appId: ${APP_ID}
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: "Mon député"
+    visible: "Accueil"
     timeout: 15000
 
 - tapOn: "Quiz"

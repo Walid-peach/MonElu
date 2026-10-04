@@ -1,4 +1,4 @@
-# Navigation flow (#459): a link opens a deputy and a vote in their own tabs,
+# Navigation flow (#459, #477): a link opens a deputy and a vote in Explorer,
 # each on its real screen, loaded from the API.
 #
 # The link is passed at launch (`MonEluOpenURL`, read by Router.launchLink in
@@ -28,7 +28,7 @@ appId: ${APP_ID}
     timeout: 20000
 - takeScreenshot: ${SCREENSHOT_PREFIX}2-vote-route
 
-# Back returns to the tab's root screen.
-- tapOn: "Votes"
+# Tapping the tab again returns to its root screen, the vote list.
+- tapOn: "Explorer"
 - assertVisible:
     id: "screen.votes"

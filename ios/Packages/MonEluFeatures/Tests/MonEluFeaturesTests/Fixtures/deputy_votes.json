@@ -8,7 +8,8 @@
       "vote_title": "l'ensemble du projet de loi relatif à la protection des enfants (première lecture).",
       "result": "adopté",
       "position": "abstention",
-      "summary_plain": "Le texte adopte le projet de loi visant à renforcer la protection des enfants, en introduisant ou en améliorant des mesures de prévention, de signalement et d'intervention en cas de maltraitance ou de danger."
+      "summary_plain": "Le texte adopte le projet de loi visant à renforcer la protection des enfants, en introduisant ou en améliorant des mesures de prévention, de signalement et d'intervention en cas de maltraitance ou de danger.",
+      "scrutin_kind": "ensemble"
     },
     {
       "vote_id": "VTANR5L17V8431",
@@ -16,7 +17,8 @@
       "vote_title": "l'ensemble de la proposition de loi visant à protéger les mineurs des risques auxquels les expose l'utilisation des réseaux sociaux (texte de la commission mixte paritaire).",
       "result": "adopté",
       "position": "pour",
-      "summary_plain": "Le texte vise à instaurer des mesures de protection des mineurs contre les dangers liés à l'usage des réseaux sociaux, notamment en renforçant le contrôle parental, en imposant des obligations de transparence aux plateformes et en sanctionnant les contenus inadaptés. Son adoption introduira un cadre légal contraignant pour les éditeurs de services en ligne afin de mieux sécuriser l’exposition des jeunes sur internet."
+      "summary_plain": "Le texte vise à instaurer des mesures de protection des mineurs contre les dangers liés à l'usage des réseaux sociaux, notamment en renforçant le contrôle parental, en imposant des obligations de transparence aux plateformes et en sanctionnant les contenus inadaptés. Son adoption introduira un cadre légal contraignant pour les éditeurs de services en ligne afin de mieux sécuriser l’exposition des jeunes sur internet.",
+      "scrutin_kind": "ensemble"
     },
     {
       "vote_id": "VTANR5L17V8429",
@@ -24,7 +26,8 @@
       "vote_title": "l'amendement n° 1 du Gouvernement de rétablissement de l'article 11 (supprimé) du projet de loi relatif à la protection des enfants (seconde délibération) (première lecture).",
       "result": "adopté",
       "position": "pour",
-      "summary_plain": "L'amendement rétablit l'article 11 du projet de loi sur la protection des enfants, réintroduisant les dispositions prévues dans cet article qui avaient été supprimées lors de l'examen précédent."
+      "summary_plain": "L'amendement rétablit l'article 11 du projet de loi sur la protection des enfants, réintroduisant les dispositions prévues dans cet article qui avaient été supprimées lors de l'examen précédent.",
+      "scrutin_kind": "amendement"
     },
     {
       "vote_id": "VTANR5L17V8428",
@@ -32,7 +35,8 @@
       "vote_title": "le sous-amendement n° 2 de Mme Perrine Goulet à l'amendement n° 1 du Gouvernement de rétablissement de l'article 11 (supprimé) du projet de loi relatif à la protection des enfants (seconde délibération) (première lecture).",
       "result": "adopté",
       "position": "pour",
-      "summary_plain": "Le texte rétablit l'article 11, précédemment supprimé, dans le projet de loi relatif à la protection des enfants, réintroduisant ainsi les dispositions prévues par cet article."
+      "summary_plain": "Le texte rétablit l'article 11, précédemment supprimé, dans le projet de loi relatif à la protection des enfants, réintroduisant ainsi les dispositions prévues par cet article.",
+      "scrutin_kind": "amendement"
     },
     {
       "vote_id": "VTANR5L17V8432",
@@ -40,7 +44,8 @@
       "vote_title": "la motion de rejet préalable, déposée par Mme Cyrielle Chatelain, du projet de loi visant à offrir des réponses immédiates aux phénomènes troublant l'ordre public, la sécurité et la tranquilité de nos concitoyens (texte de la commission mixte paritaire).",
       "result": "rejeté",
       "position": "pour",
-      "summary_plain": "Cette motion de rejet préalable vise à bloquer le texte de la commission mixte paritaire portant sur le projet de loi relatif aux réponses immédiates aux troubles de l'ordre public, de la sécurité et de la tranquillité. Son rejet signifie que le texte continue son parcours législatif sans être arrêté à ce stade."
+      "summary_plain": "Cette motion de rejet préalable vise à bloquer le texte de la commission mixte paritaire portant sur le projet de loi relatif aux réponses immédiates aux troubles de l'ordre public, de la sécurité et de la tranquillité. Son rejet signifie que le texte continue son parcours législatif sans être arrêté à ce stade.",
+      "scrutin_kind": "motion"
     }
   ]
 }

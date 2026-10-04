@@ -24,18 +24,33 @@ public enum SinceLastVisit: Hashable, Sendable {
     case unavailable
 }
 
-/// Everything the home shows.
+extension SinceLastVisit {
+    /// Whether `vote` was held after the previous visit's newest vote, so the
+    /// home marks it "Nouveau". Nothing is new on a first visit or when the
+    /// check failed.
+    public func isNew(_ vote: DeputyVote) -> Bool {
+        guard case .votes(_, let after) = self, let date = vote.date else { return false }
+        return date > after
+    }
+}
+
+/// Everything Accueil shows about the followed deputy (#477): who they are and
+/// their latest decisions. Their activity figures stay on the profile, so the
+/// scorecard is not loaded here.
 public struct MonDeputeHome: Hashable, Sendable {
-    public let page: DeputyProfilePage
+    public let profile: DeputyProfile
+    /// Nil when the list failed; the identity card still shows.
+    public let recentVotes: [DeputyVote]?
     public let sinceLastVisit: SinceLastVisit
 
-    public init(page: DeputyProfilePage, sinceLastVisit: SinceLastVisit) {
-        self.page = page
+    public init(profile: DeputyProfile, recentVotes: [DeputyVote]?, sinceLastVisit: SinceLastVisit) {
+        self.profile = profile
+        self.recentVotes = recentVotes
         self.sinceLastVisit = sinceLastVisit
     }
 }
 
-/// The Mon député tab's state: the followed deputy, kept on the device, the
+/// Accueil's state (#463, #477): the followed deputy, kept on the device, the
 /// postal-code search that chooses one, and the home that loads them.
 @MainActor
 @Observable
@@ -184,14 +199,15 @@ public final class MonDeputeModel {
         id: String, deputies: any DeputiesService, store: any FollowedDeputyStore, now: Date = Date()
     ) async throws -> MonDeputeHome {
         let lastSeen = store.lastSeenVote(for: id)
-        async let page = deputies.profilePage(id: id)
+        async let recent = try? deputies.recentVotes(id: id)
         async let newVotes = votes(of: id, since: lastSeen, deputies: deputies)
-        let home: MonDeputeHome
-        switch (lastSeen, await newVotes) {
-        case (nil, _): home = MonDeputeHome(page: try await page, sinceLastVisit: .firstVisit)
-        case let (lastSeen?, votes?): home = MonDeputeHome(page: try await page, sinceLastVisit: .votes(votes, after: lastSeen))
-        case (_?, nil): home = MonDeputeHome(page: try await page, sinceLastVisit: .unavailable)
+        let profile = try await deputies.profile(id: id)
+        let since: SinceLastVisit = switch (lastSeen, await newVotes) {
+        case (nil, _): .firstVisit
+        case let (lastSeen?, votes?): .votes(votes, after: lastSeen)
+        case (_?, nil): .unavailable
         }
+        let home = MonDeputeHome(profile: profile, recentVotes: await recent, sinceLastVisit: since)
         if let position = readingPosition(after: home, lastSeen: lastSeen, now: now) {
             store.setLastSeenVote(position, for: id)
         }
@@ -209,7 +225,7 @@ public final class MonDeputeModel {
     /// Where the next visit's "since" starts, or nil to keep the current one
     /// (when a list it depends on failed to load).
     nonisolated static func readingPosition(after home: MonDeputeHome, lastSeen: Date?, now: Date) -> Date? {
-        guard let recent = home.page.recentVotes else { return nil }
+        guard let recent = home.recentVotes else { return nil }
         if case .unavailable = home.sinceLastVisit { return nil }
         var shown = recent.compactMap(\.date)
         if case .votes(let votes, _) = home.sinceLastVisit { shown += votes.compactMap(\.date) }

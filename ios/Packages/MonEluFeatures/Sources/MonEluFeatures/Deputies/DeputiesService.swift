@@ -2,7 +2,7 @@ import Foundation
 import MonEluAPI
 import MonEluCore
 
-/// The Députés tab's data, behind a protocol so models and screens are tested
+/// The deputy list's, profiles' and Accueil's data, behind a protocol so models and screens are tested
 /// with a stub instead of the network.
 public protocol DeputiesService: Sendable {
     func deputies(_ query: DeputyQuery) async throws -> DeputyPage
@@ -114,7 +114,10 @@ public struct LiveDeputiesService: DeputiesService {
 
 extension DeputyVote {
     init(_ vote: Components.Schemas.DeputyVoteItem) {
-        self.init(id: vote.voteId, title: vote.voteTitle, date: vote.votedAt, result: vote.result, position: vote.position)
+        self.init(
+            id: vote.voteId, title: vote.voteTitle, date: vote.votedAt, result: vote.result,
+            position: vote.position, scrutinKind: vote.scrutinKind
+        )
     }
 }
 

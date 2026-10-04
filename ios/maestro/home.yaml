@@ -1,5 +1,7 @@
-# Mon député tab (#463): a postal code finds the département's deputies, the
-# chosen one is kept on the device, and a relaunch opens on their home.
+# Accueil (#463, #477): before a deputy is chosen it shows the Assembly's
+# latest votes beside the postal-code search; a code finds the département's
+# deputies, the chosen one is kept on the device, a relaunch opens on their
+# home, and the home's invitations lead to the quiz and back.
 # Asserts on fixed labels, not on who is listed: rosters change.
 appId: ${APP_ID}
 ---
@@ -8,13 +10,18 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: "Trouvez votre député"
     timeout: 15000
+- extendedWaitUntil:
+    visible: "Les derniers votes de l'Assemblée"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-before-choosing
 
 # Four digits are refused before anything is sent.
 - tapOn: "Code postal"
 - inputText: "3300"
 - tapOn: "Rechercher"
 - assertVisible: "Un code postal compte cinq chiffres."
-- takeScreenshot: ${SCREENSHOT_PREFIX}1-postal-invalid
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-postal-invalid
 
 - tapOn: "3300"
 - eraseText: 4
@@ -24,29 +31,40 @@ appId: ${APP_ID}
     visible: "Gironde (33)"
     timeout: 20000
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}2-postal-results
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-postal-results
 
 # A row reads as the deputy's name, group and seat; the 1st seat is stable.
 - tapOn: ".*Gironde · 1re circonscription.*"
 - extendedWaitUntil:
-    visible: "Depuis votre dernière visite"
+    visible: "Ses derniers votes"
     timeout: 20000
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}3-home-first-visit
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-home-first-visit
 
 # The choice survives a relaunch, which opens straight on the home.
 - launchApp:
     stopApp: true
 - extendedWaitUntil:
-    visible: "Depuis votre dernière visite"
+    visible: "Ses derniers votes"
     timeout: 20000
 - assertNotVisible: "Trouvez votre député"
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}4-home-relaunch
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-home-relaunch
+- scrollUntilVisible:
+    element: ".*Et si vous votiez.*"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-home-invitations
+
+# The quiz invitation switches tabs.
+- tapOn: ".*Et si vous votiez.*"
+- assertVisible:
+    id: "screen.quiz"
+- tapOn: "Accueil"
 
 - tapOn: "Options"
 - tapOn: "Ne plus suivre"
 - extendedWaitUntil:
     visible: "Trouvez votre député"
     timeout: 10000
-- takeScreenshot: ${SCREENSHOT_PREFIX}5-unfollowed
+- takeScreenshot: ${SCREENSHOT_PREFIX}7-unfollowed

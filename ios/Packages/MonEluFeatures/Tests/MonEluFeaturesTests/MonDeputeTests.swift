@@ -283,9 +283,42 @@ struct SinceLastVisitTests {
     }
 
     @Test func countsAreWrittenInFrench() {
-        #expect(SinceLastVisitSection.count(1) == "1 nouveau vote")
-        #expect(SinceLastVisitSection.count(3) == "3 nouveaux votes")
-        #expect(SinceLastVisitSection.count(50) == "Au moins 50 nouveaux votes")
+        #expect(HomeRecentVotesSection.newCount(1) == "1 nouveau vote")
+        #expect(HomeRecentVotesSection.newCount(3) == "3 nouveaux votes")
+        #expect(HomeRecentVotesSection.newCount(50) == "Au moins 50 nouveaux votes")
+    }
+
+    /// Accueil marks the votes held after the stored position (#477).
+    @Test func onlyVotesAfterThePreviousVisitAreNew() throws {
+        let since = SinceLastVisit.votes([vote("V3", day: "2026-07-22")], after: try APIDay.date("2026-07-21"))
+        #expect(since.isNew(vote("V3", day: "2026-07-22")))
+        #expect(!since.isNew(vote("V2", day: "2026-07-21")))
+        #expect(!SinceLastVisit.firstVisit.isNew(vote("V3", day: "2026-07-22")))
+        #expect(!SinceLastVisit.unavailable.isNew(vote("V3", day: "2026-07-22")))
+    }
+
+    /// A first visit says nothing about "new"; the other states say what
+    /// changed, and the recent votes show in every case.
+    @Test func theStatusLineFollowsTheVisit() throws {
+        let after = try APIDay.date("2026-07-21")
+        #expect(HomeRecentVotesSection.status(.firstVisit) == nil)
+        #expect(HomeRecentVotesSection.status(.votes([], after: after)) == "Rien de nouveau depuis le scrutin du 21 juillet 2026.")
+        #expect(
+            HomeRecentVotesSection.status(.votes([vote("V3", day: "2026-07-22")], after: after))
+                == "1 nouveau vote depuis votre dernière visite"
+        )
+        #expect(HomeRecentVotesSection.status(.unavailable) == "Les nouveaux votes n'ont pas pu être vérifiés.")
+    }
+
+    /// The home loads the profile and recent votes, never the scorecard,
+    /// whose figures stay on the profile.
+    @Test func theHomeKeepsItsListsWhenOnlyTheRecentVotesFail() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let home = try await MonDeputeModel.loadHome(
+            id: "PA1008", deputies: MonDeputeDeputies(recent: nil), store: store
+        )
+        #expect(home.profile == testProfile)
+        #expect(home.recentVotes == nil)
     }
 }
 

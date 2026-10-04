@@ -128,13 +128,31 @@ public struct DeputyVote: Identifiable, Hashable, Sendable {
     public let result: String?
     /// `pour`, `contre`, `abstention` or `nonVotant`.
     public let position: String
+    /// What the scrutin decided (`ensemble`, `motion`, `amendement`,
+    /// `article`, `autre`), as the API classifies it; nil when unclassified.
+    public let scrutinKind: String?
 
-    public init(id: String, title: String, date: Date?, result: String?, position: String) {
+    public init(
+        id: String, title: String, date: Date?, result: String?, position: String, scrutinKind: String? = nil
+    ) {
         self.id = id
         self.title = title
         self.date = date
         self.result = result
         self.position = position
+        self.scrutinKind = scrutinKind
+    }
+
+    /// "Vote sur l'ensemble du texte", "Vote sur un amendement", …; nil for
+    /// `autre` or an unclassified scrutin, whose title already says it all.
+    public var scope: String? {
+        switch scrutinKind {
+        case "ensemble": "Vote sur l'ensemble du texte"
+        case "motion": "Vote sur une motion"
+        case "amendement": "Vote sur un amendement"
+        case "article": "Vote sur un article"
+        default: nil
+        }
     }
 }
 

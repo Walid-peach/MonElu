@@ -43,6 +43,10 @@ WEB_SOURCES = {
     "accent": ("#C9302C", "--dp-red"),  # red.civic in tailwind.config.ts
     # POSITION_COLORS.abstention in HemicycleChart.tsx, not theme-aware there.
     "seatAbstention": ("#D97706", "#D97706"),
+    # A fixed navy surface and the white text on it, the same in both themes
+    # (MON-160: --dp-active-bg is deliberately not overridden in .dark).
+    "identityBackground": ("--dp-active-bg", "--dp-active-bg"),
+    "onIdentity": ("#FFFFFF", "#FFFFFF"),
 }
 
 

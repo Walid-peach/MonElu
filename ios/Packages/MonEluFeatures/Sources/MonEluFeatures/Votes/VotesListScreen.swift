@@ -2,13 +2,14 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// The Votes tab: every scrutin, newest first, with search and a result
-/// filter (web: `/votes`).
+/// Explorer's vote list: every scrutin, newest first, with search and a
+/// result filter (web: `/votes`). Explorer owns the model, so the search and
+/// filter survive switching to the deputies and back.
 public struct VotesListScreen: View {
-    @State private var model: VotesListModel
+    @Bindable private var model: VotesListModel
 
-    public init(service: any VotesService) {
-        _model = State(initialValue: VotesListModel(service: service))
+    public init(model: VotesListModel) {
+        self.model = model
     }
 
     public var body: some View {
@@ -43,7 +44,6 @@ public struct VotesListScreen: View {
             guard !Task.isCancelled else { return }
             await model.reload()
         }
-        .navigationTitle("Votes")
         .accessibilityIdentifier("screen.votes")
     }
 }

@@ -6,13 +6,9 @@ public enum AppRoute: Hashable, Sendable {
     case deputy(id: String)
     case vote(id: String)
 
-    /// The tab a route opens in.
-    public var tab: AppTab {
-        switch self {
-        case .deputy: .deputies
-        case .vote: .votes
-        }
-    }
+    /// The tab a route opens in: Explorer, which holds both lists, so the
+    /// back button always leads somewhere to keep browsing.
+    public var tab: AppTab { .explore }
 
     /// Parses `monelu://deputes/<id>` and `monelu://votes/<id>`, and the
     /// website's own paths (`https://<host>/deputes/<id>`, `/votes/<id>`), so
