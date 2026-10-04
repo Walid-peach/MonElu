@@ -311,6 +311,10 @@ def get_deputy_votes(
 
     `result` is the scrutin's outcome, not the deputy's: a deputy can vote
     `contre` on a text that was adopted.
+
+    `scrutin_kind` says what the scrutin decided - the whole text (`ensemble`),
+    a `motion`, one `amendement`, one `article`, or `autre` - so a reader can
+    tell a final vote from a procedural one.
     """
     try:
         with get_conn() as conn:
@@ -331,9 +335,10 @@ def get_deputy_votes(
                 cur.execute(
                     sql.SQL("""
                         SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
-                               v.summary_plain
+                               v.summary_plain, raw.scrutin_kind
                         FROM vote_positions vp
                         JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
+                        LEFT JOIN votes raw ON raw.vote_id = vp.vote_id
                         {} ORDER BY v.voted_at DESC NULLS LAST LIMIT %s
                     """).format(where),
                     params + [limit],

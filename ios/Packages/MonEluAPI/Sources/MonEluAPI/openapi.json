@@ -233,7 +233,7 @@
           "Deputies"
         ],
         "summary": "How one deputy voted, most recent first",
-        "description": "One deputy's individual positions, newest first, with the vote's outcome.\n\n`position` is one of `pour`, `contre`, `abstention`, `nonVotant`. The last two\nare different things: an `abstention` was cast deliberately, a `nonVotant` was\nnot cast at all. Do not merge them.\n\n`total` counts every scrutin the deputy has a recorded position on, ignoring\n`since`; `items` is capped by `limit` (max 50) and is the only part `since`\nfilters. There is no offset here - narrow with `since` rather than paging, or\nuse the CSV export for the whole record.\n\n`result` is the scrutin's outcome, not the deputy's: a deputy can vote\n`contre` on a text that was adopted.",
+        "description": "One deputy's individual positions, newest first, with the vote's outcome.\n\n`position` is one of `pour`, `contre`, `abstention`, `nonVotant`. The last two\nare different things: an `abstention` was cast deliberately, a `nonVotant` was\nnot cast at all. Do not merge them.\n\n`total` counts every scrutin the deputy has a recorded position on, ignoring\n`since`; `items` is capped by `limit` (max 50) and is the only part `since`\nfilters. There is no offset here - narrow with `since` rather than paging, or\nuse the CSV export for the whole record.\n\n`result` is the scrutin's outcome, not the deputy's: a deputy can vote\n`contre` on a text that was adopted.\n\n`scrutin_kind` says what the scrutin decided - the whole text (`ensemble`),\na `motion`, one `amendement`, one `article`, or `autre` - so a reader can\ntell a final vote from a procedural one.",
         "operationId": "getDeputyVotes",
         "parameters": [
           {
@@ -3886,6 +3886,11 @@
           "summary_plain": {
             "title": "Summary Plain",
             "type": "string"
+          },
+          "scrutin_kind": {
+            "title": "Scrutin Kind",
+            "description": "What the scrutin decided: ensemble | motion | amendement | article | autre; null for a scrutin not yet classified",
+            "type": "string"
           }
         },
         "type": "object",
@@ -3927,6 +3932,7 @@
             {
               "position": "contre",
               "result": "adopté",
+              "scrutin_kind": "ensemble",
               "summary_plain": "Le texte issu de la commission mixte paritaire a été adopté.",
               "vote_id": "VTANR5L17V8433",
               "vote_title": "l'ensemble du projet de loi visant à offrir des réponses immédiates aux phénomènes troublant l'ordre public (texte de la commission mixte paritaire).",
