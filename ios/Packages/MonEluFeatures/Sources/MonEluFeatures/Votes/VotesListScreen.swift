@@ -13,27 +13,29 @@ public struct VotesListScreen: View {
     }
 
     public var body: some View {
-        LoadStateView(
-            model.loader,
-            empty: EmptyStateView(
-                title: "Aucun scrutin",
-                message: "Aucun vote ne correspond à cette recherche.",
-                systemImage: "magnifyingglass"
-            )
-        ) { votes in
-            VotesList(votes: votes, isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure) {
-                await model.loadMore()
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
+        // The filter sits above the list rather than in a top safe-area
+        // inset: an inset over a List leaves the large title blank (#477).
+        VStack(spacing: 0) {
             Picker("Résultat", selection: $model.filter) {
                 ForEach(VotesListModel.ResultFilter.allCases) { Text($0.label).tag($0) }
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Palette.pageBackground)
+            LoadStateView(
+                model.loader,
+                empty: EmptyStateView(
+                    title: "Aucun scrutin",
+                    message: "Aucun vote ne correspond à cette recherche.",
+                    systemImage: "magnifyingglass"
+                )
+            ) { votes in
+                VotesList(votes: votes, isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure) {
+                    await model.loadMore()
+                }
+            }
         }
+        .background(Palette.pageBackground)
         .searchable(text: $model.searchText, prompt: "Rechercher un scrutin")
         .autocorrectionDisabled()
         // Reload when the search or filter changes, after a pause so typing

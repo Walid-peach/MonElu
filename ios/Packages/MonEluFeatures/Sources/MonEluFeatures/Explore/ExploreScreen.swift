@@ -36,21 +36,20 @@ public struct ExploreScreen: View {
     }
 
     public var body: some View {
-        Group {
-            switch segment {
-            case .votes: VotesListScreen(model: votes)
-            case .deputies: DeputiesListScreen(model: deputies)
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
+        // Stacked above the list, not in a top safe-area inset, which leaves
+        // the large title blank.
+        VStack(spacing: 0) {
             Picker("Explorer", selection: $segment) {
                 ForEach(Segment.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.top, 8)
-            .background(Palette.pageBackground)
             .accessibilityIdentifier("explore.section")
+            switch segment {
+            case .votes: VotesListScreen(model: votes)
+            case .deputies: DeputiesListScreen(model: deputies)
+            }
         }
         .background(Palette.pageBackground)
         .navigationTitle("Explorer")
