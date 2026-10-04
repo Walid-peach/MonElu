@@ -43,6 +43,12 @@ When reviewing a pull request or branch, follow this workflow:
      - Are there migration, deployment, rollback, data, or config risks?
      - Are there edge cases that could fail in production?
 
+   - Screenshots
+     - Does the PR add or change anything a user sees (a screen, component, layout, copy, color or interaction, in `frontend/` or `ios/`)?
+     - If so, the description must embed screenshots of each changed state in light and dark mode, published with `scripts/pr-screenshots.sh` (the Screenshots section of `pr-create`).
+     - Missing screenshots, or images that do not show the changed state, are a Must Fix.
+     - Look at the images themselves: a broken layout, clipped text or an unreadable dark mode is a finding like any other.
+
    - Testing
      - Are tests present where needed?
      - Are manual validation steps or automated checks sufficient?

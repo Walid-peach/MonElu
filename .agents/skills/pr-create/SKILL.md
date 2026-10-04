@@ -59,6 +59,17 @@ Explain the problem, context, or reason the change is needed.
 - List manual validation steps
 - If not tested, say so explicitly
 
+## Screenshots
+- Required when the PR adds or changes anything a user sees: a screen, component, layout, copy, color or interaction, in `frontend/` or `ios/`.
+  Omit the section only when nothing visible changed.
+- Show each changed state in light and dark mode, and before/after when the change alters an existing screen.
+- iOS: run the flow that reaches the change with the `ios-run` skill (`make ios-flow FLOW=<flow>`), which saves both appearances under `ios/build/screenshots/<flow>/`.
+- Web: capture the changed route at 390px and 1280px, light and dark, against `next dev` or the Vercel preview, e.g. from `frontend/`: `npx playwright screenshot --viewport-size=390,844 --color-scheme=dark <url> <file>.png`.
+- Publish them with `scripts/pr-screenshots.sh <pr-number> <image>...` and paste the Markdown it prints, so the images show inline.
+  It pushes to the orphan `pr-screenshots` branch and pins each link to that commit; never commit screenshots to the PR branch.
+  A new PR needs its number first: create it, publish, then edit the description.
+- Label each image with the flow or route, the appearance and the state (a small table reads well), so a reviewer can check them without running anything.
+
 ## Risks / Notes
 - Mention rollout concerns, edge cases, follow-ups, or reviewer attention points
 
@@ -91,4 +102,5 @@ Explain the problem, context, or reason the change is needed.
 12. Final deliverables:
    - A proposed or updated PR title
    - A PR description saved in `notes/prs/pr_<sanitized-branch-name>.md`
+   - For a PR that changes anything a user sees, the published screenshots embedded in that description (the Screenshots section above)
    - A short reviewer summary explaining what to review first

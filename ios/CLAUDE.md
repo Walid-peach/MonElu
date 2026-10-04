@@ -35,7 +35,7 @@ The work is tracked under epic #429, one phase epic at a time.
 8. **No push, no analytics SDK.**
    Push is out of v1 (ADR-041 §7, #359); errors go to Sentry only.
 9. **Every PR proves itself** (ADR-041 §8).
-   `make ios-test` must pass, and a PR that changes a screen carries screenshots in light and dark mode.
+   `make ios-test` must pass, and a PR that changes a screen embeds screenshots in light and dark mode, published with `scripts/pr-screenshots.sh`.
 
 ## Talking to the API
 
@@ -160,7 +160,7 @@ make ios-smoke      # every flow in SMOKE_FLOWS (scripts/ios.sh), in one Maestro
 ```
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.
-A PR that changes a screen names the flow it ran and the screenshots that show the change; CI uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.
+A PR that changes a screen embeds the screenshots that show the change, published with `scripts/pr-screenshots.sh <pr-number> <image>...` (the Screenshots section of the `pr-create` skill), and names the flow it ran; CI also uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.
 Maestro is pinned by version and SHA-256 in `scripts/install-maestro.sh` and needs Java 17 (`brew install openjdk@17`).
 
 ## The local loop
