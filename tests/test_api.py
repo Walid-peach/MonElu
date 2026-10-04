@@ -488,6 +488,53 @@ def test_list_votes_before_cursor_overrides_offset(client, mock_cursor):
     assert select_params[-1] == 0
 
 
+def test_list_votes_without_kind_adds_no_kind_condition(client, mock_cursor):
+    """The default listing is unchanged: no scrutin_kind filter, same params."""
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [_VOTE_SUMMARY]
+    resp = client.get("/votes/")
+    assert resp.status_code == 200
+    for call in mock_cursor.execute.call_args_list:
+        assert "scrutin_kind" not in call.args[0].as_string(None)
+
+
+def test_list_votes_kind_filters_on_scrutin_kind(client, mock_cursor):
+    """kind=ensemble filters both the count and the page on votes.scrutin_kind."""
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [_VOTE_SUMMARY]
+    resp = client.get("/votes/?kind=ensemble")
+    assert resp.status_code == 200
+    count_call, page_call = mock_cursor.execute.call_args_list
+    for call in (count_call, page_call):
+        assert "scrutin_kind" in call.args[0].as_string(None)
+        assert ["ensemble"] in call.args[1]
+
+
+def test_list_votes_kind_accepts_repeated_and_comma_separated_values(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [_VOTE_SUMMARY]
+    resp = client.get("/votes/?kind=ensemble,motion&kind=motion&kind=article")
+    assert resp.status_code == 200
+    count_params = mock_cursor.execute.call_args_list[0].args[1]
+    assert ["ensemble", "motion", "article"] in count_params
+
+
+def test_list_votes_unknown_kind_rejected(client, mock_cursor):
+    """An unknown kind is a 422 naming the accepted values, before any query."""
+    resp = client.get("/votes/?kind=ensemble,loi")
+    assert resp.status_code == 422
+    assert "loi" in resp.json()["detail"]
+    mock_cursor.execute.assert_not_called()
+
+
+def test_list_votes_kinds_match_ingestion():
+    """The accepted kinds are exactly the ones ingestion classifies into."""
+    from api.routers.votes import SCRUTIN_KINDS
+    from scripts.ingest_votes import SCRUTIN_KINDS as INGESTED_KINDS
+
+    assert SCRUTIN_KINDS == INGESTED_KINDS
+
+
 def test_list_votes_invalid_cursor_rejected(client):
     """A malformed before= cursor returns 422, not 500."""
     resp = client.get("/votes/?before=not-a-valid-cursor")

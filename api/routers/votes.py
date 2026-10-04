@@ -22,6 +22,23 @@ from api.schemas import (
 
 router = APIRouter()
 
+# The values of votes.scrutin_kind, as classified at ingestion (ADR-035 §4).
+# Mirrors scripts.ingest_votes.SCRUTIN_KINDS; tests/test_api.py pins the two.
+SCRUTIN_KINDS = ("ensemble", "motion", "amendement", "article", "autre")
+
+
+def _parse_kinds(values: Optional[list[str]]) -> list[str]:
+    """Flatten repeated and comma-separated `kind` values; 422 on an unknown one."""
+    kinds = [part.strip() for value in values or [] for part in value.split(",") if part.strip()]
+    unknown = sorted(set(kinds) - set(SCRUTIN_KINDS))
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown kind: {', '.join(unknown)}. "
+            f"Expected one of: {', '.join(SCRUTIN_KINDS)}",
+        )
+    return list(dict.fromkeys(kinds))
+
 
 def _encode_cursor(voted_at: Optional[datetime], vote_id: str) -> str:
     """Opaque keyset cursor over the list's sort key (voted_at, vote_id).
@@ -49,7 +66,7 @@ def _decode_cursor(token: str) -> tuple[Optional[datetime], str]:
 @router.get(
     "/",
     response_model=VoteListResponse,
-    summary="List scrutins, with full-text search and result / theme filters",
+    summary="List scrutins, with full-text search and result / theme / kind filters",
 )
 @limiter.limit(tiered_limit(30))
 def list_votes(
@@ -68,6 +85,11 @@ def list_votes(
         None,
         description="Full-text search over vote_title and summary_plain (French stemming)",
     ),
+    kind: Optional[list[str]] = Query(
+        None,
+        description="Filter by what the scrutin decided: ensemble | motion | amendement | "
+        "article | autre. Repeat the parameter or separate values with commas.",
+    ),
 ):
     """Recorded votes of the 17th legislature, newest first.
 
@@ -82,6 +104,13 @@ def list_votes(
     fuzzy matching on names. `result` takes the accented French values `adopté`
     or `rejeté`.
 
+    `kind` keeps only scrutins of the given kinds: `ensemble` is a vote on a whole
+    text, `motion` a motion (censure, rejet préalable…), `amendement` and
+    `article` the votes on one amendment or one article, which are most of the
+    dossier-tagged scrutins, and `autre` everything else (including a scrutin not
+    yet classified). `kind=ensemble` therefore lists the votes on whole texts.
+    An unknown value is a 422.
+
     Two paging modes, and they do not mix. `offset` is capped at 2000; past that
     ceiling, pass the `next_cursor` from the previous response as `before=`,
     which has no depth limit and silently overrides `offset` when set. `total` is
@@ -93,6 +122,7 @@ def list_votes(
     """
     # Decode before opening a connection so a bad cursor fails fast with 422.
     cursor_key = _decode_cursor(before) if before else None
+    kinds = _parse_kinds(kind)
 
     try:
         with get_conn() as conn:
@@ -117,6 +147,18 @@ def list_votes(
                         )
                     )
                     params.append(search)
+
+                if kinds:
+                    # The mart does not carry scrutin_kind; the raw votes table
+                    # does. An unclassified (NULL) kind counts as `autre`, as on
+                    # the bill page (lois.py).
+                    conditions.append(
+                        sql.SQL(
+                            "vote_id IN (SELECT vote_id FROM votes"
+                            " WHERE COALESCE(scrutin_kind, 'autre') = ANY(%s))"
+                        )
+                    )
+                    params.append(kinds)
 
                 # total reflects the full filtered set, independent of the cursor window.
                 count_where = (
