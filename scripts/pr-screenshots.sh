@@ -46,6 +46,16 @@ for image in "$@"; do
   esac
 done
 
+# Absolute paths, so the images are found from the repository root too.
+images=()
+for image in "$@"; do images+=("$(cd "$(dirname "$image")" && pwd)/$(basename "$image")"); done
+set -- "${images[@]}"
+
+# Run from anywhere: outside a repository, work in the one holding this script.
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  cd "$(dirname "${BASH_SOURCE[0]}")/.."
+fi
+
 # owner/name, from an https or ssh remote URL.
 repo="${PR_SCREENSHOTS_REPO:-}"
 if [[ -z "$repo" ]]; then
@@ -106,12 +116,19 @@ for attempt in 1 2 3; do
     commit="$(git commit-tree "$tree" -m "$message")"
   fi
 
-  if git push --quiet "$remote" "$commit:refs/heads/$branch" 2>/dev/null; then
+  if push_error="$(git push --quiet "$remote" "$commit:refs/heads/$branch" 2>&1)"; then
     for image in "$@"; do
       name="$(stored_name "$image")"
       echo "![${name%.*}](https://raw.githubusercontent.com/$repo/$commit/$pr/$name)"
     done
     exit 0
+  fi
+  # Only a lost race is worth retrying; anything else (auth, network, a
+  # missing remote) is reported as git said it.
+  if ! grep -qE "non-fast-forward|fetch first|rejected" <<<"$push_error"; then
+    echo "error: push to $branch failed:" >&2
+    echo "$push_error" >&2
+    exit 1
   fi
   echo "push to $branch was rejected (attempt $attempt), retrying on the new tip" >&2
 done

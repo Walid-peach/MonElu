@@ -142,6 +142,38 @@ def test_a_missing_or_non_image_file_is_refused(checkout, tmp_path):
     assert run(checkout, "1", str(notes)).returncode == 1
 
 
+def test_it_runs_from_outside_the_repository(checkout, tmp_path):
+    # A copy inside the throwaway checkout, so falling back to "the
+    # repository holding this script" can only ever reach that checkout.
+    copy = checkout / "scripts" / "pr-screenshots.sh"
+    copy.parent.mkdir()
+    copy.write_text(SCRIPT.read_text())
+    elsewhere = tmp_path / "elsewhere"
+    shot = image(elsewhere, "home/light-1.png")
+
+    result = subprocess.run(
+        ["bash", str(copy), "5", "home/light-1.png"],
+        cwd=elsewhere,
+        capture_output=True,
+        text=True,
+        env={"PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin", "PR_SCREENSHOTS_REPO": REPO},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert shot.exists()
+    assert "5/home-light-1.png" in remote_files(checkout, "pr-screenshots")
+
+
+def test_a_failed_push_is_reported_not_retried(checkout, tmp_path):
+    git(checkout, "remote", "set-url", "origin", str(tmp_path / "no-such-remote.git"))
+
+    result = run(checkout, "6", str(image(tmp_path, "tabs/light-1.png")))
+
+    assert result.returncode == 1
+    assert "push to pr-screenshots failed" in result.stderr
+    assert "retrying" not in result.stderr
+
+
 def test_two_images_that_would_share_a_name_are_refused(checkout, tmp_path):
     one = image(tmp_path / "x", "home/light-1.png")
     two = image(tmp_path / "y", "home/light-1.png")
