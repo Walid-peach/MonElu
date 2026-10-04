@@ -73,6 +73,58 @@ struct ComponentSnapshotTests {
     }
 
     @Test(arguments: variants)
+    func sectionHeaderWithAction(_ variant: Variant) {
+        check(SectionHeader("Votes récents", actionTitle: "Tout voir") {}, variant)
+    }
+
+    /// Compact (a list row) and large (a vote's page), with a sliver of an
+    /// abstention, non-votants, and an empty tally.
+    @Test(arguments: variants)
+    func voteSplitBar(_ variant: Variant) {
+        check(VStack(spacing: 16) {
+            VoteSplitBar(pour: 80, contre: 24, abstention: 24)
+            VoteSplitBar(pour: 77, contre: 86, abstention: 1)
+            VoteSplitBar(pour: 24, contre: 0, abstention: 0, nonVotant: 1)
+            VoteSplitBar(pour: 0, contre: 0, abstention: 0)
+            VoteSplitBar(pour: 80, contre: 24, abstention: 24, size: .large)
+        }, variant)
+    }
+
+    /// Three up, as on a profile; stacked at the accessibility sizes.
+    @Test(arguments: variants)
+    func statTile(_ variant: Variant) {
+        check(StatTileGrid {
+            StatTile(value: "92 %", label: "Scrutins solennels", detail: "46 sur 50")
+            StatTile(value: "39,6 %", label: "Présence aux scrutins", detail: "Tous scrutins")
+            StatTile(value: "98,4 %", label: "Fidélité au groupe")
+        }, variant)
+    }
+
+    /// Every colored group, the neutral pair, and a full label.
+    @Test(arguments: variants)
+    func partyChip(_ variant: Variant) {
+        check(VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                ForEach(["RN", "EPR", "LFI", "SOC", "DR", "ECS"], id: \.self) { PartyChip(short: $0) }
+            }
+            HStack(spacing: 6) {
+                ForEach(["DEM", "HOR", "LIOT", "UDR", "GDR", "NI"], id: \.self) { PartyChip(short: $0) }
+            }
+            PartyChip("La France insoumise - NFP", short: "LFI")
+        }, variant)
+    }
+
+    @Test(arguments: variants)
+    func filterChipRow(_ variant: Variant) {
+        check(FilterChipRow([
+            FilterChip(id: "all", title: "Tous", isSelected: true),
+            FilterChip(id: "adopted", title: "Adoptés", isSelected: false),
+            FilterChip(id: "rejected", title: "Rejetés", isSelected: false),
+            FilterChip(id: "theme", title: "Thème", isSelected: false, opensSheet: true),
+        ], inset: 0) { _ in }, variant)
+    }
+
+    @Test(arguments: variants)
     func loadingState(_ variant: Variant) {
         check(LoadingStateView().frame(height: 160), variant)
     }

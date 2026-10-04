@@ -75,7 +75,7 @@ public struct HemicycleChart: View {
         case .pour: Palette.positive
         case .contre: Palette.negative
         case .abstention: Palette.seatAbstention
-        case .nonVotant: Palette.textMuted
+        case .nonVotant: Palette.seatNonVotant
         case .absent: Palette.border
         }
     }
