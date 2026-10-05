@@ -14,6 +14,8 @@ struct RouteDestination: View {
             DeputyProfileScreen(id: id, service: services.deputies)
         case .vote(let id):
             VoteDetailScreen(id: id, service: services.votes)
+        case .agenda:
+            AgendaScreen(service: services.agenda)
         }
     }
 }

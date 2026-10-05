@@ -5,6 +5,8 @@ import Foundation
 public enum AppRoute: Hashable, Sendable {
     case deputy(id: String)
     case vote(id: String)
+    /// The séance publique agenda, one ISO week at a time.
+    case agenda
 
     /// The tab a route opens in: Explorer, which holds both lists, so the
     /// back button always leads somewhere to keep browsing.
