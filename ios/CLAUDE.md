@@ -89,9 +89,11 @@ The work is tracked under epic #429, one phase epic at a time.
 - Colors come only from `Palette` (`MonEluUI`), whose tokens are color sets in `Colors.xcassets` with a light and a dark value each, mirroring the website's `--dp-*` variables in `frontend/src/app/globals.css`.
   Never write a literal or system color (`.red`, `Color(red:…)`, `UIColor(…)`): `tests/unit/test_ios_design_tokens.py` fails on one, on a token missing its dark value, and on a token that drifts from the web palette.
   A new token means a new color set and a row in that test's `WEB_SOURCES`.
+  `textSecondary` and `textMuted` are deliberately darker than the website's, so every body text token reaches 4.5:1 on the page, card and track backgrounds in both themes (#480); the same test computes those ratios from the catalog, so a new text token or surface goes into its `TEXT_ON_BACKGROUNDS`.
+  Group chips take their colors from `Palette.party(_:)`, keyed by the API's `party_short` and mirroring `partyColor()` in `frontend/src/lib/utils.ts`.
 - Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
 - Text that can grow with Dynamic Type must wrap, not truncate.
-- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
+- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
   A new component gets the same four snapshots.
   A missing reference is recorded and the test fails once: look at the new image, commit it, re-run.
   A changed reference is a visual change: re-record by deleting the old image, and say so in the PR.

@@ -11,7 +11,12 @@ public enum Palette {
     public static let cardBackground = token("cardBackground")
     public static let border = token("border")
     public static let textPrimary = token("textPrimary")
+    /// Secondary copy: dates, counts, captions. Darker than the website's
+    /// `--dp-text-secondary` in light mode so it reaches 4.5:1 on every
+    /// surface (#480).
     public static let textSecondary = token("textSecondary")
+    /// The lightest text. Still body copy, so it too reaches 4.5:1 on the
+    /// page, card and track backgrounds in both themes (#480).
     public static let textMuted = token("textMuted")
     /// Adopté, pour.
     public static let positive = token("positive")
@@ -24,6 +29,9 @@ public enum Palette {
     /// An abstention's seat in the hemicycle: the website's amber, the same in
     /// both themes (`POSITION_COLORS` in `HemicycleChart.tsx`).
     public static let seatAbstention = token("seatAbstention")
+    /// A non-votant's seat and bar segment: the website's gray, the same in
+    /// both themes (`POSITION_COLORS.nonVotant` in `HemicycleChart.tsx`).
+    public static let seatNonVotant = token("seatNonVotant")
     /// The followed deputy's identity card: the website's fixed navy
     /// (`--dp-active-bg`), the same in both themes so white text stays legible.
     public static let identityBackground = token("identityBackground")
@@ -31,6 +39,20 @@ public enum Palette {
     public static let onIdentity = token("onIdentity")
     /// Civic red, for calls to action.
     public static let accent = token("accent")
+
+    /// A parliamentary group's chip colors, keyed by the API's `party_short`.
+    /// They mirror `partyColor()` in `frontend/src/lib/utils.ts` in light
+    /// mode; in dark mode the pair is reversed (the dark shade behind the
+    /// light one) so a chip never glows on the dark page. A group the website
+    /// leaves uncolored (LIOT, UDR, GDR, non-inscrits) or an unknown code
+    /// takes the neutral pair, as there.
+    public static func party(_ short: String?) -> (background: Color, text: Color) {
+        let code = short.flatMap { coloredParties.contains($0) ? $0 : nil } ?? "Other"
+        return (token("party\(code)Background"), token("party\(code)Text"))
+    }
+
+    /// The groups `partyColor()` gives a color of their own.
+    static let coloredParties: Set<String> = ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR"]
 
     private static func token(_ name: String) -> Color {
         Color(name, bundle: .module)

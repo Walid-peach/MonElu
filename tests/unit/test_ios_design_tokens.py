@@ -33,8 +33,11 @@ WEB_SOURCES = {
     "cardBackground": ("--dp-card-bg", "--dp-card-bg"),
     "border": ("--dp-border", "--dp-border"),
     "textPrimary": ("#0D1F3C", "--dp-text"),  # :root --dp-text is navy via theme()
-    "textSecondary": ("--dp-text-secondary", "--dp-text-secondary"),
-    "textMuted": ("--dp-text-muted", "--dp-text-muted"),
+    # Darker than the web in light mode (and textMuted in dark too): the web
+    # values miss 4.5:1 on the page and track backgrounds (#480). #5F6673 is
+    # the design A secondary text; see test_text_tokens_reach_aa_contrast.
+    "textSecondary": ("#5F6673", "--dp-text-secondary"),
+    "textMuted": ("#656C79", "#8A94A8"),
     "positive": ("--dp-green", "--dp-green"),
     "negative": ("--dp-red", "--dp-red"),
     "positiveBackground": ("--dp-badge-pos-bg", "--dp-badge-pos-bg"),
@@ -47,6 +50,49 @@ WEB_SOURCES = {
     # (MON-160: --dp-active-bg is deliberately not overridden in .dark).
     "identityBackground": ("--dp-active-bg", "--dp-active-bg"),
     "onIdentity": ("#FFFFFF", "#FFFFFF"),
+    # POSITION_COLORS.nonVotant in HemicycleChart.tsx, not theme-aware there.
+    "seatNonVotant": ("#9CA3AF", "#9CA3AF"),
+    # Group chips: partyColor() in lib/utils.ts, Tailwind's 100/900 (950 for
+    # RN) shades. The web has no dark variant; the app reverses each pair.
+    "partyRNBackground": ("#172554", "#1E3A8A"),
+    "partyRNText": ("#DBEAFE", "#DBEAFE"),
+    "partyEPRBackground": ("#FEF3C7", "#78350F"),
+    "partyEPRText": ("#78350F", "#FEF3C7"),
+    "partyLFIBackground": ("#FEE2E2", "#7F1D1D"),
+    "partyLFIText": ("#7F1D1D", "#FEE2E2"),
+    "partySOCBackground": ("#FFE4E6", "#881337"),
+    "partySOCText": ("#881337", "#FFE4E6"),
+    "partyDRBackground": ("#E0F2FE", "#0C4A6E"),
+    "partyDRText": ("#0C4A6E", "#E0F2FE"),
+    "partyECSBackground": ("#DCFCE7", "#14532D"),
+    "partyECSText": ("#14532D", "#DCFCE7"),
+    "partyDEMBackground": ("#FFEDD5", "#7C2D12"),
+    "partyDEMText": ("#7C2D12", "#FFEDD5"),
+    "partyHORBackground": ("#CCFBF1", "#134E4A"),
+    "partyHORText": ("#134E4A", "#CCFBF1"),
+    "partyOtherBackground": ("#F3F4F6", "#374151"),
+    "partyOtherText": ("#374151", "#F3F4F6"),
+}
+
+# A translucent fill (the badge backgrounds) can sit on either surface.
+SURFACES = ("pageBackground", "cardBackground")
+
+# Text token -> the backgrounds it is drawn on. Every pair must reach WCAG AA
+# for body text (4.5:1) in light and in dark, computed from the catalog.
+# The result badges (positive on positiveBackground, 3.88:1 in light) are the
+# website's own pair, caption-size labels rather than body copy, and stay out
+# of this check until both clients change them together.
+TEXT_ON_BACKGROUNDS = {
+    "textPrimary": ["pageBackground", "cardBackground", "trackBackground"],
+    "textSecondary": ["pageBackground", "cardBackground", "trackBackground"],
+    "textMuted": ["pageBackground", "cardBackground", "trackBackground"],
+    "accent": ["pageBackground", "cardBackground"],
+    "onIdentity": ["identityBackground"],
+    "cardBackground": ["textPrimary"],  # a selected FilterChipRow chip
+    **{
+        f"party{code}Text": [f"party{code}Background"]
+        for code in ("RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR", "Other")
+    },
 }
 
 
@@ -141,3 +187,62 @@ def test_literal_color_pattern_catches_the_usual_forms():
         assert LITERAL_COLOR.search(line), line
     for line in [".foregroundStyle(Palette.negative)", "Color(name, bundle: .module)"]:
         assert not LITERAL_COLOR.search(line), line
+
+
+def _luminance(rgb: str) -> float:
+    def channel(hex_pair: str) -> float:
+        c = int(hex_pair, 16) / 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (channel(rgb[i : i + 2]) for i in (0, 2, 4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast(a: str, b: str) -> float:
+    high, low = sorted((_luminance(a), _luminance(b)), reverse=True)
+    return (high + 0.05) / (low + 0.05)
+
+
+def test_contrast_helper_matches_known_ratios():
+    assert round(_contrast("000000", "FFFFFF"), 1) == 21.0
+    assert round(_contrast("767676", "FFFFFF"), 2) == 4.54
+
+
+def _over(rgb: str, alpha: float, surface: str) -> str:
+    """`rgb` at `alpha` composited over the opaque `surface`."""
+    return "".join(
+        f"{round(int(rgb[i : i + 2], 16) * alpha + int(surface[i : i + 2], 16) * (1 - alpha)):02X}"
+        for i in (0, 2, 4)
+    )
+
+
+def test_text_tokens_reach_aa_contrast():
+    colorsets = _colorsets()
+    failures = []
+    for appearance in ("light", "dark"):
+        values = {
+            name: _catalog_value(
+                next(e for e in c["colors"] if ("appearances" in e) == (appearance == "dark"))
+            )
+            for name, c in colorsets.items()
+        }
+        for text, backgrounds in TEXT_ON_BACKGROUNDS.items():
+            text_rgb, text_alpha = values[text]
+            assert text_alpha == 1.0, f"{text} is translucent text"
+            for background in backgrounds:
+                rgb, alpha = values[background]
+                # A translucent fill (the badge backgrounds) is checked over
+                # both surfaces it can sit on.
+                surfaces = (
+                    [rgb]
+                    if alpha == 1.0
+                    else [
+                        _over(rgb, alpha, values[s][0])
+                        for s in ("pageBackground", "cardBackground")
+                    ]
+                )
+                for surface in surfaces:
+                    ratio = _contrast(text_rgb, surface)
+                    if ratio < 4.5:
+                        failures.append(f"{appearance}: {text} on {background} is {ratio:.2f}:1")
+    assert failures == []
