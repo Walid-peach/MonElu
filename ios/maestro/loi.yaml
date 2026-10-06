@@ -1,0 +1,40 @@
+# The bill page (#482): a link opens a bill's page in Explorer, its counted
+# amendment votes open their list, and a bill with no page shows the
+# not-found state. Live data: asserts on fixed labels, never on the day's
+# content. DLR5L17N54372 (protection des enfants) has a first reading with
+# amendment votes, which a later stage does not remove.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    arguments:
+      MonEluOpenURL: "monelu://lois/DLR5L17N54372"
+- extendedWaitUntil:
+    visible: "Parcours"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-loi-overview
+
+- scrollUntilVisible:
+    element: ".*amendements.*votés"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-loi-parcours
+
+- tapOn: ".*amendements.*votés"
+- extendedWaitUntil:
+    visible:
+      id: "screen.loiAmendements"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-loi-amendements
+
+# A dossier without a page is a 404: the not-found state, not an error.
+- launchApp:
+    stopApp: true
+    arguments:
+      MonEluOpenURL: "monelu://lois/DLR5L17N00000"
+- extendedWaitUntil:
+    visible: "Texte introuvable"
+    timeout: 20000
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-loi-not-found

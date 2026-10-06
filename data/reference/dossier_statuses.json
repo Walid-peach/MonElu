@@ -1,0 +1,30 @@
+[
+  {
+    "status": "promulguee",
+    "label": "Promulguée"
+  },
+  {
+    "status": "conseil_constitutionnel",
+    "label": "Devant le Conseil constitutionnel"
+  },
+  {
+    "status": "rejetee",
+    "label": "Rejetée"
+  },
+  {
+    "status": "adoptee_definitivement",
+    "label": "Adoptée définitivement"
+  },
+  {
+    "status": "deposee",
+    "label": "Déposée"
+  },
+  {
+    "status": "en_commission",
+    "label": "En commission"
+  },
+  {
+    "status": "en_navette",
+    "label": "En navette parlementaire"
+  }
+]

@@ -1,0 +1,55 @@
+{
+  "from_date": "2026-10-05",
+  "to_date": "2026-11-02",
+  "days": [
+    {
+      "sitting_date": "2026-10-06",
+      "items": [
+        {
+          "point_uid": "RUANR5L17S2026IDS1-P1",
+          "sitting_start": "2026-10-06T13:00:00Z",
+          "sitting_end": null,
+          "objet": "Questions au Gouvernement",
+          "point_type": "Questions au Gouvernement",
+          "summary_plain": null,
+          "theme": null,
+          "dossier_id": null,
+          "dossier_url": null,
+          "vote_id": null,
+          "result": null
+        },
+        {
+          "point_uid": "RUANR5L17S2026IDS1-P2",
+          "sitting_start": "2026-10-06T13:00:00Z",
+          "sitting_end": null,
+          "objet": "Discussion du projet de loi relatif à la protection des enfants",
+          "point_type": "Discussion",
+          "summary_plain": null,
+          "theme": "Société",
+          "dossier_id": "DLR5L17N54372",
+          "dossier_url": null,
+          "vote_id": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "sitting_date": "2026-10-08",
+      "items": [
+        {
+          "point_uid": "RUANR5L17S2026IDS3-P1",
+          "sitting_start": "2026-10-08T07:00:00Z",
+          "sitting_end": null,
+          "objet": "Suite de la discussion du projet de loi relatif à la protection des enfants",
+          "point_type": "Suite de la discussion",
+          "summary_plain": null,
+          "theme": "Société",
+          "dossier_id": "DLR5L17N54372",
+          "dossier_url": null,
+          "vote_id": null,
+          "result": null
+        }
+      ]
+    }
+  ]
+}

@@ -51,6 +51,17 @@ struct ForcedUpdateTests {
 }
 
 struct MonEluFormatTests {
+    /// 2026-10-05T14:00:00Z is 16 h in Paris (summer time).
+    @Test func sittingIsParisWeekdayDayAndHour() {
+        #expect(MonEluFormat.sitting(Date(timeIntervalSince1970: 1_791_208_800)) == "lundi 5 octobre à 16 h")
+        #expect(MonEluFormat.sitting(Date(timeIntervalSince1970: 1_791_208_800 + 30 * 60)) == "lundi 5 octobre à 16 h 30")
+    }
+
+    @Test func shortDayAbbreviatesTheMonth() throws {
+        let date = try #require(MonEluFormat.calendarDate("2026-10-01"))
+        #expect(MonEluFormat.shortDay(date) == "1 oct. 2026")
+    }
+
     /// Paris moves from summer to winter time on 25 October 2026: 14:00 UTC
     /// is 16 h before and 15 h after, and a 16 h séance is 15:00 UTC after.
     @Test func timeIsParisWallClockAcrossTheOctoberChange() throws {

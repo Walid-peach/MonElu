@@ -47,7 +47,11 @@ def test_tables_are_ordered_lists_with_unique_keys():
     duplicate would decode silently on one client and not another."""
     for name, rows in reference_tables().items():
         assert isinstance(rows, list) and rows, name
-        key = "code" if name == "departments.json" else "slug"
+        key = {
+            "departments.json": "code",
+            "dossier_stages.json": "code",
+            "dossier_statuses.json": "status",
+        }.get(name, "slug")
         keys = [row[key] for row in rows]
         assert len(keys) == len(set(keys)), name
 
@@ -58,3 +62,25 @@ def test_vote_positions_file_is_well_formed():
     rows = json.loads((DEFAULT_OUT_DIR / "vote_positions.json").read_text(encoding="utf-8"))
     assert [row["key"] for row in rows] == ["pour", "contre", "abstention", "nonVotant"]
     assert all(row["label"] for row in rows)
+
+
+def test_bill_status_labels_cover_every_derived_status():
+    """One label per value the API derives, in ADR-035 §5's order."""
+    from api.lois_data import DOSSIER_STATUS_LABELS
+    from api.routers.lois import DOSSIER_STATUSES
+
+    assert tuple(DOSSIER_STATUS_LABELS) == DOSSIER_STATUSES
+
+
+def test_bill_stages_are_reading_stages_on_the_four_steps():
+    """Every stage code is one ingestion knows, on one of the strip's steps."""
+    from api.lois_data import DOSSIER_STAGES
+    from scripts.ingest_dossiers import (
+        CONSEIL_CONSTITUTIONNEL_CODE,
+        PROMULGATION_CODE,
+        READING_STAGE_CODES,
+    )
+
+    known = READING_STAGE_CODES | {CONSEIL_CONSTITUTIONNEL_CODE, PROMULGATION_CODE}
+    assert set(DOSSIER_STAGES) <= known
+    assert {step for step, _ in DOSSIER_STAGES.values()} == {"an", "senat", "cmp", "loi"}

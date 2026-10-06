@@ -5,6 +5,7 @@ import MonEluAPI
 public struct AppServices: Sendable {
     public let votes: any VotesService
     public let deputies: any DeputiesService
+    public let lois: any LoisService
     public let agenda: any AgendaService
     public let ask: any AskService
     public let quiz: any QuizService
@@ -15,6 +16,7 @@ public struct AppServices: Sendable {
     public init(client: Client) {
         votes = LiveVotesService(client: client)
         deputies = LiveDeputiesService(client: client)
+        lois = LiveLoisService(client: client)
         agenda = LiveAgendaService(client: client)
         ask = LiveAskService(client: client)
         quiz = LiveQuizService(client: client)
@@ -23,12 +25,13 @@ public struct AppServices: Sendable {
     }
 
     public init(
-        votes: any VotesService, deputies: any DeputiesService, agenda: any AgendaService,
+        votes: any VotesService, deputies: any DeputiesService, lois: any LoisService, agenda: any AgendaService,
         ask: any AskService, quiz: any QuizService,
         postalCodes: any PostalCodeService, followedDeputy: any FollowedDeputyStore
     ) {
         self.votes = votes
         self.deputies = deputies
+        self.lois = lois
         self.agenda = agenda
         self.ask = ask
         self.quiz = quiz

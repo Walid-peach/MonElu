@@ -3,7 +3,8 @@ scripts/export_reference_data.py
 Write the small reference tables every client mirrors to data/reference/*.json
 (ADR-041 §4, #439).
 
-Departments, parliamentary groups and themes each exist in Python (the API
+Departments, parliamentary groups, themes and the bill status and stage labels
+(api/lois_data.py) each exist in Python (the API
 routes off them) and in TypeScript (the website renders from them), and the
 iOS app needs a third copy. Instead of a third hand-maintained copy, the app
 bundles this JSON, the website's Jest suite compares its own maps against it,
@@ -29,6 +30,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from api.departments_data import DEPT_NAMES  # noqa: E402
 from api.groups_data import GROUP_SLUGS  # noqa: E402
+from api.lois_data import DOSSIER_STAGES, DOSSIER_STATUS_LABELS  # noqa: E402
 from api.themes_data import THEME_NAMES  # noqa: E402
 
 DEFAULT_OUT_DIR = pathlib.Path(__file__).resolve().parents[1] / "data" / "reference"
@@ -41,6 +43,13 @@ def reference_tables() -> dict[str, list[dict[str, str]]]:
         "departments.json": [{"code": code, "name": name} for code, name in DEPT_NAMES.items()],
         "groups.json": [{"slug": slug, "name": name} for slug, name in GROUP_SLUGS.items()],
         "themes.json": [{"slug": slug, "name": name} for slug, name in THEME_NAMES.items()],
+        "dossier_statuses.json": [
+            {"status": status, "label": label} for status, label in DOSSIER_STATUS_LABELS.items()
+        ],
+        "dossier_stages.json": [
+            {"code": code, "step": step, "label": label}
+            for code, (step, label) in DOSSIER_STAGES.items()
+        ],
     }
 
 

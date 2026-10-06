@@ -7,6 +7,8 @@ Small tables that the API, the website and the iOS app all need (ADR-041 §4).
 | `departments.json` | `api/departments_data.py` | Generated; `tests/unit/test_reference_data.py` fails on drift |
 | `groups.json` | `api/groups_data.py` | Generated; same test |
 | `themes.json` | `api/themes_data.py` | Generated; same test |
+| `dossier_statuses.json` | `api/lois_data.py` (ADR-035 §5's labels) | Generated; same test |
+| `dossier_stages.json` | `api/lois_data.py` | Generated; same test |
 | `vote_positions.json` | Written by hand | `frontend/__tests__/lib/reference-data.test.ts` checks it against `frontend/src/lib/vote-position.ts` |
 
 Regenerate after changing any of the Python sources:
