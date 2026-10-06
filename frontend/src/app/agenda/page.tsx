@@ -214,7 +214,7 @@ function Row({ item, last }: { item: AgendaItem; last: boolean }) {
               fontWeight: 600,
               padding: '2px 8px',
               borderRadius: 999,
-              color: item.result === 'adopté' ? 'var(--dp-green)' : RED,
+              color: item.result === 'adopté' ? 'var(--dp-badge-pos-text)' : 'var(--dp-badge-neg-text)',
               background:
                 item.result === 'adopté' ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)',
             }}

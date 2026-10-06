@@ -42,6 +42,10 @@ WEB_SOURCES = {
     "negative": ("--dp-red", "--dp-red"),
     "positiveBackground": ("--dp-badge-pos-bg", "--dp-badge-pos-bg"),
     "negativeBackground": ("--dp-badge-neg-bg", "--dp-badge-neg-bg"),
+    # Badge text: darker than positive in light mode, so the result and
+    # position badges reach 4.5:1 on their tint.
+    "positiveText": ("--dp-badge-pos-text", "--dp-badge-pos-text"),
+    "negativeText": ("--dp-badge-neg-text", "--dp-badge-neg-text"),
     "trackBackground": ("--dp-track-bg", "--dp-track-bg"),
     "accent": ("#C9302C", "--dp-red"),  # red.civic in tailwind.config.ts
     # POSITION_COLORS.abstention in HemicycleChart.tsx, not theme-aware there.
@@ -79,14 +83,15 @@ SURFACES = ("pageBackground", "cardBackground")
 
 # Text token -> the backgrounds it is drawn on. Every pair must reach WCAG AA
 # for body text (4.5:1) in light and in dark, computed from the catalog.
-# The result badges (positive on positiveBackground, 3.88:1 in light) are the
-# website's own pair, caption-size labels rather than body copy, and stay out
-# of this check until both clients change them together.
+# The badges draw positiveText/negativeText, never positive/negative: those
+# fills reached only 3.88:1 as text on positiveBackground in light mode.
 TEXT_ON_BACKGROUNDS = {
     "textPrimary": ["pageBackground", "cardBackground", "trackBackground"],
     "textSecondary": ["pageBackground", "cardBackground", "trackBackground"],
     "textMuted": ["pageBackground", "cardBackground", "trackBackground"],
     "accent": ["pageBackground", "cardBackground"],
+    "positiveText": ["positiveBackground"],
+    "negativeText": ["negativeBackground"],
     "onIdentity": ["identityBackground"],
     "cardBackground": ["textPrimary"],  # a selected FilterChipRow chip
     **{
@@ -103,7 +108,15 @@ def _css_block(css: str, selector: str) -> str:
 
 
 def _css_vars(block: str) -> dict[str, str]:
+    # Comments go first: one that names a variable before a colon would
+    # otherwise be read as its declaration.
+    block = re.sub(r"/\*.*?\*/", "", block, flags=re.S)
     return dict(re.findall(r"(--[\w-]+):\s*([^;]+);", block))
+
+
+def test_css_vars_ignore_comments():
+    block = "  --dp-red: #C9302A;\n  /* --dp-red: the line above; */"
+    assert _css_vars(block) == {"--dp-red": "#C9302A"}
 
 
 def _normalise(value: str) -> tuple[str, float]:
@@ -187,6 +200,73 @@ def test_literal_color_pattern_catches_the_usual_forms():
         assert LITERAL_COLOR.search(line), line
     for line in [".foregroundStyle(Palette.negative)", "Color(name, bundle: .module)"]:
         assert not LITERAL_COLOR.search(line), line
+
+
+# `positive`/`negative` are fills (bars, hemicycle seats). As text on their
+# own tint they miss 4.5:1, so badge text must use positiveText/negativeText.
+FILL = re.compile(r"Palette\.(positive|negative)\b(?!Background|Text)")
+# Where a fill would be drawn as text. Expressions span lines (a ternary per
+# line), so each pattern runs over the whole file:
+# - a tuple or call pairing a fill with its own tint on one line;
+# - a `foreground:` argument or a `var foreground: Color { … }` property, up
+#   to the `background:` that follows it or a line that closes the call;
+# - a `.foregroundStyle(...)` argument, one level of parentheses deep.
+FILL_AS_TEXT = [
+    re.compile(r"Palette\.(positive|negative)\b(?!Background|Text)[^\n]*Palette\.\1Background"),
+    re.compile(r"\bforeground:(.*?)(?=\bbackground:|\)\s*$)", re.S | re.M),
+    re.compile(r"\.foregroundStyle\(([^()]*(?:\([^()]*\)[^()]*)*)\)"),
+]
+
+
+def _fill_as_text(source: str) -> list[int]:
+    """Line numbers where a fill is drawn as text."""
+    lines = set()
+    for pattern in FILL_AS_TEXT:
+        for match in pattern.finditer(source):
+            text = match.group(0) if pattern is FILL_AS_TEXT[0] else match.group(1)
+            offset = match.start(0) if pattern is FILL_AS_TEXT[0] else match.start(1)
+            for fill in FILL.finditer(text):
+                lines.add(source.count("\n", 0, offset + fill.start()) + 1)
+    return sorted(lines)
+
+
+def test_badge_text_does_not_use_the_fill_colors():
+    offenders = []
+    for root in SWIFT_UI_SOURCES:
+        for path in root.rglob("*.swift"):
+            source = path.read_text(encoding="utf-8")
+            lines = source.splitlines()
+            offenders += [f"{path.name}:{n}: {lines[n - 1].strip()}" for n in _fill_as_text(source)]
+    assert offenders == []
+
+
+def test_fill_as_text_catches_the_usual_forms():
+    offending = [
+        'case "pour": (Palette.positive, Palette.positiveBackground)',
+        ".foregroundStyle(Palette.negative)",
+        ".foregroundStyle(isOn ? Palette.positive : Palette.textPrimary)",
+        'Badge(text: "Adopté", foreground: Palette.positive, background: x)',
+        # The confidence pill's shape before this check existed.
+        "Pill(\n"
+        "    text: confidence,\n"
+        '    foreground: answer.confidence == "low" ? Palette.negative\n'
+        '        : answer.confidence == "high" ? Palette.positive : Palette.textSecondary,\n'
+        "    background: Palette.trackBackground\n"
+        ")",
+    ]
+    for source in offending:
+        assert _fill_as_text(source), source
+    assert _fill_as_text(offending[-1]) == [3, 4]
+    fine = [
+        'case "pour": (Palette.positiveText, Palette.positiveBackground)',
+        "case .pour: Palette.positive",
+        'Segment(position: "pour", count: pour, color: Palette.positive),',
+        ".foregroundStyle(Palette.positiveText)",
+        "Badge(text: x, foreground: Palette.textSecondary, background: Palette.positive)",
+        ".fill(Palette.positive)\n.foregroundStyle(Palette.textPrimary)",
+    ]
+    for source in fine:
+        assert not _fill_as_text(source), source
 
 
 def _luminance(rgb: str) -> float:

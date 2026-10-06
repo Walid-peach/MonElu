@@ -83,14 +83,18 @@
      it must NOT be reused for a solid background under white text, since
      its dark-mode value is too light for that contrast to hold. */
   --dp-cta-bg: #E0786E;
-  /* MON-156: the vote list's own adopte/rejete result badge (distinct from
-     vote-position.ts's pour/contre/abstention badges, which stay a deferred
-     gap for MON-159). Text reuses --dp-green/--dp-red; only the pale
-     background tint needs its own token since it must stay legible in
-     dark mode, unlike vote-position.ts's badges which are out of scope
-     here. */
+  /* MON-156: the adopte/rejete result badge and vote-position.ts's
+     pour/contre badges. The pale background tint needs its own token since
+     it must stay legible in dark mode.
+     The text has its own token too, so badge text can reach WCAG AA (4.5:1)
+     on the tint while bars, dots and hemicycle seats keep the brand
+     --dp-green and --dp-red (as text on the tint, --dp-green was 3.88:1).
+     The iOS app mirrors these as positiveText/negativeText, and
+     tests/unit/test_ios_design_tokens.py checks both ratios in both themes. */
   --dp-badge-pos-bg: #EAF5EF;
   --dp-badge-neg-bg: #FBE9E7;
+  --dp-badge-pos-text: #1B7950;
+  --dp-badge-neg-text: #C9302A;
   /* MON-166: two more badge states the vote detail page needs beyond
      pos/neg - a neutral/amber "Partage" state (group split evenly) and an
      info/blue theme tag. Same reasoning as --dp-badge-pos-bg/-neg-bg. */
@@ -158,6 +162,8 @@
   --dp-header-bg: #182338;
   --dp-badge-pos-bg: rgba(52,194,131,0.16);
   --dp-badge-neg-bg: rgba(255,107,96,0.16);
+  --dp-badge-pos-text: #34C283;
+  --dp-badge-neg-text: #FF6B60;
   --dp-badge-neutral-bg: rgba(217,164,6,0.18);
   --dp-badge-neutral-text: #E0B84D;
   --dp-badge-info-bg: rgba(74,144,226,0.18);
@@ -249,6 +255,8 @@
     --dp-cta-bg: #E0786E;
     --dp-badge-pos-bg: #EAF5EF;
     --dp-badge-neg-bg: #FBE9E7;
+    --dp-badge-pos-text: #1B7950;
+    --dp-badge-neg-text: #C9302A;
     --dp-badge-neutral-bg: #FEF3C7;
     --dp-badge-neutral-text: #B45309;
     --dp-badge-info-bg: #E8EFFE;

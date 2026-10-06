@@ -163,7 +163,7 @@ export function VoteDetailClient(props: Props) {
             <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--dp-text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {headline}
             </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 999, background: adopted ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)', color: adopted ? 'var(--dp-green)' : 'var(--dp-red)', flexShrink: 0 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 999, background: adopted ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)', color: adopted ? 'var(--dp-badge-pos-text)' : 'var(--dp-badge-neg-text)', flexShrink: 0 }}>
               {adopted ? 'Adopté' : 'Rejeté'}
             </span>
             <span className="font-mono hidden sm:inline" style={{ fontSize: 12.5, color: 'var(--dp-text-secondary)', flexShrink: 0 }}>
@@ -204,7 +204,7 @@ export function VoteDetailClient(props: Props) {
               </h1>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 999, background: adopted ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)', color: adopted ? 'var(--dp-green)' : 'var(--dp-red)' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 999, background: adopted ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)', color: adopted ? 'var(--dp-badge-pos-text)' : 'var(--dp-badge-neg-text)' }}>
                   {adopted ? 'Adopté' : 'Rejeté'}
                 </span>
                 {theme && (
@@ -386,7 +386,7 @@ export function VoteDetailClient(props: Props) {
                   {selected.position ? (
                     <span style={{
                       fontSize: 13, fontWeight: 700, padding: '6px 14px', borderRadius: 999,
-                      color: selected.position === 'pour' ? 'var(--dp-green)' : selected.position === 'contre' ? 'var(--dp-red)' : 'var(--dp-text-secondary)',
+                      color: selected.position === 'pour' ? 'var(--dp-badge-pos-text)' : selected.position === 'contre' ? 'var(--dp-badge-neg-text)' : 'var(--dp-text-secondary)',
                       background: selected.position === 'pour' ? 'var(--dp-badge-pos-bg)' : selected.position === 'contre' ? 'var(--dp-badge-neg-bg)' : 'var(--dp-track-bg)',
                     }}>
                       {POSITION_LABELS[selected.position] ?? selected.position}
@@ -422,7 +422,7 @@ export function VoteDetailClient(props: Props) {
                     </span>
                   </div>
                   {groups.map((g) => {
-                    const posColor = g.position === 'Pour' ? 'var(--dp-green)' : g.position === 'Contre' ? 'var(--dp-red)' : 'var(--dp-badge-neutral-text)'
+                    const posColor = g.position === 'Pour' ? 'var(--dp-badge-pos-text)' : g.position === 'Contre' ? 'var(--dp-badge-neg-text)' : 'var(--dp-badge-neutral-text)'
                     const posBg   = g.position === 'Pour' ? 'var(--dp-badge-pos-bg)' : g.position === 'Contre' ? 'var(--dp-badge-neg-bg)' : 'var(--dp-badge-neutral-bg)'
                     const href = groupSlug(g.name)
                     return (
@@ -462,7 +462,7 @@ export function VoteDetailClient(props: Props) {
                 <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '12px 0 22px', letterSpacing: '-0.01em' }}>Dissidences &amp; surprises</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {dissidents.map((d) => {
-                    const voteColor = d.vote === 'pour' ? 'var(--dp-green)' : d.vote === 'contre' ? 'var(--dp-red)' : 'var(--dp-text-secondary)'
+                    const voteColor = d.vote === 'pour' ? 'var(--dp-badge-pos-text)' : d.vote === 'contre' ? 'var(--dp-badge-neg-text)' : 'var(--dp-text-secondary)'
                     const voteBg   = d.vote === 'pour' ? 'var(--dp-badge-pos-bg)' : d.vote === 'contre' ? 'var(--dp-badge-neg-bg)' : 'var(--dp-track-bg)'
                     const voteLabel = d.vote === 'pour' ? 'Pour' : d.vote === 'contre' ? 'Contre' : 'Abstention'
                     return (
@@ -509,7 +509,7 @@ export function VoteDetailClient(props: Props) {
                           <span suppressHydrationWarning className="font-mono" style={{ fontSize: 11, color: 'var(--dp-text-muted)' }}>
                             {new Date(r.voted_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
-                          <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: rAdopted ? 'var(--dp-green)' : 'var(--dp-red)', background: rAdopted ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)' }}>
+                          <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: rAdopted ? 'var(--dp-badge-pos-text)' : 'var(--dp-badge-neg-text)', background: rAdopted ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)' }}>
                             {rAdopted ? 'Adopté' : 'Rejeté'}
                           </span>
                         </div>

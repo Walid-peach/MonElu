@@ -15,8 +15,8 @@ const CONFIDENCE_BADGE_CLASS: Record<string, string> = {
 }
 
 const SOURCE_KIND_STYLE: Record<SourceKind, { dot?: string; badgeBg: string; badgeColor: string }> = {
-  positive: { dot: 'var(--dp-green)', badgeBg: 'var(--dp-badge-pos-bg)', badgeColor: 'var(--dp-green)' },
-  negative: { dot: 'var(--dp-red)', badgeBg: 'var(--dp-badge-neg-bg)', badgeColor: 'var(--dp-red)' },
+  positive: { dot: 'var(--dp-green)', badgeBg: 'var(--dp-badge-pos-bg)', badgeColor: 'var(--dp-badge-pos-text)' },
+  negative: { dot: 'var(--dp-red)', badgeBg: 'var(--dp-badge-neg-bg)', badgeColor: 'var(--dp-badge-neg-text)' },
   default: { dot: 'var(--dp-text)', badgeBg: 'var(--dp-track-bg)', badgeColor: 'var(--dp-text-secondary)' },
   // deputy's dot is a real per-party brand color (group_color) - left as
   // src.dot below, deferred like partyHex() elsewhere in the app.

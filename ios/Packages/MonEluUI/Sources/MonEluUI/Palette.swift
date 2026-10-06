@@ -18,12 +18,17 @@ public enum Palette {
     /// The lightest text. Still body copy, so it too reaches 4.5:1 on the
     /// page, card and track backgrounds in both themes (#480).
     public static let textMuted = token("textMuted")
-    /// Adopté, pour.
+    /// Adopté, pour, as a fill: hemicycle seats and bar segments.
     public static let positive = token("positive")
-    /// Rejeté, contre.
+    /// Rejeté, contre, as a fill: hemicycle seats and bar segments.
     public static let negative = token("negative")
     public static let positiveBackground = token("positiveBackground")
     public static let negativeBackground = token("negativeBackground")
+    /// Text on `positiveBackground`: darker than `positive` in light mode so
+    /// a badge reaches 4.5:1 (the website's `--dp-badge-pos-text`).
+    public static let positiveText = token("positiveText")
+    /// Text on `negativeBackground` (the website's `--dp-badge-neg-text`).
+    public static let negativeText = token("negativeText")
     /// Neutral fill behind abstention and non-votant badges and bar tracks.
     public static let trackBackground = token("trackBackground")
     /// An abstention's seat in the hemicycle: the website's amber, the same in
