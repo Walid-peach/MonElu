@@ -47,7 +47,7 @@ public struct LiveLoisService: LoisService {
 
     public func nextSitting(dossierID: String, after now: Date) async throws -> LoiNextSitting? {
         let to = now.addingTimeInterval(TimeInterval(Self.agendaWindowDays * 86_400))
-        let agenda = try await client.getAgenda(query: .init(from: Self.isoDay(now), to: Self.isoDay(to))).ok.body.json
+        let agenda = try await client.getAgenda(query: .init(from: MonEluFormat.isoDay(now), to: MonEluFormat.isoDay(to))).ok.body.json
         return agenda.days
             .flatMap(\.items)
             .filter { $0.dossierId == dossierID && $0.sittingStart >= now }
@@ -61,14 +61,6 @@ public struct LiveLoisService: LoisService {
             query: .init(acteUid: acteID, limit: Self.amendementsPageSize)
         ).ok.body.json
         return LoiAmendements(total: list.total, items: list.items.map(LoiScrutin.init))
-    }
-
-    /// "2026-10-05", the day in Paris, which is what the agenda's dates mean.
-    static func isoDay(_ date: Date) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "Europe/Paris")!
-        let parts = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 }
 

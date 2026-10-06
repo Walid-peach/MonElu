@@ -73,12 +73,6 @@ struct LoisTests {
         #expect(list.items.first?.result == "rejeté")
     }
 
-    @Test func isoDayIsTheParisDay() throws {
-        // 23:30 UTC on 4 October is already 5 October in Paris.
-        let date = try #require(ISO8601DateFormatter().date(from: "2026-10-04T23:30:00Z"))
-        #expect(LiveLoisService.isoDay(date) == "2026-10-05")
-    }
-
     @Test func theParcoursSplitsIntoItsTopLevelStages() async throws {
         let sections = try await Self.loi().sections
         #expect(sections.map { $0.stage?.code } == ["AN1", "SN1"])

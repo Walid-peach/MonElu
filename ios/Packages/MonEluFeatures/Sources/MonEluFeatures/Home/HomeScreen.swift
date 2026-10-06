@@ -71,6 +71,11 @@ public struct HomeScreen: View {
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        if !model.isChanging {
+            ToolbarItem(placement: .topBarLeading) {
+                AgendaToolbarLink()
+            }
+        }
         if model.isChanging {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Annuler") { model.cancelChange() }

@@ -1,0 +1,35 @@
+# The agenda (#483): opened from Explorer's toolbar, it loads this week from
+# the API, and the week buttons move it. Live data: asserts on fixed labels,
+# never on the day's points. The week label is one accessibility element
+# with its dates, so it is matched by pattern.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Accueil"
+    timeout: 15000
+- tapOn: "Explorer"
+- tapOn:
+    id: "open.agenda"
+- extendedWaitUntil:
+    visible: ".*heures de Paris.*"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-agenda-week
+
+- tapOn: "Semaine précédente"
+- extendedWaitUntil:
+    visible: ".*Semaine dernière.*"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-agenda-previous-week
+
+# Accueil opens it too.
+- tapOn: "Accueil"
+- tapOn:
+    id: "open.agenda"
+- extendedWaitUntil:
+    visible: ".*Cette semaine.*"
+    timeout: 20000
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-agenda-from-home

@@ -1,0 +1,55 @@
+{
+  "from_date": "2026-09-28",
+  "to_date": "2026-10-04",
+  "days": [
+    {
+      "sitting_date": "2026-10-01",
+      "items": [
+        {
+          "point_uid": "RUANR5L17S2027IDS30918PT53174",
+          "sitting_start": "2026-10-01T07:00:00Z",
+          "sitting_end": "2026-10-01T07:05:00Z",
+          "objet": "Ouverture de la session ordinaire",
+          "point_type": "Ouverture et clôture de session",
+          "summary_plain": "Le texte porte simplement sur l'ouverture de la session ordinaire du parlement, fixant la date et les modalités de son déroulement.",
+          "theme": "Institutions",
+          "dossier_id": null,
+          "dossier_url": null,
+          "vote_id": null,
+          "result": null
+        },
+        {
+          "point_uid": "RUANR5L17S2027IDS30919PT53176",
+          "sitting_start": "2026-10-01T13:00:00Z",
+          "sitting_end": "2026-10-01T17:30:00Z",
+          "objet": "Discussion de la proposition de loi apportant une réponse intégrale au phénomène des violences sexuelles et sexistes contre les femmes et les enfants",
+          "point_type": "Discussion",
+          "summary_plain": "Le texte propose un dispositif législatif complet pour prévenir, sanctionner et accompagner les victimes de violences sexuelles et sexistes envers les femmes et les enfants, incluant des mesures de prévention, de protection et de soutien judiciaire.",
+          "theme": "Justice & Sécurité",
+          "dossier_id": "DLR5L17N54776",
+          "dossier_url": "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N54776",
+          "vote_id": "VTANR5L17V8438",
+          "result": "adopté"
+        }
+      ]
+    },
+    {
+      "sitting_date": "2026-10-02",
+      "items": [
+        {
+          "point_uid": "RUANR5L17S2027IDS30921PT53181",
+          "sitting_start": "2026-10-02T07:00:00Z",
+          "sitting_end": "2026-10-02T11:00:00Z",
+          "objet": "Suite de la discussion de la proposition de loi organique visant à adapter l'autorité judiciaire à la lutte contre les violences sexuelles et intrafamiliales",
+          "point_type": "Suite de la discussion",
+          "summary_plain": "Le texte propose de modifier l'organisation et les compétences de l'autorité judiciaire afin de renforcer la prise en charge des violences sexuelles et intrafamiliales, notamment en créant des procédures spécialisées et en améliorant la protection des victimes.",
+          "theme": "Justice & Sécurité",
+          "dossier_id": "DLR5L17N54777",
+          "dossier_url": "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N54777",
+          "vote_id": null,
+          "result": null
+        }
+      ]
+    }
+  ]
+}
