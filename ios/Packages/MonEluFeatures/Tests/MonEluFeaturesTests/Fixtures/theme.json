@@ -1,0 +1,73 @@
+{
+  "slug": "justice-securite",
+  "name": "Justice & Sécurité",
+  "vote_count": 1474,
+  "adoption_rate": 0.3073270013568521,
+  "most_divided_vote": {
+    "vote_id": "VTANR5L17V8457",
+    "voted_at": "2026-10-02T00:00:00Z",
+    "vote_title": "l'amendement n° 343 de Mme Leboucher à l'article 2 de la proposition de loi apportant une réponse intégrale au phénomène des violences sexuelles et sexistes contre les femmes et les enfants (première lecture).",
+    "votes_for": 49,
+    "votes_against": 49
+  },
+  "party_positions": [
+    {
+      "party_short": "RN",
+      "pour": 15747,
+      "contre": 18827,
+      "abstention": 3090,
+      "expressed": 37664,
+      "pour_rate": 0.4180915463041631
+    },
+    {
+      "party_short": "EPR",
+      "pour": 8304,
+      "contre": 20189,
+      "abstention": 184,
+      "expressed": 28677,
+      "pour_rate": 0.28957003870697773
+    },
+    {
+      "party_short": "LFI",
+      "pour": 16490,
+      "contre": 8615,
+      "abstention": 1163,
+      "expressed": 26268,
+      "pour_rate": 0.6277600121821227
+    },
+    {
+      "party_short": "SOC",
+      "pour": 8215,
+      "contre": 6007,
+      "abstention": 1088,
+      "expressed": 15310,
+      "pour_rate": 0.5365774003919007
+    },
+    {
+      "party_short": null,
+      "pour": 352,
+      "contre": 783,
+      "abstention": 28,
+      "expressed": 1163,
+      "pour_rate": 0.30266552020636284
+    }
+  ],
+  "limit": 10,
+  "offset": 0,
+  "votes": [
+    {
+      "vote_id": "VTANR5L17V8535",
+      "voted_at": "2026-10-05T00:00:00Z",
+      "vote_title": "l'amendement n° 270 de M. Naillet après l'article 3 (examen prioritaire) de la proposition de loi apportant une réponse intégrale au phénomène des violences sexuelles et sexistes contre les femmes et les enfants (première lecture).",
+      "result": "adopté",
+      "summary_plain": "L'amendement 270 de M. Naillet, adopté, modifie la proposition de loi visant à répondre de façon globale aux violences sexuelles et sexistes contre les femmes et les enfants, en précisant ou renforçant certaines dispositions législatives."
+    },
+    {
+      "vote_id": "VTANR5L17V8533",
+      "voted_at": "2026-10-05T00:00:00Z",
+      "vote_title": "l'article 3 (examen prioritaire) de la proposition de loi apportant une réponse intégrale au phénomène des violences sexuelles et sexistes contre les femmes et les enfants (première lecture).",
+      "result": "adopté",
+      "summary_plain": "Le texte prévoit un examen prioritaire à l’Assemblée nationale de la proposition de loi visant à renforcer la lutte contre les violences sexuelles et sexistes envers les femmes et les enfants, en accélérant son adoption et en prévoyant des mesures de prévention, de protection et de sanction."
+    }
+  ]
+}

@@ -108,6 +108,8 @@ struct AppRouteTests {
         ("https://monelu.fr/votes/VTANR5L17V1", AppRoute.vote(id: "VTANR5L17V1")),
         ("monelu://lois/DLR5L17N54372", AppRoute.loi(id: "DLR5L17N54372")),
         ("monelu://groupes/lfi-nfp", AppRoute.group(slug: "lfi-nfp")),
+        ("monelu://themes/justice-securite", AppRoute.theme(slug: "justice-securite")),
+        ("https://monelu.fr/themes/sante-social", AppRoute.theme(slug: "sante-social")),
         ("https://monelu.fr/groupes/rassemblement-national", AppRoute.group(slug: "rassemblement-national")),
     ])
     func parsesAppAndWebsiteLinks(_ link: String, _ route: AppRoute) throws {
@@ -125,6 +127,7 @@ struct AppRouteTests {
         // Not until the website serves bill pages (#361).
         "https://monelu.fr/lois/DLR5L17N54372",
         "monelu://groupes/LFI",
+        "https://monelu.fr/themes/Santé",
         "https://monelu.fr/groupes/lfi-nfp/membres",
     ])
     func rejectsEverythingElse(_ link: String) throws {

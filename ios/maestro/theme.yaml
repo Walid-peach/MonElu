@@ -1,0 +1,18 @@
+# The theme page (#485): a link opens a theme, and one of its latest
+# scrutins opens the vote. Live data: asserts on fixed labels only.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    arguments:
+      MonEluOpenURL: "monelu://themes/justice-securite"
+- extendedWaitUntil:
+    visible: "Le vote le plus serré"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-theme-top
+- scrollUntilVisible:
+    element: "Derniers scrutins"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-theme-votes

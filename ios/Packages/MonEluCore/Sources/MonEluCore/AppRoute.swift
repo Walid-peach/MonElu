@@ -14,15 +14,18 @@ public enum AppRoute: Hashable, Sendable {
     case loiAmendements(id: String, acteID: String?)
     /// A parliamentary group's page, by the slug `GET /groups/{slug}` takes.
     case group(slug: String)
+    /// A theme's page, by the slug `GET /themes/{slug}` takes (`themes.json`).
+    case theme(slug: String)
 
     /// The tab a route opens in: Explorer, which holds both lists, so the
     /// back button always leads somewhere to keep browsing.
     public var tab: AppTab { .explore }
 
     /// Parses `monelu://deputes/<id>`, `monelu://votes/<id>`,
-    /// `monelu://lois/<id>` and `monelu://groupes/<slug>`, and the website's
-    /// own paths (`https://<host>/deputes/<id>`, `/votes/<id>`,
-    /// `/groupes/<slug>`), so universal links can
+    /// `monelu://lois/<id>`, `monelu://groupes/<slug>` and
+    /// `monelu://themes/<slug>`, and the website's own paths
+    /// (`https://<host>/deputes/<id>`, `/votes/<id>`, `/groupes/<slug>`,
+    /// `/themes/<slug>`), so universal links can
     /// reuse this once the domain exists. The website does not serve
     /// `/lois/<id>` yet (#361), so only the app's own scheme opens a bill.
     /// Anything else, including nested paths like `/deputes/<id>/dossier`, is nil.
@@ -34,9 +37,9 @@ public enum AppRoute: Hashable, Sendable {
             return nil
         }
         guard parts.count == 2 else { return nil }
-        if parts[0] == "groupes" {
+        if parts[0] == "groupes" || parts[0] == "themes" {
             guard let slug = Self.slug(parts[1]) else { return nil }
-            self = .group(slug: slug)
+            self = parts[0] == "groupes" ? .group(slug: slug) : .theme(slug: slug)
             return
         }
         guard let id = Self.identifier(parts[1]) else { return nil }
@@ -48,10 +51,11 @@ public enum AppRoute: Hashable, Sendable {
         }
     }
 
-    /// Group slugs are lower-case ASCII letters, digits and hyphens (`lfi-nfp`).
+    /// Group and theme slugs are lower-case ASCII letters, digits and
+    /// hyphens (`lfi-nfp`, `justice-securite`).
     private static func slug(_ raw: String) -> String? {
         let allowed = raw.unicodeScalars.allSatisfy {
-            ($0.isASCII && CharacterSet.lowercaseLetters.contains($0)) || CharacterSet.decimalDigits.contains($0) || $0 == "-"
+            $0.isASCII && (CharacterSet.lowercaseLetters.contains($0) || CharacterSet.decimalDigits.contains($0) || $0 == "-")
         }
         return !raw.isEmpty && allowed ? raw : nil
     }

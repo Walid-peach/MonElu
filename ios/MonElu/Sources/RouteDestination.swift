@@ -20,6 +20,8 @@ struct RouteDestination: View {
             LoiAmendementsScreen(id: id, acteID: acteID, service: services.lois)
         case .group(let slug):
             GroupScreen(slug: slug, service: services.groups)
+        case .theme(let slug):
+            ThemeScreen(slug: slug, service: services.themes)
         case .agenda:
             AgendaScreen(service: services.agenda)
         }
