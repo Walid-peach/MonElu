@@ -107,6 +107,8 @@ struct AppRouteTests {
         ("https://mon-elu.vercel.app/deputes/PA1008", AppRoute.deputy(id: "PA1008")),
         ("https://monelu.fr/votes/VTANR5L17V1", AppRoute.vote(id: "VTANR5L17V1")),
         ("monelu://lois/DLR5L17N54372", AppRoute.loi(id: "DLR5L17N54372")),
+        ("monelu://groupes/lfi-nfp", AppRoute.group(slug: "lfi-nfp")),
+        ("https://monelu.fr/groupes/rassemblement-national", AppRoute.group(slug: "rassemblement-national")),
     ])
     func parsesAppAndWebsiteLinks(_ link: String, _ route: AppRoute) throws {
         #expect(AppRoute(url: try #require(URL(string: link))) == route)
@@ -122,6 +124,8 @@ struct AppRouteTests {
         "ftp://x/votes/V1",
         // Not until the website serves bill pages (#361).
         "https://monelu.fr/lois/DLR5L17N54372",
+        "monelu://groupes/LFI",
+        "https://monelu.fr/groupes/lfi-nfp/membres",
     ])
     func rejectsEverythingElse(_ link: String) throws {
         #expect(AppRoute(url: try #require(URL(string: link))) == nil)

@@ -35,10 +35,10 @@ describe('buildAppleAppSiteAssociation', () => {
     expect(buildAppleAppSiteAssociation(team, bundle)).toBeNull()
   })
 
-  it('opens deputy, vote and quiz share pages, and excludes the rest first', () => {
+  it('opens deputy, vote, group and quiz share pages, and excludes the rest first', () => {
     const paths = APP_LINK_COMPONENTS.map((c) => c['/'])
     expect(paths).toEqual(
-      expect.arrayContaining(['/deputes/*', '/votes/*', '/quiz/s/*'])
+      expect.arrayContaining(['/deputes/*', '/votes/*', '/groupes/*', '/quiz/s/*'])
     )
     // Apple takes the first matching component, so every exclusion must come
     // before the broad pattern it carves out of.

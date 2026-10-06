@@ -5,6 +5,26 @@ import SwiftUI
 // The pieces of a deputy's profile. Accueil (#463, #477) shows the same deputy,
 // so each section is its own view taking plain models.
 
+/// The deputy's group, opening its page when the bundled table knows it.
+struct GroupLink: View {
+    let name: String
+
+    var body: some View {
+        let label = Text(name)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(Palette.accent)
+            .fixedSize(horizontal: false, vertical: true)
+        if let slug = ReferenceData.groupSlug(named: name) {
+            NavigationLink(value: AppRoute.group(slug: slug)) { label }
+                .buttonStyle(.plain)
+                .accessibilityHint("Ouvre la page du groupe")
+                .accessibilityIdentifier("deputy.group")
+        } else {
+            label
+        }
+    }
+}
+
 /// Portrait, name, group, constituency and mandate.
 struct DeputyHeader: View {
     let profile: DeputyProfile
@@ -27,10 +47,7 @@ struct DeputyHeader: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 if let group = deputy.group {
-                    Text(group)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.accent)
-                        .fixedSize(horizontal: false, vertical: true)
+                    GroupLink(name: group)
                 }
                 if let constituency = deputy.constituency {
                     Label(constituency, systemImage: "mappin.and.ellipse")
@@ -47,7 +64,8 @@ struct DeputyHeader: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .accessibilityElement(children: .combine)
+        // Contain, not combine: the group is a link VoiceOver must reach on its own.
+        .accessibilityElement(children: .contain)
     }
 
     /// The mandate in words, from the dates the API returned; nothing is
