@@ -27,4 +27,17 @@ struct ReferenceDataTests {
     @Test func votePositionsMatchTheAPIKeys() throws {
         #expect(try ReferenceData.votePositions().map(\.key) == ["pour", "contre", "abstention", "nonVotant"])
     }
+
+    @Test func dossierStatusesCoverTheSevenDerivedValues() throws {
+        #expect(try ReferenceData.dossierStatuses().map(\.status) == [
+            "promulguee", "conseil_constitutionnel", "rejetee", "adoptee_definitivement",
+            "deposee", "en_commission", "en_navette",
+        ])
+    }
+
+    @Test func dossierStagesSitOnTheFourSteps() throws {
+        let stages = try ReferenceData.dossierStages()
+        #expect(Set(stages.map(\.step)) == ["an", "senat", "cmp", "loi"])
+        #expect(stages.first { $0.code == "SN1" }?.label == "1re lecture")
+    }
 }

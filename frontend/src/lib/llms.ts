@@ -40,6 +40,7 @@ export const CAVEATS = [
   'Le résultat d\'un scrutin (adopté / rejeté) est repris tel quel de l\'Assemblée nationale, jamais recalculé.',
   'Le compteur « députés suivis » dépasse 577 : il dénombre toutes les personnes ayant siégé depuis le début de la législature, remplacements compris.',
   'Les résumés en langage clair et les réponses de l\'assistant sont générés par un LLM. Ce sont des aides à la lecture, pas des sources - le scrutin d\'origine fait foi.',
+  'L\'Assemblée ne rattache ses scrutins au texte qu\'ils concernent que depuis le **26 mars 2026** : les étapes antérieures du parcours d\'un texte n\'affichent aucun vote, ce qui ne veut pas dire qu\'il n\'y en a pas eu.',
 ]
 
 const SECTIONS: Array<{ path: string; what: string }> = [

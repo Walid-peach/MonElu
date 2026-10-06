@@ -30,10 +30,29 @@ public enum ReferenceData {
         public var id: String { key }
     }
 
+    /// A bill's derived `status` (ADR-035 §5) and how to show it.
+    public struct DossierStatus: Codable, Hashable, Sendable, Identifiable {
+        public let status: String
+        public let label: String
+        public var id: String { status }
+    }
+
+    /// A top-level parcours `codeActe` (`AN1`, `SN2`, `CMP`, `PROM`, …), the
+    /// step of the AN, Sénat, CMP, loi sequence it belongs to (`an`, `senat`,
+    /// `cmp`, `loi`), and a short label ("1re lecture").
+    public struct DossierStage: Codable, Hashable, Sendable, Identifiable {
+        public let code: String
+        public let step: String
+        public let label: String
+        public var id: String { code }
+    }
+
     public static func departments() throws -> [Department] { try load("departments") }
     public static func groups() throws -> [Group] { try load("groups") }
     public static func themes() throws -> [Theme] { try load("themes") }
     public static func votePositions() throws -> [VotePosition] { try load("vote_positions") }
+    public static func dossierStatuses() throws -> [DossierStatus] { try load("dossier_statuses") }
+    public static func dossierStages() throws -> [DossierStage] { try load("dossier_stages") }
 
     enum LoadError: Error {
         case missing(String)

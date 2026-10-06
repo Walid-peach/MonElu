@@ -51,6 +51,17 @@ struct ForcedUpdateTests {
 }
 
 struct MonEluFormatTests {
+    /// 2026-10-05T14:00:00Z is 16 h in Paris (summer time).
+    @Test func sittingIsParisWeekdayDayAndHour() {
+        #expect(MonEluFormat.sitting(Date(timeIntervalSince1970: 1_791_208_800)) == "lundi 5 octobre à 16 h")
+        #expect(MonEluFormat.sitting(Date(timeIntervalSince1970: 1_791_208_800 + 30 * 60)) == "lundi 5 octobre à 16 h 30")
+    }
+
+    @Test func shortDayAbbreviatesTheMonth() throws {
+        let date = try #require(MonEluFormat.calendarDate("2026-10-01"))
+        #expect(MonEluFormat.shortDay(date) == "1 oct. 2026")
+    }
+
     @Test func daysAreWrittenInFrenchInParisTime() {
         // 2026-07-20T22:30:00Z is already 21 July in Paris.
         #expect(MonEluFormat.day(Date(timeIntervalSince1970: 1_784_586_600)) == "21 juillet 2026")

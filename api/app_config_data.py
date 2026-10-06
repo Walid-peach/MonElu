@@ -97,6 +97,12 @@ CAVEATS: list[tuple[str, str]] = [
         "un LLM. Ce sont des aides à la lecture, pas des sources - le scrutin d'origine "
         "fait foi.",
     ),
+    (
+        "bill_coverage",
+        "L'Assemblée ne rattache ses scrutins au texte qu'ils concernent que depuis le "
+        "**26 mars 2026** : les étapes antérieures du parcours d'un texte n'affichent "
+        "aucun vote, ce qui ne veut pas dire qu'il n'y en a pas eu.",
+    ),
 ]
 
 

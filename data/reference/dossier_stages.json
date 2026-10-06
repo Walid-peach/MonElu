@@ -1,0 +1,57 @@
+[
+  {
+    "code": "AN1",
+    "step": "an",
+    "label": "1re lecture"
+  },
+  {
+    "code": "AN2",
+    "step": "an",
+    "label": "2e lecture"
+  },
+  {
+    "code": "ANNLEC",
+    "step": "an",
+    "label": "Nouvelle lecture"
+  },
+  {
+    "code": "ANLUNI",
+    "step": "an",
+    "label": "Lecture unique"
+  },
+  {
+    "code": "ANLDEF",
+    "step": "an",
+    "label": "Lecture définitive"
+  },
+  {
+    "code": "SN1",
+    "step": "senat",
+    "label": "1re lecture"
+  },
+  {
+    "code": "SN2",
+    "step": "senat",
+    "label": "2e lecture"
+  },
+  {
+    "code": "SNNLEC",
+    "step": "senat",
+    "label": "Nouvelle lecture"
+  },
+  {
+    "code": "CMP",
+    "step": "cmp",
+    "label": "Commission mixte paritaire"
+  },
+  {
+    "code": "CC",
+    "step": "loi",
+    "label": "Conseil constitutionnel"
+  },
+  {
+    "code": "PROM",
+    "step": "loi",
+    "label": "Promulgation"
+  }
+]
