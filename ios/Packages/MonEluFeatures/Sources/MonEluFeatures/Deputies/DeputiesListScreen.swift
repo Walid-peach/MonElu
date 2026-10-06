@@ -16,9 +16,20 @@ public struct DeputiesListScreen: View {
         // The filter sits above the list rather than in a top safe-area
         // inset: an inset over a List leaves the large title blank (#477).
         VStack(spacing: 0) {
-            GroupFilter(groups: model.groups, selection: $model.groupSlug, selectedName: model.groupName)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                GroupFilter(groups: model.groups, selection: $model.groupSlug, selectedName: model.groupName)
+                if let slug = model.groupSlug {
+                    NavigationLink(value: AppRoute.group(slug: slug)) {
+                        Text("Voir le groupe")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Palette.accent)
+                            .fixedSize()
+                    }
+                    .accessibilityIdentifier("deputies.open-group")
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
             LoadStateView(
                 model.loader,
                 empty: EmptyStateView(

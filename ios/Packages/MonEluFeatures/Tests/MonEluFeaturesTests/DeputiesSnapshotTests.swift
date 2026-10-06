@@ -59,7 +59,16 @@ struct DeputiesSnapshotTests {
     func deputyProfile(_ variant: Variant) async throws {
         let full = try await LiveDeputiesServiceTests.service().profilePage(id: "PA1008")
         let page = DeputyProfilePage(profile: full.profile, scorecard: full.scorecard, recentVotes: nil)
-        checkSnapshot(DeputyProfileContent(page: page, configuration: Self.configuration).padding(16), variant)
+        // The group is a link, so the profile sits in a stack (outside one a
+        // link renders disabled), sized explicitly.
+        checkSnapshot(
+            NavigationStack {
+                ScrollView { DeputyProfileContent(page: page, configuration: Self.configuration).padding(16) }
+                    .background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2260 : 720
+        )
     }
 
     /// Three recorded votes show every row case. Rows are links, so they sit

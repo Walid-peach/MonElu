@@ -55,11 +55,12 @@ public enum MonEluFormat {
         (value / 100).formatted(.percent.precision(.fractionLength(0...1)).locale(french))
     }
 
-    /// A rate the API returns as 0 to 1, written as a whole French
-    /// percentage: 0.86 is "86 %". Display only: the rate itself always
-    /// comes from the API, never from a division in Swift.
-    public static func percent(_ rate: Double) -> String {
-        rate.formatted(.percent.precision(.fractionLength(0)).locale(french))
+    /// A rate the API returns as 0 to 1, written as a French percentage:
+    /// 0.86 is "86 %", or with `decimals: 1`, 0.0092 is "0,9 %" where a
+    /// whole number would round a small rate away. Display only: the rate
+    /// itself always comes from the API, never from a division in Swift.
+    public static func percent(_ rate: Double, decimals: Int = 0) -> String {
+        rate.formatted(.percent.precision(.fractionLength(decimals)).locale(french))
     }
 
     /// A séance's start as the Paris wall clock: "16 h", or "21 h 30".

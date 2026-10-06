@@ -51,6 +51,13 @@ struct ForcedUpdateTests {
 }
 
 struct MonEluFormatTests {
+    @Test func percentKeepsOneDecimalWhenAsked() {
+        let compact = { (text: String) in text.filter { !$0.isWhitespace } }
+        #expect(compact(MonEluFormat.percent(0.3128)) == "31%")
+        #expect(compact(MonEluFormat.percent(0.3128, decimals: 1)) == "31,3%")
+        #expect(compact(MonEluFormat.percent(0.0092, decimals: 1)) == "0,9%")
+    }
+
     /// 2026-10-05T14:00:00Z is 16 h in Paris (summer time).
     @Test func sittingIsParisWeekdayDayAndHour() {
         #expect(MonEluFormat.sitting(Date(timeIntervalSince1970: 1_791_208_800)) == "lundi 5 octobre à 16 h")

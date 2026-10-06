@@ -1,0 +1,90 @@
+{
+  "slug": "lfi-nfp",
+  "name": "La France insoumise - Nouveau Front Populaire",
+  "member_count": 71,
+  "members": [
+    {
+      "deputy_id": "PA795228",
+      "full_name": "Nadège Abomangoli",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Seine-Saint-Denis",
+      "circonscription": "10",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/795228.jpg",
+      "presence_rate": 0.3917,
+      "dissident_rate": 0.0168
+    },
+    {
+      "deputy_id": "PA793262",
+      "full_name": "Laurent Alexandre",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Aveyron",
+      "circonscription": "2",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793262.jpg",
+      "presence_rate": 0.3359,
+      "dissident_rate": 0.0058
+    },
+    {
+      "deputy_id": "PA794906",
+      "full_name": "Gabriel Amard",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Rhône",
+      "circonscription": "6",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/794906.jpg",
+      "presence_rate": 0.2987,
+      "dissident_rate": 0.0053
+    }
+  ],
+  "avg_presence_rate": 0.31285774647887327,
+  "avg_dissident_rate": 0.009169014084507043,
+  "most_dissident_members": [
+    {
+      "deputy_id": "PA610654",
+      "full_name": "Jean-Philippe Nilor",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Martinique",
+      "circonscription": "4",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/610654.jpg",
+      "presence_rate": 0.0941,
+      "dissident_rate": 0.0863
+    },
+    {
+      "deputy_id": "PA721202",
+      "full_name": "Éric Coquerel",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Seine-Saint-Denis",
+      "circonscription": "1",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/721202.jpg",
+      "presence_rate": 0.2054,
+      "dissident_rate": 0.0525
+    }
+  ],
+  "divided_votes": [
+    {
+      "vote_id": "VTANR5L17V8214",
+      "voted_at": "2026-07-10T00:00:00Z",
+      "vote_title": "l'article 5 septies du projet de loi visant à offrir des réponses immédiates aux phénomènes troublant l'ordre public, la sécurité et la tranquillité de nos concitoyens (première lecture).",
+      "result": "rejeté",
+      "pour": 9,
+      "contre": 10,
+      "abstention": 0,
+      "majority_position": "contre"
+    }
+  ],
+  "recent_scrutins": [
+    {
+      "vote_id": "VTANR5L17V8534",
+      "voted_at": "2026-10-05T00:00:00Z",
+      "vote_title": "l'amendement n° 1028 de Mme Roullaud après l'article 3 (examen prioritaire) de la proposition de loi apportant une réponse intégrale au phénomène des violences sexuelles et sexistes contre les femmes et les enfants (première lecture).",
+      "result": "rejeté",
+      "pour": 0,
+      "contre": 4,
+      "abstention": 1,
+      "majority_position": "contre"
+    }
+  ]
+}

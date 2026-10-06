@@ -4,6 +4,8 @@ import SwiftUI
 /// One deputy in the list: portrait, name, group and constituency.
 struct DeputyRowView: View {
     let deputy: DeputyItem
+    /// False on a group's own page, where every row would repeat its name.
+    var showsGroup = true
 
     var body: some View {
         HStack(spacing: 12) {
@@ -12,7 +14,7 @@ struct DeputyRowView: View {
                 Text(deputy.name)
                     .font(.headline)
                     .foregroundStyle(Palette.textPrimary)
-                if let group = deputy.group {
+                if showsGroup, let group = deputy.group {
                     Text(group)
                         .font(.subheadline)
                         .foregroundStyle(Palette.textSecondary)

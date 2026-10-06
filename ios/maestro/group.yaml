@@ -1,0 +1,42 @@
+# The group page (#484): a link opens a group, a member opens their
+# profile, and that profile's group opens the group again. Explorer's group
+# filter leads there too. Live data: asserts on fixed labels only.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    arguments:
+      MonEluOpenURL: "monelu://groupes/lfi-nfp"
+- extendedWaitUntil:
+    visible: "Les plus souvent en désaccord avec le groupe"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-group-top
+- scrollUntilVisible:
+    element: "Quand le groupe s'est divisé"
+    direction: DOWN
+
+- scrollUntilVisible:
+    element: "Rechercher dans le groupe"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-group-members
+
+# Explorer's deputies, filtered on a group, link to that group's page.
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Accueil"
+    timeout: 15000
+- tapOn: "Explorer"
+- tapOn: "Députés"
+- tapOn:
+    id: "deputies.group-filter"
+- tapOn: "Rassemblement National"
+- tapOn:
+    id: "deputies.open-group"
+- extendedWaitUntil:
+    visible: "Les plus souvent en désaccord avec le groupe"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-group-from-explorer
