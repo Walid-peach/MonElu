@@ -1,0 +1,69 @@
+{
+  "dossier_uid": "DLR5L17N54372",
+  "acte_uid": "L17-VD232697S53038",
+  "total": 5,
+  "limit": 100,
+  "offset": 0,
+  "items": [
+    {
+      "vote_id": "VTANR5L17V8281",
+      "voted_at": "2026-07-15T00:00:00Z",
+      "vote_title": "l'amendement n° 393 de Mme Capdevielle de suppression de l'article 6 (examen prioritaire) du projet de loi relatif à la protection des enfants (première lecture).",
+      "scrutin_kind": "amendement",
+      "result": "rejeté",
+      "votes_for": 6,
+      "votes_against": 144,
+      "abstentions": 2,
+      "total_voters": 152,
+      "acte_uid": "L17-VD232697S53038"
+    },
+    {
+      "vote_id": "VTANR5L17V8282",
+      "voted_at": "2026-07-15T00:00:00Z",
+      "vote_title": "l'amendement n° 397 de Mme Capdevielle à l'article 6 (examen prioritaire) du projet de loi relatif à la protection des enfants (première lecture).",
+      "scrutin_kind": "amendement",
+      "result": "rejeté",
+      "votes_for": 5,
+      "votes_against": 136,
+      "abstentions": 4,
+      "total_voters": 145,
+      "acte_uid": "L17-VD232697S53038"
+    },
+    {
+      "vote_id": "VTANR5L17V8283",
+      "voted_at": "2026-07-15T00:00:00Z",
+      "vote_title": "le sous-amendement n° 1192 de Mme Ibled à l'amendement n° 1183 du Gouvernement à l'article 6 (examen prioritaire) du projet de loi relatif à la protection des enfants (première lecture).",
+      "scrutin_kind": "amendement",
+      "result": "adopté",
+      "votes_for": 74,
+      "votes_against": 70,
+      "abstentions": 0,
+      "total_voters": 144,
+      "acte_uid": "L17-VD232697S53038"
+    },
+    {
+      "vote_id": "VTANR5L17V8284",
+      "voted_at": "2026-07-15T00:00:00Z",
+      "vote_title": "le sous-amendement n° 1190 de Mme Perrine Goulet à l'amendement n° 1183 du Gouvernement à l'article 6 (examen prioritaire) du projet de loi relatif à la protection des enfants (première lecture).",
+      "scrutin_kind": "amendement",
+      "result": "adopté",
+      "votes_for": 89,
+      "votes_against": 53,
+      "abstentions": 0,
+      "total_voters": 142,
+      "acte_uid": "L17-VD232697S53038"
+    },
+    {
+      "vote_id": "VTANR5L17V8285",
+      "voted_at": "2026-07-15T00:00:00Z",
+      "vote_title": "le sous-amendement n° 1993 de Mme Ibled à l'amendement n° 1183 du Gouvernement à l'article 6 (examen prioritaire) du projet de loi relatif à la protection des enfants (première lecture).",
+      "scrutin_kind": "amendement",
+      "result": "adopté",
+      "votes_for": 93,
+      "votes_against": 53,
+      "abstentions": 0,
+      "total_voters": 146,
+      "acte_uid": "L17-VD232697S53038"
+    }
+  ]
+}

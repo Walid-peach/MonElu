@@ -29,6 +29,26 @@ public enum MonEluFormat {
         return date
     }
 
+    /// "1 oct. 2026": a date in a dense list, such as a bill's parcours.
+    public static func shortDay(_ date: Date) -> String {
+        var style = Date.FormatStyle(locale: french).day().month(.abbreviated).year()
+        style.timeZone = paris
+        return date.formatted(style)
+    }
+
+    /// "lundi 5 octobre à 16 h": when a séance starts, in Paris time. Minutes
+    /// show only when they are not zero ("16 h 30").
+    public static func sitting(_ date: Date) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = paris
+        var dayStyle = Date.FormatStyle(locale: french).weekday(.wide).day().month(.wide)
+        dayStyle.timeZone = paris
+        let parts = calendar.dateComponents([.hour, .minute], from: date)
+        let hour = parts.hour ?? 0, minute = parts.minute ?? 0
+        let time = minute == 0 ? "\(hour) h" : "\(hour) h \(String(format: "%02d", minute))"
+        return "\(date.formatted(dayStyle)) à \(time)"
+    }
+
     /// A count with French digit grouping: 5561 is "5 561".
     public static func count(_ value: Int) -> String {
         value.formatted(.number.locale(french))

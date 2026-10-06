@@ -76,3 +76,14 @@ def test_caveats_match_the_websites_llms_txt():
 
     assert len(web) == len(cfg.CAVEATS), "CAVEATS in llms.ts changed length or shape"
     assert web == [text for _, text in cfg.CAVEATS]
+
+
+def test_bill_coverage_caveat_names_the_api_coverage_start():
+    """The caveat states the date the bill page's API uses as its boundary."""
+    from api.routers.lois import SCRUTIN_COVERAGE_START
+
+    months = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
+              "septembre", "octobre", "novembre", "décembre"]  # fmt: skip
+    d = SCRUTIN_COVERAGE_START
+    text = dict(cfg.CAVEATS)["bill_coverage"]
+    assert f"**{d.day} {months[d.month - 1]} {d.year}**" in text
