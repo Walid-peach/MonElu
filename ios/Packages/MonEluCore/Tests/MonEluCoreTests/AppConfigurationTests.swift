@@ -62,6 +62,24 @@ struct MonEluFormatTests {
         #expect(MonEluFormat.shortDay(date) == "1 oct. 2026")
     }
 
+    /// Paris moves from summer to winter time on 25 October 2026: 14:00 UTC
+    /// is 16 h before and 15 h after, and a 16 h séance is 15:00 UTC after.
+    @Test func timeIsParisWallClockAcrossTheOctoberChange() throws {
+        let iso = ISO8601DateFormatter()
+        #expect(MonEluFormat.time(try #require(iso.date(from: "2026-10-23T14:00:00Z"))) == "16 h")
+        #expect(MonEluFormat.time(try #require(iso.date(from: "2026-10-27T14:00:00Z"))) == "15 h")
+        #expect(MonEluFormat.time(try #require(iso.date(from: "2026-10-27T15:00:00Z"))) == "16 h")
+        #expect(MonEluFormat.time(try #require(iso.date(from: "2026-10-27T20:30:00Z"))) == "21 h 30")
+        // 23:30 UTC on Saturday 24 October is already Sunday in Paris.
+        #expect(MonEluFormat.isoDay(try #require(iso.date(from: "2026-10-24T23:30:00Z"))) == "2026-10-25")
+    }
+
+    @Test func dayHeadingsAndSpans() {
+        #expect(MonEluFormat.weekday("2026-10-05") == "Lundi 5 octobre")
+        #expect(MonEluFormat.span(from: "2026-10-05", to: "2026-10-11") == "5 au 11 octobre")
+        #expect(MonEluFormat.span(from: "2026-09-28", to: "2026-10-04") == "28 septembre au 4 octobre")
+    }
+
     @Test func daysAreWrittenInFrenchInParisTime() {
         // 2026-07-20T22:30:00Z is already 21 July in Paris.
         #expect(MonEluFormat.day(Date(timeIntervalSince1970: 1_784_586_600)) == "21 juillet 2026")

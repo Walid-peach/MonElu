@@ -38,6 +38,10 @@ private struct NoLois: LoisService {
     func amendements(dossierID: String, acteID: String?) async throws -> LoiAmendements { LoiAmendements(total: 0, items: []) }
 }
 
+private struct NoAgenda: AgendaService {
+    func week(from: String, to: String) async throws -> AgendaWeek { AgendaWeek(from: from, to: to, days: []) }
+}
+
 private struct NoPostalCodes: PostalCodeService {
     func departments(forPostalCode code: String) async throws -> [PostalDepartment] { [] }
 }
@@ -47,7 +51,7 @@ struct RootTabViewTests {
     @Test func rendersInAHostingController() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
         let controller = UIHostingController(rootView: RootTabView(services: AppServices(
-            votes: NoVotes(), deputies: NoDeputies(), lois: NoLois(), ask: NoAsk(), quiz: NoQuiz(), postalCodes: NoPostalCodes(),
+            votes: NoVotes(), deputies: NoDeputies(), lois: NoLois(), agenda: NoAgenda(), ask: NoAsk(), quiz: NoQuiz(), postalCodes: NoPostalCodes(),
             followedDeputy: UserDefaultsFollowedDeputyStore(defaults: UserDefaults(suiteName: "RootTabViewTests")!)
         )))
         window.rootViewController = controller

@@ -53,5 +53,8 @@ public struct ExploreScreen: View {
         }
         .background(Palette.pageBackground)
         .navigationTitle("Explorer")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) { AgendaToolbarLink() }
+        }
     }
 }

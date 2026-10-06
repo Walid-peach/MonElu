@@ -39,14 +39,9 @@ public enum MonEluFormat {
     /// "lundi 5 octobre à 16 h": when a séance starts, in Paris time. Minutes
     /// show only when they are not zero ("16 h 30").
     public static func sitting(_ date: Date) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = paris
         var dayStyle = Date.FormatStyle(locale: french).weekday(.wide).day().month(.wide)
         dayStyle.timeZone = paris
-        let parts = calendar.dateComponents([.hour, .minute], from: date)
-        let hour = parts.hour ?? 0, minute = parts.minute ?? 0
-        let time = minute == 0 ? "\(hour) h" : "\(hour) h \(String(format: "%02d", minute))"
-        return "\(date.formatted(dayStyle)) à \(time)"
+        return "\(date.formatted(dayStyle)) à \(time(date))"
     }
 
     /// A count with French digit grouping: 5561 is "5 561".
@@ -66,4 +61,46 @@ public enum MonEluFormat {
     public static func percent(_ rate: Double) -> String {
         rate.formatted(.percent.precision(.fractionLength(0)).locale(french))
     }
+
+    /// A séance's start as the Paris wall clock: "16 h", or "21 h 30".
+    /// The API's timestamps are UTC; summer and winter time are Paris's.
+    public static func time(_ date: Date) -> String {
+        let parts = parisCalendar.dateComponents([.hour, .minute], from: date)
+        let hour = parts.hour ?? 0, minute = parts.minute ?? 0
+        return minute == 0 ? "\(hour) h" : "\(hour) h \(String(format: "%02d", minute))"
+    }
+
+    /// "2026-10-05": the Paris day of `date`, as the API's `from`/`to` take it.
+    public static func isoDay(_ date: Date) -> String {
+        let parts = parisCalendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// An API calendar date ("2026-10-05") as "Lundi 5 octobre", for a day heading.
+    public static func weekday(_ string: String) -> String {
+        guard let date = calendarDate(string) else { return string }
+        var style = Date.FormatStyle(locale: french).weekday(.wide).day().month(.wide)
+        style.timeZone = paris
+        let text = date.formatted(style)
+        return text.prefix(1).uppercased() + text.dropFirst()
+    }
+
+    /// Two API calendar dates as a span: "5 au 11 octobre", or
+    /// "28 septembre au 4 octobre" across a month.
+    public static func span(from: String, to: String) -> String {
+        guard let start = calendarDate(from), let end = calendarDate(to) else { return "\(from) au \(to)" }
+        var dayMonth = Date.FormatStyle(locale: french).day().month(.wide)
+        dayMonth.timeZone = paris
+        let sameMonth = parisCalendar.component(.month, from: start) == parisCalendar.component(.month, from: end)
+        let first = sameMonth ? "\(parisCalendar.component(.day, from: start))" : start.formatted(dayMonth)
+        return "\(first) au \(end.formatted(dayMonth))"
+    }
+
+    /// The Gregorian calendar in Paris, weeks starting on Monday (ISO).
+    public static let parisCalendar: Calendar = {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = paris
+        calendar.locale = french
+        return calendar
+    }()
 }
