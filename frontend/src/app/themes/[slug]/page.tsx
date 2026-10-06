@@ -220,7 +220,7 @@ export default async function ThemePage(
                       <span
                         style={{
                           fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-                          color: v.result === 'adopté' ? 'var(--dp-green)' : RED,
+                          color: v.result === 'adopté' ? 'var(--dp-badge-pos-text)' : 'var(--dp-badge-neg-text)',
                           background: v.result === 'adopté' ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)',
                         }}
                       >

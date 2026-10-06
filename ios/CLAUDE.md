@@ -90,6 +90,7 @@ The work is tracked under epic #429, one phase epic at a time.
   Never write a literal or system color (`.red`, `Color(red:…)`, `UIColor(…)`): `tests/unit/test_ios_design_tokens.py` fails on one, on a token missing its dark value, and on a token that drifts from the web palette.
   A new token means a new color set and a row in that test's `WEB_SOURCES`.
   `textSecondary` and `textMuted` are deliberately darker than the website's, so every body text token reaches 4.5:1 on the page, card and track backgrounds in both themes (#480); the same test computes those ratios from the catalog, so a new text token or surface goes into its `TEXT_ON_BACKGROUNDS`.
+  Text on `positiveBackground`/`negativeBackground` (badges, pills) uses `positiveText`/`negativeText`, never `positive`/`negative`, which are the fills for bars and hemicycle seats and miss 4.5:1 as badge text in light mode.
   Group chips take their colors from `Palette.party(_:)`, keyed by the API's `party_short` and mirroring `partyColor()` in `frontend/src/lib/utils.ts`.
 - Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
 - Text that can grow with Dynamic Type must wrap, not truncate.

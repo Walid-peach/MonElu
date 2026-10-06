@@ -294,7 +294,7 @@ export default function AProposPage() {
                     <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--dp-text)' }}>{src.name}</div>
                     <div style={{ fontSize: '13px', color: 'var(--dp-text-muted)', marginTop: '3px' }}>{src.desc}</div>
                   </div>
-                  <div className="font-mono" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--dp-green)', background: 'var(--dp-badge-pos-bg)', padding: '5px 11px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                  <div className="font-mono" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--dp-badge-pos-text)', background: 'var(--dp-badge-pos-bg)', padding: '5px 11px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
                     <span style={{ width: '6px', height: '6px', borderRadius: '999px', background: 'var(--dp-green)', flexShrink: 0, display: 'inline-block' }} />
                     {src.status}
                   </div>
@@ -318,7 +318,7 @@ export default function AProposPage() {
                 <span style={{ color: 'var(--dp-text)', fontWeight: 600 }}>06h00 UTC · GitHub Actions cron</span>
               </div>
             </div>
-            <div style={{ background: 'var(--dp-badge-pos-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '10px', padding: '16px 18px', fontSize: '13.5px', lineHeight: 1.6, color: 'var(--dp-green)' }}>
+            <div style={{ background: 'var(--dp-badge-pos-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '10px', padding: '16px 18px', fontSize: '13.5px', lineHeight: 1.6, color: 'var(--dp-badge-pos-text)' }}>
               <span style={{ fontWeight: 700 }}>Licence ouverte Etalab 2.0</span><br />
               Toutes les données redistribuées sont sous licence ouverte. Réutilisation libre, attribution requise.
             </div>

@@ -277,7 +277,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     {/* Result */}
                     <div className="order-4 sm:order-none">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', padding: '3px 10px', borderRadius: 999, background: adopted ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)', color: adopted ? 'var(--dp-green)' : 'var(--dp-red)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', padding: '3px 10px', borderRadius: 999, background: adopted ? 'var(--dp-badge-pos-bg)' : 'var(--dp-badge-neg-bg)', color: adopted ? 'var(--dp-badge-pos-text)' : 'var(--dp-badge-neg-text)' }}>
                           {adopted ? 'Adopté' : 'Rejeté'}
                         </span>
                         <span className="font-mono" style={{ fontSize: 11.5, color: 'var(--dp-text-secondary)' }}>

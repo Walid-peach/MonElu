@@ -96,7 +96,7 @@ function PositionBadge({ position }: { position: QuizAnswerPosition | null }) {
       </span>
     )
   }
-  const color = position === 'pour' ? 'var(--dp-green)' : position === 'contre' ? 'var(--dp-red)' : 'var(--dp-text-secondary)'
+  const color = position === 'pour' ? 'var(--dp-badge-pos-text)' : position === 'contre' ? 'var(--dp-badge-neg-text)' : 'var(--dp-text-secondary)'
   const bg = position === 'pour' ? 'var(--dp-badge-pos-bg)' : position === 'contre' ? 'var(--dp-badge-neg-bg)' : 'var(--dp-track-bg)'
   return (
     <span

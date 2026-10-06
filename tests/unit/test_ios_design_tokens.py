@@ -42,6 +42,10 @@ WEB_SOURCES = {
     "negative": ("--dp-red", "--dp-red"),
     "positiveBackground": ("--dp-badge-pos-bg", "--dp-badge-pos-bg"),
     "negativeBackground": ("--dp-badge-neg-bg", "--dp-badge-neg-bg"),
+    # Badge text: darker than positive in light mode, so the result and
+    # position badges reach 4.5:1 on their tint.
+    "positiveText": ("--dp-badge-pos-text", "--dp-badge-pos-text"),
+    "negativeText": ("--dp-badge-neg-text", "--dp-badge-neg-text"),
     "trackBackground": ("--dp-track-bg", "--dp-track-bg"),
     "accent": ("#C9302C", "--dp-red"),  # red.civic in tailwind.config.ts
     # POSITION_COLORS.abstention in HemicycleChart.tsx, not theme-aware there.
@@ -79,14 +83,15 @@ SURFACES = ("pageBackground", "cardBackground")
 
 # Text token -> the backgrounds it is drawn on. Every pair must reach WCAG AA
 # for body text (4.5:1) in light and in dark, computed from the catalog.
-# The result badges (positive on positiveBackground, 3.88:1 in light) are the
-# website's own pair, caption-size labels rather than body copy, and stay out
-# of this check until both clients change them together.
+# The badges draw positiveText/negativeText, never positive/negative: those
+# fills reached only 3.88:1 as text on positiveBackground in light mode.
 TEXT_ON_BACKGROUNDS = {
     "textPrimary": ["pageBackground", "cardBackground", "trackBackground"],
     "textSecondary": ["pageBackground", "cardBackground", "trackBackground"],
     "textMuted": ["pageBackground", "cardBackground", "trackBackground"],
     "accent": ["pageBackground", "cardBackground"],
+    "positiveText": ["positiveBackground"],
+    "negativeText": ["negativeBackground"],
     "onIdentity": ["identityBackground"],
     "cardBackground": ["textPrimary"],  # a selected FilterChipRow chip
     **{
@@ -103,7 +108,15 @@ def _css_block(css: str, selector: str) -> str:
 
 
 def _css_vars(block: str) -> dict[str, str]:
+    # Comments go first: one that names a variable before a colon would
+    # otherwise be read as its declaration.
+    block = re.sub(r"/\*.*?\*/", "", block, flags=re.S)
     return dict(re.findall(r"(--[\w-]+):\s*([^;]+);", block))
+
+
+def test_css_vars_ignore_comments():
+    block = "  --dp-red: #C9302A;\n  /* --dp-red: the line above; */"
+    assert _css_vars(block) == {"--dp-red": "#C9302A"}
 
 
 def _normalise(value: str) -> tuple[str, float]:

@@ -97,8 +97,8 @@ struct AnswerCard: View {
             if let confidence = AskLabels.confidence(answer.confidence) {
                 Pill(
                     text: confidence,
-                    foreground: answer.confidence == "low" ? Palette.negative
-                        : answer.confidence == "high" ? Palette.positive : Palette.textSecondary,
+                    foreground: answer.confidence == "low" ? Palette.negativeText
+                        : answer.confidence == "high" ? Palette.positiveText : Palette.textSecondary,
                     background: answer.confidence == "low" ? Palette.negativeBackground
                         : answer.confidence == "high" ? Palette.positiveBackground : Palette.trackBackground
                 )
@@ -120,7 +120,7 @@ struct AnswerCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .foregroundStyle(Palette.positive)
+                        .foregroundStyle(Palette.positiveText)
                         .background(Palette.positiveBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -285,8 +285,8 @@ struct VerdictCard: View {
 
     private var foreground: Color {
         switch verdict.verdict {
-        case "vrai": Palette.positive
-        case "faux": Palette.negative
+        case "vrai": Palette.positiveText
+        case "faux": Palette.negativeText
         default: Palette.textPrimary
         }
     }

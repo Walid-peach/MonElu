@@ -25,8 +25,8 @@ public struct VotePositionBadge: View {
     /// `nonVotant`.
     public static func colors(_ position: String) -> (Color, Color) {
         switch position {
-        case "pour": (Palette.positive, Palette.positiveBackground)
-        case "contre": (Palette.negative, Palette.negativeBackground)
+        case "pour": (Palette.positiveText, Palette.positiveBackground)
+        case "contre": (Palette.negativeText, Palette.negativeBackground)
         case "abstention": (Palette.textSecondary, Palette.trackBackground)
         default: (Palette.textMuted, Palette.trackBackground)
         }
