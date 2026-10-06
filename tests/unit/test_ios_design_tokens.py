@@ -202,6 +202,42 @@ def test_literal_color_pattern_catches_the_usual_forms():
         assert not LITERAL_COLOR.search(line), line
 
 
+# `positive`/`negative` are fills (bars, hemicycle seats). As text on their
+# own tint they miss 4.5:1, so a line that pairs one with its background, or
+# makes it a foreground, must use positiveText/negativeText instead.
+FILL_AS_TEXT = re.compile(
+    r"Palette\.(positive|negative)\b(?!Background|Text).*Palette\.\1Background"
+    r"|foregroundStyle\(Palette\.(positive|negative)\)"
+    r"|foreground: Palette\.(positive|negative)\b(?!Background|Text)"
+)
+
+
+def test_badge_text_does_not_use_the_fill_colors():
+    offenders = [
+        f"{path.name}:{number}: {line.strip()}"
+        for root in SWIFT_UI_SOURCES
+        for path in root.rglob("*.swift")
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if FILL_AS_TEXT.search(line)
+    ]
+    assert offenders == []
+
+
+def test_fill_as_text_pattern_catches_the_usual_forms():
+    for line in [
+        'case "pour": (Palette.positive, Palette.positiveBackground)',
+        ".foregroundStyle(Palette.negative)",
+        'Badge(text: "Adopté", foreground: Palette.positive, background: x)',
+    ]:
+        assert FILL_AS_TEXT.search(line), line
+    for line in [
+        'case "pour": (Palette.positiveText, Palette.positiveBackground)',
+        "case .pour: Palette.positive",
+        'Segment(position: "pour", count: pour, color: Palette.positive),',
+    ]:
+        assert not FILL_AS_TEXT.search(line), line
+
+
 def _luminance(rgb: str) -> float:
     def channel(hex_pair: str) -> float:
         c = int(hex_pair, 16) / 255

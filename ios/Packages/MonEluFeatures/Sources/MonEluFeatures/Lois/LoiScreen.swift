@@ -136,8 +136,8 @@ struct LoiStatusBadge: View {
 
     var body: some View {
         let (foreground, background): (Color, Color) = switch status {
-        case "promulguee", "adoptee_definitivement": (Palette.positive, Palette.positiveBackground)
-        case "rejetee": (Palette.negative, Palette.negativeBackground)
+        case "promulguee", "adoptee_definitivement": (Palette.positiveText, Palette.positiveBackground)
+        case "rejetee": (Palette.negativeText, Palette.negativeBackground)
         default: (Palette.textPrimary, Palette.trackBackground)
         }
         Text(LoiStatus.label(status))
