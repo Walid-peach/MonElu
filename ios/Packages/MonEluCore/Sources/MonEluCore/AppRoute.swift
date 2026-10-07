@@ -23,6 +23,12 @@ public enum AppRoute: Hashable, Sendable {
     case compare(deputyID: String)
     /// The scrutins where a deputy voted against their group. Not a link.
     case dissidentVotes(deputyID: String)
+    /// Explorer's lists (#488): every scrutin, every deputy, the bills with
+    /// a page, and the départements. Reached from Explorer, not from a link.
+    case votes
+    case deputies
+    case lois
+    case departments
 
     /// The tab a route opens in: Explorer, which holds both lists, so the
     /// back button always leads somewhere to keep browsing.

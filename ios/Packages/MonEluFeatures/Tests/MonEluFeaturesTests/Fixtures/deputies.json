@@ -10,7 +10,8 @@
       "party_short": "LIOT",
       "department": "Ariège",
       "circonscription": "2",
-      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793214.jpg"
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793214.jpg",
+      "last_name": "Abadie-Amiel"
     },
     {
       "deputy_id": "PA795228",
@@ -19,7 +20,8 @@
       "party_short": "LFI",
       "department": "Seine-Saint-Denis",
       "circonscription": "10",
-      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/795228.jpg"
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/795228.jpg",
+      "last_name": "Abomangoli"
     },
     {
       "deputy_id": "PA794278",
@@ -28,7 +30,8 @@
       "party_short": "HOR",
       "department": "Marne",
       "circonscription": "1",
-      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/794278.jpg"
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/794278.jpg",
+      "last_name": "Albertini"
     },
     {
       "deputy_id": "PA793262",
@@ -37,7 +40,8 @@
       "party_short": "LFI",
       "department": "Aveyron",
       "circonscription": "2",
-      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793262.jpg"
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793262.jpg",
+      "last_name": "Alexandre"
     }
   ]
 }

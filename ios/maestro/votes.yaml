@@ -1,5 +1,5 @@
-# Explorer's votes (#460, #477): the list loads from the API, and a row opens
-# its detail.
+# Explorer's votes (#460, #477, #488): the list loads from the API, grouped
+# by day, the chips narrow it, and a row opens its detail.
 # Asserts on structure, not on wording: the scrutins themselves change daily.
 appId: ${APP_ID}
 ---
@@ -10,6 +10,7 @@ appId: ${APP_ID}
     timeout: 15000
 
 - tapOn: "Explorer"
+- tapOn: "Votes, .*"
 - extendedWaitUntil:
     visible:
       id: "vote.row"
@@ -25,6 +26,15 @@ appId: ${APP_ID}
     timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}2-votes-adopted
+
+# Only the votes on a whole text (#481).
+- tapOn: "Textes entiers"
+- extendedWaitUntil:
+    visible:
+      id: "vote.row"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2b-votes-whole-texts
 
 - tapOn:
     id: "vote.row"

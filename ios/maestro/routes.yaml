@@ -28,7 +28,7 @@ appId: ${APP_ID}
     timeout: 20000
 - takeScreenshot: ${SCREENSHOT_PREFIX}2-vote-route
 
-# Tapping the tab again returns to its root screen, the vote list.
+# Tapping the tab again returns to its root screen, the contents page.
 - tapOn: "Explorer"
 - assertVisible:
-    id: "screen.votes"
+    id: "screen.explore"

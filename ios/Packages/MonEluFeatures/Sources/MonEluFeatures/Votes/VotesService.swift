@@ -24,7 +24,9 @@ public struct LiveVotesService: VotesService {
             limit: Self.pageSize,
             before: query.cursor,
             result: query.result,
-            search: search.isEmpty ? nil : search
+            theme: query.theme,
+            search: search.isEmpty ? nil : search,
+            kind: query.kinds.isEmpty ? nil : query.kinds
         ))
         let list = try response.ok.body.json
         return VotePage(items: list.items.map(VoteItem.init), nextCursor: list.nextCursor)

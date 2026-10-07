@@ -12,6 +12,13 @@ public protocol LoisService: Sendable {
     func nextSitting(dossierID: String, after now: Date) async throws -> LoiNextSitting?
     /// The amendment and article scrutins of the bill, or of one acte.
     func amendements(dossierID: String, acteID: String?) async throws -> LoiAmendements
+    /// The bills with a page, most recently voted first (`listLois`, #488).
+    func lois() async throws -> LoiList
+}
+
+extension LoisService {
+    /// A stub that does not answer this fails it.
+    public func lois() async throws -> LoiList { throw URLError(.unsupportedURL) }
 }
 
 extension LoisService {
@@ -53,6 +60,23 @@ public struct LiveLoisService: LoisService {
             .filter { $0.dossierId == dossierID && $0.sittingStart >= now }
             .min { $0.sittingStart < $1.sittingStart }
             .map { LoiNextSitting(start: $0.sittingStart, pointType: $0.pointType) }
+    }
+
+    /// Every bill with a page fits one request: about 70, and the API
+    /// allows 200.
+    static let loisPageSize = 200
+
+    public func lois() async throws -> LoiList {
+        let list = try await client.listLois(query: .init(limit: Self.loisPageSize)).ok.body.json
+        return LoiList(
+            items: list.items.map {
+                LoiListItem(
+                    id: $0.dossierUid, title: $0.titre, status: $0.status, lastVote: $0.lastScrutinAt,
+                    theme: $0.theme, headlineCount: $0.headlineScrutinCount
+                )
+            },
+            total: list.total
+        )
     }
 
     public func amendements(dossierID: String, acteID: String?) async throws -> LoiAmendements {

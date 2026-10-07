@@ -25,6 +25,38 @@ struct VotesListModelTests {
         #expect(model.needsReload == false)
     }
 
+    /// Each chip changes the request: "Textes entiers" asks for the votes on
+    /// a whole text, the theme chip for one theme.
+    @Test func theChipsChangeTheQuery() async {
+        let service = RecordingVotesService()
+        let model = VotesListModel(service: service)
+        model.wholeTextsOnly = true
+        await model.reload()
+        model.theme = "Agriculture"
+        model.filter = .adopted
+        await model.reload()
+        model.wholeTextsOnly = false
+        model.theme = nil
+        await model.reload()
+        #expect(service.queries == [
+            VoteQuery(kinds: ["ensemble"]),
+            VoteQuery(result: "adopté", theme: "Agriculture", kinds: ["ensemble"]),
+            VoteQuery(result: "adopté"),
+        ])
+    }
+
+    /// The list's sections are the Paris days of the scrutins, in order.
+    @Test func theListIsGroupedByDay() throws {
+        let votes = [
+            VoteItem(id: "V3", title: "c", date: try APIDay.date("2026-10-01"), result: nil, summary: nil, theme: nil),
+            VoteItem(id: "V2", title: "b", date: try APIDay.date("2026-10-01"), result: nil, summary: nil, theme: nil),
+            VoteItem(id: "V1", title: "a", date: try APIDay.date("2026-09-30"), result: nil, summary: nil, theme: nil),
+        ]
+        let days = VotesList.days(votes)
+        #expect(days.map(\.title) == ["Jeudi 1er octobre 2026", "Mercredi 30 septembre 2026"])
+        #expect(days.map { $0.votes.map(\.id) } == [["V3", "V2"], ["V1"]])
+    }
+
     @Test func noMatchIsTheEmptyState() async {
         let model = VotesListModel(service: RecordingVotesService())
         await model.reload()

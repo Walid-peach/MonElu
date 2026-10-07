@@ -190,6 +190,31 @@ def test_list_deputies(client, mock_cursor):
     assert data["items"][0]["full_name"] == "Jean Martin"
 
 
+def test_list_deputies_returns_the_surname(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [{**_DEPUTY_SUMMARY, "last_name": "Martin"}]
+    resp = client.get("/deputies/")
+    assert resp.json()["items"][0]["last_name"] == "Martin"
+    assert "last_name" in str(mock_cursor.execute.call_args_list[1].args[0])
+
+
+def test_list_deputies_active_filters_on_mandate_end(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [_DEPUTY_SUMMARY]
+    assert client.get("/deputies/?active=true").status_code == 200
+    count_sql = str(mock_cursor.execute.call_args_list[0].args[0])
+    assert "mandate_end IS NULL" in count_sql
+    assert client.get("/deputies/?active=false").status_code == 200
+    assert "mandate_end IS NOT NULL" in str(mock_cursor.execute.call_args_list[2].args[0])
+
+
+def test_list_deputies_without_active_keeps_every_mandate(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [_DEPUTY_SUMMARY]
+    assert client.get("/deputies/").status_code == 200
+    assert "mandate_end" not in str(mock_cursor.execute.call_args_list[0].args[0])
+
+
 def test_search_deputies(client, mock_cursor):
     mock_cursor.fetchone.return_value = {"count": 1}
     mock_cursor.fetchall.return_value = [_DEPUTY_SUMMARY]
@@ -985,6 +1010,25 @@ def test_majority_position_tiebreak_matches_dbt():
     assert _majority_position(pour=1, contre=1, abstention=0) == "contre"
     assert _majority_position(pour=1, contre=0, abstention=1) == "abstention"
     assert _majority_position(pour=2, contre=2, abstention=2) == "abstention"
+
+
+def test_list_groups_largest_first_with_slugs(client, mock_cursor):
+    mock_cursor.fetchall.return_value = [
+        {"party": "Socialistes et apparentés", "party_short": "SOC", "seat_count": 66},
+        {"party": "Rassemblement National", "party_short": "RN", "seat_count": 123},
+        {"party": "Un label inconnu", "party_short": "X", "seat_count": 1},
+    ]
+    resp = client.get("/groups")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert [g["slug"] for g in items] == ["rassemblement-national", "socialistes-et-apparentes"]
+    assert items[0] == {
+        "slug": "rassemblement-national",
+        "name": "Rassemblement National",
+        "party_short": "RN",
+        "seat_count": 123,
+    }
+    assert "mandate_end IS NULL" in mock_cursor.execute.call_args.args[0]
 
 
 def test_get_group(client, mock_cursor):

@@ -64,7 +64,9 @@ public struct LiveDeputiesService: DeputiesService {
             limit: Self.pageSize,
             offset: query.offset,
             search: search.isEmpty ? nil : search,
-            party: query.group
+            department: query.department,
+            party: query.group,
+            active: query.active
         ))
         let list = try response.ok.body.json
         return DeputyPage(items: list.items.map(DeputyItem.init), total: list.total, offset: list.offset)
@@ -160,11 +162,11 @@ extension DeputyVote {
 }
 
 extension DeputyItem {
-    init(_ deputy: Components.Schemas.DeputySummary) {
+    init(_ deputy: Components.Schemas.DeputyListItem) {
         self.init(
             id: deputy.deputyId, name: deputy.fullName, group: deputy.party, groupShort: deputy.partyShort,
             department: deputy.department, circonscription: deputy.circonscription,
-            photoURL: deputy.photoUrl.flatMap(URL.init(string:))
+            photoURL: deputy.photoUrl.flatMap(URL.init(string:)), lastName: deputy.lastName
         )
     }
 }

@@ -75,6 +75,39 @@ struct QuizModelTests {
         #expect(model.canGoBack == false)
     }
 
+    /// The real tallies show only once a question is answered: the answer
+    /// and its question become `lastAnswer`, which a skip clears.
+    @Test func theRealVoteIsRevealedOnlyAfterAnswering() async throws {
+        let deck = try await QuizFixtures.deck()
+        let model = await ready(RecordingQuizService(deck: deck))
+        #expect(model.lastAnswer == nil)
+        model.answer(.contre)
+        #expect(model.lastAnswer == QuizAnswered(question: deck[0], position: .contre))
+        model.skip()
+        #expect(model.lastAnswer == nil)
+    }
+
+    /// Leaving the deck keeps the answers for the session, and "Reprendre"
+    /// picks up at the same question; "Commencer" starts afresh.
+    @Test func quittingKeepsTheAnswersToResume() async throws {
+        let model = await ready(RecordingQuizService(deck: try await QuizFixtures.deck()))
+        #expect(model.canResume == false)
+        model.answer(.pour)
+        model.answer(.pour)
+        model.quit()
+        #expect(model.phase == .intro)
+        #expect(model.canResume)
+        model.continueDeck()
+        #expect(model.phase == .questions)
+        #expect(model.index == 2)
+        #expect(model.answers.count == 2)
+        model.quit()
+        model.start()
+        #expect(model.index == 0)
+        #expect(model.answers.isEmpty)
+        #expect(model.canResume == false)
+    }
+
     @Test func fewerThanThreeAnswersAskForMore() async throws {
         let service = RecordingQuizService(deck: try await QuizFixtures.deck())
         let model = await ready(service)

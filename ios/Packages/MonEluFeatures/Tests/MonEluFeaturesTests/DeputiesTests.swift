@@ -18,7 +18,19 @@ final class RecordingDeputiesService: DeputiesService, @unchecked Sendable {
         }
     }
 
-    func profile(id: String) async throws -> DeputyProfile { throw URLError(.badServerResponse) }
+    /// The followed deputy's profile, for the "Mon département" chip; nil fails.
+    var profileDepartment: String?
+
+    func profile(id: String) async throws -> DeputyProfile {
+        guard let profileDepartment else { throw URLError(.badServerResponse) }
+        return DeputyProfile(
+            deputy: DeputyItem(
+                id: id, name: "Alain David", group: nil, groupShort: nil,
+                department: profileDepartment, circonscription: nil, photoURL: nil
+            ),
+            mandateStart: nil, mandateEnd: nil
+        )
+    }
     func scorecard(id: String) async throws -> DeputyScorecard { throw URLError(.badServerResponse) }
     func recentVotes(id: String) async throws -> [DeputyVote] { throw URLError(.badServerResponse) }
     func votes(id: String, since: Date) async throws -> [DeputyVote] { throw URLError(.badServerResponse) }
@@ -59,6 +71,46 @@ struct DeputiesListModelTests {
         await model.reload()
         #expect(service.queries == [DeputyQuery(search: "david", group: "Socialistes et apparentés")])
         #expect(model.needsReload == false)
+    }
+
+    /// "En mandat" asks for current mandates only, and "Mon département" for
+    /// the followed deputy's département, which the model looks up first.
+    @Test func theChipsChangeTheQuery() async {
+        let service = RecordingDeputiesService()
+        service.profileDepartment = "Gironde"
+        let model = DeputiesListModel(service: service, groups: testGroups, followedDeputyID: "PA1008")
+        await model.loadMyDepartment()
+        #expect(model.myDepartment == "Gironde")
+        model.inMandateOnly = true
+        await model.reload()
+        model.onlyMyDepartment = true
+        await model.reload()
+        #expect(service.queries == [
+            DeputyQuery(active: true),
+            DeputyQuery(department: "Gironde", active: true),
+        ])
+    }
+
+    /// Without a followed deputy there is no "Mon département" to offer.
+    @Test func noFollowedDeputyNoDepartment() async {
+        let model = DeputiesListModel(service: RecordingDeputiesService(), groups: testGroups)
+        await model.loadMyDepartment()
+        #expect(model.myDepartment == nil)
+        model.onlyMyDepartment = true
+        #expect(model.criteria.department == nil)
+    }
+
+    /// Sections follow the surname's first letter, accents folded.
+    @Test func theListIsInLetterSections() {
+        func named(_ id: String, _ last: String) -> DeputyItem {
+            DeputyItem(
+                id: id, name: last, group: nil, groupShort: nil, department: nil, circonscription: nil,
+                photoURL: nil, lastName: last
+            )
+        }
+        let sections = DeputiesList.sections([named("1", "Abadie"), named("2", "Albertini"), named("3", "Écrivain"), named("4", "Erodi")])
+        #expect(sections.map(\.initial) == ["A", "E"])
+        #expect(sections.map { $0.deputies.map(\.id) } == [["1", "2"], ["3", "4"]])
     }
 
     @Test func noMatchIsTheEmptyState() async {
@@ -158,6 +210,7 @@ struct LiveDeputiesServiceTests {
 
     @Test func listMapsEveryDeputy() async throws {
         let page = try await Self.service().deputies(DeputyQuery())
+        #expect(page.items.first?.lastName == "Abadie-Amiel")
         #expect(page.total == 649)
         #expect(page.offset == 0)
         #expect(page.items.count == 4)

@@ -44,6 +44,17 @@ public enum MonEluFormat {
         return "\(date.formatted(dayStyle)) à \(time(date))"
     }
 
+    /// "Jeudi 1er octobre 2026": a day heading over a list of scrutins, in
+    /// Paris time, with the French ordinal for the first of the month.
+    public static func fullDay(_ date: Date) -> String {
+        var style = Date.FormatStyle(locale: french).weekday(.wide).day().month(.wide).year()
+        style.timeZone = paris
+        let parts = parisCalendar.dateComponents([.day], from: date)
+        var text = date.formatted(style)
+        if parts.day == 1, let range = text.range(of: " 1 ") { text.replaceSubrange(range, with: " 1er ") }
+        return text.prefix(1).uppercased() + text.dropFirst()
+    }
+
     /// "Lun. 5 oct. · 16 h": a séance's start on a small card, in Paris time.
     public static func shortSitting(_ date: Date) -> String {
         var dayStyle = Date.FormatStyle(locale: french).weekday(.abbreviated).day().month(.abbreviated)

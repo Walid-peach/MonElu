@@ -108,3 +108,14 @@ public struct QuizAnswer: Hashable, Sendable {
         self.position = position
     }
 }
+
+/// A question the user has just answered, and how they answered.
+public struct QuizAnswered: Hashable, Sendable {
+    public let question: QuizQuestion
+    public let position: QuizPosition
+
+    public init(question: QuizQuestion, position: QuizPosition) {
+        self.question = question
+        self.position = position
+    }
+}

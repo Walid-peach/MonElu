@@ -1,0 +1,53 @@
+# Explorer's contents page (#488): the bills with a page and every
+# département, each opening its own page. Live data: asserts on fixed labels
+# and ids, never on which bills or deputies are listed.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Accueil"
+    timeout: 15000
+- tapOn: "Explorer"
+- extendedWaitUntil:
+    visible: ".*en mandat.*"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-explore
+
+# The contents page's id masks the tiles', so they are tapped by label.
+- tapOn: "Textes, .*"
+- extendedWaitUntil:
+    visible:
+      id: "loi.row"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-lois
+- tapOn:
+    id: "loi.row"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "loi.page"
+    timeout: 20000
+
+- tapOn: "Explorer"
+- scrollUntilVisible:
+    element: "Tous les départements"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-explore-lower
+- tapOn: "Tous les départements"
+- extendedWaitUntil:
+    visible:
+      id: "department.row"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-departements
+- tapOn:
+    id: "department.row"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "department.page"
+    timeout: 20000

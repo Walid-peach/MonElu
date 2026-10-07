@@ -2,34 +2,29 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// Explorer's deputy list: every deputy, by name, with search and a group
-/// filter (web: `/deputes`). Explorer owns the model, so the search and
-/// filter survive switching to the votes and back.
+/// Explorer's deputy list (#488, design A): every deputy by surname, with
+/// search and chips for the group, the user's own département and current
+/// mandates (web: `/deputes`).
 public struct DeputiesListScreen: View {
-    @Bindable private var model: DeputiesListModel
+    @State private var model: DeputiesListModel
+    @State private var picksGroup = false
 
-    public init(model: DeputiesListModel) {
-        self.model = model
+    public init(service: any DeputiesService, followedDeputyID: String?) {
+        _model = State(initialValue: DeputiesListModel(service: service, followedDeputyID: followedDeputyID))
+    }
+
+    /// Over a model already loaded, for snapshot tests.
+    init(model: DeputiesListModel) {
+        _model = State(initialValue: model)
     }
 
     public var body: some View {
-        // The filter sits above the list rather than in a top safe-area
-        // inset: an inset over a List leaves the large title blank (#477).
+        @Bindable var model = model
+        // The chips sit above the list rather than in a top safe-area inset:
+        // an inset over a List leaves the large title blank (#477).
         VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                GroupFilter(groups: model.groups, selection: $model.groupSlug, selectedName: model.groupName)
-                if let slug = model.groupSlug {
-                    NavigationLink(value: AppRoute.group(slug: slug)) {
-                        Text("Voir le groupe")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Palette.accent)
-                            .fixedSize()
-                    }
-                    .accessibilityIdentifier("deputies.open-group")
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            DeputyChips(model: model) { picksGroup = true }
+                .padding(.vertical, 6)
             LoadStateView(
                 model.loader,
                 empty: EmptyStateView(
@@ -39,16 +34,34 @@ public struct DeputiesListScreen: View {
                 )
             ) { deputies in
                 DeputiesList(
-                    deputies: deputies, isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure
+                    deputies: deputies, total: model.total, inMandateOnly: model.inMandateOnly,
+                    isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure
                 ) {
                     await model.loadMore()
                 }
             }
         }
         .background(Palette.pageBackground)
+        .navigationTitle("Députés")
+        .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $model.searchText, prompt: "Rechercher un député")
         .autocorrectionDisabled()
-        // Reload when the search or group changes, after a pause so typing
+        .confirmationDialog("Groupe", isPresented: $picksGroup, titleVisibility: .visible) {
+            Button("Tous les groupes") { model.groupSlug = nil }
+            ForEach(model.groups) { group in
+                Button(group.name) { model.groupSlug = group.slug }
+            }
+        }
+        .toolbar {
+            if let slug = model.groupSlug {
+                ToolbarItem(placement: .primaryAction) {
+                    NavigationLink(value: AppRoute.group(slug: slug)) { Text("Voir le groupe") }
+                        .accessibilityIdentifier("deputies.open-group")
+                }
+            }
+        }
+        .task { await model.loadMyDepartment() }
+        // Reload when the search or a chip changes, after a pause so typing
         // does not send one request per letter.
         .task(id: model.criteria) {
             guard model.needsReload else { return }
@@ -60,59 +73,80 @@ public struct DeputiesListScreen: View {
     }
 }
 
-/// The group filter: a menu, since twelve groups do not fit a segmented control.
-struct GroupFilter: View {
-    let groups: [ReferenceData.Group]
-    @Binding var selection: String?
-    let selectedName: String?
+/// The group chip, which opens the group picker, and the two toggles.
+struct DeputyChips: View {
+    let model: DeputiesListModel
+    let pickGroup: () -> Void
 
     var body: some View {
-        Menu {
-            Picker("Groupe", selection: $selection) {
-                Text("Tous les groupes").tag(String?.none)
-                ForEach(groups) { Text($0.name).tag(Optional($0.slug)) }
+        FilterChipRow(chips) { id in
+            switch id {
+            case "group": pickGroup()
+            case "department": model.onlyMyDepartment.toggle()
+            case "mandate": model.inMandateOnly.toggle()
+            default: break
             }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                    .accessibilityHidden(true)
-                Text(selectedName ?? "Tous les groupes")
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .accessibilityHidden(true)
-            }
-            .font(.subheadline.weight(.medium))
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .tint(Palette.accent)
-        .accessibilityLabel("Groupe")
-        .accessibilityValue(selectedName ?? "Tous les groupes")
-        .accessibilityIdentifier("deputies.group-filter")
+        .accessibilityIdentifier("deputies.chips")
+    }
+
+    private var chips: [FilterChip] {
+        var chips = [
+            FilterChip(
+                id: "group", title: model.groupName ?? "Tous les groupes",
+                isSelected: model.groupSlug != nil, opensSheet: true
+            ),
+        ]
+        if model.myDepartment != nil {
+            chips.append(FilterChip(id: "department", title: "Mon département", isSelected: model.onlyMyDepartment))
+        }
+        chips.append(FilterChip(id: "mandate", title: "En mandat", isSelected: model.inMandateOnly))
+        return chips
     }
 }
 
-/// The loaded list. Separate from the screen so it can be snapshot-tested
-/// without a network.
+/// The loaded list, in sections by the surname's first letter. Separate
+/// from the screen so it can be snapshot-tested without a network.
 struct DeputiesList: View {
     let deputies: [DeputyItem]
+    var total: Int?
+    var inMandateOnly = false
     let isLoadingMore: Bool
     var loadMoreFailure: LoadFailure?
     let loadMore: () async -> Void
 
     var body: some View {
         List {
-            ForEach(deputies) { deputy in
-                NavigationLink(value: AppRoute.deputy(id: deputy.id)) {
-                    DeputyRowView(deputy: deputy)
-                }
-                .listRowBackground(Palette.cardBackground)
-                .accessibilityIdentifier("deputy.row")
-                .task {
-                    // Not after a failure: the footer's retry decides, so a
-                    // dead connection is not retried on every scroll.
-                    if deputy.id == deputies.last?.id, loadMoreFailure == nil { await loadMore() }
+            ForEach(Array(Self.sections(deputies).enumerated()), id: \.offset) { index, section in
+                Section {
+                    ForEach(section.deputies) { deputy in
+                        NavigationLink(value: AppRoute.deputy(id: deputy.id)) {
+                            ExplorerDeputyRow(deputy: deputy)
+                        }
+                        .listRowBackground(Palette.cardBackground)
+                        .accessibilityIdentifier("deputy.row")
+                        .task {
+                            // Not after a failure: the footer's retry decides, so a
+                            // dead connection is not retried on every scroll.
+                            if deputy.id == deputies.last?.id, loadMoreFailure == nil { await loadMore() }
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Text(section.initial ?? "")
+                            .font(.footnote.weight(.bold))
+                            .accessibilityLabel(section.initial.map { "Lettre \($0)" } ?? "")
+                        Spacer()
+                        if index == 0, let total {
+                            Text(
+                                inMandateOnly
+                                    ? "\(MonEluFormat.count(total)) en mandat"
+                                    : "\(MonEluFormat.count(total)) député\(total > 1 ? "s" : "")"
+                            )
+                            .font(.footnote)
+                        }
+                    }
+                    .foregroundStyle(Palette.textSecondary)
                 }
             }
             if let loadMoreFailure {
@@ -139,9 +173,70 @@ struct DeputiesList: View {
                     .listRowBackground(Palette.pageBackground)
             }
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Palette.pageBackground)
         .accessibilityIdentifier("deputies.list")
+    }
+
+    struct LetterSection {
+        let initial: String?
+        var deputies: [DeputyItem]
+    }
+
+    /// Consecutive deputies sharing an initial, in the API's order (by surname).
+    static func sections(_ deputies: [DeputyItem]) -> [LetterSection] {
+        var sections: [LetterSection] = []
+        for deputy in deputies {
+            if let last = sections.indices.last, sections[last].initial == deputy.initial {
+                sections[last].deputies.append(deputy)
+            } else {
+                sections.append(LetterSection(initial: deputy.initial, deputies: [deputy]))
+            }
+        }
+        return sections
+    }
+}
+
+/// A deputy in Explorer: portrait, name, département and seat, and the group chip.
+struct ExplorerDeputyRow: View {
+    let deputy: DeputyItem
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // At large text the portrait and the chip leave the name a sliver,
+            // so the chip moves under it and the portrait goes.
+            if !typeSize.isAccessibilitySize {
+                DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 44)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(deputy.name)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Palette.textPrimary)
+                if let place = Self.place(deputy) {
+                    Text(place)
+                        .font(.footnote)
+                        .foregroundStyle(Palette.textSecondary)
+                }
+                if typeSize.isAccessibilitySize, let short = deputy.groupShort {
+                    PartyChip(short: short)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if !typeSize.isAccessibilitySize, let short = deputy.groupShort {
+                PartyChip(short: short)
+            }
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "Ariège · 2e", or whichever half the API returned.
+    static func place(_ deputy: DeputyItem) -> String? {
+        let seat = deputy.circonscription.map { $0 == "1" ? "1re" : "\($0)e" }
+        let parts = [deputy.department, seat].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }

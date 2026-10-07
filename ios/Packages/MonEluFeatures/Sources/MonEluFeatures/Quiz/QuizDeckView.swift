@@ -2,28 +2,22 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// One question card: theme, the question, its context, and the scrutin's
-/// real outcome on request.
+/// One question card (design A): theme, the question and its context, with
+/// the swipe directions at the foot. The scrutin's real tallies are not on
+/// it: they are revealed only once the user has answered (`QuizRevealView`).
 struct QuizCardView: View {
     let question: QuizQuestion
-    @State private var showsDetails: Bool
-
-    init(question: QuizQuestion, showsDetails: Bool = false) {
-        self.question = question
-        _showsDetails = State(initialValue: showsDetails)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(question.theme.uppercased())
-                .font(.caption.weight(.bold))
-                .tracking(1.2)
-                .foregroundStyle(Palette.accent)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .overlay(Capsule().strokeBorder(Palette.accent, lineWidth: 1.5))
+            Text(question.theme)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Palette.textPrimary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             Text(question.question)
-                .font(Typography.heading(.title2))
+                .font(Typography.heading(.title))
                 .foregroundStyle(Palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
@@ -31,74 +25,91 @@ struct QuizCardView: View {
                 .font(.subheadline)
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if showsDetails {
-                details
-            }
-            Button {
-                showsDetails.toggle()
-            } label: {
-                Text(showsDetails ? "Masquer les détails" : "Détails du scrutin")
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    Label("Contre", systemImage: "chevron.left")
+                    Spacer(minLength: 8)
+                    Text("Glissez ou touchez")
+                    Spacer(minLength: 8)
+                    HStack(spacing: 4) {
+                        Text("Pour")
+                        Image(systemName: "chevron.right")
+                    }
+                }
+                Text("Glissez ou touchez")
             }
             .font(.footnote.weight(.semibold))
-            .buttonStyle(.bordered)
-            .tint(Palette.textSecondary)
+            .foregroundStyle(Palette.textSecondary)
+            .accessibilityHidden(true)
         }
         .padding(22)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
     }
+}
 
-    /// The real vote, as the API's tallies give it; no percentage is derived.
-    @ViewBuilder private var details: some View {
-        if let result = question.result {
-            VStack(alignment: .leading, spacing: 8) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 8) { outcome(result) }
-                    VStack(alignment: .leading, spacing: 4) { outcome(result) }
-                }
-                // On one line when it fits, one tally per line at large text.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) { tallies }
-                    VStack(alignment: .leading, spacing: 6) { tallies }
-                }
-            }
-        } else {
-            Text("Résultat du scrutin indisponible pour ce texte.")
-                .font(.footnote)
-                .foregroundStyle(Palette.textSecondary)
-        }
-    }
+/// How the Assemblée really voted on the question just answered, beside the
+/// user's own answer. The tallies are the API's; no percentage is derived.
+struct QuizRevealView: View {
+    let answered: QuizAnswered
 
-    @ViewBuilder private func outcome(_ result: String) -> some View {
-        VoteResultBadge(result: result)
-        if let date = question.voteDate {
-            Text(MonEluFormat.day(date))
-                .font(.caption)
-                .foregroundStyle(Palette.textSecondary)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Each label stays with its badge, and the pairs wrap at large text.
+            FlowLayout(spacing: 10) {
+                HStack(spacing: 6) {
+                    Text("Vous :")
+                        .font(.footnote)
+                        .foregroundStyle(Palette.textSecondary)
+                    VotePositionBadge(position: answered.position.rawValue)
+                }
                 .fixedSize()
-        }
-    }
-
-    @ViewBuilder private var tallies: some View {
-        tally("pour", question.votesFor)
-        tally("contre", question.votesAgainst)
-        tally("abstention", question.abstentions)
-    }
-
-    @ViewBuilder private func tally(_ position: String, _ count: Int?) -> some View {
-        if let count {
-            HStack(spacing: 4) {
-                VotePositionBadge(position: position)
-                Text(MonEluFormat.count(count))
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(Palette.textPrimary)
+                if let result = answered.question.result {
+                    HStack(spacing: 6) {
+                        Text("L'Assemblée :")
+                            .font(.footnote)
+                            .foregroundStyle(Palette.textSecondary)
+                        VoteResultBadge(result: result)
+                    }
+                    .fixedSize()
+                }
             }
-            .fixedSize()
-            .accessibilityElement(children: .combine)
+            if let pour = answered.question.votesFor, let contre = answered.question.votesAgainst {
+                Text(tallies(pour, contre, answered.question.abstentions))
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("quiz.reveal")
+        // An answer given through a VoiceOver action moves straight to the
+        // next card, so the real vote is read out.
+        .onAppear { announce() }
+        .onChange(of: answered) { announce() }
+    }
+
+    private func announce() {
+        var text = "Vous : \(VotePositionBadge.label(answered.position.rawValue))."
+        if let result = answered.question.result { text += " L'Assemblée : \(result)." }
+        if let pour = answered.question.votesFor, let contre = answered.question.votesAgainst {
+            text += " " + tallies(pour, contre, answered.question.abstentions)
+        }
+        AccessibilityNotification.Announcement(text).post()
+    }
+
+    /// "291 pour · 241 contre · 12 abstentions".
+    private func tallies(_ pour: Int, _ contre: Int, _ abstentions: Int?) -> String {
+        var parts = ["\(MonEluFormat.count(pour)) pour", "\(MonEluFormat.count(contre)) contre"]
+        if let abstentions {
+            parts.append("\(MonEluFormat.count(abstentions)) abstention\(abstentions > 1 ? "s" : "")")
+        }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -110,21 +121,81 @@ struct QuizDeckView: View {
     let number: Int
     let total: Int
     let canGoBack: Bool
+    var lastAnswer: QuizAnswered?
     let onAnswer: (QuizPosition) -> Void
     let onSkip: () -> Void
     let onBack: () -> Void
+    var onQuit: () -> Void = {}
 
     @State private var offset: CGSize = .zero
     @State private var committing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// A drag commits past this distance, or when flung past `flingDistance`.
     static let commitDistance: CGFloat = 100
     static let flingDistance: CGFloat = 300
 
     var body: some View {
-        VStack(spacing: 16) {
+        // At large text the deck no longer fits a screen: it scrolls, and the
+        // card takes its natural height instead of the space left.
+        if typeSize.isAccessibilitySize {
+            ScrollView { content }
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
+        VStack(spacing: 14) {
             header
+            if let lastAnswer { QuizRevealView(answered: lastAnswer) }
+            deck
+            buttons
+            Button("Passer cette question", action: onSkip)
+                .font(.subheadline.weight(.semibold))
+                .tint(Palette.textSecondary)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("quiz.skip")
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 8) {
+            // Always laid out, so the progress keeps its width from question 1.
+            Button(action: onBack) {
+                Image(systemName: "chevron.left")
+                    .frame(width: 44, height: 44)
+            }
+            .tint(Palette.textPrimary)
+            .opacity(canGoBack ? 1 : 0)
+            .disabled(!canGoBack)
+            .accessibilityHidden(!canGoBack)
+            .accessibilityLabel("Revenir à la question précédente")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Question \(number) sur \(total)")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Palette.textSecondary)
+                QuizProgress(current: number, total: total)
+            }
+            Button(action: onQuit) {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.medium))
+                    .frame(width: 44, height: 44)
+            }
+            .tint(Palette.textSecondary)
+            .accessibilityLabel("Quitter le quiz")
+            .accessibilityIdentifier("quiz.quit")
+        }
+    }
+
+    /// The card on two ghost cards, so it reads as a deck.
+    private var deck: some View {
+        ZStack {
+            if !typeSize.isAccessibilitySize {
+                ghost(inset: 20, drop: 16, opacity: 0.55)
+                ghost(inset: 10, drop: 8, opacity: 0.8)
+            }
             QuizCardView(question: question)
                 .id(question.id)
                 .overlay(alignment: .topLeading) { stamp("pour", opacity: offset.width / Self.commitDistance, angle: -12) }
@@ -142,76 +213,51 @@ struct QuizDeckView: View {
                     Button("Passer cette question", action: onSkip)
                 }
                 .accessibilityIdentifier("quiz.card")
-            Spacer(minLength: 0)
-            buttons
-            Button("Passer cette question", action: onSkip)
-                .font(.subheadline.weight(.medium))
-                .tint(Palette.textSecondary)
-                .accessibilityIdentifier("quiz.skip")
         }
+        .padding(.bottom, typeSize.isAccessibilitySize ? 0 : 16)
+        .frame(maxHeight: typeSize.isAccessibilitySize ? nil : .infinity)
     }
 
-    private var header: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Button(action: onBack) {
-                    Label("Revenir à la question précédente", systemImage: "chevron.left")
-                        .labelStyle(.iconOnly)
-                }
-                .disabled(!canGoBack)
-                .tint(Palette.textPrimary)
-                Spacer()
-                Text("Question \(number) sur \(total)")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Palette.textSecondary)
-                Spacer()
-                // Balances the back button so the count stays centred.
-                Image(systemName: "chevron.left").hidden().accessibilityHidden(true)
-            }
-            ProgressView(value: Double(number - 1), total: Double(max(total, 1)))
-                .tint(Palette.accent)
-                .accessibilityHidden(true)
-        }
+    private func ghost(inset: CGFloat, drop: CGFloat, opacity: Double) -> some View {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(Palette.cardBackground)
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+            .padding(.horizontal, inset)
+            .offset(y: drop)
+            .opacity(opacity)
+            .accessibilityHidden(true)
     }
 
-    /// Three round buttons in a row; at large text, where their labels no
-    /// longer fit under them, three full-width rows.
+    /// Contre, Abstention, Pour side by side; at large text, three rows.
     private var buttons: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 28) { answerButtons(stacked: false) }
-            VStack(spacing: 10) { answerButtons(stacked: true) }
+            HStack(spacing: 10) { answerButtons }
+            VStack(spacing: 10) { answerButtons }
         }
     }
 
-    @ViewBuilder private func answerButtons(stacked: Bool) -> some View {
-        answerButton(.contre, systemImage: "xmark", stacked: stacked)
-        answerButton(.abstention, systemImage: "minus", stacked: stacked)
-        answerButton(.pour, systemImage: "checkmark", stacked: stacked)
+    @ViewBuilder private var answerButtons: some View {
+        answerButton(.contre)
+        answerButton(.abstention)
+        answerButton(.pour)
     }
 
-    private func answerButton(_ position: QuizPosition, systemImage: String, stacked: Bool) -> some View {
-        let (foreground, background) = VotePositionBadge.colors(position.rawValue)
-        let label = Text(VotePositionBadge.label(position.rawValue)).font(.subheadline.weight(.semibold))
+    private func answerButton(_ position: QuizPosition) -> some View {
+        let (foreground, background) = position == .abstention
+            ? (Palette.textPrimary, Palette.cardBackground)
+            : VotePositionBadge.colors(position.rawValue)
         return Button { commit(position) } label: {
-            if stacked {
-                HStack(spacing: 12) {
-                    Image(systemName: systemImage).font(.title3.weight(.bold))
-                    label
-                    Spacer(minLength: 0)
-                }
-                .padding(14)
+            Text(VotePositionBadge.label(position.rawValue))
+                .font(.body.weight(.semibold))
+                .fixedSize()
+                .padding(.horizontal, 8)
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(foreground)
                 .background(background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .foregroundStyle(foreground)
-            } else {
-                VStack(spacing: 6) {
-                    Image(systemName: systemImage)
-                        .font(.title2.weight(.bold))
-                        .frame(width: 58, height: 58)
-                        .background(background, in: Circle())
-                    label.fixedSize()
-                }
-                .foregroundStyle(foreground)
-            }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(position == .abstention ? Palette.border : foreground.opacity(0.35), lineWidth: 1)
+                )
         }
         .buttonStyle(.plain)
         .disabled(committing)
@@ -284,5 +330,23 @@ struct QuizDeckView: View {
             offset = .zero
             committing = false
         }
+    }
+}
+
+/// One segment per question, those reached in the accent.
+struct QuizProgress: View {
+    let current: Int
+    let total: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<max(total, 1), id: \.self) { index in
+                Capsule(style: .circular)
+                    .fill(index < current ? Palette.accent : Palette.trackBackground)
+                    .frame(height: 4)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Question \(current) sur \(total)")
     }
 }

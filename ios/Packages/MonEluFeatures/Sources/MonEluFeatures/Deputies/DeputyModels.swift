@@ -12,10 +12,12 @@ public struct DeputyItem: Identifiable, Hashable, Sendable {
     public let department: String?
     public let circonscription: String?
     public let photoURL: URL?
+    /// The surname the list is sorted by, when the response carries it.
+    public let lastName: String?
 
     public init(
         id: String, name: String, group: String?, groupShort: String?,
-        department: String?, circonscription: String?, photoURL: URL?
+        department: String?, circonscription: String?, photoURL: URL?, lastName: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -24,6 +26,14 @@ public struct DeputyItem: Identifiable, Hashable, Sendable {
         self.department = department
         self.circonscription = circonscription
         self.photoURL = photoURL
+        self.lastName = lastName
+    }
+
+    /// The list's section letter: the surname's first letter, accents and
+    /// particles' case folded ("É" is "E", "de Courson" is "D").
+    public var initial: String? {
+        guard let first = lastName?.trimmingCharacters(in: .whitespaces).first else { return nil }
+        return String(first).folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).uppercased()
     }
 
     /// "Gironde · 4e circonscription", or whichever half the API returned.
@@ -65,11 +75,19 @@ public struct DeputyQuery: Hashable, Sendable {
     /// The group's full name, exactly as `listDeputies` filters on it; nil
     /// for every group.
     public var group: String?
+    /// The département's full name, as `listDeputies` filters on it.
+    public var department: String?
+    /// True for current mandates only; nil for every deputy of the legislature.
+    public var active: Bool?
     public var offset: Int
 
-    public init(search: String = "", group: String? = nil, offset: Int = 0) {
+    public init(
+        search: String = "", group: String? = nil, department: String? = nil, active: Bool? = nil, offset: Int = 0
+    ) {
         self.search = search
         self.group = group
+        self.department = department
+        self.active = active
         self.offset = offset
     }
 }

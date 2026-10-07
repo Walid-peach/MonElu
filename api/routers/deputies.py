@@ -14,12 +14,12 @@ from api.schemas import (
     DeputyDetail,
     DeputyDissidentVotesResponse,
     DeputyDivergingVotesResponse,
+    DeputyListItem,
     DeputyListResponse,
     DeputyScorecard,
     DeputyScorecardListResponse,
     DeputyScorecardRow,
     DeputyStats,
-    DeputySummary,
     DeputyVoteItem,
     DeputyVotesResponse,
     DissidentVoteItem,
@@ -104,6 +104,11 @@ def list_deputies(
     party: str = Query(
         None, description="Exact match on party name (e.g. 'Rassemblement National')"
     ),
+    active: Optional[bool] = Query(
+        None,
+        description="true: only deputies whose mandate is current; false: only ended "
+        "mandates; omitted: both",
+    ),
 ):
     """The roster of the 17th legislature: 577 seats, past and present holders.
 
@@ -115,9 +120,9 @@ def list_deputies(
     abbreviation: `"Rassemblement National"`, not `"RN"`; `"Nord"`, not `"59"`.
     `party_short` in the response is the abbreviation.
 
-    Includes deputies whose mandate has ended (`mandate_end` is set); there is no
-    filter for current holders, so drop them client-side when you want today's
-    Assemblée. `offset` is capped at 2000.
+    Includes deputies whose mandate has ended (`mandate_end` is set) unless
+    `active=true`, which keeps today's Assemblée only (`total` is then the
+    number of seats filled). `offset` is capped at 2000.
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -133,6 +138,10 @@ def list_deputies(
             if party:
                 conditions.append(sql.SQL("party = %s"))
                 params.append(party)
+            if active is not None:
+                conditions.append(
+                    sql.SQL("mandate_end IS NULL" if active else "mandate_end IS NOT NULL")
+                )
 
             where = (
                 sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
@@ -145,7 +154,7 @@ def list_deputies(
 
             cur.execute(
                 sql.SQL("""
-                    SELECT deputy_id, full_name, party, party_short,
+                    SELECT deputy_id, full_name, last_name, party, party_short,
                            department, circonscription, photo_url
                     FROM deputies {} ORDER BY last_name, first_name LIMIT %s OFFSET %s
                 """).format(where),
@@ -157,7 +166,7 @@ def list_deputies(
         total=total,
         limit=limit,
         offset=offset,
-        items=[DeputySummary(**r) for r in rows],
+        items=[DeputyListItem(**r) for r in rows],
     )
 
 

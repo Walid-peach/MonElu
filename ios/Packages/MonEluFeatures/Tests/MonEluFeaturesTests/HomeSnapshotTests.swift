@@ -6,7 +6,7 @@ import SnapshotTesting
 import SwiftUI
 import Testing
 
-/// Accueil and Explorer in light and dark, at the default and an
+/// Accueil in light and dark, at the default and an
 /// accessibility text size (#477), from responses recorded from the
 /// production API. Views holding links sit in a stack, as in the app.
 @MainActor
@@ -158,31 +158,6 @@ struct HomeSnapshotTests {
         checkSnapshot(
             HomeLatestVotesSection(state: .failed(.offline), onRetry: {}).padding(16),
             variant
-        )
-    }
-
-    /// Explorer on each segment, over lists already loaded.
-    @Test(arguments: Variant.all)
-    func exploreVotes(_ variant: Variant) async throws {
-        let votes = VotesListModel(service: LiveVotesService(client: stubClient(try fixture("votes"))))
-        await votes.reload()
-        let deputies = DeputiesListModel(service: try LiveDeputiesServiceTests.service())
-        checkSnapshot(
-            NavigationStack { ExploreScreen(votes: votes, deputies: deputies, segment: .votes) },
-            variant,
-            height: 844
-        )
-    }
-
-    @Test(arguments: Variant.all)
-    func exploreDeputies(_ variant: Variant) async throws {
-        let votes = VotesListModel(service: LiveVotesService(client: stubClient(try fixture("votes"))))
-        let deputies = DeputiesListModel(service: try LiveDeputiesServiceTests.service())
-        await deputies.reload()
-        checkSnapshot(
-            NavigationStack { ExploreScreen(votes: votes, deputies: deputies, segment: .deputies) },
-            variant,
-            height: 844
         )
     }
 }
