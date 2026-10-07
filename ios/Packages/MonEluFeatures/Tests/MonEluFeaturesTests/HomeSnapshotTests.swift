@@ -44,30 +44,42 @@ struct HomeSnapshotTests {
         variant.size.isAccessibilityCategory ? 3600 : 1000
     }
 
-    /// The rest of the followed deputy's home, as `HomeDeputyContent` lays it
-    /// out: the week's agenda, the Assembly's latest votes (those after the
+    /// The rest of the followed deputy's home, in `HomeDeputyContent`'s order
+    /// and in two images, each under the repository's 500 KB limit: the
+    /// week's agenda, then the Assembly's latest votes (those after the
     /// previous visit marked) and the two invitations.
     @Test(arguments: Variant.all)
-    func homeLowerSections(_ variant: Variant) async throws {
+    func homeWeekAgenda(_ variant: Variant) async throws {
         let agenda = try await LiveAgendaService(client: stubClient(try fixture("agenda_week")))
             .week(from: "2026-09-28", to: "2026-10-04").days.flatMap(\.items)
+        checkSnapshot(
+            NavigationStack { lower { HomeAgendaSection(entries: agenda) } },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2400 : 300
+        )
+    }
+
+    @Test(arguments: Variant.all)
+    func homeLatestVotes(_ variant: Variant) async throws {
         let latest = try await LiveVotesService(client: stubClient(try fixture("votes"))).votes(VoteQuery())
         let lastVisit = try APIDay.date("2026-07-20")
-        let view = NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    HomeAgendaSection(entries: agenda)
-                    HomeLatestVotesSection(
-                        state: .loaded(latest.items), since: .votes([], after: lastVisit),
-                        onRetry: {}
-                    )
+        checkSnapshot(
+            NavigationStack {
+                lower {
+                    HomeLatestVotesSection(state: .loaded(latest.items), since: .votes([], after: lastVisit), onRetry: {})
                     HomeInvitations(offersQuestions: true)
                 }
-                .padding(16)
-            }
-            .background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2600 : 760
+        )
+    }
+
+    private func lower<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) { content() }.padding(16)
         }
-        checkSnapshot(view, variant, height: variant.size.isAccessibilityCategory ? 3600 : 1000)
+        .background(Palette.pageBackground)
     }
 
     /// Every recorded vote was held after the previous visit: five new, the
