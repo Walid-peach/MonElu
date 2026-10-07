@@ -18,7 +18,8 @@ public struct QuizScreen: View {
         ) { questions in
             content(questions)
         }
-        .navigationTitle("Quiz")
+        .navigationTitle(model.phase == .questions ? "" : "Quiz")
+        .navigationBarTitleDisplayMode(model.phase == .questions ? .inline : .automatic)
         .accessibilityIdentifier("screen.quiz")
         .sheet(item: $model.sharedLink) { link in
             ActivitySheet(url: link.url)
@@ -30,14 +31,19 @@ public struct QuizScreen: View {
         switch model.phase {
         case .intro:
             ScrollView {
-                QuizIntroView(count: questions.count) { model.start() }
+                QuizIntroView(
+                    questions: questions,
+                    resume: model.canResume ? (model.answers.count, { model.continueDeck() }) : nil
+                ) { model.start() }
                     .padding(16)
             }
         case .questions:
             if let question = model.current {
                 QuizDeckView(
                     question: question, number: model.index + 1, total: questions.count, canGoBack: model.canGoBack,
-                    onAnswer: { model.answer($0) }, onSkip: { model.skip() }, onBack: { model.back() }
+                    lastAnswer: model.lastAnswer,
+                    onAnswer: { model.answer($0) }, onSkip: { model.skip() }, onBack: { model.back() },
+                    onQuit: { model.quit() }
                 )
                 .padding(16)
             }
@@ -53,13 +59,19 @@ public struct QuizScreen: View {
                     empty: EmptyStateView(title: "Aucun résultat", message: "Le résultat n'a pas pu être calculé.")
                 ) { result in
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 28) {
-                            QuizResultContent(result: result)
+                        VStack(alignment: .leading, spacing: 24) {
+                            QuizResultHeader(result: result)
                             QuizShareSection(
                                 includeAnswers: $model.includeAnswers, hasLink: model.hasShareLink,
                                 isSharing: model.isSharing, failed: model.shareFailed,
-                                onShare: { Task { await model.share() } }, onRestart: { model.restart() }
+                                onShare: { Task { await model.share() } }
                             )
+                            QuizResultContent(result: result)
+                            Button("Recommencer le quiz") { model.restart() }
+                                .font(.subheadline.weight(.semibold))
+                                .tint(Palette.accent)
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                                .accessibilityIdentifier("quiz.restart")
                         }
                         .padding(16)
                     }
