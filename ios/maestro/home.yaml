@@ -30,7 +30,7 @@ appId: ${APP_ID}
 - inputText: "33000"
 - tapOn: "Rechercher"
 - extendedWaitUntil:
-    visible: "Gironde (33)"
+    visible: ".*Gironde \\(33\\).*"
     timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}3-postal-results

@@ -87,7 +87,7 @@ struct DeputyActions: View {
                 Button(action: onFollow) {
                     Label(isFollowed ? "Suivi" : "Suivre", systemImage: isFollowed ? "checkmark" : "plus")
                         .font(.headline)
-                        .foregroundStyle(isFollowed ? Palette.textPrimary : Palette.onIdentity)
+                        .foregroundStyle(isFollowed ? Palette.textPrimary : Palette.onAccent)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .background(
                             isFollowed ? Palette.cardBackground : Palette.accent,

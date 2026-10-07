@@ -44,6 +44,9 @@ public enum Palette {
     public static let onIdentity = token("onIdentity")
     /// Civic red, for calls to action.
     public static let accent = token("accent")
+    /// Text on an accent-filled button: white in light mode, navy in dark,
+    /// where white on the lighter accent misses 4.5:1.
+    public static let onAccent = token("onAccent")
 
     /// A parliamentary group's chip colors, keyed by the API's `party_short`.
     /// They mirror `partyColor()` in `frontend/src/lib/utils.ts` in light

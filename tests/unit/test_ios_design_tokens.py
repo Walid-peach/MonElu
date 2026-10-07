@@ -54,6 +54,9 @@ WEB_SOURCES = {
     # (MON-160: --dp-active-bg is deliberately not overridden in .dark).
     "identityBackground": ("--dp-active-bg", "--dp-active-bg"),
     "onIdentity": ("#FFFFFF", "#FFFFFF"),
+    # Text on an accent-filled button: white reaches only 2.8:1 on the dark
+    # accent (#FF6B60), so dark mode writes it in navy (#491).
+    "onAccent": ("#FFFFFF", "#0D1F3C"),
     # POSITION_COLORS.nonVotant in HemicycleChart.tsx, not theme-aware there.
     "seatNonVotant": ("#9CA3AF", "#9CA3AF"),
     # Group chips: partyColor() in lib/utils.ts, Tailwind's 100/900 (950 for
@@ -93,6 +96,7 @@ TEXT_ON_BACKGROUNDS = {
     "positiveText": ["positiveBackground"],
     "negativeText": ["negativeBackground"],
     "onIdentity": ["identityBackground"],
+    "onAccent": ["accent"],
     "cardBackground": ["textPrimary"],  # a selected FilterChipRow chip
     **{
         f"party{code}Text": [f"party{code}Background"]

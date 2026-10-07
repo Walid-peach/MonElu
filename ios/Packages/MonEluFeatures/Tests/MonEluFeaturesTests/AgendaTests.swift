@@ -21,6 +21,21 @@ struct AgendaTests {
         #expect(MonEluFormat.time(vote.start) == "15 h")
     }
 
+    /// Accueil shows the week from today on, a sitting held earlier today
+    /// included, and at most five items.
+    @Test func accueilShowsTheNextItemsOnly() async throws {
+        let items = try await Self.week().days.flatMap(\.items)
+        let secondDay = try #require(ISO8601DateFormatter().date(from: "2026-10-02T08:00:00Z"))
+        #expect(HomeAgendaSection.upcoming(items, now: secondDay).map(\.id) == [items[2].id])
+        let many = (0..<7).map {
+            AgendaEntry(
+                id: "\($0)", start: secondDay.addingTimeInterval(Double($0) * 3600), pointType: nil, summary: nil,
+                objet: "Point \($0)", theme: nil, voteID: nil, result: nil, dossierURL: nil
+            )
+        }
+        #expect(HomeAgendaSection.upcoming(many.reversed(), now: secondDay).map(\.id) == ["0", "1", "2", "3", "4"])
+    }
+
     /// A one-liner leads, with the official wording under it; without one
     /// the wording leads alone; with neither, a fixed line.
     @Test func headlineFollowsTheWebsite() async throws {

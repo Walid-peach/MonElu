@@ -86,7 +86,7 @@ struct PostalCodePickerContent: View {
                 .font(.body.weight(.semibold))
                 .padding(.horizontal, 18)
                 .frame(minHeight: 50)
-                .foregroundStyle(Palette.onIdentity)
+                .foregroundStyle(Palette.onAccent)
                 .background(Palette.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -282,7 +282,7 @@ struct FollowSelectionBar: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .padding(.horizontal, 18)
-                .foregroundStyle(Palette.onIdentity)
+                .foregroundStyle(Palette.onAccent)
                 .background(Palette.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)

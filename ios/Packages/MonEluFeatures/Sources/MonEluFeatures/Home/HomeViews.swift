@@ -102,7 +102,7 @@ struct HomeIdentityCard: View {
 
     @ViewBuilder private var figures: some View {
         let solennel = home.scorecard.map {
-            IdentityFigure(value: MonEluFormat.percent($0.solennelParticipationRate), label: "des scrutins solennels")
+            IdentityFigure(value: MonEluFormat.percent($0.solennelParticipationRate), label: "de participation aux scrutins solennels")
         }
         let aligned = home.alignment.map {
             IdentityFigure(
@@ -464,8 +464,11 @@ struct HomeLatestVoteRow: View {
     }
 }
 
-/// The current week's séance items, side by side; each opens the agenda.
+/// The week's next séance items, side by side; each opens the agenda, which
+/// holds the full week.
 struct HomeAgendaSection: View {
+    static let count = 5
+
     let entries: [AgendaEntry]
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -491,6 +494,13 @@ struct HomeAgendaSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The items from today on, in order, at most `count`: a sitting already
+    /// held this week is in the agenda, not on Accueil.
+    nonisolated static func upcoming(_ items: [AgendaEntry], now: Date) -> [AgendaEntry] {
+        let today = MonEluFormat.parisCalendar.startOfDay(for: now)
+        return Array(items.filter { $0.start >= today }.sorted { $0.start < $1.start }.prefix(count))
     }
 
     private var title: some View {
@@ -530,6 +540,7 @@ struct HomeAgendaSection: View {
 /// When a séance item starts, what it is about and its theme.
 struct HomeAgendaCard: View {
     let entry: AgendaEntry
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -540,7 +551,7 @@ struct HomeAgendaCard: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Palette.textPrimary)
                 .multilineTextAlignment(.leading)
-                .lineLimit(3)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             if let tag = entry.theme ?? entry.pointTypeLabel {

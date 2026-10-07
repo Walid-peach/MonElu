@@ -22,7 +22,8 @@ public struct HomeScreen: View {
         })
         _agenda = State(initialValue: Loader {
             let week = AgendaWindow(offset: 0, now: Date())
-            return try await agenda.week(from: week.from, to: week.to).days.flatMap(\.items)
+            let items = try await agenda.week(from: week.from, to: week.to).days.flatMap(\.items)
+            return HomeAgendaSection.upcoming(items, now: Date())
         })
     }
 
