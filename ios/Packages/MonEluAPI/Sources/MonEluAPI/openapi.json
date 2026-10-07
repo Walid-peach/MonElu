@@ -12,7 +12,7 @@
           "Deputies"
         ],
         "summary": "List deputies, with name / department / party filters",
-        "description": "The roster of the 17th legislature: 577 seats, past and present holders.\n\nUse this to resolve a person's name to the `deputy_id` every other deputy\nendpoint takes. `search` matches anywhere in the full name and is\naccent-sensitive, so pass the name as the Assemblée spells it.\n\n`department` and `party` want the full stored label, not a code or an\nabbreviation: `\"Rassemblement National\"`, not `\"RN\"`; `\"Nord\"`, not `\"59\"`.\n`party_short` in the response is the abbreviation.\n\nIncludes deputies whose mandate has ended (`mandate_end` is set) unless\n`active=true`, which keeps today's Assemblée only (`total` is then the\nnumber of seats filled). `offset` is capped at 2000.",
+        "description": "The roster of the 17th legislature: 577 seats, past and present holders.\n\nUse this to resolve a person's name to the `deputy_id` every other deputy\nendpoint takes. `search` matches anywhere in the full name and is\naccent-sensitive, so pass the name as the Assemblée spells it.\n\n`department` and `party` want the full stored label, not a code or an\nabbreviation: `\"Rassemblement National\"`, not `\"RN\"`; `\"Nord\"`, not `\"59\"`.\n`party_short` in the response is the abbreviation.\n\nIncludes deputies whose mandate has ended (`mandate_end` is set) unless\n`active=true`, which keeps today's Assemblée only (`total` is then the\nnumber of seats filled). Sorted by surname, ignoring accents and case\n(\"Écrivain\" among the E's, \"de Courson\" among the D's). `offset` is capped\nat 2000.",
         "operationId": "listDeputies",
         "parameters": [
           {

@@ -28,6 +28,14 @@ from api.schemas import (
 
 router = APIRouter()
 
+# The roster's order, by surname then first name (#514). The app heads each run
+# of one surname initial with a letter, so "Écrivain" must sort among the E's and
+# "de Courson" among the D's whatever the database's default collation: under
+# "C" both land after "Z" and the letter appears twice. The ICU collation pins
+# that independently of how the database was created; deputy_id breaks ties so
+# offset paging never repeats or skips a namesake.
+ROSTER_ORDER = sql.SQL('last_name COLLATE "fr-x-icu", first_name COLLATE "fr-x-icu", deputy_id')
+
 # One scorecard row per deputy with party/department context — shared by the
 # JSON table endpoint and the CSV export so both always agree (MON-97).
 _SCORECARD_ROWS_SQL = """
@@ -122,7 +130,9 @@ def list_deputies(
 
     Includes deputies whose mandate has ended (`mandate_end` is set) unless
     `active=true`, which keeps today's Assemblée only (`total` is then the
-    number of seats filled). `offset` is capped at 2000.
+    number of seats filled). Sorted by surname, ignoring accents and case
+    ("Écrivain" among the E's, "de Courson" among the D's). `offset` is capped
+    at 2000.
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -156,8 +166,8 @@ def list_deputies(
                 sql.SQL("""
                     SELECT deputy_id, full_name, last_name, party, party_short,
                            department, circonscription, photo_url
-                    FROM deputies {} ORDER BY last_name, first_name LIMIT %s OFFSET %s
-                """).format(where),
+                    FROM deputies {} ORDER BY {} LIMIT %s OFFSET %s
+                """).format(where, ROSTER_ORDER),
                 params + [limit, offset],
             )
             rows = cur.fetchall()
