@@ -26,6 +26,11 @@ def test_defaults(client, monkeypatch):
     assert [c["id"] for c in body["caveats"]] == [cid for cid, _ in cfg.CAVEATS]
 
 
+def test_site_url_is_the_frontend_origin(client, monkeypatch):
+    monkeypatch.setenv("FRONTEND_BASE_URL", "https://monelu.example/")
+    assert client.get("/app/config").json()["site_url"] == "https://monelu.example"
+
+
 def test_needs_no_account(client):
     assert client.get("/app/config").status_code == 200
 

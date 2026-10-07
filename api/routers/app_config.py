@@ -40,6 +40,8 @@ def get_app_config(request: Request):
     `data_horizon` is the first date production holds scrutins for (ISO date).
     `caveats` are the reading notes the website prints next to its figures,
     in French, with inline Markdown, each under a stable `id`.
+    `site_url` is the website's origin, the base of the links the app shares,
+    so a domain move needs no app release.
 
     Nothing here depends on the caller, and no account is needed.
     """

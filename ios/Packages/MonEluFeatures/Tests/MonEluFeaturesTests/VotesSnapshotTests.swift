@@ -1,5 +1,6 @@
 import MonEluCore
 @testable import MonEluFeatures
+import MonEluUI
 import SnapshotTesting
 import SwiftUI
 import Testing
@@ -50,14 +51,30 @@ struct VotesSnapshotTests {
     @Test(arguments: Variant.all)
     func voteDetail(_ variant: Variant) async throws {
         let full = try await LiveVotesService(client: stubClient(try fixture("vote_detail"))).vote(id: "VTANR5L17V8434")
-        // Three groups show every layout case (one position, two, with
-        // non-votants) and keep the image a reviewable length.
-        let groups = Set(full.positionsByGroup.prefix(3).map(\.group))
+        // Two groups show both bar cases (one position, and several with
+        // non-votants) and keep the image under the repository's size limit.
+        let groups = Set(full.positionsByGroup.prefix(2).map(\.group))
         let vote = VoteDetail(
             item: full.item, votesFor: full.votesFor, votesAgainst: full.votesAgainst, abstentions: full.abstentions,
             positions: full.positions.filter { groups.contains($0.group ?? GroupPositions.nonInscrit) },
-            dossierTitle: full.dossierTitle, dossierURL: full.dossierURL
+            dossierTitle: full.dossierTitle, dossierURL: full.dossierURL,
+            totalVoters: full.totalVoters, dossierID: full.dossierID, dossierStatus: full.dossierStatus
         )
-        checkSnapshot(VoteDetailContent(vote: vote, configuration: Self.configuration).padding(16), variant)
+        // The theme and the bill are links, so the page sits in a stack
+        // (outside one a link renders disabled), sized explicitly. The
+        // first deputy listed stands for the one the user follows.
+        checkSnapshot(
+            NavigationStack {
+                ScrollView {
+                    VoteDetailContent(
+                        vote: vote, configuration: Self.configuration, followedDeputyID: vote.positions.first?.deputyID
+                    )
+                    .padding(16)
+                }
+                .background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 4140 : 1450
+        )
     }
 }

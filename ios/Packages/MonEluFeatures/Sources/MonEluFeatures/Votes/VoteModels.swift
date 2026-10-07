@@ -73,10 +73,17 @@ public struct VoteDetail: Hashable, Sendable {
     public let dossierTitle: String?
     /// The bill's page on the website, when it has one (the API's `lois_url`).
     public let dossierURL: URL?
+    /// The API's `total_voters`.
+    public let totalVoters: Int?
+    /// The bill's dossier uid, for its page in the app (#482).
+    public let dossierID: String?
+    /// The bill's derived status (`en_navette`, …).
+    public let dossierStatus: String?
 
     public init(
         item: VoteItem, votesFor: Int?, votesAgainst: Int?, abstentions: Int?,
-        positions: [DeputyPosition], dossierTitle: String?, dossierURL: URL?
+        positions: [DeputyPosition], dossierTitle: String?, dossierURL: URL?,
+        totalVoters: Int? = nil, dossierID: String? = nil, dossierStatus: String? = nil
     ) {
         self.item = item
         self.votesFor = votesFor
@@ -85,6 +92,25 @@ public struct VoteDetail: Hashable, Sendable {
         self.positions = positions
         self.dossierTitle = dossierTitle
         self.dossierURL = dossierURL
+        self.totalVoters = totalVoters
+        self.dossierID = dossierID
+        self.dossierStatus = dossierStatus
+    }
+
+    /// The bill has a page (the API's `lois_url` is set only then), so the
+    /// "Le texte" card can open it in the app.
+    public var hasLoiPage: Bool { dossierID != nil && dossierURL != nil }
+
+    /// "8441", from the AN's scrutin id (`VTANR5L17V8441`): a label only.
+    public var scrutinNumber: String? {
+        guard let range = item.id.range(of: #"V(\d+)$"#, options: .regularExpression) else { return nil }
+        return String(item.id[range].dropFirst())
+    }
+
+    /// The followed deputy's position on this scrutin, if they have one.
+    func position(of deputyID: String?) -> DeputyPosition? {
+        guard let deputyID else { return nil }
+        return positions.first { $0.deputyID == deputyID }
     }
 
     /// The positions tallied per group, largest group first. A display

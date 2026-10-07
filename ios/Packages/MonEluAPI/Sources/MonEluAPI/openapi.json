@@ -2311,7 +2311,7 @@
           "App"
         ],
         "summary": "Launch configuration for the MonÉlu mobile app",
-        "description": "What a MonÉlu mobile app reads at launch instead of hardcoding it.\n\n`min_ios_version` is the oldest app version (`MAJOR.MINOR.PATCH`) this API\nstill serves correctly: an older app must ask its user to update rather than\ncall the API. `features` are remote switches, `true` unless the operator has\nturned one off: `chat` says whether the app should offer `POST /search/`, and\n`verify` whether it should offer `POST /verify/`, both of which depend on a\nthird-party model provider. They are advice to the app, not enforcement -\nboth endpoints keep answering whatever the switches say.\n`data_horizon` is the first date production holds scrutins for (ISO date).\n`caveats` are the reading notes the website prints next to its figures,\nin French, with inline Markdown, each under a stable `id`.\n\nNothing here depends on the caller, and no account is needed.",
+        "description": "What a MonÉlu mobile app reads at launch instead of hardcoding it.\n\n`min_ios_version` is the oldest app version (`MAJOR.MINOR.PATCH`) this API\nstill serves correctly: an older app must ask its user to update rather than\ncall the API. `features` are remote switches, `true` unless the operator has\nturned one off: `chat` says whether the app should offer `POST /search/`, and\n`verify` whether it should offer `POST /verify/`, both of which depend on a\nthird-party model provider. They are advice to the app, not enforcement -\nboth endpoints keep answering whatever the switches say.\n`data_horizon` is the first date production holds scrutins for (ISO date).\n`caveats` are the reading notes the website prints next to its figures,\nin French, with inline Markdown, each under a stable `id`.\n`site_url` is the website's origin, the base of the links the app shares,\nso a domain move needs no app release.\n\nNothing here depends on the caller, and no account is needed.",
         "operationId": "getAppConfig",
         "responses": {
           "200": {
@@ -2953,6 +2953,11 @@
             "type": "array",
             "title": "Caveats",
             "default": []
+          },
+          "site_url": {
+            "title": "Site Url",
+            "description": "The public website's origin, without a trailing slash: the base of every link the app shares (`<site_url>/votes/<vote_id>`)",
+            "type": "string"
           }
         },
         "type": "object",
@@ -2975,7 +2980,8 @@
             "chat": true,
             "verify": true
           },
-          "min_ios_version": "1.0.0"
+          "min_ios_version": "1.0.0",
+          "site_url": "https://mon-elu.vercel.app"
         }
       },
       "AppFeatures": {

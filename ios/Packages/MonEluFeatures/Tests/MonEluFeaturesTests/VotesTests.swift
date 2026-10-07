@@ -116,4 +116,18 @@ struct GroupPositionsTests {
         #expect(groups[0].ordered.map(\.count) == [2, 1])
         #expect(groups[0].total == 3)
     }
+
+    /// The followed deputy's own position, nil when they recorded none; and
+    /// the scrutin's number, read off its id for display.
+    @Test func followedPositionAndScrutinNumber() async throws {
+        let vote = try await LiveVotesService(client: stubClient(try fixture("vote_detail"))).vote(id: "VTANR5L17V8434")
+        let first = try #require(vote.positions.first)
+        #expect(vote.position(of: first.deputyID)?.position == first.position)
+        #expect(vote.position(of: "PA0") == nil)
+        #expect(vote.position(of: nil) == nil)
+        #expect(vote.scrutinNumber == "8434")
+        #expect(vote.totalVoters == 364)
+        #expect(vote.dossierID == "DLR5L17N52746")
+        #expect(vote.hasLoiPage)
+    }
 }

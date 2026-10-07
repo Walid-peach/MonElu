@@ -50,6 +50,24 @@ struct ForcedUpdateTests {
     }
 }
 
+struct SiteLinkTests {
+    @Test func linksAreBuiltOnTheSiteTheAPINames() {
+        let config = AppConfiguration(
+            minIOSVersion: "1.0.0", features: .init(chat: true, verify: true), dataHorizon: "2025-07-01",
+            caveats: [], siteURL: "https://monelu.example"
+        )
+        #expect(config.siteLink("votes/V1")?.absoluteString == "https://monelu.example/votes/V1")
+        #expect(AppConfiguration.defaults.siteLink("votes/V1") == nil)
+    }
+
+    /// A configuration cached before `site_url` existed still decodes.
+    @Test func anOlderCachedConfigurationDecodes() throws {
+        let json = #"{"minIOSVersion":"1.0.0","features":{"chat":true,"verify":true},"dataHorizon":"2025-07-01","caveats":[]}"#
+        let config = try JSONDecoder().decode(AppConfiguration.self, from: Data(json.utf8))
+        #expect(config.siteURL == nil)
+    }
+}
+
 struct MonEluFormatTests {
     @Test func percentKeepsOneDecimalWhenAsked() {
         let compact = { (text: String) in text.filter { !$0.isWhitespace } }

@@ -82,7 +82,8 @@ extension AppConfiguration {
             // A switch the API leaves out is on, as it is on the API's side.
             features: Features(chat: config.features.chat ?? true, verify: config.features.verify ?? true),
             dataHorizon: config.dataHorizon,
-            caveats: (config.caveats ?? []).map { Caveat(id: $0.id, text: $0.text) }
+            caveats: (config.caveats ?? []).map { Caveat(id: $0.id, text: $0.text) },
+            siteURL: config.siteUrl
         )
     }
 }

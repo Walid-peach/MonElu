@@ -1340,6 +1340,7 @@ class AppConfig(_Base):
                 "min_ios_version": "1.0.0",
                 "features": {"chat": True, "verify": True},
                 "data_horizon": "2025-07-01",
+                "site_url": DEFAULT_FRONTEND_BASE_URL,
                 "caveats": [
                     {
                         "id": "vote_result",
@@ -1357,3 +1358,8 @@ class AppConfig(_Base):
     features: AppFeatures
     data_horizon: date
     caveats: list[AppCaveat] = []
+    site_url: Optional[str] = Field(
+        default=None,
+        description="The public website's origin, without a trailing slash: the base of "
+        "every link the app shares (`<site_url>/votes/<vote_id>`)",
+    )

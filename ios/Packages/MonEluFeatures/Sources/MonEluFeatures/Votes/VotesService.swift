@@ -58,7 +58,10 @@ extension VoteDetail {
                 DeputyPosition(deputyID: $0.deputyId, name: $0.fullName, group: $0.partyShort, position: $0.position)
             },
             dossierTitle: vote.dossier?.titre,
-            dossierURL: vote.dossier?.loisUrl.flatMap(URL.init(string:))
+            dossierURL: vote.dossier?.loisUrl.flatMap(URL.init(string:)),
+            totalVoters: vote.totalVoters,
+            dossierID: vote.dossier?.dossierUid,
+            dossierStatus: vote.dossier?.status
         )
     }
 }
