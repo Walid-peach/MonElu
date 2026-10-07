@@ -87,7 +87,7 @@ struct DeputiesSnapshotTests {
         checkSnapshot(
             NavigationStack { DissidentVotesList(votes: votes) },
             variant,
-            height: variant.size.isAccessibilityCategory ? 2400 : 760
+            height: variant.size.isAccessibilityCategory ? 2520 : 760
         )
     }
 

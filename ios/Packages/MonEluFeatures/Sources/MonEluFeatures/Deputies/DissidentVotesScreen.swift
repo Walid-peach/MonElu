@@ -61,6 +61,7 @@ struct DissidentVotesList: View {
 
 struct DissidentVoteRow: View {
     let vote: DissidentVote
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -77,7 +78,10 @@ struct DissidentVoteRow: View {
             Text(vote.title.capitalizingFirstLetter)
                 .font(.subheadline)
                 .foregroundStyle(Palette.textPrimary)
-                .lineLimit(3)
+                // Three lines in the list; in full at large text, which must
+                // wrap rather than truncate.
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
+                .fixedSize(horizontal: false, vertical: typeSize.isAccessibilitySize)
             FlowLayout(spacing: 14) {
                 position("Son vote", vote.position)
                 position("Son groupe", vote.majorityPosition)

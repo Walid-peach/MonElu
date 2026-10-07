@@ -48,3 +48,12 @@ public final class UserDefaultsFollowedDeputyStore: FollowedDeputyStore, @unchec
         defaults.set(date, forKey: Self.lastSeenPrefix + deputyID)
     }
 }
+
+public extension FollowedDeputyStore {
+    /// Follows `newID` in place of the current deputy, forgetting the
+    /// previous one's reading position so a later return starts afresh.
+    func switchTo(_ newID: String) {
+        if let current = deputyID, current != newID { clear() }
+        follow(newID)
+    }
+}

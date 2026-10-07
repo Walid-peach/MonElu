@@ -30,7 +30,7 @@ public struct DeputyProfileScreen: View {
                     page: page, configuration: configuration, isFollowed: isFollowed,
                     onFollow: followedDeputy.map { store in
                         {
-                            store.follow(id)
+                            store.switchTo(id)
                             isFollowed = true
                         }
                     }
