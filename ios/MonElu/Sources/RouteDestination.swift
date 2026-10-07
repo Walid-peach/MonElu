@@ -22,6 +22,8 @@ struct RouteDestination: View {
             GroupScreen(slug: slug, service: services.groups)
         case .theme(let slug):
             ThemeScreen(slug: slug, service: services.themes)
+        case .department(let code):
+            DepartmentScreen(code: code, service: services.departments)
         case .agenda:
             AgendaScreen(service: services.agenda)
         }

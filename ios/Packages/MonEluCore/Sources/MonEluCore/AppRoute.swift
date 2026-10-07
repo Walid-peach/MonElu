@@ -16,6 +16,8 @@ public enum AppRoute: Hashable, Sendable {
     case group(slug: String)
     /// A theme's page, by the slug `GET /themes/{slug}` takes (`themes.json`).
     case theme(slug: String)
+    /// A département's deputies, by its INSEE code (`33`, `2A`, `971`).
+    case department(code: String)
 
     /// The tab a route opens in: Explorer, which holds both lists, so the
     /// back button always leads somewhere to keep browsing.
@@ -23,9 +25,10 @@ public enum AppRoute: Hashable, Sendable {
 
     /// Parses `monelu://deputes/<id>`, `monelu://votes/<id>`,
     /// `monelu://lois/<id>`, `monelu://groupes/<slug>` and
-    /// `monelu://themes/<slug>`, and the website's own paths
-    /// (`https://<host>/deputes/<id>`, `/votes/<id>`, `/groupes/<slug>`,
-    /// `/themes/<slug>`), so universal links can
+    /// `monelu://themes/<slug>` and `monelu://departements/<code>`, and the
+    /// website's own paths (`https://<host>/deputes/<id>`, `/votes/<id>`,
+    /// `/groupes/<slug>`, `/themes/<slug>`, `/departements/<code>`), so
+    /// universal links can
     /// reuse this once the domain exists. The website does not serve
     /// `/lois/<id>` yet (#361), so only the app's own scheme opens a bill.
     /// Anything else, including nested paths like `/deputes/<id>/dossier`, is nil.
@@ -46,6 +49,7 @@ public enum AppRoute: Hashable, Sendable {
         switch parts[0] {
         case "deputes": self = .deputy(id: id)
         case "votes": self = .vote(id: id)
+        case "departements": self = .department(code: id)
         case "lois" where url.scheme == "monelu": self = .loi(id: id)
         default: return nil
         }

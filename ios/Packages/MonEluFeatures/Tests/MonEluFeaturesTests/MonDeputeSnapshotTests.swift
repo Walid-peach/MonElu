@@ -67,6 +67,12 @@ struct MonDeputeSnapshotTests {
                 ]
             ),
         ]
-        checkSnapshot(picker(.found(found), code: "05110"), variant)
+        // Each département links to its page, so the picker sits in a stack
+        // (outside one a link renders disabled), sized explicitly.
+        checkSnapshot(
+            NavigationStack { ScrollView { picker(.found(found), code: "05110") }.background(Palette.pageBackground) },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 1800 : 800
+        )
     }
 }

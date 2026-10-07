@@ -102,7 +102,13 @@ struct PostalCodePickerContent: View {
                         SectionHeader(
                             "\(entry.department.name) (\(entry.department.code))",
                             subtitle: entry.deputies.isEmpty ? "Aucun député en mandat." : "Choisissez votre député."
-                        )
+                        ) {
+                            NavigationLink(value: AppRoute.department(code: entry.department.code)) {
+                                Text("Voir")
+                            }
+                            .accessibilityLabel("Voir le département")
+                            .accessibilityIdentifier("picker.department")
+                        }
                         ForEach(entry.deputies) { deputy in
                             Button { onChoose(deputy) } label: {
                                 Card { DeputyRowView(deputy: deputy) }

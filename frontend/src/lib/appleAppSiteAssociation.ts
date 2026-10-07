@@ -27,6 +27,7 @@ export const APP_LINK_COMPONENTS: Array<{ '/': string; exclude?: true }> = [
   { '/': '/votes/*' },
   { '/': '/groupes/*' },
   { '/': '/themes/*' },
+  { '/': '/departements/*' },
   { '/': '/quiz/s/*' },
 ]
 

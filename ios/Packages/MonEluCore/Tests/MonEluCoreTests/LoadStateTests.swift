@@ -110,6 +110,8 @@ struct AppRouteTests {
         ("monelu://groupes/lfi-nfp", AppRoute.group(slug: "lfi-nfp")),
         ("monelu://themes/justice-securite", AppRoute.theme(slug: "justice-securite")),
         ("https://monelu.fr/themes/sante-social", AppRoute.theme(slug: "sante-social")),
+        ("monelu://departements/2A", AppRoute.department(code: "2A")),
+        ("https://monelu.fr/departements/971", AppRoute.department(code: "971")),
         ("https://monelu.fr/groupes/rassemblement-national", AppRoute.group(slug: "rassemblement-national")),
     ])
     func parsesAppAndWebsiteLinks(_ link: String, _ route: AppRoute) throws {

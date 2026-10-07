@@ -1,0 +1,227 @@
+{
+  "code": "33",
+  "name": "Gironde",
+  "deputy_count": 13,
+  "deputies": [
+    {
+      "deputy_id": "PA793944",
+      "full_name": "Alexandra Martin (Gironde)",
+      "party": "Ensemble pour la République",
+      "party_short": "EPR",
+      "department": "Gironde",
+      "circonscription": "1",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793944.jpg",
+      "presence_rate": 0.035,
+      "solennel_participation_rate": 0.5,
+      "party_alignment_rate": 0.9495,
+      "dissident_rate": 0.0505
+    },
+    {
+      "deputy_id": "PA793948",
+      "full_name": "Nicolas Thierry",
+      "party": "Écologiste et Social",
+      "party_short": "ECS",
+      "department": "Gironde",
+      "circonscription": "2",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793948.jpg",
+      "presence_rate": 0.1745,
+      "solennel_participation_rate": 0.92,
+      "party_alignment_rate": 0.9798,
+      "dissident_rate": 0.0202
+    },
+    {
+      "deputy_id": "PA719578",
+      "full_name": "Loïc Prud'homme",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Gironde",
+      "circonscription": "3",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/719578.jpg",
+      "presence_rate": 0.1335,
+      "solennel_participation_rate": 0.84,
+      "party_alignment_rate": 0.9828,
+      "dissident_rate": 0.0172
+    },
+    {
+      "deputy_id": "PA1008",
+      "full_name": "Alain David",
+      "party": "Socialistes et apparentés",
+      "party_short": "SOC",
+      "department": "Gironde",
+      "circonscription": "4",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/1008.jpg",
+      "presence_rate": 0.0616,
+      "solennel_participation_rate": 0.86,
+      "party_alignment_rate": 0.8911,
+      "dissident_rate": 0.1089
+    },
+    {
+      "deputy_id": "PA331973",
+      "full_name": "Pascale Got",
+      "party": "Socialistes et apparentés",
+      "party_short": "SOC",
+      "department": "Gironde",
+      "circonscription": "5",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/331973.jpg",
+      "presence_rate": 0.2856,
+      "solennel_participation_rate": 0.8,
+      "party_alignment_rate": 0.9511,
+      "dissident_rate": 0.0489
+    },
+    {
+      "deputy_id": "PA341981",
+      "full_name": "Marie Récalde",
+      "party": "Socialistes et apparentés",
+      "party_short": "SOC",
+      "department": "Gironde",
+      "circonscription": "6",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/341981.jpg",
+      "presence_rate": 0.1607,
+      "solennel_participation_rate": 0.78,
+      "party_alignment_rate": 0.9791,
+      "dissident_rate": 0.0209
+    },
+    {
+      "deputy_id": "PA841243",
+      "full_name": "Sébastien Saint-Pasteur",
+      "party": "Socialistes et apparentés",
+      "party_short": "SOC",
+      "department": "Gironde",
+      "circonscription": "7",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/841243.jpg",
+      "presence_rate": 0.2808,
+      "solennel_participation_rate": 0.88,
+      "party_alignment_rate": 0.9654,
+      "dissident_rate": 0.0346
+    },
+    {
+      "deputy_id": "PA719632",
+      "full_name": "Sophie Panonacle",
+      "party": "Ensemble pour la République",
+      "party_short": "EPR",
+      "department": "Gironde",
+      "circonscription": "8",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/719632.jpg",
+      "presence_rate": 0.1722,
+      "solennel_participation_rate": 0.88,
+      "party_alignment_rate": 0.961,
+      "dissident_rate": 0.039
+    },
+    {
+      "deputy_id": "PA719640",
+      "full_name": "Sophie Mette",
+      "party": "Les Démocrates",
+      "party_short": "DEM",
+      "department": "Gironde",
+      "circonscription": "9",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/719640.jpg",
+      "presence_rate": 0.3564,
+      "solennel_participation_rate": 0.88,
+      "party_alignment_rate": 0.946,
+      "dissident_rate": 0.054
+    },
+    {
+      "deputy_id": "PA793924",
+      "full_name": "Marie-Sophie Bernadeau",
+      "party": "Ensemble pour la République",
+      "party_short": "EPR",
+      "department": "Gironde",
+      "circonscription": "10",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793924.jpg",
+      "presence_rate": 0.0115,
+      "solennel_participation_rate": 0.08,
+      "party_alignment_rate": 0.9692,
+      "dissident_rate": 0.0308
+    },
+    {
+      "deputy_id": "PA606507",
+      "full_name": "Florent Boudié",
+      "party": "Ensemble pour la République",
+      "party_short": "EPR",
+      "department": "Gironde",
+      "circonscription": "10",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/606507.jpg",
+      "presence_rate": 0.1641,
+      "solennel_participation_rate": 0.84,
+      "party_alignment_rate": 0.9774,
+      "dissident_rate": 0.0226
+    },
+    {
+      "deputy_id": "PA793928",
+      "full_name": "Edwige Diaz",
+      "party": "Rassemblement National",
+      "party_short": "RN",
+      "department": "Gironde",
+      "circonscription": "11",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/793928.jpg",
+      "presence_rate": 0.547,
+      "solennel_participation_rate": 0.92,
+      "party_alignment_rate": 0.9774,
+      "dissident_rate": 0.0226
+    },
+    {
+      "deputy_id": "PA841251",
+      "full_name": "Mathilde Feld",
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "department": "Gironde",
+      "circonscription": "12",
+      "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/841251.jpg",
+      "presence_rate": 0.4045,
+      "solennel_participation_rate": 0.96,
+      "party_alignment_rate": 0.9921,
+      "dissident_rate": 0.0079
+    }
+  ],
+  "avg_presence_rate": 0.21441538461538462,
+  "party_distribution": [
+    {
+      "party": "Ensemble pour la République",
+      "count": 4
+    },
+    {
+      "party": "Socialistes et apparentés",
+      "count": 4
+    },
+    {
+      "party": "La France insoumise - Nouveau Front Populaire",
+      "count": 2
+    },
+    {
+      "party": "Écologiste et Social",
+      "count": 1
+    },
+    {
+      "party": "Les Démocrates",
+      "count": 1
+    },
+    {
+      "party": "Rassemblement National",
+      "count": 1
+    }
+  ],
+  "most_dissident": {
+    "deputy_id": "PA1008",
+    "full_name": "Alain David",
+    "party": "Socialistes et apparentés",
+    "party_short": "SOC",
+    "department": "Gironde",
+    "circonscription": "4",
+    "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/1008.jpg",
+    "presence_rate": 0.0616,
+    "solennel_participation_rate": 0.86,
+    "party_alignment_rate": 0.8911,
+    "dissident_rate": 0.1089
+  },
+  "split_votes": [
+    {
+      "vote_id": "VTANR5L17V8533",
+      "voted_at": "2026-10-05T00:00:00Z",
+      "vote_title": "l'article 3 (examen prioritaire) de la proposition de loi apportant une réponse intégrale au phénomène des violences sexuelles et sexistes contre les femmes et les enfants (première lecture).",
+      "result": "adopté",
+      "pour": 3,
+      "contre": 1,
+      "abstention": 1
+    }
+  ]
+}

@@ -99,13 +99,21 @@ struct DeputiesSnapshotTests {
             mandateStart: MonEluFormat.calendarDate("2024-07-07"),
             mandateEnd: MonEluFormat.calendarDate("2024-10-21")
         )
+        // The constituency links to its département, so the profile sits in
+        // a stack, sized explicitly.
         checkSnapshot(
-            DeputyProfileContent(
-                page: DeputyProfilePage(profile: profile, scorecard: nil, recentVotes: nil),
-                configuration: Self.configuration
-            )
-            .padding(16),
-            variant
+            NavigationStack {
+                ScrollView {
+                    DeputyProfileContent(
+                        page: DeputyProfilePage(profile: profile, scorecard: nil, recentVotes: nil),
+                        configuration: Self.configuration
+                    )
+                    .padding(16)
+                }
+                .background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 400 : 150
         )
     }
 }
