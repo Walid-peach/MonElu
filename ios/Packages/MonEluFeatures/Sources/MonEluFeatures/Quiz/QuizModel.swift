@@ -31,6 +31,10 @@ public final class QuizModel {
     public private(set) var shareFailed = false
     /// Set when the API returned a share URL; the share sheet presents it.
     public var sharedLink: SharedLink?
+    /// The question just answered and the answer, so the next card can show
+    /// how the Assemblée really voted: the tallies are revealed only once the
+    /// user has answered.
+    public private(set) var lastAnswer: QuizAnswered?
 
     private let service: any QuizService
     /// The indexes visited, so Back returns along the same path.
@@ -59,6 +63,10 @@ public final class QuizModel {
     /// Whether the share link exists already, which fixes what it holds.
     public var hasShareLink: Bool { shareURL != nil }
 
+    /// Whether the intro offers to pick the deck up again: the user left it
+    /// part-way, with answers kept in memory for the session.
+    public var canResume: Bool { phase == .intro && current != nil && (!answers.isEmpty || index > 0) }
+
     public func start() {
         reset()
         phase = .questions
@@ -67,6 +75,7 @@ public final class QuizModel {
     public func answer(_ position: QuizPosition) {
         guard let current else { return }
         answers[current.voteID] = position
+        lastAnswer = QuizAnswered(question: current, position: position)
         advance()
     }
 
@@ -74,6 +83,7 @@ public final class QuizModel {
     public func skip() {
         guard let current else { return }
         answers[current.voteID] = nil
+        lastAnswer = nil
         advance()
     }
 
@@ -82,6 +92,18 @@ public final class QuizModel {
         guard let previous = history.popLast() else { return }
         index = previous
         if let question = current { answers[question.voteID] = nil }
+        lastAnswer = nil
+        phase = .questions
+    }
+
+    /// Leaves the deck for the intro, keeping the answers so far.
+    public func quit() {
+        phase = .intro
+    }
+
+    /// Back into the deck where the user left it.
+    public func continueDeck() {
+        guard current != nil else { return }
         phase = .questions
     }
 
@@ -132,6 +154,7 @@ public final class QuizModel {
     }
 
     private func reset() {
+        lastAnswer = nil
         index = 0
         history = []
         answers = [:]

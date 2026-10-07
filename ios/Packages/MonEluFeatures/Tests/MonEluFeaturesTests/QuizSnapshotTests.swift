@@ -7,36 +7,38 @@ import SwiftUI
 import Testing
 
 /// The Quiz tab in light and dark, at the default and an accessibility text
-/// size (#465), from the questions and a `match` result recorded from the
+/// size (#465, design A in #492), from the questions and a `match` result recorded from the
 /// production API.
 @MainActor
 @Suite(.snapshots(record: .missing))
 struct QuizSnapshotTests {
+    /// The intro, here with a deck left part-way, so "Reprendre" shows.
     @Test(arguments: Variant.all)
-    func quizIntro(_ variant: Variant) {
-        checkSnapshot(QuizIntroView(count: 10) {}.padding(16), variant)
+    func quizIntro(_ variant: Variant) async throws {
+        let questions = try await QuizFixtures.deck()
+        checkSnapshot(
+            ScrollView { QuizIntroView(questions: questions, resume: (4, {})) {}.padding(16) }
+                .background(Palette.pageBackground),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2600 : 900
+        )
     }
 
-    /// The deck on its first question: progress, card, and the three answers.
+    /// The deck on its second question: progress, the first answer beside
+    /// the Assemblée's real vote, the card, and the three answers.
     @Test(arguments: Variant.all)
     func quizDeck(_ variant: Variant) async throws {
-        let question = try #require(try await QuizFixtures.deck().first)
+        let deck = try await QuizFixtures.deck()
         checkSnapshot(
             QuizDeckView(
-                question: question, number: 1, total: 10, canGoBack: false,
+                question: deck[1], number: 2, total: deck.count, canGoBack: true,
+                lastAnswer: QuizAnswered(question: deck[0], position: .pour),
                 onAnswer: { _ in }, onSkip: {}, onBack: {}
             )
             .padding(16),
             variant,
             height: variant.size.isAccessibilityCategory ? 1500 : 760
         )
-    }
-
-    /// A card with the real vote opened: result, date and the API's tallies.
-    @Test(arguments: Variant.all)
-    func quizCardDetails(_ variant: Variant) async throws {
-        let question = try #require(try await QuizFixtures.deck().first)
-        checkSnapshot(QuizCardView(question: question, showsDetails: true).padding(16), variant)
     }
 
     @Test(arguments: Variant.all)
@@ -62,7 +64,17 @@ struct QuizSnapshotTests {
                     .background(Palette.pageBackground)
             },
             variant,
-            height: variant.size.isAccessibilityCategory ? 2400 : 1180
+            height: variant.size.isAccessibilityCategory ? 2400 : 760
+        )
+    }
+
+    /// The header and the poster card: the closest deputy and the themes.
+    @Test(arguments: Variant.all)
+    func quizPoster(_ variant: Variant) async throws {
+        let result = try await QuizFixtures.result()
+        checkSnapshot(
+            QuizResultHeader(result: result).padding(16),
+            variant
         )
     }
 
@@ -73,11 +85,11 @@ struct QuizSnapshotTests {
             VStack(spacing: 32) {
                 QuizShareSection(
                     includeAnswers: .constant(false), hasLink: false, isSharing: false, failed: false,
-                    onShare: {}, onRestart: {}
+                    onShare: {}
                 )
                 QuizShareSection(
                     includeAnswers: .constant(true), hasLink: false, isSharing: false, failed: false,
-                    onShare: {}, onRestart: {}
+                    onShare: {}
                 )
             }
             .padding(16),

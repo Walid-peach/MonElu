@@ -1,4 +1,4 @@
-# Quiz tab (#465): the intro, the swipe deck (right pour, left contre, down
+# Quiz tab (#465, #492): the intro, leaving and resuming the deck, the swipe deck (right pour, left contre, down
 # abstention), "not enough answers", and the result from match, which stores
 # nothing. It stops before sharing: shareResult stores a public snapshot in
 # production, covered by unit and snapshot tests instead.
@@ -38,53 +38,67 @@ appId: ${APP_ID}
 # One answer per direction, then pour and contre in turn. Each swipe starts
 # on the card: Maestro's bare directions start above it, on the header.
 - swipe:
-    start: 25%, 35%
-    end: 90%, 35%
+    start: 25%, 50%
+    end: 90%, 50%
+    duration: 400
+- waitForAnimationToEnd
+# The first answer reveals how the Assemblée really voted.
+- assertVisible: ".*L'Assemblée.*"
+- takeScreenshot: ${SCREENSHOT_PREFIX}3b-quiz-reveal
+
+# Leaving keeps the answer for the session; the intro offers to resume.
+- tapOn: "Quitter le quiz"
+- extendedWaitUntil:
+    visible: "Reprendre les questions.*"
+    timeout: 10000
+- takeScreenshot: ${SCREENSHOT_PREFIX}3c-quiz-resume
+- tapOn: "Reprendre les questions.*"
+- extendedWaitUntil:
+    visible: "Question 2 sur 10"
+    timeout: 10000
+- swipe:
+    start: 75%, 50%
+    end: 10%, 50%
     duration: 400
 - waitForAnimationToEnd
 - swipe:
-    start: 75%, 35%
-    end: 10%, 35%
+    start: 50%, 45%
+    end: 50%, 75%
     duration: 400
 - waitForAnimationToEnd
 - swipe:
-    start: 50%, 35%
-    end: 50%, 70%
+    start: 25%, 50%
+    end: 90%, 50%
     duration: 400
 - waitForAnimationToEnd
 - swipe:
-    start: 25%, 35%
-    end: 90%, 35%
+    start: 75%, 50%
+    end: 10%, 50%
     duration: 400
 - waitForAnimationToEnd
 - swipe:
-    start: 75%, 35%
-    end: 10%, 35%
+    start: 25%, 50%
+    end: 90%, 50%
     duration: 400
 - waitForAnimationToEnd
 - swipe:
-    start: 25%, 35%
-    end: 90%, 35%
+    start: 75%, 50%
+    end: 10%, 50%
     duration: 400
 - waitForAnimationToEnd
 - swipe:
-    start: 75%, 35%
-    end: 10%, 35%
+    start: 25%, 50%
+    end: 90%, 50%
     duration: 400
 - waitForAnimationToEnd
 - swipe:
-    start: 25%, 35%
-    end: 90%, 35%
+    start: 75%, 50%
+    end: 10%, 50%
     duration: 400
 - waitForAnimationToEnd
 - swipe:
-    start: 75%, 35%
-    end: 10%, 35%
-    duration: 400
-- waitForAnimationToEnd
-- swipe:
-    start: 25%, 35%
-    end: 90%, 35%
+    start: 25%, 50%
+    end: 90%, 50%
     duration: 400
 - waitForAnimationToEnd
 - extendedWaitUntil:
@@ -93,11 +107,12 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}4-quiz-result
 - scrollUntilVisible:
+    element: "Les députés qui votent comme vous"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz-matches
+- scrollUntilVisible:
     element: "Les groupes"
     direction: DOWN
     centerElement: true
-- takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz-groups
-- scrollUntilVisible:
-    element: "Partager mes résultats"
-    direction: DOWN
-- takeScreenshot: ${SCREENSHOT_PREFIX}6-quiz-share
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-quiz-groups
