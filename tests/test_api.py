@@ -190,6 +190,14 @@ def test_list_deputies(client, mock_cursor):
     assert data["items"][0]["full_name"] == "Jean Martin"
 
 
+def test_list_deputies_returns_the_surname(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchall.return_value = [{**_DEPUTY_SUMMARY, "last_name": "Martin"}]
+    resp = client.get("/deputies/")
+    assert resp.json()["items"][0]["last_name"] == "Martin"
+    assert "last_name" in str(mock_cursor.execute.call_args_list[1].args[0])
+
+
 def test_list_deputies_active_filters_on_mandate_end(client, mock_cursor):
     mock_cursor.fetchone.return_value = {"count": 1}
     mock_cursor.fetchall.return_value = [_DEPUTY_SUMMARY]

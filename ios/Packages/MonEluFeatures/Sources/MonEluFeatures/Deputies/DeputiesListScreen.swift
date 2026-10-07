@@ -93,8 +93,8 @@ struct DeputyChips: View {
     private var chips: [FilterChip] {
         var chips = [
             FilterChip(
-                id: "group", title: model.groupName.map(Self.shortName) ?? "Tous les groupes",
-                isSelected: true, opensSheet: true
+                id: "group", title: model.groupName ?? "Tous les groupes",
+                isSelected: model.groupSlug != nil, opensSheet: true
             ),
         ]
         if model.myDepartment != nil {
@@ -102,11 +102,6 @@ struct DeputyChips: View {
         }
         chips.append(FilterChip(id: "mandate", title: "En mandat", isSelected: model.inMandateOnly))
         return chips
-    }
-
-    /// A long group name cut to fit a chip: "La France insoumise - NFP".
-    static func shortName(_ name: String) -> String {
-        name.replacingOccurrences(of: "Nouveau Front Populaire", with: "NFP")
     }
 }
 
@@ -206,10 +201,15 @@ struct DeputiesList: View {
 /// A deputy in Explorer: portrait, name, département and seat, and the group chip.
 struct ExplorerDeputyRow: View {
     let deputy: DeputyItem
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         HStack(spacing: 12) {
-            DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 44)
+            // At large text the portrait and the chip leave the name a sliver,
+            // so the chip moves under it and the portrait goes.
+            if !typeSize.isAccessibilitySize {
+                DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 44)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(deputy.name)
                     .font(.body.weight(.semibold))
@@ -219,10 +219,13 @@ struct ExplorerDeputyRow: View {
                         .font(.footnote)
                         .foregroundStyle(Palette.textSecondary)
                 }
+                if typeSize.isAccessibilitySize, let short = deputy.groupShort {
+                    PartyChip(short: short)
+                }
             }
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            if let short = deputy.groupShort {
+            if !typeSize.isAccessibilitySize, let short = deputy.groupShort {
                 PartyChip(short: short)
             }
         }

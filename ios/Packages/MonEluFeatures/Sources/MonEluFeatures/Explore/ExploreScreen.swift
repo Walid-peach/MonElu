@@ -8,12 +8,16 @@ import SwiftUI
 /// the départements, the user's own first.
 public struct ExploreScreen: View {
     @State private var loader: Loader<ExploreHub>
+    private let store: any FollowedDeputyStore
 
     public init(
-        deputies: any DeputiesService, lois: any LoisService, groups: any GroupsService, followedDeputyID: String?
+        deputies: any DeputiesService, lois: any LoisService, groups: any GroupsService, store: any FollowedDeputyStore
     ) {
+        self.store = store
+        // The followed deputy is read on every load, not once: the user can
+        // follow someone else on Accueil while Explorer stays alive.
         _loader = State(initialValue: Loader {
-            await ExploreHub.load(deputies: deputies, lois: lois, groups: groups, followedDeputyID: followedDeputyID)
+            await ExploreHub.load(deputies: deputies, lois: lois, groups: groups, followedDeputyID: store.deputyID)
         })
     }
 
@@ -26,6 +30,12 @@ public struct ExploreScreen: View {
             }
         }
         .background(Palette.pageBackground)
+        .onAppear {
+            // Followed or unfollowed since the hub loaded: its département row is stale.
+            if let hub = loader.state.value, hub.followedDeputyID != store.deputyID {
+                Task { await loader.refresh() }
+            }
+        }
         .navigationTitle("Explorer")
         .accessibilityIdentifier("screen.explore")
     }
@@ -48,7 +58,7 @@ struct ExploreContent: View {
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Palette.textPrimary)
                                     .padding(.horizontal, 12)
-                                    .frame(minHeight: 36)
+                                    .frame(minHeight: 44)
                                     .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 10, style: .continuous)

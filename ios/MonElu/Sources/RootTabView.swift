@@ -51,7 +51,7 @@ struct RootTabView: View {
         case .explore:
             ExploreScreen(
                 deputies: services.deputies, lois: services.lois, groups: services.groups,
-                followedDeputyID: services.followedDeputy.deputyID
+                store: services.followedDeputy
             )
         case .quiz:
             QuizScreen(service: services.quiz)

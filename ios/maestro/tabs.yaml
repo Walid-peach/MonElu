@@ -36,14 +36,14 @@ appId: ${APP_ID}
     visible:
       id: "screen.deputies"
     timeout: 10000
-- takeScreenshot: ${SCREENSHOT_PREFIX}3-explorer-deputes
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-explorer-deputes
 
 - tapOn: "Quiz"
 - assertVisible:
     id: "screen.quiz"
-- takeScreenshot: ${SCREENSHOT_PREFIX}4-quiz
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz
 
 - tapOn: "Demander"
 - assertVisible:
     id: "screen.ask"
-- takeScreenshot: ${SCREENSHOT_PREFIX}5-demander
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-demander

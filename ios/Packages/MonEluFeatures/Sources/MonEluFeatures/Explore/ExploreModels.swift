@@ -73,12 +73,19 @@ public struct ExploreHub: Hashable, Sendable {
     public let groups: [GroupSeats]?
     /// The followed deputy's département.
     public let myDepartment: DepartmentRef?
+    /// The followed deputy the hub was loaded for, so the screen can tell
+    /// when the user has followed someone else since.
+    public let followedDeputyID: String?
 
-    public init(deputiesInMandate: Int?, loiCount: Int?, groups: [GroupSeats]?, myDepartment: DepartmentRef?) {
+    public init(
+        deputiesInMandate: Int?, loiCount: Int?, groups: [GroupSeats]?, myDepartment: DepartmentRef?,
+        followedDeputyID: String? = nil
+    ) {
         self.deputiesInMandate = deputiesInMandate
         self.loiCount = loiCount
         self.groups = groups
         self.myDepartment = myDepartment
+        self.followedDeputyID = followedDeputyID
     }
 
     /// Loads every part at once; none of them can fail the page.
@@ -90,7 +97,8 @@ public struct ExploreHub: Hashable, Sendable {
         async let seats = try? groups.groups()
         async let mine = myDepartment(deputies: deputies, followedDeputyID: followedDeputyID)
         return ExploreHub(
-            deputiesInMandate: await inMandate, loiCount: await loiCount, groups: await seats, myDepartment: await mine
+            deputiesInMandate: await inMandate, loiCount: await loiCount, groups: await seats, myDepartment: await mine,
+            followedDeputyID: followedDeputyID
         )
     }
 

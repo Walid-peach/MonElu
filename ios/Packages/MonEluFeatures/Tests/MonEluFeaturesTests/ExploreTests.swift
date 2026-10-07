@@ -42,6 +42,8 @@ struct ExploreTests {
         #expect(hub.loiCount == 71)
         #expect(hub.groups?.count == 6)
         #expect(hub.myDepartment == DepartmentRef(code: "33", name: "Gironde"))
+        // What Explorer compares with the store to know the hub is stale.
+        #expect(hub.followedDeputyID == "PA1008")
     }
 
     /// A failing part leaves the rest; no followed deputy, no département.
