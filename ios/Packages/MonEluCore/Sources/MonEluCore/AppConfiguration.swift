@@ -35,12 +35,25 @@ public struct AppConfiguration: Codable, Hashable, Sendable {
     /// ISO date of the first scrutin production holds.
     public var dataHorizon: String
     public var caveats: [Caveat]
+    /// The website's origin (`site_url`), the base of every link the app
+    /// shares. Nil before the API sent it: the app then shares nothing
+    /// rather than guess a host.
+    public var siteURL: String?
 
-    public init(minIOSVersion: String, features: Features, dataHorizon: String, caveats: [Caveat]) {
+    public init(
+        minIOSVersion: String, features: Features, dataHorizon: String, caveats: [Caveat], siteURL: String? = nil
+    ) {
         self.minIOSVersion = minIOSVersion
         self.features = features
         self.dataHorizon = dataHorizon
         self.caveats = caveats
+        self.siteURL = siteURL
+    }
+
+    /// `<site_url>/<path>`, or nil while the site's origin is unknown.
+    public func siteLink(_ path: String) -> URL? {
+        guard let siteURL, !siteURL.isEmpty else { return nil }
+        return URL(string: siteURL + "/" + path)
     }
 
     /// Used before the first successful fetch: nothing blocked, every feature

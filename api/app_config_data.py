@@ -26,6 +26,8 @@ import logging
 import os
 import re
 
+from api.config import frontend_base_url
+
 logger = logging.getLogger(__name__)
 
 # Production holds scrutins from this date onward (Supabase free tier, CLAUDE.md
@@ -148,4 +150,5 @@ def app_config() -> dict:
         "features": {name: feature_enabled(name) for name in FEATURE_ENV_VARS},
         "data_horizon": DATA_HORIZON,
         "caveats": [{"id": cid, "text": text} for cid, text in CAVEATS],
+        "site_url": frontend_base_url(),
     }
