@@ -24,6 +24,15 @@ public struct AskScreen: View {
         }
         .background(Palette.pageBackground)
         .navigationTitle("Demander")
+        .toolbar {
+            if !model.exchanges.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { model.clear() } label: { Label("Nouvelle conversation", systemImage: "plus") }
+                        .disabled(model.isWaiting)
+                        .accessibilityIdentifier("ask.new")
+                }
+            }
+        }
         .accessibilityIdentifier("screen.ask")
         .onAppear { model.features = configuration.features }
         .onChange(of: configuration.features) { model.features = $1 }
@@ -34,10 +43,27 @@ public struct AskScreen: View {
     }
 
     private var conversation: some View {
+        // The mode sits above the conversation rather than in a top inset,
+        // which would leave the large title blank (#477).
+        VStack(spacing: 0) {
+            if configuration.features.verify {
+                Picker("Mode", selection: $model.mode) {
+                    ForEach(AskModel.Mode.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .accessibilityIdentifier("ask.mode")
+            }
+            thread
+        }
+    }
+
+    private var thread: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 AskConversation(
-                    exchanges: model.exchanges,
+                    exchanges: model.exchanges, mode: model.effectiveMode,
                     offersVerification: { model.offersVerification($0) },
                     onRetry: { id in Task { await model.retry(id) } },
                     onVerify: { id in Task { await model.verify(id) } },
@@ -53,29 +79,39 @@ public struct AskScreen: View {
         }
     }
 
+    /// The composer, pinned above the tab bar.
     private var input: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            TextField("Posez une question sur vos élus…", text: $model.draft, axis: .vertical)
-                .lineLimit(1...5)
-                .focused($inputFocused)
-                .padding(10)
-                .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
-                .accessibilityIdentifier("ask.input")
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField(
+                model.effectiveMode == .claim ? "Collez une affirmation à vérifier…" : "Posez une question sur vos élus…",
+                text: $model.draft, axis: .vertical
+            )
+            .lineLimit(1...5)
+            .focused($inputFocused)
+            .padding(.vertical, 10)
+            .padding(.leading, 12)
+            .accessibilityIdentifier("ask.input")
             Button {
                 inputFocused = false
                 Task { await model.send() }
             } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title)
+                Image(systemName: "arrow.up")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Palette.onAccent)
+                    .frame(width: 40, height: 40)
+                    .background(Palette.accent, in: Circle())
+                    .opacity(model.canSend ? 1 : 0.4)
             }
-            .tint(Palette.accent)
+            .buttonStyle(.plain)
             .disabled(!model.canSend)
-            .accessibilityLabel("Envoyer la question")
+            .accessibilityLabel(model.effectiveMode == .claim ? "Vérifier l'affirmation" : "Envoyer la question")
             .accessibilityIdentifier("ask.send")
         }
+        .padding(4)
+        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .background(Palette.pageBackground)
     }
 }
@@ -84,6 +120,7 @@ public struct AskScreen: View {
 /// without a network.
 struct AskConversation: View {
     let exchanges: [ChatExchange]
+    var mode: AskModel.Mode = .question
     let offersVerification: (ChatExchange) -> Bool
     let onRetry: (Int) -> Void
     let onVerify: (Int) -> Void
@@ -92,7 +129,7 @@ struct AskConversation: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
-            if exchanges.isEmpty { AskIntro() }
+            if exchanges.isEmpty { AskIntro(mode: mode) }
             ForEach(exchanges) { exchange in
                 ExchangeView(
                     exchange: exchange,

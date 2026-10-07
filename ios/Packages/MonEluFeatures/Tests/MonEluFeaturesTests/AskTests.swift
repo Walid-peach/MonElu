@@ -54,6 +54,53 @@ let allOn = AppConfiguration.Features(chat: true, verify: true)
 
 @MainActor
 struct AskModelTests {
+    /// "Vérifier une affirmation" sends the draft to `verify` directly, never
+    /// to `search`, within the bounds `verify` accepts.
+    @Test func claimModeVerifiesDirectly() async throws {
+        let service = RecordingAskService(answer: .failure(URLError(.badServerResponse)))
+        service.verdict = .success(try await AskFixtures.service().verify("x"))
+        let model = AskModel(service: service, features: allOn)
+        model.mode = .claim
+        model.draft = "Trop bref"
+        #expect(model.canSend == false)
+        model.draft = "Alain David a voté contre la loi sur la protection des enfants"
+        await model.send()
+        #expect(service.questions.isEmpty)
+        #expect(service.claims == ["Alain David a voté contre la loi sur la protection des enfants"])
+        let exchange = try #require(model.exchanges.first)
+        #expect(exchange.isClaim)
+        guard case .done = exchange.verification else { Issue.record("no verdict"); return }
+    }
+
+    /// With verification switched off, the mode falls back to a question.
+    @Test func claimModeNeedsVerification() async {
+        let service = RecordingAskService(answer: .failure(URLError(.badServerResponse)))
+        let model = AskModel(service: service, features: .init(chat: true, verify: false))
+        model.mode = .claim
+        #expect(model.effectiveMode == .question)
+        model.draft = "Qui est mon député ?"
+        await model.send()
+        #expect(service.claims.isEmpty)
+        #expect(service.questions == ["Qui est mon député ?"])
+    }
+
+    /// A failed claim is sent again by "Réessayer"; a new conversation empties
+    /// the thread.
+    @Test func aFailedClaimCanBeRetriedAndTheThreadCleared() async throws {
+        let service = RecordingAskService(answer: .failure(URLError(.badServerResponse)))
+        let model = AskModel(service: service, features: allOn)
+        model.mode = .claim
+        model.draft = "Alain David a voté contre la loi sur la protection des enfants"
+        await model.send()
+        let id = try #require(model.exchanges.first?.id)
+        service.verdict = .success(try await AskFixtures.service().verify("x"))
+        await model.retry(id)
+        #expect(service.claims.count == 2)
+        guard case .done = model.exchanges.first?.verification else { Issue.record("no verdict"); return }
+        model.clear()
+        #expect(model.exchanges.isEmpty)
+    }
+
     /// ADR-023: the nudge shows for a claim, and `verify` runs only when tapped.
     @Test func aClaimShowsTheNudgeAndVerifiesOnlyWhenTapped() async throws {
         let service = RecordingAskService(answer: .success(try await AskFixtures.claimAnswer()))

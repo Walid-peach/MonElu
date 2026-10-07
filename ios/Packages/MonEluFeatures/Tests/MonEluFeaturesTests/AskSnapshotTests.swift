@@ -39,6 +39,25 @@ struct AskSnapshotTests {
         checkSnapshot(AskIntro().padding(16), variant)
     }
 
+    /// "Vérifier une affirmation" before the first claim.
+    @Test(arguments: Variant.all)
+    func askIntroClaim(_ variant: Variant) {
+        checkSnapshot(AskIntro(mode: .claim).padding(16), variant)
+    }
+
+    /// A claim sent in "Vérifier": the quoted claim and its verdict, no answer.
+    @Test(arguments: Variant.all)
+    func askClaimVerdict(_ variant: Variant) async throws {
+        let verdict = try await AskFixtures.service().verify("x")
+        var claim = ChatExchange(id: 1, question: verdict.claim, isClaim: true)
+        claim.verification = .done(verdict)
+        checkSnapshot(
+            conversation([claim]),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2400 : 900
+        )
+    }
+
     @Test(arguments: Variant.all)
     func askUnavailable(_ variant: Variant) {
         checkSnapshot(AskUnavailable(), variant, height: 420)
