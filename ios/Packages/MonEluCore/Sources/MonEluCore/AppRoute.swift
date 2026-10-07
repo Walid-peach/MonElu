@@ -29,6 +29,8 @@ public enum AppRoute: Hashable, Sendable {
     case deputies
     case lois
     case departments
+    /// Réglages (#494): reached from Accueil, not from a link.
+    case settings
 
     /// The tab a route opens in: Explorer, which holds both lists, so the
     /// back button always leads somewhere to keep browsing.

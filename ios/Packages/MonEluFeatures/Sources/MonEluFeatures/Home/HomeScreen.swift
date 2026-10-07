@@ -104,6 +104,13 @@ public struct HomeScreen: View {
             ToolbarItem(placement: .topBarLeading) {
                 AgendaToolbarLink()
             }
+            // Réglages lives here until accounts give it a home (#434).
+            ToolbarItem(placement: .topBarLeading) {
+                NavigationLink(value: AppRoute.settings) {
+                    Label("Réglages", systemImage: "gearshape")
+                }
+                .accessibilityIdentifier("open.settings")
+            }
         }
         if model.isChanging {
             ToolbarItem(placement: .cancellationAction) {
