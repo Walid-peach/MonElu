@@ -1,6 +1,6 @@
 # The group page (#484): a link opens a group, a member opens their
-# profile, and that profile's group opens the group again. Explorer's group
-# filter leads there too. Live data: asserts on fixed labels only.
+# profile, and that profile's group opens the group again. Explorer's
+# groups lead there too. Live data: asserts on fixed labels only.
 appId: ${APP_ID}
 ---
 - launchApp:
@@ -16,25 +16,26 @@ appId: ${APP_ID}
     element: "Quand le groupe s'est divisé"
     direction: DOWN
 
+# The member search's placeholder is not visible text to Maestro, so the
+# section is found by its header, which counts the members.
 - scrollUntilVisible:
-    element: "Rechercher dans le groupe"
+    element: "Les .* membres"
     direction: DOWN
     centerElement: true
 - takeScreenshot: ${SCREENSHOT_PREFIX}2-group-members
 
-# Explorer's deputies, filtered on a group, link to that group's page.
+# Explorer's groups, by seats, open each group's page (#488).
 - launchApp:
     stopApp: true
 - extendedWaitUntil:
     visible: "Accueil"
     timeout: 15000
 - tapOn: "Explorer"
-- tapOn: "Députés"
-- tapOn:
-    id: "deputies.group-filter"
-- tapOn: "Rassemblement National"
-- tapOn:
-    id: "deputies.open-group"
+- scrollUntilVisible:
+    element: ".*Rassemblement National.*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Rassemblement National.*"
 - extendedWaitUntil:
     visible: "Les plus souvent en désaccord avec le groupe"
     timeout: 20000

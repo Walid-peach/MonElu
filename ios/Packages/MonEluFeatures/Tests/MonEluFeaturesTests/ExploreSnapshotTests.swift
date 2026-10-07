@@ -46,8 +46,16 @@ struct ExploreSnapshotTests {
         let model = VotesListModel(service: LiveVotesService(client: stubClient(try fixture("votes"))))
         await model.reload()
         model.wholeTextsOnly = true
+        // The chips and the loaded list, as the screen stacks them, without
+        // the screen's next-page load, which would show its spinner.
         checkSnapshot(
-            NavigationStack { VotesListScreen(model: model) },
+            NavigationStack {
+                VStack(spacing: 0) {
+                    VoteChips(model: model) {}.padding(.vertical, 6)
+                    VotesList(votes: model.loader.state.value ?? [], isLoadingMore: false) {}
+                }
+                .background(Palette.pageBackground)
+            },
             variant,
             height: variant.size.isAccessibilityCategory ? 2200 : 844
         )
@@ -59,7 +67,13 @@ struct ExploreSnapshotTests {
         await model.loadMyDepartment()
         await model.reload()
         checkSnapshot(
-            NavigationStack { DeputiesListScreen(model: model) },
+            NavigationStack {
+                VStack(spacing: 0) {
+                    DeputyChips(model: model) {}.padding(.vertical, 6)
+                    DeputiesList(deputies: model.loader.state.value ?? [], total: model.total, isLoadingMore: false) {}
+                }
+                .background(Palette.pageBackground)
+            },
             variant,
             height: variant.size.isAccessibilityCategory ? 1800 : 844
         )

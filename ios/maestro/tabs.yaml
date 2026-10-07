@@ -1,5 +1,5 @@
-# Smoke flow (#450, #477): launch the app and visit every tab, screenshotting
-# each, and both of Explorer's lists.
+# Smoke flow (#450, #477, #488): launch the app and visit every tab,
+# screenshotting each, and Explorer's two lists from its contents page.
 # Tabs are tapped by their visible label and checked by the screen's
 # accessibility id (`screen.<name>`): the tab bar shows every label all the
 # time, so a label cannot prove the screen changed.
@@ -18,13 +18,24 @@ appId: ${APP_ID}
 
 - tapOn: "Explorer"
 - assertVisible:
-    id: "screen.votes"
+    id: "screen.explore"
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}2-explorer-votes
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-explorer
 
-- tapOn: "Députés"
-- assertVisible:
-    id: "screen.deputies"
+# The contents page's own id masks the tiles' ids, so a tile is tapped by
+# its label, which reads its title then its detail.
+- tapOn: "Votes, .*"
+- extendedWaitUntil:
+    visible:
+      id: "screen.votes"
+    timeout: 10000
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-explorer-votes
+- tapOn: "Explorer"
+- tapOn: "Députés, .*"
+- extendedWaitUntil:
+    visible:
+      id: "screen.deputies"
+    timeout: 10000
 - takeScreenshot: ${SCREENSHOT_PREFIX}3-explorer-deputes
 
 - tapOn: "Quiz"
