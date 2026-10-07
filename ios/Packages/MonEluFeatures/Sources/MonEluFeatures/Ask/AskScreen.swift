@@ -9,6 +9,7 @@ public struct AskScreen: View {
     @State private var model: AskModel
     @Environment(\.appConfiguration) private var configuration
     @FocusState private var inputFocused: Bool
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     public init(service: any AskService) {
         _model = State(initialValue: AskModel(service: service, features: AppConfiguration.defaults.features))
@@ -24,15 +25,6 @@ public struct AskScreen: View {
         }
         .background(Palette.pageBackground)
         .navigationTitle("Demander")
-        .toolbar {
-            if !model.exchanges.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    Button { model.clear() } label: { Label("Nouvelle conversation", systemImage: "plus") }
-                        .disabled(model.isWaiting)
-                        .accessibilityIdentifier("ask.new")
-                }
-            }
-        }
         .accessibilityIdentifier("screen.ask")
         .onAppear { model.features = configuration.features }
         .onChange(of: configuration.features) { model.features = $1 }
@@ -47,8 +39,14 @@ public struct AskScreen: View {
         // which would leave the large title blank (#477).
         VStack(spacing: 0) {
             if configuration.features.verify {
+                // A segment cannot wrap: at large text the claim mode keeps
+                // its full name for VoiceOver only.
                 Picker("Mode", selection: $model.mode) {
-                    ForEach(AskModel.Mode.allCases, id: \.self) { Text($0.title).tag($0) }
+                    ForEach(AskModel.Mode.allCases, id: \.self) { mode in
+                        Text(typeSize.isAccessibilitySize ? mode.shortTitle : mode.title)
+                            .accessibilityLabel(mode.title)
+                            .tag(mode)
+                    }
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16)
@@ -56,6 +54,15 @@ public struct AskScreen: View {
                 .accessibilityIdentifier("ask.mode")
             }
             thread
+        }
+        .toolbar {
+            if !model.exchanges.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { model.clear() } label: { Label("Nouvelle conversation", systemImage: "plus") }
+                        .disabled(model.isWaiting)
+                        .accessibilityIdentifier("ask.new")
+                }
+            }
         }
     }
 
@@ -65,6 +72,7 @@ public struct AskScreen: View {
                 AskConversation(
                     exchanges: model.exchanges, mode: model.effectiveMode,
                     offersVerification: { model.offersVerification($0) },
+                    canRetry: { model.canRetry($0) },
                     onRetry: { id in Task { await model.retry(id) } },
                     onVerify: { id in Task { await model.verify(id) } },
                     onShare: { id in Task { await model.share(id) } },
@@ -122,6 +130,7 @@ struct AskConversation: View {
     let exchanges: [ChatExchange]
     var mode: AskModel.Mode = .question
     let offersVerification: (ChatExchange) -> Bool
+    var canRetry: (ChatExchange) -> Bool = { _ in true }
     let onRetry: (Int) -> Void
     let onVerify: (Int) -> Void
     let onShare: (Int) -> Void
@@ -134,6 +143,7 @@ struct AskConversation: View {
                 ExchangeView(
                     exchange: exchange,
                     offersVerification: offersVerification(exchange),
+                    canRetry: canRetry(exchange),
                     onRetry: { onRetry(exchange.id) },
                     onVerify: { onVerify(exchange.id) },
                     onShare: { onShare(exchange.id) },

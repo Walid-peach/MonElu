@@ -54,6 +54,21 @@ let allOn = AppConfiguration.Features(chat: true, verify: true)
 
 @MainActor
 struct AskModelTests {
+    /// A failed claim offers "Réessayer" only while verification is on, and
+    /// a claim over 500 characters cannot be sent.
+    @Test func retryAndLengthFollowVerify() {
+        let model = AskModel(service: RecordingAskService(answer: .failure(URLError(.badServerResponse))), features: allOn)
+        let claim = ChatExchange(id: 1, question: "Alain David a voté contre la loi", isClaim: true)
+        #expect(model.canRetry(claim))
+        model.features = .init(chat: true, verify: false)
+        #expect(model.canRetry(claim) == false)
+        #expect(model.canRetry(ChatExchange(id: 2, question: "Qui est mon député ?")))
+        model.features = allOn
+        model.mode = .claim
+        model.draft = String(repeating: "a", count: 501)
+        #expect(model.canSend == false)
+    }
+
     /// "Vérifier une affirmation" sends the draft to `verify` directly, never
     /// to `search`, within the bounds `verify` accepts.
     @Test func claimModeVerifiesDirectly() async throws {

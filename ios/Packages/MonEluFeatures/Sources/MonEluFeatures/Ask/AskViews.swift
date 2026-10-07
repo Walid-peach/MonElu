@@ -155,7 +155,7 @@ struct AnswerCard: View {
             background: answer.confidence == "low" ? Palette.negativeBackground
                 : answer.confidence == "high" ? Palette.positiveBackground : Palette.trackBackground
         )
-        .fixedSize()
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var confidenceNote: some View {
@@ -359,7 +359,7 @@ struct VerdictCard: View {
         case "vrai": "checkmark.shield"
         case "faux": "xmark.shield"
         case "trompeur": "exclamationmark.shield"
-        default: "questionmark.circle"
+        default: "questionmark.diamond"
         }
     }
 
@@ -423,6 +423,7 @@ private struct CitationRow: View {
 struct ExchangeView: View {
     let exchange: ChatExchange
     let offersVerification: Bool
+    var canRetry = true
     let onRetry: () -> Void
     let onVerify: () -> Void
     let onShare: () -> Void
@@ -437,7 +438,7 @@ struct ExchangeView: View {
             case .pending:
                 Waiting(text: "Recherche dans les votes et profils des députés…")
             case .failed(let failure):
-                FailureLine(text: AskLabels.failure(failure), actionTitle: "Réessayer", action: onRetry)
+                FailureLine(text: AskLabels.failure(failure), actionTitle: canRetry ? "Réessayer" : nil, action: onRetry)
             case .answered(let answer):
                 AnswerCard(
                     answer: answer, offersVerification: offersVerification, feedback: exchange.feedback,
@@ -457,7 +458,7 @@ struct ExchangeView: View {
                 // the nudge itself offers it again.
                 FailureLine(
                     text: AskLabels.failure(failure, verifying: true),
-                    actionTitle: exchange.isClaim ? "Réessayer" : nil, action: onRetry
+                    actionTitle: exchange.isClaim && canRetry ? "Réessayer" : nil, action: onRetry
                 )
             }
         }
@@ -516,7 +517,10 @@ struct AskIntro: View {
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             if mode == .claim {
-                Label("Les verdicts possibles : vrai, faux, trompeur, invérifiable avec nos données.", systemImage: "checkmark.shield")
+                Label(
+                    "Les verdicts possibles : \(["vrai", "faux", "trompeur", "inverifiable"].map { AskLabels.verdict($0).lowercased() }.joined(separator: ", ")).",
+                    systemImage: "checkmark.shield"
+                )
                     .font(.footnote)
                     .foregroundStyle(Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

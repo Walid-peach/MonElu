@@ -89,6 +89,14 @@ public final class AskModel {
             case .claim: "Vérifier une affirmation"
             }
         }
+
+        /// What fits a segment at large text sizes.
+        public var shortTitle: String {
+            switch self {
+            case .question: "Question"
+            case .claim: "Vérifier"
+            }
+        }
     }
 
     public var draft = ""
@@ -155,6 +163,11 @@ public final class AskModel {
         guard case .failed = exchanges[index].answer else { return }
         exchanges[index].answer = .pending
         await answer(id)
+    }
+
+    /// Whether "Réessayer" can run for this exchange now.
+    public func canRetry(_ exchange: ChatExchange) -> Bool {
+        features.chat && (!exchange.isClaim || features.verify)
     }
 
     /// Starts a new conversation; not while a request is under way.
