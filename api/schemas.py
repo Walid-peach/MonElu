@@ -356,6 +356,32 @@ class DeputyVotesResponse(_Base):
     items: list[DeputyVoteItem]
 
 
+class DeputyListItem(DeputySummary):
+    """A deputy in `GET /deputies`, with the surname the list is sorted by."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "last_name": "Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "party_short": "LFI",
+                "department": "Val-de-Marne",
+                "circonscription": "10",
+                "photo_url": (
+                    "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/"
+                    "carre/720892.jpg"
+                ),
+            }
+        }
+    )
+
+    last_name: Optional[str] = Field(
+        None, description="Surname as the Assemblée files it; the list's sort key"
+    )
+
+
 class DeputyListResponse(_Base):
     model_config = ConfigDict(
         json_schema_extra={
@@ -367,6 +393,7 @@ class DeputyListResponse(_Base):
                     {
                         "deputy_id": "PA720892",
                         "full_name": "Mathilde Panot",
+                        "last_name": "Panot",
                         "party": "La France insoumise - Nouveau Front Populaire",
                         "party_short": "LFI",
                         "department": "Val-de-Marne",
@@ -384,7 +411,7 @@ class DeputyListResponse(_Base):
     total: int
     limit: int
     offset: int
-    items: list[DeputySummary]
+    items: list[DeputyListItem]
 
 
 # ---------------------------------------------------------------------------
@@ -563,6 +590,40 @@ class GroupVoteBreakdown(_Base):
     majority_position: str = Field(
         description="pour/contre/abstention — whichever the group cast most of on this vote"
     )
+
+
+class GroupSummary(_Base):
+    """One parliamentary group and how many seats it holds today."""
+
+    slug: str
+    name: str
+    party_short: Optional[str] = Field(None, description="The group's abbreviation, e.g. `RN`")
+    seat_count: int = Field(description="Deputies sitting in the group today (mandate not ended)")
+
+
+class GroupListResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "items": [
+                    {
+                        "slug": "rassemblement-national",
+                        "name": "Rassemblement National",
+                        "party_short": "RN",
+                        "seat_count": 123,
+                    },
+                    {
+                        "slug": "ensemble-pour-la-republique",
+                        "name": "Ensemble pour la République",
+                        "party_short": "EPR",
+                        "seat_count": 91,
+                    },
+                ]
+            }
+        }
+    )
+
+    items: list[GroupSummary]
 
 
 class GroupDetail(_Base):

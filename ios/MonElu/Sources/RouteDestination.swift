@@ -30,6 +30,14 @@ struct RouteDestination: View {
             DissidentVotesScreen(deputyID: deputyID, service: services.deputies)
         case .agenda:
             AgendaScreen(service: services.agenda)
+        case .votes:
+            VotesListScreen(service: services.votes)
+        case .deputies:
+            DeputiesListScreen(service: services.deputies, followedDeputyID: services.followedDeputy.deputyID)
+        case .lois:
+            LoisListScreen(service: services.lois)
+        case .departments:
+            DepartmentsListScreen(deputies: services.deputies, followedDeputyID: services.followedDeputy.deputyID)
         }
     }
 }

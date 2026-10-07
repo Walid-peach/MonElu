@@ -16,9 +16,15 @@ from fastapi import APIRouter, HTTPException, Query
 from starlette.requests import Request
 
 from api.db import get_conn
-from api.groups_data import normalize_slug
+from api.groups_data import GROUP_SLUGS, normalize_slug
 from api.limiter import limiter, tiered_limit
-from api.schemas import GroupDetail, GroupMember, GroupVoteBreakdown
+from api.schemas import (
+    GroupDetail,
+    GroupListResponse,
+    GroupMember,
+    GroupSummary,
+    GroupVoteBreakdown,
+)
 
 router = APIRouter()
 
@@ -62,6 +68,48 @@ def _majority_position(pour: int, contre: int, abstention: int) -> str:
     counts = {"abstention": abstention, "contre": contre, "pour": pour}
     top = max(counts.values())
     return min(position for position, count in counts.items() if count == top)
+
+
+@router.get(
+    "",
+    response_model=GroupListResponse,
+    summary="Every parliamentary group with its current seat count",
+)
+@limiter.limit(tiered_limit(30))
+def list_groups(request: Request):
+    """The 12 groups of the Assemblée, largest first, with the slug `GET /groups/{slug}` takes.
+
+    `seat_count` counts **current** deputies only (`mandate_end` not set), so
+    the counts add up to the seats filled today, at most 577. A group with no
+    sitting member is left out, as `GET /groups/{slug}` answers 404 for it.
+    `non-inscrits` is listed like the others but is not a group in any political
+    sense: its members belong to none.
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT party, MAX(party_short) AS party_short, COUNT(*) AS seat_count
+                FROM deputies
+                WHERE mandate_end IS NULL AND party IS NOT NULL
+                GROUP BY party
+                """
+            )
+            rows = cur.fetchall()
+
+    slugs = {label: slug for slug, label in GROUP_SLUGS.items()}
+    items = [
+        GroupSummary(
+            slug=slugs[r["party"]],
+            name=r["party"],
+            party_short=r["party_short"],
+            seat_count=r["seat_count"],
+        )
+        for r in rows
+        if r["party"] in slugs
+    ]
+    items.sort(key=lambda g: (-g.seat_count, g.name))
+    return GroupListResponse(items=items)
 
 
 @router.get(

@@ -1,5 +1,6 @@
-# Explorer's deputies (#462, #477): the list loads from the API, the group filter narrows
-# it, and a row opens the deputy's profile. Asserts on structure and fixed
+# Explorer's deputies (#462, #477, #488): the list loads from the API by
+# surname, the group chip and "En mandat" narrow it, and a row opens the
+# deputy's profile. Asserts on structure and fixed
 # labels, not on who is listed: the data changes with each ingestion.
 appId: ${APP_ID}
 ---
@@ -10,7 +11,7 @@ appId: ${APP_ID}
     timeout: 15000
 
 - tapOn: "Explorer"
-- tapOn: "Députés"
+- tapOn: "Députés, .*"
 - extendedWaitUntil:
     visible:
       id: "deputy.row"
@@ -19,7 +20,11 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-deputies-list
 
-# The screen's id masks the filter's, so it is tapped by its label.
+# The screen's id masks the chips', so they are tapped by their labels.
+- tapOn: "En mandat"
+- extendedWaitUntil:
+    visible: ".* en mandat"
+    timeout: 20000
 - tapOn: "Tous les groupes"
 - tapOn: "Rassemblement National"
 - extendedWaitUntil:

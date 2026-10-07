@@ -1,4 +1,4 @@
-# The agenda (#483): opened from Explorer's toolbar, it loads this week from
+# The agenda (#483): opened from Explorer's "Agenda" tile (#488), it loads this week from
 # the API, and the week buttons move it. Live data: asserts on fixed labels,
 # never on the day's points. The week label is one accessibility element
 # with its dates, so it is matched by pattern.
@@ -10,8 +10,7 @@ appId: ${APP_ID}
     visible: "Accueil"
     timeout: 15000
 - tapOn: "Explorer"
-- tapOn:
-    id: "open.agenda"
+- tapOn: "Agenda, .*"
 - extendedWaitUntil:
     visible: ".*heures de Paris.*"
     timeout: 20000

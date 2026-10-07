@@ -47,12 +47,20 @@ public struct VoteQuery: Hashable, Sendable {
     public var search: String
     /// `adopté`, `rejeté`, or nil for both.
     public var result: String?
+    /// The theme's name, exactly as `listVotes` filters on it; nil for every theme.
+    public var theme: String?
+    /// What the scrutins decided (`ensemble`, `motion`, …, #481); empty for every kind.
+    public var kinds: [String]
     /// `next_cursor` of the previous page; nil for the first page.
     public var cursor: String?
 
-    public init(search: String = "", result: String? = nil, cursor: String? = nil) {
+    public init(
+        search: String = "", result: String? = nil, theme: String? = nil, kinds: [String] = [], cursor: String? = nil
+    ) {
         self.search = search
         self.result = result
+        self.theme = theme
+        self.kinds = kinds
         self.cursor = cursor
     }
 }

@@ -1,0 +1,10 @@
+{
+  "items": [
+    {"slug": "rassemblement-national", "name": "Rassemblement National", "party_short": "RN", "seat_count": 123},
+    {"slug": "ensemble-pour-la-republique", "name": "Ensemble pour la République", "party_short": "EPR", "seat_count": 91},
+    {"slug": "lfi-nfp", "name": "La France insoumise - Nouveau Front Populaire", "party_short": "LFI", "seat_count": 71},
+    {"slug": "socialistes-et-apparentes", "name": "Socialistes et apparentés", "party_short": "SOC", "seat_count": 66},
+    {"slug": "droite-republicaine", "name": "Droite Républicaine", "party_short": "DR", "seat_count": 49},
+    {"slug": "ecologiste-et-social", "name": "Écologiste et Social", "party_short": "ECS", "seat_count": 38}
+  ]
+}
