@@ -25,6 +25,29 @@ struct GroupLink: View {
     }
 }
 
+/// The deputy's constituency, opening the département's page when the
+/// bundled table knows its name.
+struct ConstituencyLink: View {
+    let constituency: String
+    let department: String?
+
+    var body: some View {
+        let label = Label(constituency, systemImage: "mappin.and.ellipse")
+            .font(.subheadline)
+            .fixedSize(horizontal: false, vertical: true)
+        if let code = ReferenceData.departmentCode(named: department) {
+            NavigationLink(value: AppRoute.department(code: code)) {
+                label.foregroundStyle(Palette.accent)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Ouvre la page du département")
+            .accessibilityIdentifier("deputy.department")
+        } else {
+            label.foregroundStyle(Palette.textSecondary)
+        }
+    }
+}
+
 /// Portrait, name, group, constituency and mandate.
 struct DeputyHeader: View {
     let profile: DeputyProfile
@@ -50,10 +73,7 @@ struct DeputyHeader: View {
                     GroupLink(name: group)
                 }
                 if let constituency = deputy.constituency {
-                    Label(constituency, systemImage: "mappin.and.ellipse")
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    ConstituencyLink(constituency: constituency, department: deputy.department)
                 }
                 if let mandate = Self.mandate(start: profile.mandateStart, end: profile.mandateEnd) {
                     Text(mandate)

@@ -194,9 +194,11 @@ struct DissidentMemberRow: View {
     }
 }
 
-/// A scrutin that split the group: its result and the group's own tally.
+/// A scrutin that split a set of deputies: its result and their own tally.
 struct DividedVoteRow: View {
     let vote: GroupDividedVote
+    /// Whose tally it is: "Dans le groupe", "En Gironde".
+    var scope = "Dans le groupe"
 
     var body: some View {
         HStack(spacing: 8) {
@@ -216,7 +218,7 @@ struct DividedVoteRow: View {
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(3)
                 let bar = VoteSplitBar(pour: vote.pour, contre: vote.contre, abstention: vote.abstention)
-                Text("Dans le groupe : \(bar.accessibilityText)")
+                Text("\(scope) : \(bar.accessibilityText)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

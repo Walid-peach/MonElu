@@ -1,0 +1,17 @@
+# The département page (#486): a link opens a département, and a deputy's
+# constituency leads back to it. Live data: asserts on fixed labels only.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    arguments:
+      MonEluOpenURL: "monelu://departements/33"
+- extendedWaitUntil:
+    visible: "Ses députés"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-department
+- scrollUntilVisible:
+    element: "Quand ils ont voté différemment"
+    direction: DOWN
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-department-split-votes
