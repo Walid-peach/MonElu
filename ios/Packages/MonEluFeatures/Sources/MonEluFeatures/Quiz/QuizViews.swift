@@ -280,9 +280,38 @@ struct QuizRows<Content: View>: View {
 struct QuizDeputyRow: View {
     let match: QuizDeputyMatch
     let rank: Int?
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         NavigationLink(value: AppRoute.deputy(id: match.deputy.id)) {
+            if typeSize.isAccessibilitySize {
+                // At large text the name needs the row's width: the rank and
+                // the percentage go on their own line under it.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(match.deputy.name)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Palette.textPrimary)
+                    Text(Self.detail(match))
+                        .font(.footnote)
+                        .foregroundStyle(Palette.textSecondary)
+                    Text([rank.map { "n° \($0)" }, match.agreementPct.map(MonEluFormat.percentage)].compactMap { $0 }.joined(separator: " · "))
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(Palette.textPrimary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .contentShape(Rectangle())
+            } else {
+                row
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var row: some View {
             HStack(spacing: 12) {
                 if let rank {
                     Text("\(rank)")
@@ -309,9 +338,6 @@ struct QuizDeputyRow: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
     }
 
     /// "EPR · Isère · 5 sur 5 scrutins en commun".
@@ -350,12 +376,14 @@ struct QuizGroupRow: View {
                 .frame(minWidth: 52, alignment: .trailing)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(group.group) : \(MonEluFormat.percentage(group.agreementPct)), \(group.matches) sur \(group.compared) scrutins")
+        .accessibilityLabel(
+            "\(group.group) : \(MonEluFormat.percentage(group.agreementPct)), \(group.matches) sur \(group.compared) scrutins, \(group.deputyCount) députés"
+        )
     }
 }
 
 /// Sharing the result. Including the answers is an explicit opt-in, off by
-/// default (ADR-028).
+/// default, with the website's wording (ADR-028).
 struct QuizShareSection: View {
     @Binding var includeAnswers: Bool
     let hasLink: Bool
@@ -368,8 +396,8 @@ struct QuizShareSection: View {
             VStack(alignment: .leading, spacing: 12) {
                 Toggle(isOn: $includeAnswers) {
                     Text(includeAnswers
-                        ? "Vos réponses seront incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous."
-                        : "Inclure mes réponses pour permettre à un ami de se comparer à moi.")
+                        ? "Vos réponses seront aussi incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous. Votre carte gardera le bloc « vous votez pour »."
+                        : "Inclure mes réponses pour permettre à un ami de se comparer à moi, et garder le bloc « vous votez pour » sur ma carte.")
                         .font(.subheadline)
                         .foregroundStyle(Palette.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)

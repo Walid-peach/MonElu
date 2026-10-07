@@ -57,17 +57,23 @@ struct QuizRevealView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text("Vous :")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.textSecondary)
-                VotePositionBadge(position: answered.position.rawValue)
-                if let result = answered.question.result {
-                    Text("L'Assemblée :")
+            // Each label stays with its badge, and the pairs wrap at large text.
+            FlowLayout(spacing: 10) {
+                HStack(spacing: 6) {
+                    Text("Vous :")
                         .font(.footnote)
                         .foregroundStyle(Palette.textSecondary)
-                        .padding(.leading, 4)
-                    VoteResultBadge(result: result)
+                    VotePositionBadge(position: answered.position.rawValue)
+                }
+                .fixedSize()
+                if let result = answered.question.result {
+                    HStack(spacing: 6) {
+                        Text("L'Assemblée :")
+                            .font(.footnote)
+                            .foregroundStyle(Palette.textSecondary)
+                        VoteResultBadge(result: result)
+                    }
+                    .fixedSize()
                 }
             }
             if let pour = answered.question.votesFor, let contre = answered.question.votesAgainst {
@@ -82,6 +88,19 @@ struct QuizRevealView: View {
         .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("quiz.reveal")
+        // An answer given through a VoiceOver action moves straight to the
+        // next card, so the real vote is read out.
+        .onAppear { announce() }
+        .onChange(of: answered) { announce() }
+    }
+
+    private func announce() {
+        var text = "Vous : \(VotePositionBadge.label(answered.position.rawValue))."
+        if let result = answered.question.result { text += " L'Assemblée : \(result)." }
+        if let pour = answered.question.votesFor, let contre = answered.question.votesAgainst {
+            text += " " + tallies(pour, contre, answered.question.abstentions)
+        }
+        AccessibilityNotification.Announcement(text).post()
     }
 
     /// "291 pour · 241 contre · 12 abstentions".
@@ -118,6 +137,16 @@ struct QuizDeckView: View {
     static let flingDistance: CGFloat = 300
 
     var body: some View {
+        // At large text the deck no longer fits a screen: it scrolls, and the
+        // card takes its natural height instead of the space left.
+        if typeSize.isAccessibilitySize {
+            ScrollView { content }
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 14) {
             header
             if let lastAnswer { QuizRevealView(answered: lastAnswer) }
@@ -133,14 +162,16 @@ struct QuizDeckView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 8) {
-            if canGoBack {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .frame(width: 44, height: 44)
-                }
-                .tint(Palette.textPrimary)
-                .accessibilityLabel("Revenir à la question précédente")
+            // Always laid out, so the progress keeps its width from question 1.
+            Button(action: onBack) {
+                Image(systemName: "chevron.left")
+                    .frame(width: 44, height: 44)
             }
+            .tint(Palette.textPrimary)
+            .opacity(canGoBack ? 1 : 0)
+            .disabled(!canGoBack)
+            .accessibilityHidden(!canGoBack)
+            .accessibilityLabel("Revenir à la question précédente")
             VStack(alignment: .leading, spacing: 6) {
                 Text("Question \(number) sur \(total)")
                     .font(.footnote.weight(.semibold))
@@ -184,7 +215,7 @@ struct QuizDeckView: View {
                 .accessibilityIdentifier("quiz.card")
         }
         .padding(.bottom, typeSize.isAccessibilitySize ? 0 : 16)
-        .frame(maxHeight: .infinity)
+        .frame(maxHeight: typeSize.isAccessibilitySize ? nil : .infinity)
     }
 
     private func ghost(inset: CGFloat, drop: CGFloat, opacity: Double) -> some View {
@@ -199,14 +230,16 @@ struct QuizDeckView: View {
 
     /// Contre, Abstention, Pour side by side; at large text, three rows.
     private var buttons: some View {
-        let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(spacing: 10))
-            : AnyLayout(HStackLayout(spacing: 10))
-        return layout {
-            answerButton(.contre)
-            answerButton(.abstention)
-            answerButton(.pour)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) { answerButtons }
+            VStack(spacing: 10) { answerButtons }
         }
+    }
+
+    @ViewBuilder private var answerButtons: some View {
+        answerButton(.contre)
+        answerButton(.abstention)
+        answerButton(.pour)
     }
 
     private func answerButton(_ position: QuizPosition) -> some View {
@@ -216,8 +249,8 @@ struct QuizDeckView: View {
         return Button { commit(position) } label: {
             Text(VotePositionBadge.label(position.rawValue))
                 .font(.body.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .fixedSize()
+                .padding(.horizontal, 8)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .foregroundStyle(foreground)
                 .background(background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))

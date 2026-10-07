@@ -37,7 +37,23 @@ struct QuizSnapshotTests {
             )
             .padding(16),
             variant,
-            height: variant.size.isAccessibilityCategory ? 1500 : 760
+            // A phone's height: at large text the deck scrolls.
+            height: 760
+        )
+    }
+
+    /// The first question: no answer to reveal yet, no way back.
+    @Test(arguments: Variant.all)
+    func quizDeckFirst(_ variant: Variant) async throws {
+        let deck = try await QuizFixtures.deck()
+        checkSnapshot(
+            QuizDeckView(
+                question: deck[0], number: 1, total: deck.count, canGoBack: false,
+                onAnswer: { _ in }, onSkip: {}, onBack: {}
+            )
+            .padding(16),
+            variant,
+            height: 760
         )
     }
 

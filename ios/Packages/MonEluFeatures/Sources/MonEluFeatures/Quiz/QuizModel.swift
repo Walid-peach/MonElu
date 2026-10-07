@@ -65,7 +65,7 @@ public final class QuizModel {
 
     /// Whether the intro offers to pick the deck up again: the user left it
     /// part-way, with answers kept in memory for the session.
-    public var canResume: Bool { phase == .intro && current != nil && (!answers.isEmpty || index > 0) }
+    public var canResume: Bool { phase == .intro && current != nil && !answers.isEmpty }
 
     public func start() {
         reset()
