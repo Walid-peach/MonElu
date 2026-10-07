@@ -6,10 +6,16 @@ The app heads each run of one surname initial with a letter, in the order this
 endpoint returns. An accented or lowercase-particle surname that sorts apart
 from its base letter makes that letter appear twice, and whether it does depends
 on the database's collation - which a mocked cursor cannot show.
+
+Postgres images default to en_US, under which a plain `ORDER BY last_name`
+already happens to be right, so the fixture switches the name columns to the
+byte collation "C" for this module. The old order then splits the letters, and
+only an order that names its collation passes.
 """
 
 from unittest.mock import patch
 
+import psycopg2.errors
 import pytest
 from fastapi.testclient import TestClient
 
@@ -42,13 +48,29 @@ ON CONFLICT (deputy_id) DO UPDATE SET
 """
 
 
+_NAME_COLUMNS = ("last_name", "first_name")
+
+
+def _collate_names(cur, collation: str) -> None:
+    for column in _NAME_COLUMNS:
+        cur.execute(f"ALTER TABLE deputies ALTER COLUMN {column} TYPE text COLLATE {collation}")
+
+
 @pytest.fixture(scope="module")
 def seeded(db_conn):
     with db_conn.cursor() as cur:
         for deputy_id, last_name in SURNAMES.items():
             cur.execute(_INSERT, (deputy_id, f"{FIRST} {last_name}", FIRST, last_name))
+        try:
+            _collate_names(cur, '"C"')
+        except psycopg2.errors.DependentObjectsStillExist:
+            # A local database with dbt views over deputies cannot retype the
+            # column; CI's has none, so the guard still runs there.
+            cur.execute("DELETE FROM deputies WHERE deputy_id LIKE 'IT-ORD-%'")
+            pytest.skip("views depend on deputies' name columns; cannot switch collation")
     yield
     with db_conn.cursor() as cur:
+        _collate_names(cur, 'pg_catalog."default"')
         cur.execute("DELETE FROM deputies WHERE deputy_id LIKE 'IT-ORD-%'")
 
 
@@ -65,16 +87,16 @@ def _roster(api, **params) -> list[dict]:
 
 
 @pytest.mark.integration
-def test_fixture_sorts_apart_under_a_byte_collation(db_conn, seeded):
-    """Under "C" these surnames do split their letters, so the test below can fail."""
+def test_the_column_order_splits_the_letters(db_conn, seeded):
+    """The columns' own order puts "de Courson" and "Écrivain" after "Zola"."""
     with db_conn.cursor() as cur:
         cur.execute(
-            """SELECT last_name FROM deputies WHERE deputy_id LIKE 'IT-ORD-%%'
-               ORDER BY last_name COLLATE "C", deputy_id"""
+            "SELECT last_name FROM deputies WHERE deputy_id LIKE 'IT-ORD-%' "
+            "ORDER BY last_name, first_name"
         )
-        byte_order = [r["last_name"] for r in cur.fetchall()]
-    assert byte_order.index("Zola") < byte_order.index("de Courson")
-    assert byte_order.index("Zola") < byte_order.index("Écrivain")
+        column_order = [r["last_name"] for r in cur.fetchall()]
+    assert column_order.index("Zola") < column_order.index("de Courson")
+    assert column_order.index("Zola") < column_order.index("Écrivain")
 
 
 @pytest.mark.integration
