@@ -37,12 +37,11 @@ struct SettingsTests {
         checkSnapshot(
             NavigationStack {
                 SettingsContent(
-                    appearance: .constant(.system), configuration: Self.configuration, version: "1.0 (42)",
-                    onTextSize: {}
+                    appearance: .constant(.system), configuration: Self.configuration, version: "1.0 (42)"
                 )
             },
             variant,
-            height: variant.size.isAccessibilityCategory ? 2000 : 760
+            height: variant.size.isAccessibilityCategory ? 2600 : 900
         )
     }
 }

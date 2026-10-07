@@ -16,6 +16,7 @@ appId: ${APP_ID}
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-settings
 
 # The appearance applies to the whole app at once.
+# The screen's id masks the rows', so they are tapped by label.
 - tapOn: "Sombre"
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}2-settings-dark

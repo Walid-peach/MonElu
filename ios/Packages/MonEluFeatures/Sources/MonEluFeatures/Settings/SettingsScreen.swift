@@ -41,7 +41,6 @@ public struct SettingsScreen: View {
     let version: String
     @AppStorage(AppearancePreference.storageKey) private var appearance = AppearancePreference.system
     @Environment(\.appConfiguration) private var configuration
-    @Environment(\.openURL) private var openURL
 
     /// `version` is the app's, "1.0 (42)": the target reads it from Info.plist.
     public init(version: String) {
@@ -49,14 +48,7 @@ public struct SettingsScreen: View {
     }
 
     public var body: some View {
-        SettingsContent(
-            appearance: $appearance, configuration: configuration, version: version,
-            onTextSize: {
-                // The app follows the iPhone's text size; its settings are the
-                // closest the app can open.
-                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-            }
-        )
+        SettingsContent(appearance: $appearance, configuration: configuration, version: version)
         .navigationTitle("Réglages")
         .accessibilityIdentifier("screen.settings")
     }
@@ -67,26 +59,38 @@ struct SettingsContent: View {
     @Binding var appearance: AppearancePreference
     let configuration: AppConfiguration
     let version: String
-    let onTextSize: () -> Void
 
     var body: some View {
         List {
-            Section("Affichage") {
-                // Three short choices, all in view: a segmented control.
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Apparence").foregroundStyle(Palette.textPrimary)
-                    Picker("Apparence", selection: $appearance) {
-                        ForEach(AppearancePreference.allCases) { Text($0.label).tag($0) }
+            Section {
+                // One row per choice, so each grows with Dynamic Type.
+                ForEach(AppearancePreference.allCases) { preference in
+                    Button { appearance = preference } label: {
+                        HStack {
+                            Text(preference.label).foregroundStyle(Palette.textPrimary)
+                            Spacer(minLength: 8)
+                            if appearance == preference {
+                                Image(systemName: "checkmark")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Palette.accent)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .accessibilityIdentifier("settings.appearance")
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(appearance == preference ? .isSelected : [])
+                    .accessibilityIdentifier("settings.appearance.\(preference.rawValue)")
                 }
-                .padding(.vertical, 6)
-                Button(action: onTextSize) {
-                    row("Taille du texte", value: "Réglage iPhone", chevron: true)
-                }
-                .accessibilityIdentifier("settings.text-size")
+                // The iPhone's text size applies; the system offers no link
+                // to that setting.
+                row("Taille du texte", value: "Suit le réglage de l'iPhone", chevron: false)
+                    .accessibilityElement(children: .combine)
+            } header: {
+                header("Affichage")
+            } footer: {
+                footer("Système suit l'iPhone ; Clair et Sombre s'appliquent à MonÉlu seulement.")
             }
             .listRowBackground(Palette.cardBackground)
 
@@ -98,22 +102,32 @@ struct SettingsContent: View {
                         .accessibilityElement(children: .combine)
                 }
             } header: {
-                Text("Les données")
+                header("Les données")
             } footer: {
-                Text("Données officielles de l'Assemblée nationale, mises à jour chaque jour ouvré.")
+                footer("Données officielles de l'Assemblée nationale.")
             }
             .listRowBackground(Palette.cardBackground)
 
-            Section("MonÉlu") {
+            Section {
                 link("Contact et signalement d'erreur", path: "contact")
                 row("Version", value: version, chevron: false)
                     .accessibilityElement(children: .combine)
+            } header: {
+                header("MonÉlu")
             }
             .listRowBackground(Palette.cardBackground)
         }
         .scrollContentBackground(.hidden)
         .background(Palette.pageBackground)
         .tint(Palette.accent)
+    }
+
+    private func header(_ text: String) -> some View {
+        Text(text).foregroundStyle(Palette.textSecondary)
+    }
+
+    private func footer(_ text: String) -> some View {
+        Text(text).foregroundStyle(Palette.textSecondary)
     }
 
     /// A page of the website, opened in the browser; left out while the

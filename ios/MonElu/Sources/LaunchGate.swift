@@ -29,6 +29,12 @@ struct LaunchGate: View {
         _configuration = State(initialValue: service.cached())
     }
 
+    private func applyAppearance() {
+        for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
+            for window in scene.windows { window.overrideUserInterfaceStyle = appearance.interfaceStyle }
+        }
+    }
+
     var body: some View {
         Group {
             if configuration.requiresUpdate(appVersion: appVersion) {
@@ -40,11 +46,10 @@ struct LaunchGate: View {
         .environment(\.appConfiguration, configuration)
         // On the windows themselves, so sheets and alerts follow too, and the
         // change applies at once from Réglages.
-        .onChange(of: appearance, initial: true) { _, preference in
-            for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
-                for window in scene.windows { window.overrideUserInterfaceStyle = preference.interfaceStyle }
-            }
-        }
+        .onChange(of: appearance, initial: true) { applyAppearance() }
+        // Again on activation: at a cold launch the window may not exist yet
+        // when the first change fires.
+        .onChange(of: scenePhase) { if scenePhase == .active { applyAppearance() } }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             configuration = await service.refresh()
