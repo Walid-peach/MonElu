@@ -39,24 +39,6 @@ struct DeputiesSnapshotTests {
         checkSnapshot(DeputyRowView(deputy: deputy("PA1008")).padding(16), variant)
     }
 
-    @Test(arguments: Variant.all)
-    func deputiesList(_ variant: Variant) async throws {
-        let page = try await LiveDeputiesServiceTests.service().deputies(DeputyQuery())
-        // In a stack, as in the app: a NavigationLink outside one renders disabled.
-        checkSnapshot(
-            NavigationStack {
-                DeputiesList(deputies: page.items, isLoadingMore: false) {}
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        GroupFilter(groups: testGroups, selection: .constant(nil), selectedName: nil)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                    }
-            },
-            variant,
-            height: 560
-        )
-    }
-
     /// The header and scorecard, from the recorded responses. They hold no
     /// link, so they need no navigation stack, which has no size of its own.
     @Test(arguments: Variant.all)

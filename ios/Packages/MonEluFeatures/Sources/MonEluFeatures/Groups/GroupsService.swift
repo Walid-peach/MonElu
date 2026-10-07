@@ -5,6 +5,14 @@ import MonEluAPI
 public protocol GroupsService: Sendable {
     /// Nil for an unknown slug or a group with no sitting member (a 404).
     func group(slug: String) async throws -> GroupPage?
+    /// Every group with its seats today, largest first (`listGroups`, #488).
+    func groups() async throws -> [GroupSeats]
+}
+
+extension GroupsService {
+    /// A stub that does not answer this fails it, and Explorer leaves the
+    /// groups out.
+    public func groups() async throws -> [GroupSeats] { throw URLError(.unsupportedURL) }
 }
 
 /// `GroupsService` on the generated client (`getGroup`).
@@ -20,6 +28,12 @@ public struct LiveGroupsService: GroupsService {
         // A 404 is not in the spec, so the client reports it as undocumented.
         if case .undocumented(statusCode: 404, _) = response { return nil }
         return GroupPage(try response.ok.body.json)
+    }
+
+    public func groups() async throws -> [GroupSeats] {
+        try await client.listGroups().ok.body.json.items.map {
+            GroupSeats(slug: $0.slug, name: $0.name, short: $0.partyShort, seats: $0.seatCount)
+        }
     }
 }
 

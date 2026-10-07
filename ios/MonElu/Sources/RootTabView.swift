@@ -39,8 +39,7 @@ struct RootTabView: View {
 
     /// Each root screen carries a `screen.<name>` accessibility id Maestro
     /// flows assert after tapping a tab: the tab bar shows every label all the
-    /// time, so a label alone cannot prove the screen changed. Explorer's are
-    /// its lists' (`screen.votes`, `screen.deputies`).
+    /// time, so a label alone cannot prove the screen changed.
     @ViewBuilder
     private func root(for tab: AppTab) -> some View {
         switch tab {
@@ -50,7 +49,10 @@ struct RootTabView: View {
                 agenda: services.agenda, store: services.followedDeputy
             )
         case .explore:
-            ExploreScreen(votes: services.votes, deputies: services.deputies)
+            ExploreScreen(
+                deputies: services.deputies, lois: services.lois, groups: services.groups,
+                followedDeputyID: services.followedDeputy.deputyID
+            )
         case .quiz:
             QuizScreen(service: services.quiz)
         case .ask:

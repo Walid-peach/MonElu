@@ -77,6 +77,12 @@ struct MonEluFormatTests {
     }
 
     /// 2026-10-05T14:00:00Z is 16 h in Paris (summer time).
+    @Test func fullDayUsesTheFrenchOrdinal() {
+        // 2026-10-01T00:00:00Z and 2026-10-05T00:00:00Z, both in Paris that day.
+        #expect(MonEluFormat.fullDay(Date(timeIntervalSince1970: 1_790_812_800)) == "Jeudi 1er octobre 2026")
+        #expect(MonEluFormat.fullDay(Date(timeIntervalSince1970: 1_791_158_400)) == "Lundi 5 octobre 2026")
+    }
+
     @Test func shortSittingFitsACard() {
         #expect(MonEluFormat.shortSitting(Date(timeIntervalSince1970: 1_791_208_800)) == "Lun. 5 oct. · 16 h")
     }

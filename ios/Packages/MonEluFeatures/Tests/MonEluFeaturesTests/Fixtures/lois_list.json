@@ -1,0 +1,49 @@
+{
+    "total": 71,
+    "limit": 3,
+    "offset": 0,
+    "items": [
+        {
+            "dossier_uid": "DLR5L17N54776",
+            "titre": "Apporter une r\u00e9ponse int\u00e9grale au ph\u00e9nom\u00e8ne des violences sexuelles et sexistes contre les femmes et les enfants",
+            "status": "en_commission",
+            "status_label": null,
+            "current_stage": "AN1",
+            "parcours_start": "2026-08-11",
+            "parcours_end": "2026-10-09",
+            "last_scrutin_at": "2026-10-05T00:00:00Z",
+            "scrutin_count": 101,
+            "headline_scrutin_count": 0,
+            "theme": "Justice & S\u00e9curit\u00e9",
+            "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N54776"
+        },
+        {
+            "dossier_uid": "DLR5L17N52746",
+            "titre": "Moderniser la gestion du patrimoine immobilier de l'\u00c9tat",
+            "status": "promulguee",
+            "status_label": "adopt\u00e9e, dans les conditions pr\u00e9vues \u00e0 l'article 45, alin\u00e9a 3, de la Constitution",
+            "current_stage": "PROM",
+            "parcours_start": "2025-09-16",
+            "parcours_end": "2026-08-18",
+            "last_scrutin_at": "2026-07-21T00:00:00Z",
+            "scrutin_count": 1,
+            "headline_scrutin_count": 1,
+            "theme": "Institutions",
+            "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N52746"
+        },
+        {
+            "dossier_uid": "DLR5L17N53187",
+            "titre": "Prot\u00e9ger les mineurs des risques auxquels les expose l\u2019utilisation des r\u00e9seaux sociaux",
+            "status": "promulguee",
+            "status_label": "Accord",
+            "current_stage": "PROM",
+            "parcours_start": "2025-11-18",
+            "parcours_end": "2026-08-24",
+            "last_scrutin_at": "2026-07-21T00:00:00Z",
+            "scrutin_count": 1,
+            "headline_scrutin_count": 1,
+            "theme": "Sant\u00e9 & Social",
+            "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N53187"
+        }
+    ]
+}

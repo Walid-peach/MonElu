@@ -69,7 +69,7 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 |--------|----------|-----|-------------|
 | GET | `/` | - | Redirects to the Next.js frontend |
 | GET | `/health` | - | API status, live record counts, last ingestion, dbt mart row counts, RAG staging-table orphan check, cached Groq key and model probe |
-| GET | `/deputies` | 30 | List deputies (`search`, `department` filters) |
+| GET | `/deputies` | 30 | List deputies (`search`, `department`, `party`, `active` filters) |
 | GET | `/deputies/stats` | 30 | Aggregate counts by party, department, mandate status |
 | GET | `/deputies/{id}` | 30 | Deputy profile |
 | GET | `/deputies/{id}/votes` | 30 | A deputy's voting record |
@@ -84,6 +84,7 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | GET | `/lois/{dossier_uid}` | 30 | One bill's acte parcours with headline scrutins attached and amendment counts per acte (#369) |
 | GET | `/lois/{dossier_uid}/amendements` | 30 | A bill's amendment and article scrutins on demand, optional `acte_uid` filter (#369) |
 | GET | `/departments/{code}` | 30 | Department page data - deputies, aggregates, split votes (MON-107) |
+| GET | `/groups` | 30 | Every parliamentary group with its current seat count, largest first |
 | GET | `/groups/{slug}` | 30 | Parliamentary group page data - members, dissidence, divided votes (ADR-026) |
 | GET | `/themes/{slug}` | 30 | Theme hub - per-theme stats, party positioning, vote list (MON-106) |
 | GET | `/agenda` | 30 | Upcoming séance publique items grouped by day, `from`/`to` window (MON-212, ADR-030) |
@@ -294,6 +295,7 @@ A full dbt project (`transform/`) sits between raw ingestion and the FastAPI lay
 | `GET /deputies/{id}/alignment` · `/dissident-votes` | `analytics_marts.mart_party_alignment` |
 | `GET /votes` · `GET /votes/latest` | `analytics_marts.mart_vote_summary` |
 | `GET /votes/{id}` | `analytics_marts.mart_vote_summary` + raw `vote_positions` |
+| `GET /groups` | raw `deputies` |
 | `GET /groups/{slug}` | `mart_deputy_scorecard` + `mart_party_alignment` + raw `vote_positions` |
 | `GET /departments/{code}` | Raw tables, plus the marts for the highlight rates on a dedicated connection - falls back to raw-only when the marts are absent |
 | `GET /themes/{slug}` | Raw tables only - no mart dependency |
@@ -452,7 +454,7 @@ design.
 | `routers/deputies.py` | Deputy list, profile, scorecard, alignment, dissident/diverging votes, CSV exports |
 | `routers/votes.py` | Vote list, latest, detail, positions CSV |
 | `routers/departments.py` | `GET /departments/{code}` - department page data (MON-107) |
-| `routers/groups.py` | `GET /groups/{slug}` - parliamentary group page data (ADR-026) |
+| `routers/groups.py` | `GET /groups` - the groups and their seat counts; `GET /groups/{slug}` - parliamentary group page data (ADR-026) |
 | `routers/themes.py` | `GET /themes/{slug}` - theme hub pages (MON-106) |
 | `routers/search.py` | `POST /search/` - RAG query, plus chat share snapshots (ADR-024) |
 | `routers/verify.py` | `POST /verify/` + `GET /verify/{id}` - fact-check verdicts (ADR-022) |

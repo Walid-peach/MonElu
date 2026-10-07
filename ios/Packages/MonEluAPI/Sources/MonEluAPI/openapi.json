@@ -12,7 +12,7 @@
           "Deputies"
         ],
         "summary": "List deputies, with name / department / party filters",
-        "description": "The roster of the 17th legislature: 577 seats, past and present holders.\n\nUse this to resolve a person's name to the `deputy_id` every other deputy\nendpoint takes. `search` matches anywhere in the full name and is\naccent-sensitive, so pass the name as the Assemblée spells it.\n\n`department` and `party` want the full stored label, not a code or an\nabbreviation: `\"Rassemblement National\"`, not `\"RN\"`; `\"Nord\"`, not `\"59\"`.\n`party_short` in the response is the abbreviation.\n\nIncludes deputies whose mandate has ended (`mandate_end` is set); there is no\nfilter for current holders, so drop them client-side when you want today's\nAssemblée. `offset` is capped at 2000.",
+        "description": "The roster of the 17th legislature: 577 seats, past and present holders.\n\nUse this to resolve a person's name to the `deputy_id` every other deputy\nendpoint takes. `search` matches anywhere in the full name and is\naccent-sensitive, so pass the name as the Assemblée spells it.\n\n`department` and `party` want the full stored label, not a code or an\nabbreviation: `\"Rassemblement National\"`, not `\"RN\"`; `\"Nord\"`, not `\"59\"`.\n`party_short` in the response is the abbreviation.\n\nIncludes deputies whose mandate has ended (`mandate_end` is set) unless\n`active=true`, which keeps today's Assemblée only (`total` is then the\nnumber of seats filled). `offset` is capped at 2000.",
         "operationId": "listDeputies",
         "parameters": [
           {
@@ -71,6 +71,17 @@
               "title": "Party"
             },
             "description": "Exact match on party name (e.g. 'Rassemblement National')"
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "true: only deputies whose mandate is current; false: only ended mandates; omitted: both",
+              "title": "Active",
+              "type": "boolean"
+            },
+            "description": "true: only deputies whose mandate is current; false: only ended mandates; omitted: both"
           }
         ],
         "responses": {
@@ -590,6 +601,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/groups": {
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Every parliamentary group with its current seat count",
+        "description": "The 12 groups of the Assemblée, largest first, with the slug `GET /groups/{slug}` takes.\n\n`seat_count` counts **current** deputies only (`mandate_end` not set), so\nthe counts add up to the seats filled today, at most 577. A group with no\nsitting member is left out, as `GET /groups/{slug}` answers 404 for it.\n`non-inscrits` is listed like the others but is not a group in any political\nsense: its members belong to none.",
+        "operationId": "listGroups",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupListResponse"
                 }
               }
             }
@@ -3453,6 +3486,60 @@
         ],
         "title": "DeputyDivergingVotesResponse"
       },
+      "DeputyListItem": {
+        "properties": {
+          "deputy_id": {
+            "type": "string",
+            "title": "Deputy Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "party": {
+            "title": "Party",
+            "type": "string"
+          },
+          "party_short": {
+            "title": "Party Short",
+            "type": "string"
+          },
+          "department": {
+            "title": "Department",
+            "type": "string"
+          },
+          "circonscription": {
+            "title": "Circonscription",
+            "type": "string"
+          },
+          "photo_url": {
+            "title": "Photo Url",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "description": "Surname as the Assemblée files it; the list's sort key",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deputy_id",
+          "full_name"
+        ],
+        "title": "DeputyListItem",
+        "description": "A deputy in `GET /deputies`, with the surname the list is sorted by.",
+        "example": {
+          "circonscription": "10",
+          "department": "Val-de-Marne",
+          "deputy_id": "PA720892",
+          "full_name": "Mathilde Panot",
+          "last_name": "Panot",
+          "party": "La France insoumise - Nouveau Front Populaire",
+          "party_short": "LFI",
+          "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720892.jpg"
+        }
+      },
       "DeputyListResponse": {
         "properties": {
           "total": {
@@ -3469,7 +3556,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/DeputySummary"
+              "$ref": "#/components/schemas/DeputyListItem"
             },
             "type": "array",
             "title": "Items"
@@ -3490,6 +3577,7 @@
               "department": "Val-de-Marne",
               "deputy_id": "PA720892",
               "full_name": "Mathilde Panot",
+              "last_name": "Panot",
               "party": "La France insoumise - Nouveau Front Populaire",
               "party_short": "LFI",
               "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720892.jpg"
@@ -3832,54 +3920,6 @@
           "avg_voting_days_rate": 0.5553
         }
       },
-      "DeputySummary": {
-        "properties": {
-          "deputy_id": {
-            "type": "string",
-            "title": "Deputy Id"
-          },
-          "full_name": {
-            "type": "string",
-            "title": "Full Name"
-          },
-          "party": {
-            "title": "Party",
-            "type": "string"
-          },
-          "party_short": {
-            "title": "Party Short",
-            "type": "string"
-          },
-          "department": {
-            "title": "Department",
-            "type": "string"
-          },
-          "circonscription": {
-            "title": "Circonscription",
-            "type": "string"
-          },
-          "photo_url": {
-            "title": "Photo Url",
-            "type": "string"
-          }
-        },
-        "type": "object",
-        "required": [
-          "deputy_id",
-          "full_name"
-        ],
-        "title": "DeputySummary",
-        "description": "Lightweight deputy — used in list responses.",
-        "example": {
-          "circonscription": "10",
-          "department": "Val-de-Marne",
-          "deputy_id": "PA720892",
-          "full_name": "Mathilde Panot",
-          "party": "La France insoumise - Nouveau Front Populaire",
-          "party_short": "LFI",
-          "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720892.jpg"
-        }
-      },
       "DeputyVoteItem": {
         "properties": {
           "vote_id": {
@@ -4159,6 +4199,38 @@
         ],
         "title": "GroupDetail"
       },
+      "GroupListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GroupSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "GroupListResponse",
+        "example": {
+          "items": [
+            {
+              "name": "Rassemblement National",
+              "party_short": "RN",
+              "seat_count": 123,
+              "slug": "rassemblement-national"
+            },
+            {
+              "name": "Ensemble pour la République",
+              "party_short": "EPR",
+              "seat_count": 91,
+              "slug": "ensemble-pour-la-republique"
+            }
+          ]
+        }
+      },
       "GroupMember": {
         "properties": {
           "deputy_id": {
@@ -4216,6 +4288,36 @@
           "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720892.jpg",
           "presence_rate": 0.954
         }
+      },
+      "GroupSummary": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "party_short": {
+            "title": "Party Short",
+            "description": "The group's abbreviation, e.g. `RN`",
+            "type": "string"
+          },
+          "seat_count": {
+            "type": "integer",
+            "title": "Seat Count",
+            "description": "Deputies sitting in the group today (mandate not ended)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "name",
+          "seat_count"
+        ],
+        "title": "GroupSummary",
+        "description": "One parliamentary group and how many seats it holds today."
       },
       "GroupVoteBreakdown": {
         "properties": {
