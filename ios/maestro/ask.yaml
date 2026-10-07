@@ -1,4 +1,5 @@
-# Demander tab (#464): a question gets an answer with its sources.
+# Demander tab (#464, #493): the fact-check mode, then a question gets an
+# answer with its sources.
 # It asks the production API, so it stops there: verify, share and feedback
 # each store a row in production, and are covered by snapshot and unit tests
 # instead. Asserts on fixed labels, not on the answer's wording.
@@ -15,6 +16,15 @@ appId: ${APP_ID}
     visible: "Posez une question sur vos élus"
     timeout: 10000
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-ask-intro
+
+# The fact-check mode, reachable directly; no claim is sent (verify stores
+# a verdict in production).
+- tapOn: "Vérifier une affirmation"
+- extendedWaitUntil:
+    visible: "Vérifiez une affirmation"
+    timeout: 5000
+- takeScreenshot: ${SCREENSHOT_PREFIX}1b-ask-claim-mode
+- tapOn: "Question"
 
 - tapOn: "Posez une question sur vos élus…"
 - inputText: "Quels textes sur la protection des enfants ont ete votes ?"

@@ -54,6 +54,68 @@ let allOn = AppConfiguration.Features(chat: true, verify: true)
 
 @MainActor
 struct AskModelTests {
+    /// A failed claim offers "Réessayer" only while verification is on, and
+    /// a claim over 500 characters cannot be sent.
+    @Test func retryAndLengthFollowVerify() {
+        let model = AskModel(service: RecordingAskService(answer: .failure(URLError(.badServerResponse))), features: allOn)
+        let claim = ChatExchange(id: 1, question: "Alain David a voté contre la loi", isClaim: true)
+        #expect(model.canRetry(claim))
+        model.features = .init(chat: true, verify: false)
+        #expect(model.canRetry(claim) == false)
+        #expect(model.canRetry(ChatExchange(id: 2, question: "Qui est mon député ?")))
+        model.features = allOn
+        model.mode = .claim
+        model.draft = String(repeating: "a", count: 501)
+        #expect(model.canSend == false)
+    }
+
+    /// "Vérifier une affirmation" sends the draft to `verify` directly, never
+    /// to `search`, within the bounds `verify` accepts.
+    @Test func claimModeVerifiesDirectly() async throws {
+        let service = RecordingAskService(answer: .failure(URLError(.badServerResponse)))
+        service.verdict = .success(try await AskFixtures.service().verify("x"))
+        let model = AskModel(service: service, features: allOn)
+        model.mode = .claim
+        model.draft = "Trop bref"
+        #expect(model.canSend == false)
+        model.draft = "Alain David a voté contre la loi sur la protection des enfants"
+        await model.send()
+        #expect(service.questions.isEmpty)
+        #expect(service.claims == ["Alain David a voté contre la loi sur la protection des enfants"])
+        let exchange = try #require(model.exchanges.first)
+        #expect(exchange.isClaim)
+        guard case .done = exchange.verification else { Issue.record("no verdict"); return }
+    }
+
+    /// With verification switched off, the mode falls back to a question.
+    @Test func claimModeNeedsVerification() async {
+        let service = RecordingAskService(answer: .failure(URLError(.badServerResponse)))
+        let model = AskModel(service: service, features: .init(chat: true, verify: false))
+        model.mode = .claim
+        #expect(model.effectiveMode == .question)
+        model.draft = "Qui est mon député ?"
+        await model.send()
+        #expect(service.claims.isEmpty)
+        #expect(service.questions == ["Qui est mon député ?"])
+    }
+
+    /// A failed claim is sent again by "Réessayer"; a new conversation empties
+    /// the thread.
+    @Test func aFailedClaimCanBeRetriedAndTheThreadCleared() async throws {
+        let service = RecordingAskService(answer: .failure(URLError(.badServerResponse)))
+        let model = AskModel(service: service, features: allOn)
+        model.mode = .claim
+        model.draft = "Alain David a voté contre la loi sur la protection des enfants"
+        await model.send()
+        let id = try #require(model.exchanges.first?.id)
+        service.verdict = .success(try await AskFixtures.service().verify("x"))
+        await model.retry(id)
+        #expect(service.claims.count == 2)
+        guard case .done = model.exchanges.first?.verification else { Issue.record("no verdict"); return }
+        model.clear()
+        #expect(model.exchanges.isEmpty)
+    }
+
     /// ADR-023: the nudge shows for a claim, and `verify` runs only when tapped.
     @Test func aClaimShowsTheNudgeAndVerifiesOnlyWhenTapped() async throws {
         let service = RecordingAskService(answer: .success(try await AskFixtures.claimAnswer()))

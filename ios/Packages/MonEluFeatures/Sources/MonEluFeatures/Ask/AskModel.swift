@@ -22,6 +22,9 @@ public enum AskFailure: Equatable, Sendable {
 /// One question and everything that followed it.
 public struct ChatExchange: Identifiable, Sendable {
     public enum Answer: Sendable {
+        /// A claim sent in "Vérifier une affirmation": no answer is asked
+        /// for, only the verdict.
+        case notAsked
         case pending
         case answered(ChatAnswer)
         case failed(AskFailure)
@@ -41,15 +44,19 @@ public struct ChatExchange: Identifiable, Sendable {
 
     public let id: Int
     public let question: String
+    /// Sent as a claim to verify rather than a question to answer.
+    public let isClaim: Bool
     public internal(set) var answer: Answer = .pending
     public internal(set) var verification: Verification = .none
     public internal(set) var feedback: Feedback = .none
     public internal(set) var isSharing = false
     public internal(set) var shareFailed = false
 
-    public init(id: Int, question: String) {
+    public init(id: Int, question: String, isClaim: Bool = false) {
         self.id = id
         self.question = question
+        self.isClaim = isClaim
+        if isClaim { answer = .notAsked }
     }
 
     var answered: ChatAnswer? {
@@ -71,7 +78,29 @@ public final class AskModel {
     /// The `search` input bounds.
     public static let questionLength = 5...500
 
+    /// What the composer sends: a question to answer, or a claim to verify
+    /// directly (ADR-023), without waiting for the nudge.
+    public enum Mode: String, CaseIterable, Sendable {
+        case question, claim
+
+        public var title: String {
+            switch self {
+            case .question: "Question"
+            case .claim: "Vérifier une affirmation"
+            }
+        }
+
+        /// What fits a segment at large text sizes.
+        public var shortTitle: String {
+            switch self {
+            case .question: "Question"
+            case .claim: "Vérifier"
+            }
+        }
+    }
+
     public var draft = ""
+    public var mode: Mode = .question
     public private(set) var exchanges: [ChatExchange] = []
     /// Set when the API returned a share URL; the share sheet presents it.
     public var sharedLink: SharedLink?
@@ -95,8 +124,16 @@ public final class AskModel {
     }
 
     public var canSend: Bool {
-        features.chat && !isWaiting && Self.questionLength.contains(trimmedDraft.count)
+        guard features.chat, !isWaiting else { return false }
+        switch effectiveMode {
+        case .question: return Self.questionLength.contains(trimmedDraft.count)
+        case .claim: return ChatAnswer.claimLength.contains(trimmedDraft.count)
+        }
     }
+
+    /// The mode in force: "Vérifier" falls back to a question while
+    /// verification is switched off (`/app/config`).
+    public var effectiveMode: Mode { features.verify ? mode : .question }
 
     private var trimmedDraft: String { draft.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -104,17 +141,39 @@ public final class AskModel {
     /// screen shows why instead of an input.
     public func send() async {
         guard canSend else { return }
-        let question = trimmedDraft
+        let text = trimmedDraft
+        let isClaim = effectiveMode == .claim
         draft = ""
         nextID += 1
-        exchanges.append(ChatExchange(id: nextID, question: question))
-        await answer(nextID)
+        exchanges.append(ChatExchange(id: nextID, question: text, isClaim: isClaim))
+        if isClaim {
+            await runVerification(nextID)
+        } else {
+            await answer(nextID)
+        }
     }
 
     public func retry(_ id: Int) async {
-        guard features.chat, let index = index(id), case .failed = exchanges[index].answer else { return }
+        guard features.chat, let index = index(id) else { return }
+        if exchanges[index].isClaim {
+            guard features.verify, case .failed = exchanges[index].verification else { return }
+            await runVerification(id)
+            return
+        }
+        guard case .failed = exchanges[index].answer else { return }
         exchanges[index].answer = .pending
         await answer(id)
+    }
+
+    /// Whether "Réessayer" can run for this exchange now.
+    public func canRetry(_ exchange: ChatExchange) -> Bool {
+        features.chat && (!exchange.isClaim || features.verify)
+    }
+
+    /// Starts a new conversation; not while a request is under way.
+    public func clear() {
+        guard !isWaiting else { return }
+        exchanges = []
     }
 
     /// Whether to offer verifying this exchange's question (ADR-023): the
@@ -130,9 +189,15 @@ public final class AskModel {
     /// Runs `verify` on the exchange's question. Only ever called from the
     /// nudge the user tapped.
     public func verify(_ id: Int) async {
-        guard let index = index(id), offersVerification(exchanges[index]),
-              let claim = exchanges[index].answered?.question
-        else { return }
+        guard let index = index(id), offersVerification(exchanges[index]) else { return }
+        await runVerification(id)
+    }
+
+    /// Runs `verify` on the exchange's text: a claim the user sent as one, or
+    /// a question whose nudge they tapped.
+    private func runVerification(_ id: Int) async {
+        guard let index = index(id) else { return }
+        let claim = exchanges[index].question
         exchanges[index].verification = .pending
         let result: ChatExchange.Verification
         do {

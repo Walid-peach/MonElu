@@ -63,20 +63,29 @@ struct Pill: View {
     }
 }
 
-/// The question, on the trailing side as in a conversation.
+/// The question, or the claim to verify, on the trailing side as in a
+/// conversation.
 struct QuestionBubble: View {
     let text: String
+    var isClaim = false
 
     var body: some View {
-        Text(text)
+        Text(isClaim ? "« \(text) »" : text)
             .font(.body)
-            .foregroundStyle(Palette.textPrimary)
+            .foregroundStyle(Palette.onIdentity)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(12)
-            .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 18, bottomLeadingRadius: 18, bottomTrailingRadius: 4, topTrailingRadius: 18,
+                    style: .continuous
+                )
+                .fill(Palette.identityBackground)
+            )
             .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.leading, 40)
-            .accessibilityLabel("Votre question : \(text)")
+            .accessibilityLabel(isClaim ? "Affirmation à vérifier : \(text)" : "Votre question : \(text)")
     }
 }
 
@@ -93,52 +102,71 @@ struct AnswerCard: View {
     let onFeedback: (ChatFeedback) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if let confidence = AskLabels.confidence(answer.confidence) {
-                Pill(
-                    text: confidence,
-                    foreground: answer.confidence == "low" ? Palette.negativeText
-                        : answer.confidence == "high" ? Palette.positiveText : Palette.textSecondary,
-                    background: answer.confidence == "low" ? Palette.negativeBackground
-                        : answer.confidence == "high" ? Palette.positiveBackground : Palette.trackBackground
-                )
-                .accessibilityHint("Reflète la qualité des sources retrouvées, pas l'avis du modèle.")
-            }
-            ChatMarkdownView(text: answer.answer)
-            if let caveat = answer.caveat, !caveat.isEmpty {
-                CaveatNote(caveat)
-            }
-            if !answer.sources.isEmpty {
-                SourcesSection(sources: Array(answer.sources.prefix(3)))
-            }
-            if offersVerification {
-                Button(action: onVerify) {
-                    Label("Cela ressemble à une affirmation : la vérifier contre les scrutins officiels ?",
-                          systemImage: "checkmark.shield")
-                        .font(.subheadline.weight(.semibold))
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .foregroundStyle(Palette.positiveText)
-                        .background(Palette.positiveBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        Card {
+            VStack(alignment: .leading, spacing: 14) {
+                ChatMarkdownView(text: answer.answer)
+                if let caveat = answer.caveat, !caveat.isEmpty {
+                    CaveatNote(caveat)
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ask.verify-nudge")
+                if !answer.sources.isEmpty {
+                    SourcesSection(sources: Array(answer.sources.prefix(3)))
+                }
+                if offersVerification {
+                    Button(action: onVerify) {
+                        Label("Cela ressemble à une affirmation : la vérifier contre les scrutins officiels ?",
+                              systemImage: "checkmark.shield")
+                            .font(.subheadline.weight(.semibold))
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .foregroundStyle(Palette.positiveText)
+                            .background(Palette.positiveBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("ask.verify-nudge")
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Divider().overlay(Palette.border)
+                    confidence
+                    actions
+                }
             }
-            actions
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The confidence badge with what it means: the quality of the sources
+    /// found, not the model's opinion.
+    @ViewBuilder private var confidence: some View {
+        if let label = AskLabels.confidence(answer.confidence) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { confidencePill(label); confidenceNote }
+                VStack(alignment: .leading, spacing: 4) { confidencePill(label); confidenceNote }
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    private func confidencePill(_ label: String) -> some View {
+        Pill(
+            text: label,
+            foreground: answer.confidence == "low" ? Palette.negativeText
+                : answer.confidence == "high" ? Palette.positiveText : Palette.textSecondary,
+            background: answer.confidence == "low" ? Palette.negativeBackground
+                : answer.confidence == "high" ? Palette.positiveBackground : Palette.trackBackground
+        )
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var confidenceNote: some View {
+        Text("Reflète la qualité des sources retrouvées, pas l'avis du modèle.")
+            .font(.caption)
+            .foregroundStyle(Palette.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var actions: some View {
-        HStack(spacing: 16) {
-            Button(action: onShare) {
-                Label(shareFailed ? "Erreur, réessayez" : "Partager", systemImage: "square.and.arrow.up")
-            }
-            .disabled(isSharing)
-            .accessibilityIdentifier("ask.share")
-            Spacer(minLength: 0)
+        HStack(spacing: 4) {
             switch feedback {
             case .sent:
                 Text("Merci pour votre retour !")
@@ -146,18 +174,33 @@ struct AnswerCard: View {
             case .sending:
                 ProgressView().tint(Palette.accent)
             case .none, .failed:
+                Button { onFeedback(.up) } label: {
+                    Image(systemName: "hand.thumbsup").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Réponse utile")
+                Button { onFeedback(.down) } label: {
+                    Image(systemName: "hand.thumbsdown").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Réponse pas utile")
                 if feedback == .failed {
                     Text("Échec de l'envoi")
                         .foregroundStyle(Palette.textSecondary)
                 }
-                Button { onFeedback(.up) } label: { Image(systemName: "hand.thumbsup") }
-                    .accessibilityLabel("Réponse utile")
-                Button { onFeedback(.down) } label: { Image(systemName: "hand.thumbsdown") }
-                    .accessibilityLabel("Réponse pas utile")
             }
+            Spacer(minLength: 0)
+            Button(action: onShare) {
+                if shareFailed {
+                    Label("Erreur, réessayez", systemImage: "square.and.arrow.up")
+                } else {
+                    Image(systemName: "square.and.arrow.up").frame(width: 44, height: 44)
+                }
+            }
+            .disabled(isSharing)
+            .accessibilityLabel(shareFailed ? "Erreur, réessayez" : "Partager")
+            .accessibilityIdentifier("ask.share")
         }
         .font(.subheadline)
-        .tint(Palette.accent)
+        .tint(Palette.textSecondary)
     }
 }
 
@@ -168,8 +211,8 @@ struct SourcesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Sources")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Palette.textMuted)
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Palette.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             ForEach(sources) { source in
                 if let route = source.route {
@@ -229,24 +272,20 @@ private struct SourceRow: View {
     }
 }
 
-/// A verdict: what was checked, the result, why, and the scrutins it rests on.
+/// A verdict: the result as icon, word and color (never color alone), the
+/// claim checked, why, the scrutins it rests on, and its share link.
 struct VerdictCard: View {
     let verdict: Verdict
 
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Pill(text: AskLabels.verdict(verdict.verdict), foreground: foreground, background: background)
-                    Spacer(minLength: 0)
-                    if let url = verdict.shareURL {
-                        ShareLink(item: url) { Image(systemName: "square.and.arrow.up") }
-                            .tint(Palette.accent)
-                            .accessibilityLabel("Partager ce verdict")
-                    }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) { badge; checkedLine }
+                    VStack(alignment: .leading, spacing: 6) { badge; checkedLine }
                 }
                 Text("« \(verdict.claim) »")
-                    .font(.subheadline.italic())
+                    .font(Typography.heading(.title3).italic())
                     .foregroundStyle(Palette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let id = verdict.deputyID, let name = verdict.deputyName {
@@ -266,8 +305,9 @@ struct VerdictCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if !verdict.citations.isEmpty {
                     Text("Scrutins cités")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Palette.textMuted)
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(Palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
                     ForEach(verdict.citations) { citation in
                         NavigationLink(value: AppRoute.vote(id: citation.voteID)) {
                             CitationRow(citation: citation)
@@ -278,9 +318,49 @@ struct VerdictCard: View {
                 Text(AskLabels.verdictConfidence(verdict.confidence))
                     .font(.footnote)
                     .foregroundStyle(Palette.textSecondary)
+                if let url = verdict.shareURL {
+                    ShareLink(item: url) {
+                        Label("Partager ce verdict", systemImage: "square.and.arrow.up")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Palette.textPrimary)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .strokeBorder(Palette.border, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("ask.share-verdict")
+                }
             }
         }
         .accessibilityIdentifier("ask.verdict")
+    }
+
+    private var badge: some View {
+        Label(AskLabels.verdict(verdict.verdict), systemImage: icon)
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(background, in: Capsule())
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var checkedLine: some View {
+        Text("Vérifié contre les scrutins officiels")
+            .font(.caption)
+            .foregroundStyle(Palette.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var icon: String {
+        switch verdict.verdict {
+        case "vrai": "checkmark.shield"
+        case "faux": "xmark.shield"
+        case "trompeur": "exclamationmark.shield"
+        default: "questionmark.diamond"
+        }
     }
 
     private var foreground: Color {
@@ -305,28 +385,35 @@ private struct CitationRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                if let result = citation.result {
+                    VoteResultBadge(result: result)
+                }
+                if let date = citation.date {
+                    Text(MonEluFormat.shortDay(date))
+                        .font(.caption)
+                        .foregroundStyle(Palette.textSecondary)
+                }
+            }
             Text(citation.title.capitalizingFirstLetter)
                 .font(.subheadline)
                 .foregroundStyle(Palette.textPrimary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 8) {
-                if let position = citation.deputyPosition {
-                    VotePositionBadge(position: position)
-                }
-                if let result = citation.result {
-                    VoteResultBadge(result: result)
-                }
-                if let date = citation.date {
-                    Text(MonEluFormat.day(date))
+            if let position = citation.deputyPosition {
+                HStack(spacing: 6) {
+                    Text("Son vote :")
                         .font(.caption)
                         .foregroundStyle(Palette.textSecondary)
+                    VotePositionBadge(position: position)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(Palette.pageBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 }
@@ -336,6 +423,7 @@ private struct CitationRow: View {
 struct ExchangeView: View {
     let exchange: ChatExchange
     let offersVerification: Bool
+    var canRetry = true
     let onRetry: () -> Void
     let onVerify: () -> Void
     let onShare: () -> Void
@@ -343,12 +431,14 @@ struct ExchangeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            QuestionBubble(text: exchange.question)
+            QuestionBubble(text: exchange.question, isClaim: exchange.isClaim)
             switch exchange.answer {
+            case .notAsked:
+                EmptyView()
             case .pending:
                 Waiting(text: "Recherche dans les votes et profils des députés…")
             case .failed(let failure):
-                FailureLine(text: AskLabels.failure(failure), actionTitle: "Réessayer", action: onRetry)
+                FailureLine(text: AskLabels.failure(failure), actionTitle: canRetry ? "Réessayer" : nil, action: onRetry)
             case .answered(let answer):
                 AnswerCard(
                     answer: answer, offersVerification: offersVerification, feedback: exchange.feedback,
@@ -364,7 +454,12 @@ struct ExchangeView: View {
             case .done(let verdict):
                 VerdictCard(verdict: verdict)
             case .failed(let failure):
-                FailureLine(text: AskLabels.failure(failure, verifying: true), actionTitle: nil, action: {})
+                // A claim sent as one can be sent again; after the nudge,
+                // the nudge itself offers it again.
+                FailureLine(
+                    text: AskLabels.failure(failure, verifying: true),
+                    actionTitle: exchange.isClaim && canRetry ? "Réessayer" : nil, action: onRetry
+                )
             }
         }
     }
@@ -404,19 +499,39 @@ private struct FailureLine: View {
     }
 }
 
-/// What the tab says before the first question.
+/// What the tab says before the first question, in each mode.
 struct AskIntro: View {
+    var mode: AskModel.Mode = .question
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Posez une question sur vos élus")
+            Text(mode == .claim ? "Vérifiez une affirmation" : "Posez une question sur vos élus")
                 .font(Typography.heading(.title2))
                 .foregroundStyle(Palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text("Les réponses s'appuient sur les votes et les profils des députés, avec leurs sources. Une affirmation peut ensuite être vérifiée contre les scrutins officiels.")
+            Text(mode == .claim
+                ? "Collez une phrase sur le vote d'un député : elle est comparée aux scrutins officiels et à la position qu'il y a enregistrée."
+                : "Les réponses s'appuient sur les votes et les profils des députés, avec leurs sources. Une affirmation peut ensuite être vérifiée contre les scrutins officiels.")
                 .font(.subheadline)
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if mode == .claim {
+                Label(
+                    "Les verdicts possibles : \(["vrai", "faux", "trompeur", "inverifiable"].map { AskLabels.verdict($0).lowercased() }.joined(separator: ", ")).",
+                    systemImage: "checkmark.shield"
+                )
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Palette.border, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    )
+                    .padding(.top, 4)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
