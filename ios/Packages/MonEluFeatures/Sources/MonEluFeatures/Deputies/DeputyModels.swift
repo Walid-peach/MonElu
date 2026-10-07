@@ -165,10 +165,60 @@ public struct DeputyProfilePage: Hashable, Sendable {
     public let profile: DeputyProfile
     public let scorecard: DeputyScorecard?
     public let recentVotes: [DeputyVote]?
+    /// Nil when the alignment failed to load; the section is left out.
+    public let alignment: DeputyAlignment?
 
-    public init(profile: DeputyProfile, scorecard: DeputyScorecard?, recentVotes: [DeputyVote]?) {
+    public init(
+        profile: DeputyProfile, scorecard: DeputyScorecard?, recentVotes: [DeputyVote]?, alignment: DeputyAlignment? = nil
+    ) {
         self.profile = profile
         self.scorecard = scorecard
         self.recentVotes = recentVotes
+        self.alignment = alignment
+    }
+}
+
+/// How often a deputy votes with their group, as `getAlignment` computed it.
+public struct DeputyAlignment: Hashable, Sendable {
+    /// 0 to 1, over the deputy's expressed positions.
+    public let alignmentRate: Double
+    public let dissidentVotes: Int
+    public let totalVotes: Int
+
+    public init(alignmentRate: Double, dissidentVotes: Int, totalVotes: Int) {
+        self.alignmentRate = alignmentRate
+        self.dissidentVotes = dissidentVotes
+        self.totalVotes = totalVotes
+    }
+}
+
+/// A scrutin where the deputy voted against their group's majority.
+public struct DissidentVote: Identifiable, Hashable, Sendable {
+    public let id: String
+    public let title: String
+    public let date: Date?
+    public let result: String?
+    public let position: String
+    /// The group's plurality position, as the API computed it.
+    public let majorityPosition: String
+
+    public init(id: String, title: String, date: Date?, result: String?, position: String, majorityPosition: String) {
+        self.id = id
+        self.title = title
+        self.date = date
+        self.result = result
+        self.position = position
+        self.majorityPosition = majorityPosition
+    }
+}
+
+/// The dissident votes: how many in all, and the latest.
+public struct DissidentVotes: Hashable, Sendable {
+    public let total: Int
+    public let items: [DissidentVote]
+
+    public init(total: Int, items: [DissidentVote]) {
+        self.total = total
+        self.items = items
     }
 }

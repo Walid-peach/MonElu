@@ -11,7 +11,7 @@ struct RouteDestination: View {
     var body: some View {
         switch route {
         case .deputy(let id):
-            DeputyProfileScreen(id: id, service: services.deputies)
+            DeputyProfileScreen(id: id, service: services.deputies, followedDeputy: services.followedDeputy)
         case .vote(let id):
             VoteDetailScreen(id: id, service: services.votes, followedDeputyID: services.followedDeputy.deputyID)
         case .loi(let id):
@@ -26,6 +26,8 @@ struct RouteDestination: View {
             DepartmentScreen(code: code, service: services.departments)
         case .compare(let deputyID):
             CompareScreen(deputyID: deputyID, deputies: services.deputies, compare: services.compare)
+        case .dissidentVotes(let deputyID):
+            DissidentVotesScreen(deputyID: deputyID, service: services.deputies)
         case .agenda:
             AgendaScreen(service: services.agenda)
         }

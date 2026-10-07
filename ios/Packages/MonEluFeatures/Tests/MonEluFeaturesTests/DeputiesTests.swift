@@ -141,7 +141,19 @@ struct LiveDeputiesServiceTests {
             "getDeputy": try fixture("deputy"),
             "getScorecard": try fixture("deputy_scorecard"),
             "getDeputyVotes": try fixture("deputy_votes"),
+            "getAlignment": try fixture("deputy_alignment"),
+            "getDissidentVotes": try fixture("dissident_votes"),
         ]))
+    }
+
+    /// The profile page carries the alignment; the dissident votes list maps.
+    @Test func alignmentAndDissidentVotes() async throws {
+        let page = try await Self.service().profilePage(id: "PA1008")
+        let alignment = try #require(page.alignment)
+        #expect(alignment.alignmentRate > 0 && alignment.alignmentRate <= 1)
+        let dissident = try await Self.service().dissidentVotes(id: "PA1008")
+        #expect(dissident.items.count == 3)
+        #expect(dissident.items.allSatisfy { $0.position != $0.majorityPosition })
     }
 
     @Test func listMapsEveryDeputy() async throws {

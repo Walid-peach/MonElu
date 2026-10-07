@@ -14,6 +14,17 @@ public protocol DeputiesService: Sendable {
     func votes(id: String, since: Date) async throws -> [DeputyVote]
     /// The current deputies of a département, by INSEE code (`33`, `2A`).
     func departmentDeputies(code: String) async throws -> [DeputyItem]
+    /// How often the deputy votes with their group's majority.
+    func alignment(id: String) async throws -> DeputyAlignment
+    /// The scrutins where the deputy voted against their group's majority.
+    func dissidentVotes(id: String) async throws -> DissidentVotes
+}
+
+extension DeputiesService {
+    /// A stub that does not answer these fails them, and the profile
+    /// leaves the section out.
+    public func alignment(id: String) async throws -> DeputyAlignment { throw URLError(.unsupportedURL) }
+    public func dissidentVotes(id: String) async throws -> DissidentVotes { throw URLError(.unsupportedURL) }
 }
 
 /// The API has no deputy with this id (a 404 from `getDeputy`).
@@ -27,8 +38,9 @@ extension DeputiesService {
     public func profilePage(id: String) async throws -> DeputyProfilePage {
         async let scorecard = try? self.scorecard(id: id)
         async let votes = try? self.recentVotes(id: id)
+        async let alignment = try? self.alignment(id: id)
         let profile = try await profile(id: id)
-        return await DeputyProfilePage(profile: profile, scorecard: scorecard, recentVotes: votes)
+        return await DeputyProfilePage(profile: profile, scorecard: scorecard, recentVotes: votes, alignment: alignment)
     }
 }
 
@@ -98,6 +110,32 @@ public struct LiveDeputiesService: DeputiesService {
             path: .init(deputyId: id), query: .init(limit: Self.sinceVotesCount, since: since)
         )
         return try response.ok.body.json.items.map(DeputyVote.init)
+    }
+
+    public func alignment(id: String) async throws -> DeputyAlignment {
+        let alignment = try await client.getAlignment(path: .init(deputyId: id)).ok.body.json
+        return DeputyAlignment(
+            alignmentRate: alignment.partyAlignmentRate, dissidentVotes: alignment.dissidentVotes,
+            totalVotes: alignment.totalVotes
+        )
+    }
+
+    /// The API's ceiling for one call.
+    static let dissidentVotesCount = 50
+
+    public func dissidentVotes(id: String) async throws -> DissidentVotes {
+        let response = try await client.getDissidentVotes(
+            path: .init(deputyId: id), query: .init(limit: Self.dissidentVotesCount)
+        ).ok.body.json
+        return DissidentVotes(
+            total: response.total,
+            items: response.items.map {
+                DissidentVote(
+                    id: $0.voteId, title: $0.voteTitle, date: $0.votedAt, result: $0.result,
+                    position: $0.position, majorityPosition: $0.majorityPosition
+                )
+            }
+        )
     }
 
     public func departmentDeputies(code: String) async throws -> [DeputyItem] {

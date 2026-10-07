@@ -5,22 +5,21 @@ import SwiftUI
 // The pieces of a deputy's profile. Accueil (#463, #477) shows the same deputy,
 // so each section is its own view taking plain models.
 
-/// The deputy's group, opening its page when the bundled table knows it.
+/// The deputy's group as its chip, opening the group's page when the
+/// bundled table knows it.
 struct GroupLink: View {
     let name: String
+    let short: String?
 
     var body: some View {
-        let label = Text(name)
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(Palette.accent)
-            .fixedSize(horizontal: false, vertical: true)
+        let chip = PartyChip(name, short: short)
         if let slug = ReferenceData.groupSlug(named: name) {
-            NavigationLink(value: AppRoute.group(slug: slug)) { label }
+            NavigationLink(value: AppRoute.group(slug: slug)) { chip }
                 .buttonStyle(.plain)
                 .accessibilityHint("Ouvre la page du groupe")
                 .accessibilityIdentifier("deputy.group")
         } else {
-            label
+            chip
         }
     }
 }
@@ -51,40 +50,35 @@ struct ConstituencyLink: View {
 /// Portrait, name, group, constituency and mandate.
 struct DeputyHeader: View {
     let profile: DeputyProfile
-    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var deputy: DeputyItem { profile.deputy }
 
     var body: some View {
-        // Beside the text, the portrait would leave large text a column too
-        // narrow for "circonscription"; above it, the text has the full width.
-        let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-            : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
-        layout {
-            DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 88)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(deputy.name)
-                    .font(Typography.heading(.title2))
-                    .foregroundStyle(Palette.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader)
-                if let group = deputy.group {
-                    GroupLink(name: group)
-                }
-                if let constituency = deputy.constituency {
-                    ConstituencyLink(constituency: constituency, department: deputy.department)
-                }
-                if let mandate = Self.mandate(start: profile.mandateStart, end: profile.mandateEnd) {
-                    Text(mandate)
-                        .font(.footnote)
-                        .foregroundStyle(Palette.textMuted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+        VStack(spacing: 8) {
+            DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 96)
+            Text(deputy.name)
+                .font(Typography.heading(.title))
+                .foregroundStyle(Palette.textPrimary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            if let group = deputy.group {
+                GroupLink(name: group, short: deputy.groupShort)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            if let constituency = deputy.constituency {
+                ConstituencyLink(constituency: constituency, department: deputy.department)
+            }
+            if let mandate = Self.mandate(start: profile.mandateStart, end: profile.mandateEnd) {
+                Text(mandate)
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        // Contain, not combine: the group is a link VoiceOver must reach on its own.
+        .frame(maxWidth: .infinity)
+        // Contain, not combine: the group and département are links VoiceOver
+        // must reach on their own.
         .accessibilityElement(children: .contain)
     }
 
@@ -102,87 +96,57 @@ struct DeputyHeader: View {
 
 /// The deputy's voting figures. Every number is a field of the scorecard
 /// response, rates included: Swift only formats them (ADR-041 §4).
+/// Scrutins solennels come first, before raw presence (design A), and the
+/// presence notes always show with the presence figure.
 struct DeputyScorecardSection: View {
     let scorecard: DeputyScorecard
     let configuration: AppConfiguration
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionHeader("Activité en séance")
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 10) { rateCards }
-                VStack(spacing: 10) { rateCards }
-            }
-            Card {
-                VStack(alignment: .leading, spacing: 10) {
-                    RateFigure(
-                        rate: scorecard.presenceRate,
-                        title: "Présence aux scrutins",
-                        detail: "\(MonEluFormat.count(scorecard.totalVotes)) scrutins avec une position enregistrée"
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 10) {
+                SectionHeader("Activité en séance")
+                StatTileGrid {
+                    StatTile(
+                        value: MonEluFormat.percent(scorecard.solennelParticipationRate),
+                        label: "Scrutins solennels",
+                        detail: "\(MonEluFormat.count(scorecard.solennelsCast)) sur \(MonEluFormat.count(scorecard.eligibleSolennels))"
                     )
-                    // Both notes on every profile: the president's 100 % is
-                    // structural, and the app cannot tell who presides
-                    // without copying an id into Swift. Other deputies reach
-                    // 100 % too, so the note is not tied to the figure.
-                    CaveatNote(id: "presence_rate", in: configuration)
-                    CaveatNote(id: "president_presence", in: configuration)
+                    StatTile(
+                        value: MonEluFormat.percent(scorecard.votingDaysRate),
+                        label: "Jours de vote",
+                        detail: "\(MonEluFormat.count(scorecard.votingDaysPresent)) sur \(MonEluFormat.count(scorecard.eligibleVotingDays))"
+                    )
+                    StatTile(
+                        value: MonEluFormat.percent(scorecard.presenceRate, decimals: 1),
+                        label: "Présence aux scrutins",
+                        detail: "Tous scrutins"
+                    )
+                }
+                .accessibilityIdentifier("deputy.presence")
+                // Both notes on every profile: the president's 100 % is
+                // structural, and the app cannot tell who presides without
+                // copying an id into Swift.
+                CaveatNote(id: "presence_rate", in: configuration)
+                CaveatNote(id: "president_presence", in: configuration)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                SectionHeader("Positions exprimées")
+                Card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        VoteSplitBar(
+                            pour: scorecard.votesFor, contre: scorecard.votesAgainst,
+                            abstention: scorecard.abstentions, size: .large
+                        )
+                        FlowLayout(spacing: 14) {
+                            PositionCount(position: "pour", count: scorecard.votesFor)
+                            PositionCount(position: "contre", count: scorecard.votesAgainst)
+                            PositionCount(position: "abstention", count: scorecard.abstentions)
+                        }
+                    }
                 }
             }
-            .accessibilityIdentifier("deputy.presence")
-            Card {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Positions exprimées")
-                        .font(.headline)
-                        .foregroundStyle(Palette.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    PositionCount(position: "pour", count: scorecard.votesFor)
-                    PositionCount(position: "contre", count: scorecard.votesAgainst)
-                    PositionCount(position: "abstention", count: scorecard.abstentions)
-                }
-            }
         }
-    }
-
-    @ViewBuilder private var rateCards: some View {
-        Card {
-            RateFigure(
-                rate: scorecard.solennelParticipationRate,
-                title: "Scrutins solennels",
-                detail: "\(MonEluFormat.count(scorecard.solennelsCast)) sur \(MonEluFormat.count(scorecard.eligibleSolennels))"
-            )
-        }
-        Card {
-            RateFigure(
-                rate: scorecard.votingDaysRate,
-                title: "Jours de vote",
-                detail: "\(MonEluFormat.count(scorecard.votingDaysPresent)) sur \(MonEluFormat.count(scorecard.eligibleVotingDays))"
-            )
-        }
-    }
-}
-
-/// A rate as the API returned it, its name, and the counts behind it.
-private struct RateFigure: View {
-    let rate: Double
-    let title: String
-    let detail: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(MonEluFormat.percent(rate))
-                .font(.title.weight(.semibold).monospacedDigit())
-                .foregroundStyle(Palette.textPrimary)
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Palette.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(detail)
-                .font(.footnote)
-                .foregroundStyle(Palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -191,14 +155,70 @@ private struct PositionCount: View {
     let count: Int
 
     var body: some View {
-        HStack {
+        HStack(spacing: 6) {
             VotePositionBadge(position: position)
-            Spacer()
             Text(MonEluFormat.count(count))
-                .font(.body.weight(.semibold).monospacedDigit())
+                .font(.subheadline.weight(.semibold).monospacedDigit())
                 .foregroundStyle(Palette.textPrimary)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// How often the deputy votes with their group, from `getAlignment`, and
+/// the way to the scrutins where they did not.
+struct DeputyAlignmentSection: View {
+    let deputyID: String
+    let alignment: DeputyAlignment
+    let configuration: AppConfiguration
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader("Fidélité au groupe")
+            Card {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(MonEluFormat.percent(alignment.alignmentRate, decimals: 1))
+                            .font(Typography.heading(.title))
+                            .monospacedDigit()
+                            .foregroundStyle(Palette.textPrimary)
+                        Spacer(minLength: 8)
+                        Text("\(MonEluFormat.count(alignment.dissidentVotes)) vote\(alignment.dissidentVotes > 1 ? "s" : "") divergent\(alignment.dissidentVotes > 1 ? "s" : "")")
+                            .font(.footnote)
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                    Text("de ses votes suivent la majorité de son groupe")
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Capsule(style: .circular)
+                        .fill(Palette.trackBackground)
+                        .frame(height: 8)
+                        .overlay(alignment: .leading) {
+                            GeometryReader { proxy in
+                                Capsule(style: .circular)
+                                    .fill(Palette.textPrimary)
+                                    .frame(width: proxy.size.width * min(max(alignment.alignmentRate, 0), 1))
+                            }
+                        }
+                        .accessibilityHidden(true)
+                    CaveatNote(id: "group_alignment", in: configuration)
+                    if alignment.dissidentVotes > 0 {
+                        NavigationLink(value: AppRoute.dissidentVotes(deputyID: deputyID)) {
+                            HStack(spacing: 4) {
+                                Text("Voir ses votes divergents")
+                                Image(systemName: "chevron.right").accessibilityHidden(true)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Palette.accent)
+                            .frame(minHeight: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("deputy.dissident")
+                    }
+                }
+            }
+        }
     }
 }
 
