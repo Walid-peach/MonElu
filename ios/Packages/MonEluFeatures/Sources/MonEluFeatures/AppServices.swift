@@ -10,6 +10,7 @@ public struct AppServices: Sendable {
     public let groups: any GroupsService
     public let themes: any ThemesService
     public let departments: any DepartmentsService
+    public let compare: any CompareService
     public let ask: any AskService
     public let quiz: any QuizService
     public let postalCodes: any PostalCodeService
@@ -24,6 +25,7 @@ public struct AppServices: Sendable {
         groups = LiveGroupsService(client: client)
         themes = LiveThemesService(client: client)
         departments = LiveDepartmentsService(client: client)
+        compare = LiveCompareService(client: client)
         ask = LiveAskService(client: client)
         quiz = LiveQuizService(client: client)
         postalCodes = LivePostalCodeService()
@@ -33,7 +35,7 @@ public struct AppServices: Sendable {
     public init(
         votes: any VotesService, deputies: any DeputiesService, lois: any LoisService, agenda: any AgendaService,
         groups: any GroupsService, themes: any ThemesService,
-        departments: any DepartmentsService,
+        departments: any DepartmentsService, compare: any CompareService,
         ask: any AskService, quiz: any QuizService,
         postalCodes: any PostalCodeService, followedDeputy: any FollowedDeputyStore
     ) {
@@ -44,6 +46,7 @@ public struct AppServices: Sendable {
         self.groups = groups
         self.themes = themes
         self.departments = departments
+        self.compare = compare
         self.ask = ask
         self.quiz = quiz
         self.postalCodes = postalCodes

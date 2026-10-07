@@ -99,11 +99,13 @@ public struct DeputyScorecard: Hashable, Sendable {
     public let eligibleVotingDays: Int
     public let votingDaysPresent: Int
     public let votingDaysRate: Double
+    /// Share of "pour" among expressed positions (`votes_for_pct`, 0 to 1).
+    public let votesForRate: Double?
 
     public init(
         totalVotes: Int, presenceRate: Double, votesFor: Int, votesAgainst: Int, abstentions: Int,
         eligibleSolennels: Int, solennelsCast: Int, solennelParticipationRate: Double,
-        eligibleVotingDays: Int, votingDaysPresent: Int, votingDaysRate: Double
+        eligibleVotingDays: Int, votingDaysPresent: Int, votingDaysRate: Double, votesForRate: Double? = nil
     ) {
         self.totalVotes = totalVotes
         self.presenceRate = presenceRate
@@ -116,6 +118,7 @@ public struct DeputyScorecard: Hashable, Sendable {
         self.eligibleVotingDays = eligibleVotingDays
         self.votingDaysPresent = votingDaysPresent
         self.votingDaysRate = votingDaysRate
+        self.votesForRate = votesForRate
     }
 }
 

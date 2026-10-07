@@ -5,10 +5,12 @@ import SwiftUI
 /// A deputy's page: who they are, how they vote and their latest scrutins
 /// (web: `/deputes/[id]`).
 public struct DeputyProfileScreen: View {
+    let id: String
     @State private var loader: Loader<DeputyProfilePage>
     @Environment(\.appConfiguration) private var configuration
 
     public init(id: String, service: any DeputiesService) {
+        self.id = id
         _loader = State(initialValue: Loader { try await service.profilePage(id: id) })
     }
 
@@ -24,6 +26,14 @@ public struct DeputyProfileScreen: View {
         }
         .navigationTitle("Député")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink(value: AppRoute.compare(deputyID: id)) {
+                    Label("Comparer", systemImage: "arrow.left.arrow.right")
+                }
+                .accessibilityIdentifier("deputy.compare")
+            }
+        }
     }
 }
 

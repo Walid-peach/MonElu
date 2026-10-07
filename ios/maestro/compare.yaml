@@ -1,0 +1,32 @@
+# The comparison (#487): "Comparer" on a profile, a second deputy picked in
+# the search sheet, then both scorecards and their divergences. Live data:
+# asserts on fixed labels only.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    arguments:
+      MonEluOpenURL: "monelu://deputes/PA795228"
+- extendedWaitUntil:
+    visible:
+      id: "deputy.profile"
+    timeout: 20000
+- tapOn:
+    id: "deputy.compare"
+- extendedWaitUntil:
+    visible: "Choisir un député"
+    timeout: 20000
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-compare-choose
+- tapOn: "Choisir un député"
+- inputText: "Coquerel"
+- extendedWaitUntil:
+    visible:
+      id: "compare.candidate"
+    timeout: 20000
+- tapOn:
+    id: "compare.candidate"
+- extendedWaitUntil:
+    visible: "Où ils ont voté différemment"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-compare-both
