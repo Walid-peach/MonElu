@@ -21,6 +21,8 @@ public enum AppRoute: Hashable, Sendable {
     /// Two deputies side by side, starting from the one whose profile was
     /// open; the second is picked on the screen. Not a link.
     case compare(deputyID: String)
+    /// The scrutins where a deputy voted against their group. Not a link.
+    case dissidentVotes(deputyID: String)
 
     /// The tab a route opens in: Explorer, which holds both lists, so the
     /// back button always leads somewhere to keep browsing.

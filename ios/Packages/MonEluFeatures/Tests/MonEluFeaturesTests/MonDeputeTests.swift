@@ -203,6 +203,17 @@ struct MonDeputeModelTests {
         #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == "PA2")
     }
 
+    @Test func switchingDeputyForgetsThePreviousPosition() {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        store.follow("PA1")
+        store.setLastSeenVote(Date(), for: "PA1")
+        store.switchTo("PA1")
+        #expect(store.lastSeenVote(for: "PA1") != nil)
+        store.switchTo("PA2")
+        #expect(store.deputyID == "PA2")
+        #expect(store.lastSeenVote(for: "PA1") == nil)
+    }
+
     @Test func unfollowingForgetsTheDeputyAndTheirPosition() {
         let defaults = freshDefaults()
         let store = UserDefaultsFollowedDeputyStore(defaults: defaults)

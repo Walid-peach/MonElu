@@ -11,8 +11,9 @@ appId: ${APP_ID}
     visible:
       id: "deputy.profile"
     timeout: 20000
-- tapOn:
-    id: "deputy.compare"
+# The profile's own id masks ids nested inside it, so the button is found
+# by its label.
+- tapOn: "Comparer"
 - extendedWaitUntil:
     visible: "Choisir un député"
     timeout: 20000

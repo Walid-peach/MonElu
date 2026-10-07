@@ -1,0 +1,30 @@
+{
+  "deputy_id": "PA1008",
+  "total": 38,
+  "items": [
+    {
+      "vote_id": "VTANR5L17V8429",
+      "voted_at": "2026-07-21T00:00:00",
+      "vote_title": "l'amendement n° 1 du Gouvernement de rétablissement de l'article 11 (supprimé) du projet de loi relatif à la protection des enfants (seconde délibération) (première lecture).",
+      "result": "adopté",
+      "position": "pour",
+      "majority_position": "contre"
+    },
+    {
+      "vote_id": "VTANR5L17V8428",
+      "voted_at": "2026-07-21T00:00:00",
+      "vote_title": "le sous-amendement n° 2 de Mme Perrine Goulet à l'amendement n° 1 du Gouvernement de rétablissement de l'article 11 (supprimé) du projet de loi relatif à la protection des enfants (seconde délibération) (première lecture).",
+      "result": "adopté",
+      "position": "pour",
+      "majority_position": "contre"
+    },
+    {
+      "vote_id": "VTANR5L17V7984",
+      "voted_at": "2026-07-07T00:00:00",
+      "vote_title": "l'amendement n° 32 de M. Amirshahi au titre de la proposition de loi visant à reconnaître une présomption de légitime défense pour les forces de l'ordre, dans l'exercice de leurs fonctions (première lecture).",
+      "result": "rejeté",
+      "position": "contre",
+      "majority_position": "pour"
+    }
+  ]
+}

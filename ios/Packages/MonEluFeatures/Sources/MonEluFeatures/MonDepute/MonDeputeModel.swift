@@ -119,8 +119,7 @@ public final class MonDeputeModel {
 
     /// Follows `deputy` and opens their home.
     public func choose(_ deputy: DeputyItem) {
-        if let current = followedID, current != deputy.id { store.clear() }
-        store.follow(deputy.id)
+        store.switchTo(deputy.id)
         followedID = deputy.id
         isChanging = false
         notice = nil

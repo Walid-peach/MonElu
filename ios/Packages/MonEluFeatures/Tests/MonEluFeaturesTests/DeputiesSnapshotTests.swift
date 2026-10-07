@@ -27,6 +27,10 @@ struct DeputiesSnapshotTests {
                 id: "president_presence",
                 text: "Yaël Braun-Pivet affiche 100 % de présence parce qu'elle préside l'Assemblée et figure sur chaque scrutin par construction des données source."
             ),
+            .init(
+                id: "group_alignment",
+                text: "L'alignement de groupe compare tout l'historique d'un député à son groupe **actuel**, même s'il en a changé en cours de mandat."
+            ),
         ]
     )
 
@@ -58,16 +62,32 @@ struct DeputiesSnapshotTests {
     @Test(arguments: Variant.all)
     func deputyProfile(_ variant: Variant) async throws {
         let full = try await LiveDeputiesServiceTests.service().profilePage(id: "PA1008")
-        let page = DeputyProfilePage(profile: full.profile, scorecard: full.scorecard, recentVotes: nil)
-        // The group is a link, so the profile sits in a stack (outside one a
-        // link renders disabled), sized explicitly.
+        let page = DeputyProfilePage(
+            profile: full.profile, scorecard: full.scorecard, recentVotes: nil, alignment: full.alignment
+        )
+        // The group, the département and the actions are links, so the
+        // profile sits in a stack (outside one a link renders disabled),
+        // sized explicitly.
         checkSnapshot(
             NavigationStack {
-                ScrollView { DeputyProfileContent(page: page, configuration: Self.configuration).padding(16) }
-                    .background(Palette.pageBackground)
+                ScrollView {
+                    DeputyProfileContent(page: page, configuration: Self.configuration, onFollow: {}).padding(16)
+                }
+                .background(Palette.pageBackground)
             },
             variant,
-            height: variant.size.isAccessibilityCategory ? 2260 : 720
+            height: variant.size.isAccessibilityCategory ? 2980 : 1040
+        )
+    }
+
+    /// Three recorded dissident votes, each with both positions.
+    @Test(arguments: Variant.all)
+    func dissidentVotes(_ variant: Variant) async throws {
+        let votes = try await LiveDeputiesServiceTests.service().dissidentVotes(id: "PA1008")
+        checkSnapshot(
+            NavigationStack { DissidentVotesList(votes: votes) },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2520 : 760
         )
     }
 
@@ -113,7 +133,7 @@ struct DeputiesSnapshotTests {
                 .background(Palette.pageBackground)
             },
             variant,
-            height: variant.size.isAccessibilityCategory ? 400 : 150
+            height: variant.size.isAccessibilityCategory ? 900 : 340
         )
     }
 }
