@@ -54,6 +54,10 @@ private struct NoDepartments: DepartmentsService {
     func department(code: String) async throws -> DepartmentPage? { nil }
 }
 
+private struct NoCompare: CompareService {
+    func diverging(first: String, other: String) async throws -> DivergingVotes { DivergingVotes(total: 0, items: []) }
+}
+
 private struct NoPostalCodes: PostalCodeService {
     func departments(forPostalCode code: String) async throws -> [PostalDepartment] { [] }
 }
@@ -63,7 +67,7 @@ struct RootTabViewTests {
     @Test func rendersInAHostingController() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
         let controller = UIHostingController(rootView: RootTabView(services: AppServices(
-            votes: NoVotes(), deputies: NoDeputies(), lois: NoLois(), agenda: NoAgenda(), groups: NoGroups(), themes: NoThemes(), departments: NoDepartments(), ask: NoAsk(), quiz: NoQuiz(), postalCodes: NoPostalCodes(),
+            votes: NoVotes(), deputies: NoDeputies(), lois: NoLois(), agenda: NoAgenda(), groups: NoGroups(), themes: NoThemes(), departments: NoDepartments(), compare: NoCompare(), ask: NoAsk(), quiz: NoQuiz(), postalCodes: NoPostalCodes(),
             followedDeputy: UserDefaultsFollowedDeputyStore(defaults: UserDefaults(suiteName: "RootTabViewTests")!)
         )))
         window.rootViewController = controller

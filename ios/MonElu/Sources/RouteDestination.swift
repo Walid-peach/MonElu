@@ -24,6 +24,8 @@ struct RouteDestination: View {
             ThemeScreen(slug: slug, service: services.themes)
         case .department(let code):
             DepartmentScreen(code: code, service: services.departments)
+        case .compare(let deputyID):
+            CompareScreen(deputyID: deputyID, deputies: services.deputies, compare: services.compare)
         case .agenda:
             AgendaScreen(service: services.agenda)
         }

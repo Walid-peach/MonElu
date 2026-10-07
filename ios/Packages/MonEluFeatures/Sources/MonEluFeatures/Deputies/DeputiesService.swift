@@ -82,7 +82,7 @@ public struct LiveDeputiesService: DeputiesService {
             eligibleSolennels: card.eligibleSolennels, solennelsCast: card.solennelsCast,
             solennelParticipationRate: card.solennelParticipationRate,
             eligibleVotingDays: card.eligibleVotingDays, votingDaysPresent: card.votingDaysPresent,
-            votingDaysRate: card.votingDaysRate
+            votingDaysRate: card.votingDaysRate, votesForRate: card.votesForPct
         )
     }
 

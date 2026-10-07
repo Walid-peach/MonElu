@@ -141,5 +141,6 @@ struct AppRouteTests {
         #expect(AppRoute.vote(id: "V1").tab == .explore)
         #expect(AppRoute.loi(id: "DLR1").tab == .explore)
         #expect(AppRoute.agenda.tab == .explore)
+        #expect(AppRoute.compare(deputyID: "PA1").tab == .explore)
     }
 }

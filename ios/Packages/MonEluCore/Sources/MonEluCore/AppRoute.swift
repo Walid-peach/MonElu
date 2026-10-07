@@ -18,6 +18,9 @@ public enum AppRoute: Hashable, Sendable {
     case theme(slug: String)
     /// A département's deputies, by its INSEE code (`33`, `2A`, `971`).
     case department(code: String)
+    /// Two deputies side by side, starting from the one whose profile was
+    /// open; the second is picked on the screen. Not a link.
+    case compare(deputyID: String)
 
     /// The tab a route opens in: Explorer, which holds both lists, so the
     /// back button always leads somewhere to keep browsing.
