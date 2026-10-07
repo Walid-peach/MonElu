@@ -36,6 +36,8 @@ struct RouteDestination: View {
             DeputiesListScreen(service: services.deputies, followedDeputyID: services.followedDeputy.deputyID)
         case .lois:
             LoisListScreen(service: services.lois)
+        case .settings:
+            SettingsScreen(version: AppEnvironment.displayVersion)
         case .departments:
             DepartmentsListScreen(deputies: services.deputies, followedDeputyID: services.followedDeputy.deputyID)
         }

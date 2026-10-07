@@ -1,0 +1,23 @@
+# Réglages (#494): opened from Accueil's navigation bar, it switches the
+# app's appearance and shows the data horizon from /app/config. Asserts on
+# fixed labels only.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Accueil"
+    timeout: 15000
+- tapOn: "Réglages"
+- extendedWaitUntil:
+    visible: "Votes disponibles depuis le"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-settings
+
+# The appearance applies to the whole app at once.
+# The screen's id masks the rows', so they are tapped by label.
+- tapOn: "Sombre"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-settings-dark
+- tapOn: "Système"

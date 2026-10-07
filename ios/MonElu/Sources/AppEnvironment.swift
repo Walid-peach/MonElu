@@ -15,4 +15,10 @@ enum AppEnvironment {
     static var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
+
+    /// "1.0 (42)": the version and the build, as Réglages shows them.
+    static var displayVersion: String {
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        return [appVersion, build.map { "(\($0))" }].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
+    }
 }

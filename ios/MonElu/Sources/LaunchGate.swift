@@ -3,6 +3,7 @@ import MonEluCore
 import MonEluFeatures
 import MonEluUI
 import SwiftUI
+import UIKit
 
 /// Opens the app on the last known launch configuration, refreshes it from
 /// `GET /app/config`, and blocks on an update screen when this version is
@@ -19,12 +20,19 @@ struct LaunchGate: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var configuration: AppConfiguration
+    @AppStorage(AppearancePreference.storageKey) private var appearance = AppearancePreference.system
 
     init(service: AppConfigService, services: AppServices, appVersion: String) {
         self.service = service
         self.services = services
         self.appVersion = appVersion
         _configuration = State(initialValue: service.cached())
+    }
+
+    private func applyAppearance() {
+        for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
+            for window in scene.windows { window.overrideUserInterfaceStyle = appearance.interfaceStyle }
+        }
     }
 
     var body: some View {
@@ -36,6 +44,12 @@ struct LaunchGate: View {
             }
         }
         .environment(\.appConfiguration, configuration)
+        // On the windows themselves, so sheets and alerts follow too, and the
+        // change applies at once from Réglages.
+        .onChange(of: appearance, initial: true) { applyAppearance() }
+        // Again on activation: at a cold launch the window may not exist yet
+        // when the first change fires.
+        .onChange(of: scenePhase) { if scenePhase == .active { applyAppearance() } }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             configuration = await service.refresh()
