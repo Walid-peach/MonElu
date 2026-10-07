@@ -28,9 +28,13 @@ public struct DeputyItem: Identifiable, Hashable, Sendable {
 
     /// "Gironde · 4e circonscription", or whichever half the API returned.
     public var constituency: String? {
-        let seat = circonscription.map { $0 == "1" ? "1re circonscription" : "\($0)e circonscription" }
         let parts = [department, seat].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// "1re circonscription", "4e circonscription".
+    public var seat: String? {
+        circonscription.map { $0 == "1" ? "1re circonscription" : "\($0)e circonscription" }
     }
 }
 

@@ -29,24 +29,36 @@ extension SinceLastVisit {
     /// home marks it "Nouveau". Nothing is new on a first visit or when the
     /// check failed.
     public func isNew(_ vote: DeputyVote) -> Bool {
-        guard case .votes(_, let after) = self, let date = vote.date else { return false }
+        isNew(date: vote.date)
+    }
+
+    /// Whether a scrutin held on `date` came after the previous visit.
+    public func isNew(date: Date?) -> Bool {
+        guard case .votes(_, let after) = self, let date else { return false }
         return date > after
     }
 }
 
-/// Everything Accueil shows about the followed deputy (#477): who they are and
-/// their latest decisions. Their activity figures stay on the profile, so the
-/// scorecard is not loaded here.
+/// Everything Accueil shows about the followed deputy (#477, #491): who they
+/// are, two of their figures and their latest decisions.
 public struct MonDeputeHome: Hashable, Sendable {
     public let profile: DeputyProfile
     /// Nil when the list failed; the identity card still shows.
     public let recentVotes: [DeputyVote]?
     public let sinceLastVisit: SinceLastVisit
+    /// The identity card's two figures; each is left out when its request failed.
+    public let scorecard: DeputyScorecard?
+    public let alignment: DeputyAlignment?
 
-    public init(profile: DeputyProfile, recentVotes: [DeputyVote]?, sinceLastVisit: SinceLastVisit) {
+    public init(
+        profile: DeputyProfile, recentVotes: [DeputyVote]?, sinceLastVisit: SinceLastVisit,
+        scorecard: DeputyScorecard? = nil, alignment: DeputyAlignment? = nil
+    ) {
         self.profile = profile
         self.recentVotes = recentVotes
         self.sinceLastVisit = sinceLastVisit
+        self.scorecard = scorecard
+        self.alignment = alignment
     }
 }
 
@@ -71,6 +83,8 @@ public final class MonDeputeModel {
     public private(set) var followedID: String?
     /// True while the user picks another deputy over the one they follow.
     public private(set) var isChanging = false
+    /// The deputy picked in the results, followed once the user confirms.
+    public private(set) var selection: DeputyItem?
     /// Why the picker is showing when the user did not ask for it.
     public private(set) var notice: String?
     /// The followed deputy's home; nil while no deputy is followed.
@@ -100,6 +114,7 @@ public final class MonDeputeModel {
         }
         searchID += 1
         let id = searchID
+        selection = nil
         search = .searching
         let result: Search
         do {
@@ -115,6 +130,16 @@ public final class MonDeputeModel {
         // A newer search started while this one ran.
         guard id == searchID else { return }
         search = result
+    }
+
+    /// Marks `deputy` as the one to follow; "Suivre" confirms it.
+    public func select(_ deputy: DeputyItem) {
+        selection = deputy
+    }
+
+    /// Follows the selected deputy.
+    public func followSelection() {
+        if let selection { choose(selection) }
     }
 
     /// Follows `deputy` and opens their home.
@@ -148,6 +173,7 @@ public final class MonDeputeModel {
 
     private func resetSearch() {
         searchID += 1
+        selection = nil
         postalCode = ""
         search = .idle
     }
@@ -200,13 +226,18 @@ public final class MonDeputeModel {
         let lastSeen = store.lastSeenVote(for: id)
         async let recent = try? deputies.recentVotes(id: id)
         async let newVotes = votes(of: id, since: lastSeen, deputies: deputies)
+        async let scorecard = try? deputies.scorecard(id: id)
+        async let alignment = try? deputies.alignment(id: id)
         let profile = try await deputies.profile(id: id)
         let since: SinceLastVisit = switch (lastSeen, await newVotes) {
         case (nil, _): .firstVisit
         case let (lastSeen?, votes?): .votes(votes, after: lastSeen)
         case (_?, nil): .unavailable
         }
-        let home = MonDeputeHome(profile: profile, recentVotes: await recent, sinceLastVisit: since)
+        let home = MonDeputeHome(
+            profile: profile, recentVotes: await recent, sinceLastVisit: since,
+            scorecard: await scorecard, alignment: await alignment
+        )
         if let position = readingPosition(after: home, lastSeen: lastSeen, now: now) {
             store.setLastSeenVote(position, for: id)
         }

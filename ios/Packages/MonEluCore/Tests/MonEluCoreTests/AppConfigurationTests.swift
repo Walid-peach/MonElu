@@ -77,6 +77,10 @@ struct MonEluFormatTests {
     }
 
     /// 2026-10-05T14:00:00Z is 16 h in Paris (summer time).
+    @Test func shortSittingFitsACard() {
+        #expect(MonEluFormat.shortSitting(Date(timeIntervalSince1970: 1_791_208_800)) == "Lun. 5 oct. · 16 h")
+    }
+
     @Test func sittingIsParisWeekdayDayAndHour() {
         #expect(MonEluFormat.sitting(Date(timeIntervalSince1970: 1_791_208_800)) == "lundi 5 octobre à 16 h")
         #expect(MonEluFormat.sitting(Date(timeIntervalSince1970: 1_791_208_800 + 30 * 60)) == "lundi 5 octobre à 16 h 30")

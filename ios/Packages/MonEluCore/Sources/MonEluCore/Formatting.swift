@@ -44,6 +44,14 @@ public enum MonEluFormat {
         return "\(date.formatted(dayStyle)) à \(time(date))"
     }
 
+    /// "Lun. 5 oct. · 16 h": a séance's start on a small card, in Paris time.
+    public static func shortSitting(_ date: Date) -> String {
+        var dayStyle = Date.FormatStyle(locale: french).weekday(.abbreviated).day().month(.abbreviated)
+        dayStyle.timeZone = paris
+        let day = date.formatted(dayStyle)
+        return "\(day.prefix(1).uppercased() + day.dropFirst()) · \(time(date))"
+    }
+
     /// A count with French digit grouping: 5561 is "5 561".
     public static func count(_ value: Int) -> String {
         value.formatted(.number.locale(french))

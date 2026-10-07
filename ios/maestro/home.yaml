@@ -1,7 +1,9 @@
-# Accueil (#463, #477): before a deputy is chosen it shows the Assembly's
-# latest votes beside the postal-code search; a code finds the département's
-# deputies, the chosen one is kept on the device, a relaunch opens on their
-# home, and the home's invitations lead to the quiz and back.
+# Accueil (#463, #477, #491): before a deputy is chosen it shows the
+# Assembly's latest votes beside the postal-code search; a code finds the
+# département's deputies, a tap selects one and the pinned "Suivre" follows
+# them, the choice is kept on the device, a relaunch opens on their home with
+# the week's agenda and the latest votes, and the invitations lead to the
+# quiz and back.
 # Asserts on fixed labels, not on who is listed: rosters change.
 appId: ${APP_ID}
 ---
@@ -11,7 +13,7 @@ appId: ${APP_ID}
     visible: "Trouvez votre député"
     timeout: 15000
 - extendedWaitUntil:
-    visible: "Les derniers votes de l'Assemblée"
+    visible: "Les derniers votes"
     timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-before-choosing
@@ -34,7 +36,12 @@ appId: ${APP_ID}
 - takeScreenshot: ${SCREENSHOT_PREFIX}3-postal-results
 
 # A row reads as the deputy's name, group and seat; the 1st seat is stable.
-- tapOn: ".*Gironde · 1re circonscription.*"
+- tapOn: ".*1re circonscription.*"
+- extendedWaitUntil:
+    visible: "Suivre .*"
+    timeout: 5000
+- takeScreenshot: ${SCREENSHOT_PREFIX}3b-postal-selected
+- tapOn: "Suivre .*"
 - extendedWaitUntil:
     visible: "Ses derniers votes"
     timeout: 20000
@@ -50,6 +57,12 @@ appId: ${APP_ID}
 - assertNotVisible: "Trouvez votre député"
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}5-home-relaunch
+- scrollUntilVisible:
+    element: "Cette semaine à l'Assemblée"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}5b-home-week
 - scrollUntilVisible:
     element: ".*Et si vous votiez.*"
     direction: DOWN

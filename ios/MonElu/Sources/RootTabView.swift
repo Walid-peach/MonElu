@@ -47,7 +47,7 @@ struct RootTabView: View {
         case .home:
             HomeScreen(
                 deputies: services.deputies, votes: services.votes, postalCodes: services.postalCodes,
-                store: services.followedDeputy
+                agenda: services.agenda, store: services.followedDeputy
             )
         case .explore:
             ExploreScreen(votes: services.votes, deputies: services.deputies)

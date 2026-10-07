@@ -39,7 +39,8 @@ extension VoteItem {
     init(_ vote: Components.Schemas.VoteSummary) {
         self.init(
             id: vote.voteId, title: vote.voteTitle, date: vote.votedAt,
-            result: vote.result, summary: vote.summaryPlain, theme: vote.theme
+            result: vote.result, summary: vote.summaryPlain, theme: vote.theme,
+            votesFor: vote.votesFor, votesAgainst: vote.votesAgainst, abstentions: vote.abstentions
         )
     }
 }

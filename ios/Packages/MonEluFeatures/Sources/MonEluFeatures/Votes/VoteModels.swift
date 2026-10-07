@@ -9,14 +9,25 @@ public struct VoteItem: Identifiable, Hashable, Sendable {
     public let result: String?
     public let summary: String?
     public let theme: String?
+    /// The counts the list returns, for its split bar; nil where the
+    /// response carries none.
+    public let votesFor: Int?
+    public let votesAgainst: Int?
+    public let abstentions: Int?
 
-    public init(id: String, title: String, date: Date?, result: String?, summary: String?, theme: String?) {
+    public init(
+        id: String, title: String, date: Date?, result: String?, summary: String?, theme: String?,
+        votesFor: Int? = nil, votesAgainst: Int? = nil, abstentions: Int? = nil
+    ) {
         self.id = id
         self.title = title
         self.date = date
         self.result = result
         self.summary = summary
         self.theme = theme
+        self.votesFor = votesFor
+        self.votesAgainst = votesAgainst
+        self.abstentions = abstentions
     }
 }
 
