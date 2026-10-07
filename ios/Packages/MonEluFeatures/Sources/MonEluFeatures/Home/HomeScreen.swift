@@ -2,21 +2,28 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// The Accueil tab (#477): the followed deputy through their latest
-/// decisions, or, before one is chosen, the postal-code search beside the
-/// Assembly's latest votes, so a first visit already shows something.
+/// The Accueil tab (#477, #491): the followed deputy through their latest
+/// decisions, the week at the Assembly and its latest votes, or, before one
+/// is chosen, the postal-code search beside the Assembly's latest votes, so a
+/// first visit already shows something.
 public struct HomeScreen: View {
     @State private var model: MonDeputeModel
     @State private var latestVotes: Loader<[VoteItem]>
+    @State private var agenda: Loader<[AgendaEntry]>
     @Environment(\.appConfiguration) private var configuration
 
     public init(
         deputies: any DeputiesService, votes: any VotesService, postalCodes: any PostalCodeService,
-        store: any FollowedDeputyStore
+        agenda: any AgendaService, store: any FollowedDeputyStore
     ) {
         _model = State(initialValue: MonDeputeModel(deputies: deputies, postalCodes: postalCodes, store: store))
         _latestVotes = State(initialValue: Loader(isEmpty: { $0.isEmpty }) {
             Array(try await votes.votes(VoteQuery()).items.prefix(HomeLatestVotesSection.count))
+        })
+        _agenda = State(initialValue: Loader {
+            let week = AgendaWindow(offset: 0, now: Date())
+            let items = try await agenda.week(from: week.from, to: week.to).days.flatMap(\.items)
+            return HomeAgendaSection.upcoming(items, now: Date())
         })
     }
 
@@ -30,9 +37,15 @@ public struct HomeScreen: View {
                     empty: EmptyStateView(title: "Député introuvable", message: "Ce député n'existe pas ou plus.")
                 ) { home in
                     ScrollView {
-                        HomeDeputyContent(home: home, offersQuestions: configuration.features.chat)
-                            .padding(16)
+                        HomeDeputyContent(
+                            home: home, offersQuestions: configuration.features.chat,
+                            agenda: agendaEntries, latestVotes: latestVotes.state,
+                            onRetryLatest: { Task { await latestVotes.load() } }
+                        )
+                        .padding(16)
                     }
+                    .task { await latestVotes.loadIfNeeded() }
+                    .task { await agenda.loadIfNeeded() }
                 }
                 // A new deputy is a new loader; a new identity starts its load.
                 .id(model.followedID)
@@ -54,8 +67,9 @@ public struct HomeScreen: View {
                     postalCode: $model.postalCode,
                     search: model.search,
                     notice: model.notice,
+                    selection: model.selection,
                     onSearch: { Task { await model.runSearch() } },
-                    onChoose: { model.choose($0) }
+                    onSelect: { model.select($0) }
                 )
                 if !model.isChanging {
                     HomeLatestVotesSection(state: latestVotes.state) {
@@ -68,6 +82,21 @@ public struct HomeScreen: View {
             .padding(16)
         }
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let selection = model.selection {
+                FollowSelectionBar(deputy: selection) { model.followSelection() }
+            }
+        }
+    }
+
+    /// The week's items once loaded; nil while loading or when they failed,
+    /// and the home leaves the section out.
+    private var agendaEntries: [AgendaEntry]? {
+        switch agenda.state {
+        case .loaded(let entries): entries
+        case .empty: []
+        default: nil
+        }
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {

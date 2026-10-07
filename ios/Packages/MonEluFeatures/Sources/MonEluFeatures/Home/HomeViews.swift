@@ -17,62 +17,77 @@ struct HomeTagline: View {
     }
 }
 
-/// The followed deputy's home.
+/// The followed deputy's home (design A, Accueil): the deputy, their latest
+/// votes, the week at the Assembly, its latest votes, then the quiz and
+/// Demander.
 struct HomeDeputyContent: View {
     let home: MonDeputeHome
     /// False while the assistant is switched off (`/app/config`).
     let offersQuestions: Bool
+    /// The current week's séance items; nil until loaded, or when they failed.
+    var agenda: [AgendaEntry]?
+    var latestVotes: LoadState<[VoteItem]> = .idle
+    var onRetryLatest: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
             HomeTagline()
-            HomeIdentityCard(profile: home.profile)
+            HomeIdentityCard(home: home)
             HomeRecentVotesSection(
                 deputyID: home.profile.deputy.id, votes: home.recentVotes, since: home.sinceLastVisit
             )
-            VStack(spacing: 12) {
-                if offersQuestions { HomeAskInvitation() }
-                HomeQuizInvitation()
-            }
+            if let agenda { HomeAgendaSection(entries: agenda) }
+            HomeLatestVotesSection(state: latestVotes, since: home.sinceLastVisit, onRetry: onRetryLatest)
+            HomeInvitations(offersQuestions: offersQuestions)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("home.deputy")
     }
 }
 
-/// The deputy on a navy card; the whole card opens their profile.
+/// The deputy on a navy card: who they are, two of their figures as the API
+/// returns them, and the way to their profile. The whole card opens it.
 struct HomeIdentityCard: View {
-    let profile: DeputyProfile
+    let home: MonDeputeHome
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    private var deputy: DeputyItem { profile.deputy }
+    private var deputy: DeputyItem { home.profile.deputy }
 
     var body: some View {
         NavigationLink(value: AppRoute.deputy(id: deputy.id)) {
-            // At large text the portrait goes above, so the name keeps the
-            // card's full width.
-            let layout = typeSize.isAccessibilitySize
-                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-                : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
-            layout {
-                DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 80)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(deputy.name)
-                        .font(Typography.heading(.title2))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(Self.role(of: deputy))
-                        .font(.subheadline)
-                        .opacity(0.85)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 4) {
-                        Text("Voir son profil")
-                        Image(systemName: "arrow.right")
-                            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 14) {
+                Text(Self.role(of: deputy))
+                    .font(.footnote.weight(.semibold))
+                    .opacity(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+                // At large text the portrait goes above, so the name keeps the
+                // card's full width.
+                let layout = typeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                    : AnyLayout(HStackLayout(alignment: .center, spacing: 14))
+                layout {
+                    DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 64)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(deputy.name)
+                            .font(Typography.heading(.title2))
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let line = Self.seat(of: deputy) {
+                            Text(line)
+                                .font(.subheadline)
+                                .opacity(0.85)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.top, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                figures
+                Text("Voir son profil")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Palette.onIdentity.opacity(0.5), lineWidth: 1)
+                    )
             }
             .foregroundStyle(Palette.onIdentity)
             .multilineTextAlignment(.leading)
@@ -85,10 +100,58 @@ struct HomeIdentityCard: View {
         .accessibilityIdentifier("home.identity")
     }
 
+    @ViewBuilder private var figures: some View {
+        let solennel = home.scorecard.map {
+            IdentityFigure(value: MonEluFormat.percent($0.solennelParticipationRate), label: "de participation aux scrutins solennels")
+        }
+        let aligned = home.alignment.map {
+            IdentityFigure(
+                value: MonEluFormat.percent($0.alignmentRate, decimals: 1), label: "de votes alignés sur son groupe"
+            )
+        }
+        if solennel != nil || aligned != nil {
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 8))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+            layout {
+                solennel
+                aligned
+            }
+        }
+    }
+
     /// "Votre député · Gironde", or the role alone when the API has no
     /// département for them.
     static func role(of deputy: DeputyItem) -> String {
         [Optional("Votre député"), deputy.department].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// "La France insoumise - NFP · 10e circ.", or whichever half the API returned.
+    static func seat(of deputy: DeputyItem) -> String? {
+        let seat = deputy.circonscription.map { $0 == "1" ? "1re circ." : "\($0)e circ." }
+        let parts = [deputy.group, seat].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+}
+
+/// One figure on the identity card.
+private struct IdentityFigure: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(Typography.heading(.title))
+                .monospacedDigit()
+            Text(label)
+                .font(.footnote)
+                .opacity(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Palette.onIdentity.opacity(0.1), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -244,28 +307,20 @@ struct HomeVoteRow: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// The badge moves under the label rather than splitting it at large text.
     private var position: some View {
-        let (color, _) = VotePositionBadge.colors(vote.position)
-        // The dot stays on the first line when the label wraps at large text.
-        return HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Circle()
-                .fill(color)
-                .frame(width: 10, height: 10)
-                .alignmentGuide(.firstTextBaseline) { $0[.bottom] }
-                .accessibilityHidden(true)
-            let label = Text(VotePositionBadge.label(vote.position))
-                .fontWeight(.semibold)
-                .foregroundStyle(color)
-            Text("Son vote : \(label)")
-                .foregroundStyle(Palette.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+        FlowLayout(spacing: 6) {
+            Text("Son vote :")
+                .font(.subheadline)
+                .foregroundStyle(Palette.textSecondary)
+                .fixedSize()
+            VotePositionBadge(position: vote.position)
         }
-        .font(.subheadline)
     }
 }
 
 /// Marks a scrutin held since the previous visit.
-private struct NewBadge: View {
+struct NewBadge: View {
     var body: some View {
         Text("Nouveau")
             .font(.caption.weight(.semibold))
@@ -277,12 +332,14 @@ private struct NewBadge: View {
     }
 }
 
-/// Before a deputy is chosen: the Assembly's latest scrutins, so a first visit
-/// shows a real decision rather than only a form.
+/// The Assembly's latest scrutins with their split, on every state of the
+/// home, so a first visit shows a real decision rather than only a form.
+/// Those held since the previous visit are marked.
 struct HomeLatestVotesSection: View {
     static let count = 3
 
     let state: LoadState<[VoteItem]>
+    var since: SinceLastVisit = .firstVisit
     let onRetry: () -> Void
     @Environment(\.openTab) private var openTab
 
@@ -298,7 +355,7 @@ struct HomeLatestVotesSection: View {
     }
 
     private var title: some View {
-        Text("Les derniers votes de l'Assemblée")
+        Text("Les derniers votes")
             .font(Typography.heading(.title2))
             .foregroundStyle(Palette.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
@@ -345,15 +402,7 @@ struct HomeLatestVotesSection: View {
                 ForEach(Array(votes.enumerated()), id: \.element.id) { index, vote in
                     if index > 0 { Divider().overlay(Palette.border) }
                     NavigationLink(value: AppRoute.vote(id: vote.id)) {
-                        HStack(spacing: 12) {
-                            VoteRowView(vote: vote)
-                            Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(Palette.textMuted)
-                                .accessibilityHidden(true)
-                        }
-                        .padding(.vertical, 10)
-                        .contentShape(Rectangle())
+                        HomeLatestVoteRow(vote: vote, isNew: since.isNew(date: vote.date))
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("home.latest-vote")
@@ -372,40 +421,204 @@ struct HomeLatestVotesSection: View {
     }
 }
 
-/// Opens Demander. Shown only while the assistant is switched on.
-struct HomeAskInvitation: View {
+/// A scrutin of the Assembly: how it ended, when, what it was, and its split.
+struct HomeLatestVoteRow: View {
+    let vote: VoteItem
+    let isNew: Bool
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                let layout = typeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                    : AnyLayout(HStackLayout(spacing: 8))
+                layout {
+                    if isNew { NewBadge() }
+                    if let result = vote.result { VoteResultBadge(result: result) }
+                    if let date = vote.date {
+                        Text(MonEluFormat.day(date))
+                            .font(.footnote)
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                }
+                Text(vote.title.capitalizingFirstLetter)
+                    .font(.subheadline)
+                    .foregroundStyle(Palette.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
+                    .fixedSize(horizontal: false, vertical: typeSize.isAccessibilitySize)
+                if let pour = vote.votesFor, let contre = vote.votesAgainst, let abstention = vote.abstentions {
+                    VoteSplitBar(pour: pour, contre: contre, abstention: abstention)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Palette.textMuted)
+                .accessibilityHidden(true)
+        }
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The week's next séance items, side by side; each opens the agenda, which
+/// holds the full week.
+struct HomeAgendaSection: View {
+    static let count = 5
+
+    let entries: [AgendaEntry]
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) { title; Spacer(minLength: 12); agendaLink }
+                VStack(alignment: .leading, spacing: 6) { title; agendaLink }
+            }
+            if entries.isEmpty {
+                Text("Pas de séance publique prévue cette semaine.")
+                    .font(.subheadline)
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if typeSize.isAccessibilitySize {
+                // Cards a third of the screen wide would leave the words a sliver.
+                VStack(spacing: 10) { cards }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 10) { cards }
+                }
+                .scrollClipDisabled()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The items from today on, in order, at most `count`: a sitting already
+    /// held this week is in the agenda, not on Accueil.
+    nonisolated static func upcoming(_ items: [AgendaEntry], now: Date) -> [AgendaEntry] {
+        let today = MonEluFormat.parisCalendar.startOfDay(for: now)
+        return Array(items.filter { $0.start >= today }.sorted { $0.start < $1.start }.prefix(count))
+    }
+
+    private var title: some View {
+        Text("Cette semaine à l'Assemblée")
+            .font(Typography.heading(.title2))
+            .foregroundStyle(Palette.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var agendaLink: some View {
+        NavigationLink(value: AppRoute.agenda) {
+            HStack(spacing: 4) {
+                Text("Agenda")
+                Image(systemName: "arrow.right").accessibilityHidden(true)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Palette.textPrimary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Ouvrir l'agenda")
+        .accessibilityIdentifier("home.agenda")
+    }
+
+    private var cards: some View {
+        ForEach(entries) { entry in
+            NavigationLink(value: AppRoute.agenda) {
+                HomeAgendaCard(entry: entry)
+                    .frame(width: typeSize.isAccessibilitySize ? nil : 220)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("home.agenda-item")
+        }
+    }
+}
+
+/// When a séance item starts, what it is about and its theme.
+struct HomeAgendaCard: View {
+    let entry: AgendaEntry
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(MonEluFormat.shortSitting(entry.start))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Palette.accent)
+            Text(entry.headline.lead)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Palette.textPrimary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            if let tag = entry.theme ?? entry.pointTypeLabel {
+                Text(tag)
+                    .font(.caption)
+                    .foregroundStyle(Palette.textSecondary)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 130, alignment: .topLeading)
+        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The quiz and, while the assistant is on, Demander, side by side.
+struct HomeInvitations: View {
+    let offersQuestions: Bool
     @Environment(\.openTab) private var openTab
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        Button { openTab(.ask) } label: {
-            HStack(spacing: 14) {
-                // Decorative; at large text it would leave the words a sliver.
-                if !typeSize.isAccessibilitySize {
-                    Image(systemName: "bubble.left")
-                        .font(.title3)
-                        .accessibilityHidden(true)
-                }
-                Text("Une question sur ses votes ?")
-                    .font(Typography.heading(.headline))
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "arrow.right")
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 10))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
+        layout {
+            tile("Et si vous votiez ?", "De vrais scrutins", systemImage: AppTab.quiz.systemImage, tab: .quiz, filled: true)
+                .accessibilityHint("Ouvre le quiz")
+                .accessibilityIdentifier("home.quiz")
+            if offersQuestions {
+                tile("Une question sur ses votes ?", "Réponses sourcées", systemImage: "bubble.left", tab: .ask, filled: false)
+                    .accessibilityHint("Ouvre Demander")
+                    .accessibilityIdentifier("home.ask")
+            }
+        }
+    }
+
+    private func tile(_ title: String, _ detail: String, systemImage: String, tab: AppTab, filled: Bool) -> some View {
+        Button { openTab(tab) } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.title3)
                     .accessibilityHidden(true)
+                Text(title)
+                    .font(Typography.heading(.headline))
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
             }
             .foregroundStyle(Palette.textPrimary)
-            .padding(16)
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .multilineTextAlignment(.leading)
+            .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(
+                filled ? Palette.trackBackground : Palette.cardBackground,
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Palette.border, lineWidth: 1.5)
+                    .strokeBorder(filled ? .clear : Palette.border, lineWidth: 1)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("Ouvre Demander")
-        .accessibilityIdentifier("home.ask")
+        .accessibilityElement(children: .combine)
     }
 }
 

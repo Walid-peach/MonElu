@@ -15,10 +15,13 @@ public enum PostalCode {
 public struct PostalDepartment: Hashable, Sendable {
     public let code: String
     public let name: String
+    /// The communes of the postal code in this département, as named there.
+    public let communes: [String]
 
-    public init(code: String, name: String) {
+    public init(code: String, name: String, communes: [String] = []) {
         self.code = code
         self.name = name
+        self.communes = communes
     }
 }
 
@@ -61,25 +64,34 @@ public struct LivePostalCodeService: PostalCodeService {
         components.path = "/communes"
         components.queryItems = [
             URLQueryItem(name: "codePostal", value: code),
-            URLQueryItem(name: "fields", value: "departement"),
+            URLQueryItem(name: "fields", value: "nom,departement"),
             URLQueryItem(name: "format", value: "json"),
         ]
         return components.url!
     }
 
-    /// The distinct départements of the communes in a response, in order.
+    /// The distinct départements of the communes in a response, in order,
+    /// each with its communes.
     static func departments(from data: Data) throws -> [PostalDepartment] {
         struct Commune: Decodable {
             struct Department: Decodable {
                 let code: String
                 let nom: String
             }
+            let nom: String?
             let departement: Department?
         }
-        var seen = Set<String>()
-        return try JSONDecoder().decode([Commune].self, from: data).compactMap { commune in
-            guard let department = commune.departement, seen.insert(department.code).inserted else { return nil }
-            return PostalDepartment(code: department.code, name: department.nom)
+        var order: [String] = []
+        var names: [String: String] = [:]
+        var communes: [String: [String]] = [:]
+        for commune in try JSONDecoder().decode([Commune].self, from: data) {
+            guard let department = commune.departement else { continue }
+            if names[department.code] == nil {
+                order.append(department.code)
+                names[department.code] = department.nom
+            }
+            if let name = commune.nom { communes[department.code, default: []].append(name) }
         }
+        return order.map { PostalDepartment(code: $0, name: names[$0] ?? $0, communes: communes[$0] ?? []) }
     }
 }

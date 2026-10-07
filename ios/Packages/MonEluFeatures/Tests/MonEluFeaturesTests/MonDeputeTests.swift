@@ -84,8 +84,8 @@ struct PostalCodeTests {
     @Test func aCodeSpanningTwoDepartmentsListsBoth() throws {
         let departments = try LivePostalCodeService.departments(from: fixture("geo_communes_05110"))
         #expect(departments == [
-            PostalDepartment(code: "04", name: "Alpes-de-Haute-Provence"),
-            PostalDepartment(code: "05", name: "Hautes-Alpes"),
+            PostalDepartment(code: "04", name: "Alpes-de-Haute-Provence", communes: ["Claret", "Curbans"]),
+            PostalDepartment(code: "05", name: "Hautes-Alpes", communes: ["Barcillonnette"]),
         ])
     }
 
@@ -97,7 +97,7 @@ struct PostalCodeTests {
     /// the request is kept on disk (#463).
     @Test func theCodeGoesOnlyToGeoAPIWithNoCache() {
         let url = LivePostalCodeService.url(forPostalCode: "33000")
-        #expect(url.absoluteString == "https://geo.api.gouv.fr/communes?codePostal=33000&fields=departement&format=json")
+        #expect(url.absoluteString == "https://geo.api.gouv.fr/communes?codePostal=33000&fields=nom,departement&format=json")
         let configuration = LivePostalCodeService().session.configuration
         #expect(configuration.urlCache == nil)
         #expect(configuration.requestCachePolicy == .reloadIgnoringLocalCacheData)
@@ -190,6 +190,29 @@ struct MonDeputeModelTests {
         #expect(!stored.contains { $0.contains("33000") })
     }
 
+    /// A tap only selects; "Suivre" follows, and a new search drops the selection.
+    @Test func aDeputyIsFollowedOnlyOnceConfirmed() async {
+        let deputies = MonDeputeDeputies()
+        deputies.rosters["33"] = [deputy("PA1"), deputy("PA2")]
+        let defaults = freshDefaults()
+        let model = model(
+            postal: StubPostalCodes(.success([PostalDepartment(code: "33", name: "Gironde")])),
+            deputies: deputies, defaults: defaults
+        )
+        model.postalCode = "33000"
+        await model.runSearch()
+        model.select(deputy("PA2"))
+        #expect(model.selection?.id == "PA2")
+        #expect(model.followedID == nil)
+        await model.runSearch()
+        #expect(model.selection == nil)
+        model.select(deputy("PA1"))
+        model.followSelection()
+        #expect(model.followedID == "PA1")
+        #expect(model.selection == nil)
+        #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == "PA1")
+    }
+
     @Test func changingKeepsTheDeputyUntilAnotherIsChosen() {
         let defaults = freshDefaults()
         let model = model(defaults: defaults)
@@ -242,6 +265,25 @@ struct MonDeputeModelTests {
 /// "Since your last visit" reads the stored position and then advances it
 /// to the newest vote shown (#463).
 struct SinceLastVisitTests {
+    /// The identity card's two figures come from the scorecard and the
+    /// alignment as the API returned them.
+    @Test func theHomeCarriesTheScorecardAndAlignment() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let home = try await MonDeputeModel.loadHome(
+            id: "PA1008", deputies: try LiveDeputiesServiceTests.service(), store: store
+        )
+        #expect(home.scorecard != nil)
+        #expect(home.alignment != nil)
+    }
+
+    /// Either figure missing leaves the rest of the home.
+    @Test func aFailedScorecardStillLoadsTheHome() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let home = try await MonDeputeModel.loadHome(id: "PA1008", deputies: MonDeputeDeputies(), store: store)
+        #expect(home.scorecard == nil)
+        #expect(home.alignment == nil)
+    }
+
     @Test func aFirstVisitAsksForNothingAndStartsFromTheNewestVote() async throws {
         let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
         let deputies = MonDeputeDeputies(recent: [vote("V2", day: "2026-07-21"), vote("V1", day: "2026-07-20")])

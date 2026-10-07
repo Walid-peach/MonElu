@@ -12,16 +12,29 @@ import Testing
 @MainActor
 @Suite(.snapshots(record: .missing))
 struct HomeSnapshotTests {
+    /// The top of the followed deputy's home: their card with its two
+    /// figures and their latest votes, from recorded responses. The rest of
+    /// the home is `homeLowerSections`; one image of the whole home would pass
+    /// the repository's 500 KB limit.
     func home(_ since: SinceLastVisit, offersQuestions: Bool = true) async throws -> some View {
         let service = try LiveDeputiesServiceTests.service()
         let home = MonDeputeHome(
             profile: try await service.profile(id: "PA1008"),
             recentVotes: try await service.recentVotes(id: "PA1008"),
-            sinceLastVisit: since
+            sinceLastVisit: since,
+            scorecard: try await service.scorecard(id: "PA1008"),
+            alignment: try await service.alignment(id: "PA1008")
         )
         return NavigationStack {
             ScrollView {
-                HomeDeputyContent(home: home, offersQuestions: offersQuestions).padding(16)
+                VStack(alignment: .leading, spacing: 28) {
+                    HomeTagline()
+                    HomeIdentityCard(home: home)
+                    HomeRecentVotesSection(
+                        deputyID: home.profile.deputy.id, votes: home.recentVotes, since: home.sinceLastVisit
+                    )
+                }
+                .padding(16)
             }
             .background(Palette.pageBackground)
         }
@@ -29,6 +42,44 @@ struct HomeSnapshotTests {
 
     func height(_ variant: Variant) -> CGFloat {
         variant.size.isAccessibilityCategory ? 3600 : 1000
+    }
+
+    /// The rest of the followed deputy's home, in `HomeDeputyContent`'s order
+    /// and in two images, each under the repository's 500 KB limit: the
+    /// week's agenda, then the Assembly's latest votes (those after the
+    /// previous visit marked) and the two invitations.
+    @Test(arguments: Variant.all)
+    func homeWeekAgenda(_ variant: Variant) async throws {
+        let agenda = try await LiveAgendaService(client: stubClient(try fixture("agenda_week")))
+            .week(from: "2026-09-28", to: "2026-10-04").days.flatMap(\.items)
+        checkSnapshot(
+            NavigationStack { lower { HomeAgendaSection(entries: agenda) } },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2400 : 300
+        )
+    }
+
+    @Test(arguments: Variant.all)
+    func homeLatestVotes(_ variant: Variant) async throws {
+        let latest = try await LiveVotesService(client: stubClient(try fixture("votes"))).votes(VoteQuery())
+        let lastVisit = try APIDay.date("2026-07-20")
+        checkSnapshot(
+            NavigationStack {
+                lower {
+                    HomeLatestVotesSection(state: .loaded(latest.items), since: .votes([], after: lastVisit), onRetry: {})
+                    HomeInvitations(offersQuestions: true)
+                }
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2600 : 760
+        )
+    }
+
+    private func lower<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) { content() }.padding(16)
+        }
+        .background(Palette.pageBackground)
     }
 
     /// Every recorded vote was held after the previous visit: five new, the
@@ -76,12 +127,13 @@ struct HomeSnapshotTests {
     @Test(arguments: Variant.all)
     func homeBeforeChoosing(_ variant: Variant) async throws {
         let latest = try await LiveVotesService(client: stubClient(try fixture("votes"))).votes(VoteQuery())
+        let lastVisit = try APIDay.date("2026-07-20")
         let view = NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     HomeTagline()
                     PostalCodePickerContent(
-                        postalCode: .constant(""), search: .idle, notice: nil, onSearch: {}, onChoose: { _ in }
+                        postalCode: .constant(""), search: .idle, notice: nil, onSearch: {}, onSelect: { _ in }
                     )
                     HomeLatestVotesSection(
                         state: .loaded(Array(latest.items.prefix(HomeLatestVotesSection.count))), onRetry: {}
@@ -92,7 +144,13 @@ struct HomeSnapshotTests {
             }
             .background(Palette.pageBackground)
         }
-        checkSnapshot(view, variant, height: height(variant))
+        checkSnapshot(view, variant, height: variant.size.isAccessibilityCategory ? 3600 : 1300)
+    }
+
+    /// The week with no séance, and the latest votes still loading.
+    @Test(arguments: Variant.all)
+    func agendaEmpty(_ variant: Variant) {
+        checkSnapshot(NavigationStack { HomeAgendaSection(entries: []).padding(16) }, variant, height: 200)
     }
 
     @Test(arguments: Variant.all)
