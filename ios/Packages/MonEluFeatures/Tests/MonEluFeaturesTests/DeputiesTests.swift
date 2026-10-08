@@ -100,7 +100,9 @@ struct DeputiesListModelTests {
         #expect(model.criteria.department == nil)
     }
 
-    /// Sections follow the surname's first letter, accents folded.
+    /// Sections follow the surname's first letter, accents and case folded. The
+    /// names come in the order `GET /deputies` returns them
+    /// (`tests/integration/test_deputy_order.py`, #514): one section per letter.
     @Test func theListIsInLetterSections() {
         func named(_ id: String, _ last: String) -> DeputyItem {
             DeputyItem(
@@ -108,9 +110,12 @@ struct DeputiesListModelTests {
                 photoURL: nil, lastName: last
             )
         }
-        let sections = DeputiesList.sections([named("1", "Abadie"), named("2", "Albertini"), named("3", "Écrivain"), named("4", "Erodi")])
-        #expect(sections.map(\.initial) == ["A", "E"])
-        #expect(sections.map { $0.deputies.map(\.id) } == [["1", "2"], ["3", "4"]])
+        let sections = DeputiesList.sections([
+            named("1", "Abadie"), named("2", "Albertini"), named("3", "Dabo"), named("4", "de Courson"),
+            named("5", "Écrivain"), named("6", "Erodi"),
+        ])
+        #expect(sections.map(\.initial) == ["A", "D", "E"])
+        #expect(sections.map { $0.deputies.map(\.id) } == [["1", "2"], ["3", "4"], ["5", "6"]])
     }
 
     @Test func noMatchIsTheEmptyState() async {
