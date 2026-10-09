@@ -21,17 +21,11 @@ public enum NavigationBarStyle {
         let bar = UINavigationBar.appearance()
         bar.largeTitleTextAttributes = large
         bar.titleTextAttributes = inline
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithDefaultBackground()
-        appearance.largeTitleTextAttributes = large
-        appearance.titleTextAttributes = inline
-        let edge = UINavigationBarAppearance()
-        edge.configureWithTransparentBackground()
-        edge.largeTitleTextAttributes = large
-        edge.titleTextAttributes = inline
-        bar.standardAppearance = appearance
-        bar.compactAppearance = appearance
-        bar.scrollEdgeAppearance = edge
+        // The back chevron on iOS 17 and 18, which SwiftUI's `.tint` does not
+        // reach. From iOS 26 the system draws it as a monochrome glass button.
+        bar.tintColor = Palette.uiColor("accent")
+        // No `UINavigationBarAppearance` is set, so the bar keeps the
+        // system's own background and scroll-edge behaviour.
     }
 
     /// Newsreader SemiBold at the large title's size, scaled like it.
