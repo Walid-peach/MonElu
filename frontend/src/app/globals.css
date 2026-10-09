@@ -102,6 +102,11 @@
   --dp-badge-neutral-text: #B45309;
   --dp-badge-info-bg: #E8EFFE;
   --dp-badge-info-text: #2A5DB0;
+  /* #516: the abstention badge, in the amber the hemicycle and split bars
+     already use for abstention (6.3:1 on its tint). The iOS app mirrors it
+     as abstentionText/abstentionBackground. */
+  --dp-badge-abst-bg: #FDF1DC;
+  --dp-badge-abst-text: #92400E;
   /* MON-166: translucent sticky-header backdrop (backdrop-filter: blur).
      Needs its own token since it is not opaque like --dp-card-bg. */
   --dp-sticky-bg: rgba(255,255,255,0.94);
@@ -168,6 +173,8 @@
   --dp-badge-neutral-text: #E0B84D;
   --dp-badge-info-bg: rgba(74,144,226,0.18);
   --dp-badge-info-text: #7EB0F0;
+  --dp-badge-abst-bg: rgba(217,119,6,0.18);
+  --dp-badge-abst-text: #F5B759;
   --dp-sticky-bg: rgba(18,29,48,0.92);
 
   /* MON-197: lightened so each still clears 4.5:1 against --dp-card-bg
@@ -261,6 +268,8 @@
     --dp-badge-neutral-text: #B45309;
     --dp-badge-info-bg: #E8EFFE;
     --dp-badge-info-text: #2A5DB0;
+    --dp-badge-abst-bg: #FDF1DC;
+    --dp-badge-abst-text: #92400E;
     --dp-sticky-bg: rgba(255,255,255,0.94);
     --party-rn: #003189;
     --party-epr: #C79A2E;

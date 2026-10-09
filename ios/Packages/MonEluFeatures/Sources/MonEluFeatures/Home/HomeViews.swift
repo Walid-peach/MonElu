@@ -263,6 +263,7 @@ struct HomeRecentVotesSection: View {
 /// One scrutin: when, how it ended, what it was, its scope, and the deputy's
 /// position, which is theirs and not the result.
 struct HomeVoteRow: View {
+    @Environment(\.today) private var today
     let vote: DeputyVote
     let isNew: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -276,7 +277,7 @@ struct HomeVoteRow: View {
                 layout {
                     if isNew { NewBadge() }
                     if let date = vote.date {
-                        Text(MonEluFormat.day(date))
+                        Text(MonEluFormat.listDay(date, today: today))
                             .font(.footnote)
                             .foregroundStyle(Palette.textSecondary)
                     }
@@ -423,6 +424,7 @@ struct HomeLatestVotesSection: View {
 
 /// A scrutin of the Assembly: how it ended, when, what it was, and its split.
 struct HomeLatestVoteRow: View {
+    @Environment(\.today) private var today
     let vote: VoteItem
     let isNew: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -437,7 +439,7 @@ struct HomeLatestVoteRow: View {
                     if isNew { NewBadge() }
                     if let result = vote.result { VoteResultBadge(result: result) }
                     if let date = vote.date {
-                        Text(MonEluFormat.day(date))
+                        Text(MonEluFormat.listDay(date, today: today))
                             .font(.footnote)
                             .foregroundStyle(Palette.textSecondary)
                     }

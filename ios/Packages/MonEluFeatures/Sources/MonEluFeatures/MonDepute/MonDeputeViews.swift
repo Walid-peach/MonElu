@@ -44,9 +44,6 @@ struct PostalCodePickerContent: View {
                 CaveatNote(
                     "Il sert seulement à trouver votre département auprès de geo.api.gouv.fr ; il n'est ni conservé ni envoyé à MonÉlu."
                 )
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .padding(.top, 4)
             }
             status

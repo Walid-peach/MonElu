@@ -248,6 +248,7 @@ struct DeputyRecentVotesSection: View {
 
 /// A scrutin with the deputy's position and its result, as a card.
 struct DeputyVoteRow: View {
+    @Environment(\.today) private var today
     let vote: DeputyVote
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -263,7 +264,7 @@ struct DeputyVoteRow: View {
                     layout {
                         VotePositionBadge(position: vote.position)
                         if let date = vote.date {
-                            Text(MonEluFormat.day(date))
+                            Text(MonEluFormat.listDay(date, today: today))
                                 .font(.caption)
                                 .foregroundStyle(Palette.textSecondary)
                         }

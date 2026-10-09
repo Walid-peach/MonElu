@@ -27,7 +27,7 @@ public struct VotePositionBadge: View {
         switch position {
         case "pour": (Palette.positiveText, Palette.positiveBackground)
         case "contre": (Palette.negativeText, Palette.negativeBackground)
-        case "abstention": (Palette.textSecondary, Palette.trackBackground)
+        case "abstention": (Palette.abstentionText, Palette.abstentionBackground)
         default: (Palette.textMuted, Palette.trackBackground)
         }
     }

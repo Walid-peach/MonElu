@@ -88,13 +88,17 @@ The work is tracked under epic #429, one phase epic at a time.
 ## Design
 
 - Colors come only from `Palette` (`MonEluUI`), whose tokens are color sets in `Colors.xcassets` with a light and a dark value each, mirroring the website's `--dp-*` variables in `frontend/src/app/globals.css`.
-  Never write a literal or system color (`.red`, `Color(red:…)`, `UIColor(…)`): `tests/unit/test_ios_design_tokens.py` fails on one, on a token missing its dark value, and on a token that drifts from the web palette.
+  Never write a literal or system color (`.red`, `Color(red:…)`, `UIColor(…)`; `Palette.uiColor` is the one way to hand a token to UIKit): `tests/unit/test_ios_design_tokens.py` fails on one, on a token missing its dark value, and on a token that drifts from the web palette.
   A new token means a new color set and a row in that test's `WEB_SOURCES`.
   `textSecondary` and `textMuted` are deliberately darker than the website's, so every body text token reaches 4.5:1 on the page, card and track backgrounds in both themes (#480); the same test computes those ratios from the catalog, so a new text token or surface goes into its `TEXT_ON_BACKGROUNDS`.
   Text on `positiveBackground`/`negativeBackground` (badges, pills) uses `positiveText`/`negativeText`, never `positive`/`negative`, which are the fills for bars and hemicycle seats and miss 4.5:1 as badge text in light mode.
   Group chips take their colors from `Palette.party(_:)`, keyed by the API's `party_short` and mirroring `partyColor()` in `frontend/src/lib/utils.ts`.
-- Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
+- Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type), and an italic word in one `Typography.headingItalic(_:)` (the bundled italic face; `.italic()` on the roman face only slants it); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
 - Text that can grow with Dynamic Type must wrap, not truncate.
+- Navigation titles are styled once at launch by `NavigationBarStyle.apply()` (Newsreader large titles, `textPrimary`), and the tab bar and every control take `Palette.accent` through `.tint` on `RootTabView`; never restyle a bar per screen or replace the system bar (#516).
+- Cards are 12 pt radius (`Card`); a screen built on `List(.insetGrouped)` (Votes, Députés, Départements, Réglages) keeps the system's own corner radius rather than imitating 12 (#516).
+  The system list brings sections, swipe actions, VoiceOver rotors and cell reuse for hundreds of rows, and its radius follows the platform as iOS changes it; a hand-built `LazyVStack` in a `Card` would give those up for a few points of radius.
+- A scrutin's date in a list row is `MonEluFormat.listDay` ("21 juil.", the year only when it is not the current one), relative to `@Environment(\.today)`, which snapshot tests pin; a page's own header keeps the long date.
 - Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
   A new component gets the same four snapshots.
   A missing reference is recorded and the test fails once: look at the new image, commit it, re-run.

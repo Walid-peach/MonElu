@@ -47,6 +47,9 @@ WEB_SOURCES = {
     "positiveText": ("--dp-badge-pos-text", "--dp-badge-pos-text"),
     "negativeText": ("--dp-badge-neg-text", "--dp-badge-neg-text"),
     "trackBackground": ("--dp-track-bg", "--dp-track-bg"),
+    # The abstention badge: amber, the hue of the abstention seat (#516).
+    "abstentionBackground": ("--dp-badge-abst-bg", "--dp-badge-abst-bg"),
+    "abstentionText": ("--dp-badge-abst-text", "--dp-badge-abst-text"),
     "accent": ("#C9302C", "--dp-red"),  # red.civic in tailwind.config.ts
     # POSITION_COLORS.abstention in HemicycleChart.tsx, not theme-aware there.
     "seatAbstention": ("#D97706", "#D97706"),
@@ -95,6 +98,7 @@ TEXT_ON_BACKGROUNDS = {
     "accent": ["pageBackground", "cardBackground"],
     "positiveText": ["positiveBackground"],
     "negativeText": ["negativeBackground"],
+    "abstentionText": ["abstentionBackground"],
     "onIdentity": ["identityBackground"],
     "onAccent": ["accent"],
     "cardBackground": ["textPrimary"],  # a selected FilterChipRow chip
@@ -174,7 +178,8 @@ def test_tokens_match_the_website_palette():
 # A literal or system color in a component bypasses the tokens (and dark mode).
 LITERAL_COLOR = re.compile(
     r"Color\((red|white|hue|\.sRGB|\.displayP3|uiColor)"
-    r"|UIColor\("
+    # A UIKit color is only ever a token looked up by name, in Palette.swift.
+    r"|UIColor\((?!named: name, in: \.module)"
     r"|(?<![\w.])\.(red|blue|green|black|white|gray|orange|yellow|pink|purple|mint|teal|cyan|indigo|brown"
     r"|primary|secondary|tertiary|quaternary)\b"
     r"|Color\.(red|blue|green|black|white|gray|orange|yellow|pink|purple|primary|secondary)\b"
@@ -202,7 +207,11 @@ def test_literal_color_pattern_catches_the_usual_forms():
         ".foregroundStyle(.primary)",
     ]:
         assert LITERAL_COLOR.search(line), line
-    for line in [".foregroundStyle(Palette.negative)", "Color(name, bundle: .module)"]:
+    for line in [
+        ".foregroundStyle(Palette.negative)",
+        "Color(name, bundle: .module)",
+        "UIColor(named: name, in: .module, compatibleWith: nil)",
+    ]:
         assert not LITERAL_COLOR.search(line), line
 
 

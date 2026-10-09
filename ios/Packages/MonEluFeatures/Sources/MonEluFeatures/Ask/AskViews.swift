@@ -285,7 +285,7 @@ struct VerdictCard: View {
                     VStack(alignment: .leading, spacing: 6) { badge; checkedLine }
                 }
                 Text("« \(verdict.claim) »")
-                    .font(Typography.heading(.title3).italic())
+                    .font(Typography.headingItalic(.title3))
                     .foregroundStyle(Palette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let id = verdict.deputyID, let name = verdict.deputyName {

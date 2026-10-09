@@ -19,6 +19,7 @@ struct LaunchGate: View {
     let appVersion: String
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var configuration: AppConfiguration
     @AppStorage(AppearancePreference.storageKey) private var appearance = AppearancePreference.system
 
@@ -50,6 +51,9 @@ struct LaunchGate: View {
         // Again on activation: at a cold launch the window may not exist yet
         // when the first change fires.
         .onChange(of: scenePhase) { if scenePhase == .active { applyAppearance() } }
+        // The large title's font is resolved for the text size at the time,
+        // so a new size restyles the bars created from then on.
+        .onChange(of: typeSize) { NavigationBarStyle.apply() }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             configuration = await service.refresh()
