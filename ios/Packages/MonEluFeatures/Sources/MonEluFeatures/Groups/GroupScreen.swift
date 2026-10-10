@@ -74,8 +74,9 @@ struct GroupContent: View {
                 .foregroundStyle(Palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text("\(MonEluFormat.count(group.memberCount)) député\(group.memberCount > 1 ? "s" : "") en mandat")
+            Text(group.countLine)
                 .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(Palette.textSecondary)
             if group.averagePresence != nil || group.averageDissidence != nil {
                 StatTileGrid {
