@@ -48,7 +48,8 @@ extension GroupPage {
             averageDissidence: group.avgDissidentRate,
             members: group.members.map(GroupMember.init),
             mostDissident: (group.mostDissidentMembers ?? []).map(GroupMember.init),
-            dividedVotes: (group.dividedVotes ?? []).map(GroupDividedVote.init)
+            dividedVotes: (group.dividedVotes ?? []).map(GroupDividedVote.init),
+            seatRank: group.seatRank
         )
     }
 }

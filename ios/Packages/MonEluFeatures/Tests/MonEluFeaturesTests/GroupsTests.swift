@@ -15,6 +15,8 @@ struct GroupsTests {
         #expect(group.name == "La France insoumise - Nouveau Front Populaire")
         #expect(group.short == "LFI")
         #expect(group.memberCount == 71)
+        #expect(group.seatRank == 3)
+        #expect(group.countLine == "71 députés en mandat · 3e groupe de l'Assemblée")
         #expect(group.members.count == 3)
         #expect(group.mostDissident.first?.deputy.name == "Jean-Philippe Nilor")
         #expect(group.mostDissident.first?.dissidentRate == 0.0863)
