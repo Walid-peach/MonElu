@@ -52,11 +52,12 @@ let testGroups = try! JSONDecoder().decode([ReferenceData.Group].self, from: Dat
 
 @MainActor
 struct DeputiesListModelTests {
-    @Test func firstLoadAsksForEveryone() async {
+    /// The list opens on current mandates (#523).
+    @Test func firstLoadAsksForCurrentMandates() async {
         let service = RecordingDeputiesService(pages: [.success(DeputyPage(items: [deputy("PA1")], total: 1, offset: 0))])
         let model = DeputiesListModel(service: service, groups: testGroups)
         await model.loader.loadIfNeeded()
-        #expect(service.queries == [DeputyQuery()])
+        #expect(service.queries == [DeputyQuery(active: true)])
         #expect(model.loader.state.value?.map(\.id) == ["PA1"])
         #expect(model.needsReload == false)
     }
@@ -69,7 +70,7 @@ struct DeputiesListModelTests {
         #expect(model.needsReload)
         #expect(model.groupName == "Socialistes et apparentés")
         await model.reload()
-        #expect(service.queries == [DeputyQuery(search: "david", group: "Socialistes et apparentés")])
+        #expect(service.queries == [DeputyQuery(search: "david", group: "Socialistes et apparentés", active: true)])
         #expect(model.needsReload == false)
     }
 
@@ -81,13 +82,13 @@ struct DeputiesListModelTests {
         let model = DeputiesListModel(service: service, groups: testGroups, followedDeputyID: "PA1008")
         await model.loadMyDepartment()
         #expect(model.myDepartment == "Gironde")
-        model.inMandateOnly = true
-        await model.reload()
         model.onlyMyDepartment = true
         await model.reload()
+        model.inMandateOnly = false
+        await model.reload()
         #expect(service.queries == [
-            DeputyQuery(active: true),
             DeputyQuery(department: "Gironde", active: true),
+            DeputyQuery(department: "Gironde"),
         ])
     }
 

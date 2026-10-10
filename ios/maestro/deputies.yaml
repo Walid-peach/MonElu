@@ -17,14 +17,14 @@ appId: ${APP_ID}
       id: "deputy.row"
     timeout: 20000
 - assertVisible: "Tous les groupes"
+# The list opens on current mandates (#523).
+- extendedWaitUntil:
+    visible: ".* en mandat"
+    timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-deputies-list
 
 # The screen's id masks the chips', so they are tapped by their labels.
-- tapOn: "En mandat"
-- extendedWaitUntil:
-    visible: ".* en mandat"
-    timeout: 20000
 - tapOn: "Tous les groupes"
 - tapOn: "Rassemblement National"
 - extendedWaitUntil:
