@@ -164,17 +164,19 @@ struct MirroredScorecards: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            row("Scrutins solennels", a.solennelParticipationRate, b.solennelParticipationRate)
+            // The profile's precision per figure (#529): whole numbers for the
+            // two participation rates, a tenth for the share of "pour".
+            row("Scrutins solennels", a.solennelParticipationRate, b.solennelParticipationRate, decimals: 0)
             Divider().overlay(Palette.border)
-            row("Jours de vote", a.votingDaysRate, b.votingDaysRate)
+            row("Jours de vote", a.votingDaysRate, b.votingDaysRate, decimals: 0)
             if let forA = a.votesForRate, let forB = b.votesForRate {
                 Divider().overlay(Palette.border)
-                row("Votes « pour » parmi ses positions", forA, forB)
+                row("Votes « pour » parmi ses positions", forA, forB, decimals: 1)
             }
         }
     }
 
-    private func row(_ label: String, _ left: Double, _ right: Double) -> some View {
+    private func row(_ label: String, _ left: Double, _ right: Double, decimals: Int) -> some View {
         VStack(spacing: 8) {
             Text(label)
                 .font(.footnote)
@@ -182,13 +184,15 @@ struct MirroredScorecards: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(alignment: .top, spacing: 12) {
-                RateBar(rate: left, color: Palette.textPrimary, leading: false)
-                RateBar(rate: right, color: Palette.accent, leading: true)
+                RateBar(rate: left, color: Palette.textPrimary, leading: false, decimals: decimals)
+                RateBar(rate: right, color: Palette.accent, leading: true, decimals: decimals)
             }
         }
         .padding(.vertical, 12)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label) : \(MonEluFormat.percent(left, decimals: 1)) et \(MonEluFormat.percent(right, decimals: 1))")
+        .accessibilityLabel(
+            "\(label) : \(MonEluFormat.percent(left, decimals: decimals)) et \(MonEluFormat.percent(right, decimals: decimals))"
+        )
     }
 }
 
@@ -198,10 +202,11 @@ struct RateBar: View {
     let color: Color
     /// True when the bar starts at the leading edge (the right-hand side).
     let leading: Bool
+    var decimals = 1
 
     var body: some View {
         VStack(alignment: leading ? .leading : .trailing, spacing: 4) {
-            Text(MonEluFormat.percent(rate, decimals: 1))
+            Text(MonEluFormat.percent(rate, decimals: decimals))
                 .font(Typography.heading(.title3))
                 .monospacedDigit()
                 .foregroundStyle(Palette.textPrimary)
