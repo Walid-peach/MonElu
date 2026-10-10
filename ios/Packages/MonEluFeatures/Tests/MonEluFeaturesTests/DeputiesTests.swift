@@ -293,3 +293,13 @@ struct LiveDeputiesServiceTests {
         await #expect(throws: (any Error).self) { try await service.profilePage(id: "PA1008") }
     }
 }
+
+/// The president's presence note shows only where the figure it explains
+/// does: a presence of 100 % as the API returns it (#520).
+struct PresidentNoteTests {
+    @Test func onlyAFullPresenceShowsThePresidentNote() {
+        #expect(DeputyScorecardSection.showsPresidentNote(presenceRate: 1))
+        #expect(!DeputyScorecardSection.showsPresidentNote(presenceRate: 0.0628))
+        #expect(!DeputyScorecardSection.showsPresidentNote(presenceRate: 0.998))
+    }
+}

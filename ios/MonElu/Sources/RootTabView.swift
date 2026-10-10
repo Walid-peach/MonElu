@@ -58,8 +58,8 @@ struct RootTabView: View {
             )
         case .explore:
             ExploreScreen(
-                deputies: services.deputies, lois: services.lois, groups: services.groups,
-                store: services.followedDeputy
+                deputies: services.deputies, votes: services.votes, lois: services.lois, groups: services.groups,
+                postalCodes: services.postalCodes, store: services.followedDeputy
             )
         case .quiz:
             QuizScreen(service: services.quiz)
