@@ -135,11 +135,7 @@ struct LoiStatusBadge: View {
     let status: String
 
     var body: some View {
-        let (foreground, background): (Color, Color) = switch status {
-        case "promulguee", "adoptee_definitivement": (Palette.positiveText, Palette.positiveBackground)
-        case "rejetee": (Palette.negativeText, Palette.negativeBackground)
-        default: (Palette.textPrimary, Palette.trackBackground)
-        }
+        let (foreground, background) = Self.colors(status)
         Text(LoiStatus.label(status))
             .font(.caption.weight(.semibold))
             .foregroundStyle(foreground)
@@ -147,6 +143,21 @@ struct LoiStatusBadge: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(background, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+}
+
+extension LoiStatusBadge {
+    /// The ADR-035 statuses by stage (#524): adopted and promulgated green,
+    /// rejected red, still in the parliamentary process amber (the
+    /// abstention pair), anything else neutral.
+    static func colors(_ status: String) -> (Color, Color) {
+        switch status {
+        case "promulguee", "adoptee_definitivement": (Palette.positiveText, Palette.positiveBackground)
+        case "rejetee": (Palette.negativeText, Palette.negativeBackground)
+        case "deposee", "en_commission", "en_navette", "conseil_constitutionnel":
+            (Palette.abstentionText, Palette.abstentionBackground)
+        default: (Palette.textPrimary, Palette.trackBackground)
+        }
     }
 }
 
@@ -239,7 +250,7 @@ struct ParcoursSectionView: View {
                 if let stage = section.stage {
                     StageTitle(text: stage.label ?? stage.code)
                 }
-                ForEach(section.rows) { row in
+                ForEach(Array(section.rows.enumerated()), id: \.element.id) { index, row in
                     switch row {
                     case .group(let acte):
                         Text(acte.label ?? acte.code)
@@ -249,12 +260,22 @@ struct ParcoursSectionView: View {
                             .padding(.leading, indent(acte))
                             .accessibilityAddTraits(.isHeader)
                     case .acte(let acte, let repeats):
-                        ActeRow(loiID: loiID, acte: acte, repeats: repeats, today: today)
-                            .padding(.leading, indent(acte))
+                        ActeRow(
+                            loiID: loiID, acte: acte, repeats: repeats, today: today,
+                            connectsBelow: Self.nextIsActe(section.rows, after: index)
+                        )
+                        .padding(.leading, indent(acte))
                     }
                 }
             }
         }
+    }
+
+    /// True when the row after `index` is a dated step, which the timeline
+    /// line joins; a sub-heading in between breaks it.
+    static func nextIsActe(_ rows: [ParcoursRow], after index: Int) -> Bool {
+        guard rows.indices.contains(index + 1), case .acte = rows[index + 1] else { return false }
+        return true
     }
 
     /// Depth 1 sits at the card's edge; each deeper level steps in.
@@ -283,6 +304,8 @@ struct ActeRow: View {
     /// Identical later steps folded into this one; their dates are listed.
     let repeats: [LoiActe]
     let today: Date
+    /// Draws the timeline line from this step's dot to the next one (#524).
+    var connectsBelow = false
 
     private var isUpcoming: Bool {
         guard let date = (repeats.last ?? acte).date else { return false }
@@ -291,11 +314,22 @@ struct ActeRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Circle()
-                .fill(dotColor)
-                .frame(width: 10, height: 10)
-                .padding(.top, 4)
-                .accessibilityHidden(true)
+            VStack(spacing: 0) {
+                Circle()
+                    .fill(dotColor)
+                    .frame(width: 10, height: 10)
+                    .padding(.top, 4)
+                if connectsBelow {
+                    // Through the row and the 12-point gap to the next dot.
+                    Rectangle()
+                        .fill(Palette.border)
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                        .padding(.bottom, -16)
+                }
+            }
+            .frame(width: 10)
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(dateText)
                     .font(.caption)
@@ -333,6 +367,7 @@ struct ActeRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var dotColor: Color {
