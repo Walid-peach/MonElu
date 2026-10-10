@@ -14,6 +14,7 @@
           "summary_plain": null,
           "theme": null,
           "dossier_id": null,
+          "dossier_title": null,
           "dossier_url": null,
           "vote_id": null,
           "result": null
@@ -27,6 +28,7 @@
           "summary_plain": null,
           "theme": "Société",
           "dossier_id": "DLR5L17N54372",
+          "dossier_title": "Projet de loi relatif à la protection des enfants",
           "dossier_url": null,
           "vote_id": null,
           "result": null
@@ -45,6 +47,7 @@
           "summary_plain": null,
           "theme": "Société",
           "dossier_id": "DLR5L17N54372",
+          "dossier_title": "Projet de loi relatif à la protection des enfants",
           "dossier_url": null,
           "vote_id": null,
           "result": null
