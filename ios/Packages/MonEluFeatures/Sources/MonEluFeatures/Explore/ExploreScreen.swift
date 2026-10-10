@@ -8,12 +8,17 @@ import SwiftUI
 /// the départements, the user's own first.
 public struct ExploreScreen: View {
     @State private var loader: Loader<ExploreHub>
+    @State private var search: ExploreSearchModel
     private let store: any FollowedDeputyStore
 
     public init(
-        deputies: any DeputiesService, lois: any LoisService, groups: any GroupsService, store: any FollowedDeputyStore
+        deputies: any DeputiesService, votes: any VotesService, lois: any LoisService, groups: any GroupsService,
+        postalCodes: any PostalCodeService, store: any FollowedDeputyStore
     ) {
         self.store = store
+        _search = State(initialValue: ExploreSearchModel(
+            search: ExploreSearch(deputies: deputies, votes: votes, postalCodes: postalCodes), lois: lois
+        ))
         // The followed deputy is read on every load, not once: the user can
         // follow someone else on Accueil while Explorer stays alive.
         _loader = State(initialValue: Loader {
@@ -22,14 +27,30 @@ public struct ExploreScreen: View {
     }
 
     public var body: some View {
-        // Every part of the hub degrades on its own, so it is never empty and
-        // never fails: the fixed tables (themes, départements) always show.
-        LoadStateView(loader, empty: EmptyStateView(title: "Explorer", message: "")) { hub in
-            ScrollView {
-                ExploreContent(hub: hub).padding(.vertical, 12)
+        Group {
+            if search.isActive {
+                ScrollView {
+                    ExploreSearchResultsView(results: search.results).padding(.vertical, 12)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            } else {
+                // Every part of the hub degrades on its own, so it is never empty
+                // and never fails: the fixed tables (themes, départements) always show.
+                LoadStateView(loader, empty: EmptyStateView(title: "Explorer", message: "")) { hub in
+                    ScrollView {
+                        ExploreContent(hub: hub).padding(.vertical, 12)
+                    }
+                }
             }
         }
         .background(Palette.pageBackground)
+        // Always shown, as the design opens Explorer on it (#521).
+        .searchable(
+            text: Bindable(search).query,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Vote, député, texte, commune"
+        )
+        .task(id: search.query) { await search.run() }
         .onAppear {
             // Followed or unfollowed since the hub loaded: its département row is stale.
             if let hub = loader.state.value, hub.followedDeputyID != store.deputyID {
@@ -164,6 +185,9 @@ struct ExploreGroupsSection: View {
 
     let groups: [GroupSeats]
     @State private var showsAll = false
+    /// One width for every chip, sized to the widest code (LIOT) and scaled
+    /// with the text, so the group names line up (#521).
+    @ScaledMetric(relativeTo: .caption) private var chipWidth: CGFloat = 52
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -183,7 +207,7 @@ struct ExploreGroupsSection: View {
                     ExploreRow(route: .group(slug: group.slug), id: "explore.group") {
                         HStack(spacing: 12) {
                             PartyChip(group.short ?? group.name, short: group.short)
-                                .frame(minWidth: 52, alignment: .leading)
+                                .frame(width: chipWidth, alignment: .leading)
                             Text(group.name)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Text(MonEluFormat.count(group.seats))
