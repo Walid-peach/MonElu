@@ -112,6 +112,7 @@ struct VoteDetailContent: View {
             }
             Text(vote.item.title.capitalizingFirstLetter)
                 .font(Typography.heading(.title2))
+                .headingLineSpacing()
                 .foregroundStyle(Palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
@@ -188,7 +189,7 @@ struct ResultCard: View {
                 layout {
                     count(vote.votesFor, "pour", Palette.positiveText)
                     count(vote.votesAgainst, "contre", Palette.negativeText)
-                    count(vote.abstentions, vote.abstentions == 1 ? "abstention" : "abstentions", Palette.textPrimary)
+                    count(vote.abstentions, vote.abstentions == 1 ? "abstention" : "abstentions", Palette.abstentionText)
                 }
                 if let pour = vote.votesFor, let contre = vote.votesAgainst, let abstention = vote.abstentions {
                     VoteSplitBar(pour: pour, contre: contre, abstention: abstention, size: .large)
@@ -300,6 +301,7 @@ struct LoiCard: View {
                 }
                 Text(title)
                     .font(Typography.heading(.title3))
+                    .headingLineSpacing()
                     .foregroundStyle(Palette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if link {

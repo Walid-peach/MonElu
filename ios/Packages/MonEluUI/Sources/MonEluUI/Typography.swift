@@ -36,6 +36,11 @@ public enum Typography {
         }
     }()
 
+    /// The extra space between the lines of a long Newsreader title, which
+    /// otherwise nearly touch: about 1.25 line height, as the design sets it
+    /// (#519).
+    public static let headingLineSpacing: CGFloat = 3
+
     /// Point sizes at the default text size, from Apple's type ramp.
     private static func baseSize(_ style: Font.TextStyle) -> CGFloat {
         switch style {
@@ -51,5 +56,13 @@ public enum Typography {
         case .caption2: 11
         @unknown default: 17
         }
+    }
+}
+
+extension View {
+    /// Line spacing for a Newsreader title that can run over several lines
+    /// (a scrutin, a bill, a group): `Typography.headingLineSpacing`.
+    public func headingLineSpacing() -> some View {
+        lineSpacing(Typography.headingLineSpacing)
     }
 }
