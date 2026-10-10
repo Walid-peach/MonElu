@@ -1321,3 +1321,24 @@ def test_get_agenda_empty_window_returns_empty_list(client, mock_cursor):
     resp = client.get("/agenda")
     assert resp.status_code == 200
     assert resp.json()["days"] == []
+
+
+def test_get_theme_most_divided_vote_carries_its_result(client, mock_cursor):
+    # #527: the closest scrutin shows its result badge, so the API returns it.
+    mock_cursor.fetchone.side_effect = [
+        {"total": 12, "adopted": 7, "decided": 10},
+        {
+            "vote_id": "VTANR5L17V1",
+            "voted_at": datetime(2026, 7, 21, tzinfo=timezone.utc),
+            "vote_title": "l'amendement n° 12",
+            "votes_for": 140,
+            "votes_against": 141,
+            "result": "rejeté",
+        },
+    ]
+    mock_cursor.fetchall.side_effect = [[], []]
+    resp = client.get("/themes/institutions")
+    assert resp.status_code == 200
+    divided = resp.json()["most_divided_vote"]
+    assert divided["result"] == "rejeté"
+    assert divided["votes_against"] == 141

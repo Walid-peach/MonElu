@@ -5771,6 +5771,11 @@
           "votes_against": {
             "type": "integer",
             "title": "Votes Against"
+          },
+          "result": {
+            "title": "Result",
+            "description": "`adopté` or `rejeté`, as recorded (#527)",
+            "type": "string"
           }
         },
         "type": "object",

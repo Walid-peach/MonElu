@@ -52,7 +52,7 @@ struct ThemeContent: View {
                     SectionHeader("Qui vote pour")
                     Card {
                         VStack(spacing: 0) {
-                            ForEach(Array(theme.partyPositions.enumerated()), id: \.element.id) { index, position in
+                            ForEach(Array(theme.byPourRate.enumerated()), id: \.element.id) { index, position in
                                 if index > 0 { Divider().overlay(Palette.border) }
                                 PartyPourRow(position: position)
                             }
@@ -135,11 +135,15 @@ struct DividedThemeVote: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             let bar = VoteSplitBar(pour: vote.votesFor, contre: vote.votesAgainst, abstention: 0)
-            Text([vote.date.map(MonEluFormat.day), "\(MonEluFormat.count(vote.votesFor)) pour, \(MonEluFormat.count(vote.votesAgainst)) contre"]
-                .compactMap { $0 }.joined(separator: " · "))
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(Palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            // The result first, as the design's meta line reads (#527).
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if let result = vote.result { VoteResultBadge(result: result) }
+                Text([vote.date.map(MonEluFormat.day), "\(MonEluFormat.count(vote.votesFor)) pour, \(MonEluFormat.count(vote.votesAgainst)) contre"]
+                    .compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text(vote.title.capitalizingFirstLetter)
                 .font(.subheadline)
                 .foregroundStyle(Palette.textPrimary)

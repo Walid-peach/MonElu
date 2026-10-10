@@ -10,7 +10,7 @@ public struct ThemePage: Hashable, Sendable {
     /// Share adopted among scrutins with a known result; nil when none has one.
     public let adoptionRate: Double?
     public let mostDivided: ThemeDividedVote?
-    /// In the API's order.
+    /// In the API's order (by seats); `byPourRate` is the order the chart reads in.
     public let partyPositions: [ThemePartyPosition]
     /// The theme's most recent scrutins.
     public let votes: [VoteItem]
@@ -36,13 +36,16 @@ public struct ThemeDividedVote: Hashable, Sendable {
     public let date: Date?
     public let votesFor: Int
     public let votesAgainst: Int
+    /// `adopté` or `rejeté`, as the API recorded it.
+    public let result: String?
 
-    public init(id: String, title: String, date: Date?, votesFor: Int, votesAgainst: Int) {
+    public init(id: String, title: String, date: Date?, votesFor: Int, votesAgainst: Int, result: String? = nil) {
         self.id = id
         self.title = title
         self.date = date
         self.votesFor = votesFor
         self.votesAgainst = votesAgainst
+        self.result = result
     }
 }
 
@@ -74,4 +77,15 @@ extension ReferenceData {
         let rows = (try? ReferenceData.themes()) ?? []
         return Dictionary(rows.map { ($0.name, $0.slug) }, uniquingKeysWith: { first, _ in first })
     }()
+}
+
+extension ThemePage {
+    /// The groups by their share of "pour", highest first, which is what the
+    /// "Qui vote pour" bars show (#527); ties keep the API's order. The rates
+    /// are the API's, only sorted here.
+    var byPourRate: [ThemePartyPosition] {
+        partyPositions.enumerated()
+            .sorted { $0.element.pourRate != $1.element.pourRate ? $0.element.pourRate > $1.element.pourRate : $0.offset < $1.offset }
+            .map(\.element)
+    }
 }
