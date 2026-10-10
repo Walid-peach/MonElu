@@ -25,7 +25,8 @@ struct GroupLink: View {
 }
 
 /// The deputy's constituency, opening the département's page when the
-/// bundled table knows its name.
+/// bundled table knows its name. Secondary grey like the design (#520), with a
+/// chevron so it still reads as a way in.
 struct ConstituencyLink: View {
     let constituency: String
     let department: String?
@@ -36,7 +37,15 @@ struct ConstituencyLink: View {
             .fixedSize(horizontal: false, vertical: true)
         if let code = ReferenceData.departmentCode(named: department) {
             NavigationLink(value: AppRoute.department(code: code)) {
-                label.foregroundStyle(Palette.accent)
+                HStack(spacing: 4) {
+                    label
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(Palette.textSecondary)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityHint("Ouvre la page du département")
@@ -124,11 +133,14 @@ struct DeputyScorecardSection: View {
                     )
                 }
                 .accessibilityIdentifier("deputy.presence")
-                // Both notes on every profile: the president's 100 % is
-                // structural, and the app cannot tell who presides without
-                // copying an id into Swift.
                 CaveatNote(id: "presence_rate", in: configuration)
-                CaveatNote(id: "president_presence", in: configuration)
+                // The president's note only where it explains the figure: a
+                // presence of 100 % as the API returns it, which only the
+                // president reaches by construction (#520). No deputy id is
+                // copied into Swift for this.
+                if Self.showsPresidentNote(presenceRate: scorecard.presenceRate) {
+                    CaveatNote(id: "president_presence", in: configuration)
+                }
             }
             VStack(alignment: .leading, spacing: 10) {
                 SectionHeader("Positions exprimées")
@@ -147,6 +159,14 @@ struct DeputyScorecardSection: View {
                 }
             }
         }
+    }
+}
+
+extension DeputyScorecardSection {
+    /// True for a presence of 100 % as returned by the API (rounded to the
+    /// tenth the tile shows): the figure the president's caveat explains.
+    static func showsPresidentNote(presenceRate: Double) -> Bool {
+        presenceRate >= 0.9995
     }
 }
 
@@ -222,8 +242,8 @@ struct DeputyAlignmentSection: View {
     }
 }
 
-/// The deputy's latest scrutins, each with their position; a row opens the
-/// scrutin.
+/// The deputy's latest scrutins in one card, with the rows Accueil uses: the
+/// result and the short date, the title, then their position (#520).
 struct DeputyRecentVotesSection: View {
     let votes: [DeputyVote]
 
@@ -234,60 +254,15 @@ struct DeputyRecentVotesSection: View {
                 Text("Aucun vote enregistré.")
                     .font(.subheadline)
                     .foregroundStyle(Palette.textSecondary)
-            }
-            ForEach(votes) { vote in
-                NavigationLink(value: AppRoute.vote(id: vote.id)) {
-                    DeputyVoteRow(vote: vote)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("deputy.vote")
-            }
-        }
-    }
-}
-
-/// A scrutin with the deputy's position and its result, as a card.
-struct DeputyVoteRow: View {
-    @Environment(\.today) private var today
-    let vote: DeputyVote
-    @Environment(\.dynamicTypeSize) private var typeSize
-
-    var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    // At large text the date gets its own line, rather than
-                    // a sliver beside the badge.
-                    let layout = typeSize.isAccessibilitySize
-                        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
-                        : AnyLayout(HStackLayout(spacing: 8))
-                    layout {
-                        VotePositionBadge(position: vote.position)
-                        if let date = vote.date {
-                            Text(MonEluFormat.listDay(date, today: today))
-                                .font(.caption)
-                                .foregroundStyle(Palette.textSecondary)
-                        }
+            } else {
+                HomeVoteList(votes) { vote in
+                    NavigationLink(value: AppRoute.vote(id: vote.id)) {
+                        HomeVoteRow(vote: vote, isNew: false)
                     }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Palette.textMuted)
-                        .accessibilityHidden(true)
-                }
-                // Three lines in a list of rows; in full at large text, which
-                // must wrap rather than truncate.
-                Text(vote.title.capitalizingFirstLetter)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.textPrimary)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
-                    .fixedSize(horizontal: false, vertical: typeSize.isAccessibilitySize)
-                if let result = vote.result {
-                    VoteResultBadge(result: result)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("deputy.vote")
                 }
             }
         }
-        .accessibilityElement(children: .combine)
     }
 }
