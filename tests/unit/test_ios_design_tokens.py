@@ -57,6 +57,10 @@ WEB_SOURCES = {
     # (MON-160: --dp-active-bg is deliberately not overridden in .dark).
     "identityBackground": ("--dp-active-bg", "--dp-active-bg"),
     "onIdentity": ("#FFFFFF", "#FFFFFF"),
+    # Eyebrows on the fixed navy, the design's salmon and green (#530); the
+    # web has no navy surface carrying them, so these are literals.
+    "onIdentityAccent": ("#FF9A8F", "#FF9A8F"),
+    "onIdentityPositive": ("#6EE7A8", "#6EE7A8"),
     # Text on an accent-filled button: white reaches only 2.8:1 on the dark
     # accent (#FF6B60), so dark mode writes it in navy (#491).
     "onAccent": ("#FFFFFF", "#0D1F3C"),
@@ -115,7 +119,10 @@ TEXT_ON_BACKGROUNDS = {
     "negativeText": ["negativeBackground"],
     "abstentionText": ["abstentionBackground"],
     "onIdentity": ["identityBackground"],
-    "onAccent": ["accent"],
+    "onIdentityAccent": ["identityBackground"],
+    "onIdentityPositive": ["identityBackground"],
+    # The quiz's filled Contre and Pour answers (#530).
+    "onAccent": ["accent", "negative", "positiveText"],
     "cardBackground": ["textPrimary"],  # a selected FilterChipRow chip
     **{
         f"party{code}Text": [f"party{code}Background"]

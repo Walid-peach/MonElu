@@ -242,10 +242,16 @@ struct QuizDeckView: View {
         answerButton(.pour)
     }
 
+    /// Contre and Pour filled, as the design draws them, Abstention outlined.
+    /// Pour fills with `positiveText`, not the lighter `positive`: white on
+    /// that misses 4.5:1 (#530). `onAccent` turns navy in dark mode, where
+    /// the fills are lighter.
     private func answerButton(_ position: QuizPosition) -> some View {
-        let (foreground, background) = position == .abstention
-            ? (Palette.textPrimary, Palette.cardBackground)
-            : VotePositionBadge.colors(position.rawValue)
+        let (foreground, background): (Color, Color) = switch position {
+        case .contre: (Palette.onAccent, Palette.negative)
+        case .pour: (Palette.onAccent, Palette.positiveText)
+        default: (Palette.textPrimary, Palette.cardBackground)
+        }
         return Button { commit(position) } label: {
             Text(VotePositionBadge.label(position.rawValue))
                 .font(.body.weight(.semibold))
@@ -256,7 +262,7 @@ struct QuizDeckView: View {
                 .background(background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(position == .abstention ? Palette.border : foreground.opacity(0.35), lineWidth: 1)
+                        .strokeBorder(position == .abstention ? Palette.border : .clear, lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)

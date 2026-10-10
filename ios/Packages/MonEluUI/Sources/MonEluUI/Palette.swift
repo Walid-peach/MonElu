@@ -49,6 +49,11 @@ public enum Palette {
     public static let identityBackground = token("identityBackground")
     /// Text and icons on `identityBackground`.
     public static let onIdentity = token("onIdentity")
+    /// An eyebrow on `identityBackground` ("LE QUIZ", "VOUS VOTEZ CONTRE"):
+    /// the design's salmon, the same in both themes like the navy under it.
+    public static let onIdentityAccent = token("onIdentityAccent")
+    /// The positive eyebrow on `identityBackground` ("VOUS VOTEZ POUR").
+    public static let onIdentityPositive = token("onIdentityPositive")
     /// Civic red, for calls to action.
     public static let accent = token("accent")
     /// Text on an accent-filled button: white in light mode, navy in dark,
