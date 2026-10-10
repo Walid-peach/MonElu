@@ -36,17 +36,22 @@ struct AgendaTests {
         #expect(HomeAgendaSection.upcoming(many.reversed(), now: secondDay).map(\.id) == ["0", "1", "2", "3", "4"])
     }
 
-    /// A one-liner leads, with the official wording under it; without one
-    /// the wording leads alone; with neither, a fixed line.
-    @Test func headlineFollowsTheWebsite() async throws {
-        let items = try await Self.week().days[0].items
-        #expect(items[0].headline.official == "Ouverture de la session ordinaire")
+    /// The bill's title leads with the one-liner under it (#525); without a
+    /// dossier title the AN's wording leads; with neither, a fixed line.
+    @Test func headlineLeadsWithTheBillTitle() async throws {
+        let items = try await Self.week().days.flatMap(\.items)
+        // A dossier the API knows: its title, then the one-liner.
+        #expect(items[1].headline.lead.hasPrefix("Apporter une réponse intégrale"))
+        #expect(items[1].headline.detail?.hasPrefix("Le texte propose un dispositif") == true)
+        // No dossier title: the point's wording leads, the one-liner follows.
+        #expect(items[0].headline.lead == "Ouverture de la session ordinaire")
+        #expect(items[0].headline.detail?.hasPrefix("Le texte porte simplement") == true)
         let objetOnly = AgendaEntry(
             id: "y", start: .now, pointType: "Ouverture et clôture de session", summary: nil,
             objet: "Nomination du Bureau", theme: nil, voteID: nil, result: nil, dossierURL: nil
         )
         #expect(objetOnly.headline.lead == "Nomination du Bureau")
-        #expect(objetOnly.headline.official == nil)
+        #expect(objetOnly.headline.detail == nil)
         let blank = AgendaEntry(
             id: "x", start: .now, pointType: "Discussion", summary: " ", objet: nil, theme: nil,
             voteID: nil, result: nil, dossierURL: nil
