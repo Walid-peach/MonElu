@@ -98,7 +98,8 @@ TEXT_ON_BACKGROUNDS = {
     "accent": ["pageBackground", "cardBackground"],
     "positiveText": ["positiveBackground"],
     "negativeText": ["negativeBackground"],
-    "abstentionText": ["abstentionBackground"],
+    # The badge, and an abstention count written as a figure on a card (#519).
+    "abstentionText": ["abstentionBackground", "cardBackground"],
     "onIdentity": ["identityBackground"],
     "onAccent": ["accent"],
     "cardBackground": ["textPrimary"],  # a selected FilterChipRow chip

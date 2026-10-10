@@ -95,6 +95,7 @@ The work is tracked under epic #429, one phase epic at a time.
   Group chips take their colors from `Palette.party(_:)`, keyed by the API's `party_short` and mirroring `partyColor()` in `frontend/src/lib/utils.ts`.
 - Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type), and an italic word in one `Typography.headingItalic(_:)` (the bundled italic face; `.italic()` on the roman face only slants it); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
 - Text that can grow with Dynamic Type must wrap, not truncate.
+- A Newsreader title that can run over several lines (a scrutin, a bill, a group) takes `.headingLineSpacing()`, so its lines do not touch (#519).
 - Navigation titles are styled once at launch by `NavigationBarStyle.apply()` (Newsreader large titles, `textPrimary`), and the tab bar and every control take `Palette.accent` through `.tint` on `RootTabView`; never restyle a bar per screen or replace the system bar (#516).
 - Cards are 12 pt radius (`Card`); a screen built on `List(.insetGrouped)` (Votes, Députés, Départements, Réglages) keeps the system's own corner radius rather than imitating 12 (#516).
   The system list brings sections, swipe actions, VoiceOver rotors and cell reuse for hundreds of rows, and its radius follows the platform as iOS changes it; a hand-built `LazyVStack` in a `Card` would give those up for a few points of radius.
