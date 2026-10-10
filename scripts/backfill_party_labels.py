@@ -37,6 +37,8 @@ import psycopg2
 from dotenv import load_dotenv
 from psycopg2.extras import execute_batch
 
+from api.groups_data import CANONICAL_SHORT_LABELS
+
 load_dotenv()
 
 # Canonical 17th-legislature parliamentary groups + Non inscrit.
@@ -56,24 +58,8 @@ CANONICAL_LABELS = {
     "Non inscrit",
 }
 
-# Canonical full name → short group code, one entry per CANONICAL_LABELS.
-# Keep in sync with frontend/src/lib/utils.ts::partyShort() — party_short is
-# read directly by the frontend (vote group breakdown, dissident detection)
-# and must match the keys that map/utils there expect.
-CANONICAL_SHORT_LABELS: dict[str, str] = {
-    "Rassemblement National": "RN",
-    "Ensemble pour la République": "EPR",
-    "La France insoumise - Nouveau Front Populaire": "LFI",
-    "Socialistes et apparentés": "SOC",
-    "Droite Républicaine": "DR",
-    "Écologiste et Social": "ECS",
-    "Les Démocrates": "DEM",
-    "Horizons & Indépendants": "HOR",
-    "Libertés, Indépendants, Outre-mer et Territoires": "LIOT",
-    "Union des droites pour la République": "UDR",
-    "Gauche Démocrate et Républicaine": "GDR",
-    "Non inscrit": "NI",
-}
+# Canonical full name → short group code: one source, in api/groups_data.py,
+# shared with GET /groups (#517). Re-exported here for the scripts that read it.
 
 # Variant → canonical. Only mappings that hold for every deputy carrying
 # the variant label (verified against the deputies concerned, 2026-07).

@@ -3,7 +3,9 @@ scripts/update_party.py
 
 Steps 3 + 4:
   - Updates deputies.party using the GP mapping from ingest_organes.py
+  - Derives every row's party_short from its party label (#517)
   - Backfills deputies.department for any row still holding a raw code
+  - Exits 1 when a row still holds a raw AN code (check_deputy_labels, #517)
 
 Run: venv/bin/python3 scripts/update_party.py [--zip-path /path/to/AMO10.json.zip]
 """
@@ -17,7 +19,8 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.departments_data import DEPT_NAMES  # noqa: E402
+from api.departments_data import department_name  # noqa: E402
+from api.groups_data import CANONICAL_SHORT_LABELS  # noqa: E402
 
 load_dotenv()
 
@@ -89,9 +92,9 @@ def update_departments(conn) -> None:
 
     to_update = []
     for d in deputies:
-        code = (d["department"] or "").strip()
-        full_name = DEPT_NAMES.get(code)
-        if full_name:
+        stored = (d["department"] or "").strip()
+        full_name = department_name(stored) if stored else stored
+        if full_name and full_name != stored:
             to_update.append((full_name, d["deputy_id"], full_name))
 
     print(f"\nUpdating department names for {len(to_update)} deputies …")
@@ -108,6 +111,61 @@ def update_departments(conn) -> None:
         )
     conn.commit()
     print(f"  Done — {len(to_update)} departments expanded to full names.")
+
+
+# A raw AN organe uid, and a department still held as a bare code.
+RAW_ORGANE_PATTERN = r"^PO[0-9]+$"
+RAW_DEPARTMENT_PATTERN = r"^[0-9]+[AB]?$"
+
+
+def normalize_party_short(conn) -> None:
+    """Derive every row's party_short from its party label (#517).
+
+    update_parties only reaches the deputies AMO10 lists as active, and skips a
+    non-canonical label, so a former deputy - or a current one whose PARPOL
+    label was overridden by backfill_party_labels.py - could keep a raw organe
+    uid ("PO838901") from before MON-119. This step rewrites party_short from
+    the canonical label for every row, and clears a raw organe uid on a row
+    with no label, so the abbreviation can never disagree with the party.
+    """
+    rows = list(CANONICAL_SHORT_LABELS.items())
+    with conn.cursor() as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            "UPDATE deputies SET party_short = %s, changed_at = NOW() "
+            "WHERE party = %s AND party_short IS DISTINCT FROM %s",
+            [(short, label, short) for label, short in rows],
+            page_size=200,
+        )
+        cur.execute(
+            "UPDATE deputies SET party_short = NULL, changed_at = NOW() "
+            "WHERE party IS NULL AND party_short ~ %s",
+            (RAW_ORGANE_PATTERN,),
+        )
+    conn.commit()
+
+
+CHECK_LABELS_SQL = """
+SELECT deputy_id, full_name, party_short, department
+FROM deputies
+WHERE party_short ~ %(organe)s OR department ~* %(department)s
+ORDER BY deputy_id
+"""
+
+
+def check_deputy_labels(conn) -> list[dict]:
+    """Rows still holding a raw AN code where a label belongs (#517).
+
+    Run after the backfills above: anything left is a code the label maps do
+    not know, which the app and the website would print as is, so the step
+    exits 1 rather than ship it (the same rule as the parser guards, MON-220).
+    """
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            CHECK_LABELS_SQL,
+            {"organe": RAW_ORGANE_PATTERN, "department": RAW_DEPARTMENT_PATTERN},
+        )
+        return cur.fetchall()
 
 
 def print_summary(conn) -> None:
@@ -167,9 +225,18 @@ if __name__ == "__main__":
     conn = psycopg2.connect(DATABASE_URL)
     try:
         update_parties(conn, deputy_map)
+        normalize_party_short(conn)
         update_departments(conn)
         print_summary(conn)
+        raw = check_deputy_labels(conn)
     finally:
         conn.close()
+
+    if raw:
+        print(f"\n::error::{len(raw)} deputies still hold a raw AN code:")
+        for r in raw:
+            codes = f"{r['party_short']!r} / {r['department']!r}"
+            print(f"    {r['deputy_id']} {r['full_name']}: {codes}")
+        sys.exit(1)
 
     print("\nDone.")
