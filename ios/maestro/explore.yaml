@@ -51,3 +51,25 @@ appId: ${APP_ID}
     visible:
       id: "department.page"
     timeout: 20000
+
+# The search (#521): a département name finds it among the results, which
+# open its page. Deputies and votes found for the same query vary with the
+# day's data, so only the département is asserted.
+# Back at the contents page, still scrolled down; the field stays pinned.
+- tapOn: "Explorer"
+- extendedWaitUntil:
+    visible: "Vote, député, texte, commune"
+    timeout: 10000
+- tapOn: "Vote, député, texte, commune"
+- inputText: "Gironde"
+- extendedWaitUntil:
+    visible: "Gironde \\(33\\)"
+    timeout: 20000
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-search
+- tapOn: "Gironde \\(33\\)"
+- extendedWaitUntil:
+    visible:
+      id: "department.page"
+    timeout: 20000

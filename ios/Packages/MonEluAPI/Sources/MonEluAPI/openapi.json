@@ -1702,7 +1702,7 @@
           "Agenda"
         ],
         "summary": "Upcoming séance publique sittings, grouped by day",
-        "description": "What the Assemblée is scheduled to take up in the hemicycle.\n\nWindow defaults to the current ISO week; pass `from` and `to` as ISO dates to\nmove it. The span is capped at 90 days, and the feed's forward coverage is\nshort anyway - asking for months ahead returns thin days, not an error.\n\n**Forward-looking and volatile.** The ordre du jour is rewritten constantly:\nitems are cancelled, reordered and rescheduled. Cancelled items and anything\nmissing from the latest ingestion run are filtered out, so a point that\nvanishes between two calls was dropped upstream. Describe what is here as\nscheduled, never as certain.\n\n`vote_id` and `result` are filled in once a scrutin exists for the item's\ndossier, which turns a scheduled item into a settled one; otherwise\n`dossier_url` points at the official dossier page. Séance publique only -\ncommittee work is not covered.",
+        "description": "What the Assemblée is scheduled to take up in the hemicycle.\n\nWindow defaults to the current ISO week; pass `from` and `to` as ISO dates to\nmove it. The span is capped at 90 days, and the feed's forward coverage is\nshort anyway - asking for months ahead returns thin days, not an error.\n\n**Forward-looking and volatile.** The ordre du jour is rewritten constantly:\nitems are cancelled, reordered and rescheduled. Cancelled items and anything\nmissing from the latest ingestion run are filtered out, so a point that\nvanishes between two calls was dropped upstream. Describe what is here as\nscheduled, never as certain.\n\n`vote_id` and `result` are filled in once a scrutin exists for the item's\ndossier, which turns a scheduled item into a settled one; otherwise\n`dossier_url` points at the official dossier page. Séance publique only -\ncommittee work is not covered.\n\n`dossier_title` is the bill's short official title (the dossier législatif's\n`titre`), null when the item has no dossier or the dossier is not in the\n17th-legislature export. It names the text; `objet` names this point of the\nordre du jour, and `summary_plain` is a machine-written one-line summary of\nit, null by design for a stub `objet` (only `point_type` is meaningful then).",
         "operationId": "getAgenda",
         "parameters": [
           {
@@ -2826,6 +2826,11 @@
             "title": "Dossier Id",
             "type": "string"
           },
+          "dossier_title": {
+            "title": "Dossier Title",
+            "description": "The bill's short official title, when the dossier is known (#525)",
+            "type": "string"
+          },
           "dossier_url": {
             "title": "Dossier Url",
             "description": "Official AN dossier page; set whenever dossier_id is known",
@@ -2881,6 +2886,7 @@
               "items": [
                 {
                   "dossier_id": "DLR5L17N52985",
+                  "dossier_title": "Lutte contre les fraudes sociales et fiscales",
                   "dossier_url": "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N52985",
                   "objet": "Projet de loi relatif à la lutte contre les fraudes sociales et fiscales (première lecture)",
                   "point_type": "Discussion générale",

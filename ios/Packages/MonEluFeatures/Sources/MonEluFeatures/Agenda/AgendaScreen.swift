@@ -185,7 +185,7 @@ struct AgendaEntryLink: View {
     }
 }
 
-/// Time, point type, the headline and the official wording, theme and result.
+/// Time, point type, the bill's title, its one-liner, theme and result.
 struct AgendaEntryRow: View {
     let entry: AgendaEntry
     let trailing: String?
@@ -211,10 +211,12 @@ struct AgendaEntryRow: View {
                     Text(headline.lead)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Palette.textPrimary)
-                    if let official = headline.official {
-                        Text(official)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
+                    if let detail = headline.detail {
+                        Text(detail)
                             .font(.footnote)
                             .foregroundStyle(Palette.textSecondary)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
                     }
                     if entry.theme != nil || entry.result != nil {
                         HStack(spacing: 8) {
