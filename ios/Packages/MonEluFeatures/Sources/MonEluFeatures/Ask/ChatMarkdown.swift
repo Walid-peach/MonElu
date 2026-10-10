@@ -12,9 +12,22 @@ enum MarkdownBlock: Hashable {
     /// A table becomes one card per row on a phone screen.
     case table(header: [String], rows: [[String]])
 
+    /// The model writes French typography's narrow spaces (U+202F, U+2009)
+    /// where they do not belong too, and they showed as gaps (#531): inside a
+    /// date ("21 /07 /2026") they go, and anywhere else they become an
+    /// ordinary no-break space, which keeps "16 h" or "1 000" on one line.
+    static func normalizingSpaces(_ text: String) -> String {
+        let thin = "[\u{202F}\u{2009}]"
+        return text
+            .replacingOccurrences(of: #"(?<=\d)"# + thin + #"+(?=/)|(?<=/)"# + thin + #"+(?=\d)"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: thin, with: "\u{00A0}", options: .regularExpression)
+    }
+
     static func parse(_ text: String) -> [MarkdownBlock] {
         // The model sometimes leaves citation markers ("【source】") inline.
-        let cleaned = text.replacingOccurrences(of: #"\s*【[^】]*】"#, with: "", options: .regularExpression)
+        let cleaned = normalizingSpaces(
+            text.replacingOccurrences(of: #"\s*【[^】]*】"#, with: "", options: .regularExpression)
+        )
         var blocks: [MarkdownBlock] = []
         var paragraph: [String] = []
         var bullets: [String] = []
