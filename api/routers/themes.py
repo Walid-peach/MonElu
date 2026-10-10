@@ -75,7 +75,7 @@ def get_theme(
             # one expressed position — the vote that split the chamber most.
             cur.execute(
                 """
-                SELECT vote_id, voted_at, vote_title, votes_for, votes_against
+                SELECT vote_id, voted_at, vote_title, votes_for, votes_against, result
                 FROM votes
                 WHERE theme = %s AND votes_for + votes_against > 0
                 ORDER BY ABS(votes_for - votes_against) ASC, voted_at DESC NULLS LAST
