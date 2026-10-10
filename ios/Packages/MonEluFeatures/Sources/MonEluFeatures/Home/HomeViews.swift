@@ -11,7 +11,7 @@ import SwiftUI
 struct HomeTagline: View {
     var body: some View {
         Text("Le Parlement, près de vous.")
-            .font(.title3)
+            .font(.subheadline)
             .foregroundStyle(Palette.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -81,13 +81,18 @@ struct HomeIdentityCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 figures
-                Text("Voir son profil")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Palette.onIdentity.opacity(0.5), lineWidth: 1)
-                    )
+                // White on the navy card in both themes, as the design draws it:
+                // the card itself does not change with the theme.
+                HStack(spacing: 6) {
+                    Text("Voir son profil")
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .accessibilityHidden(true)
+                }
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Palette.identityBackground)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(Palette.onIdentity, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .foregroundStyle(Palette.onIdentity)
             .multilineTextAlignment(.leading)
@@ -167,40 +172,28 @@ struct HomeRecentVotesSection: View {
     let since: SinceLastVisit
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline) { title; Spacer(minLength: 12); seeAll }
-                VStack(alignment: .leading, spacing: 6) { title; seeAll }
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader("Ses derniers votes") { seeAll }
             if let status = Self.status(since) {
-                Text(status)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if Self.hasNew(since) { NewBadge() }
+                    Text(status)
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             rows
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var title: some View {
-        Text("Ses derniers votes")
-            .font(Typography.heading(.title2))
-            .foregroundStyle(Palette.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityAddTraits(.isHeader)
-    }
-
     /// The profile lists the deputy's ten latest votes.
     private var seeAll: some View {
         NavigationLink(value: AppRoute.deputy(id: deputyID)) {
-            HStack(spacing: 4) {
-                Text("Tout voir")
-                Image(systemName: "arrow.right")
-                    .accessibilityHidden(true)
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Palette.textPrimary)
+            Text("Tout voir")
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Voir tous ses votes")
@@ -214,17 +207,13 @@ struct HomeRecentVotesSection: View {
         case let votes? where votes.isEmpty:
             note("Aucun vote enregistré pour l'instant.")
         case let votes?:
-            VStack(spacing: 0) {
-                ForEach(Array(votes.prefix(Self.count).enumerated()), id: \.element.id) { index, vote in
-                    if index > 0 { Divider().overlay(Palette.border) }
-                    NavigationLink(value: AppRoute.vote(id: vote.id)) {
-                        HomeVoteRow(vote: vote, isNew: since.isNew(vote))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("home.vote")
+            HomeVoteList(votes.prefix(Self.count)) { vote in
+                NavigationLink(value: AppRoute.vote(id: vote.id)) {
+                    HomeVoteRow(vote: vote, isNew: since.isNew(vote))
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.vote")
             }
-            .padding(.top, 6)
         }
     }
 
@@ -234,6 +223,13 @@ struct HomeRecentVotesSection: View {
             .foregroundStyle(Palette.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 8)
+    }
+
+    /// True when scrutins were held since the previous visit: the count line
+    /// then carries the one "Nouveau" badge, and the rows only a dot.
+    static func hasNew(_ since: SinceLastVisit) -> Bool {
+        if case .votes(let votes, _) = since { return !votes.isEmpty }
+        return false
     }
 
     /// What changed since the previous visit; nothing on a first visit.
@@ -260,8 +256,9 @@ struct HomeRecentVotesSection: View {
     }
 }
 
-/// One scrutin: when, how it ended, what it was, its scope, and the deputy's
-/// position, which is theirs and not the result.
+/// One scrutin: how it ended, when, what it was, and the deputy's position,
+/// which is theirs and not the result. The title says what was voted ("L'ensemble
+/// du projet de loi…", "L'amendement n° 12…"), so the row has no separate scope line.
 struct HomeVoteRow: View {
     @Environment(\.today) private var today
     let vote: DeputyVote
@@ -275,26 +272,20 @@ struct HomeVoteRow: View {
                     ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
                     : AnyLayout(HStackLayout(spacing: 8))
                 layout {
-                    if isNew { NewBadge() }
+                    if isNew { NewDot() }
+                    if let result = vote.result { VoteResultBadge(result: result) }
                     if let date = vote.date {
                         Text(MonEluFormat.listDay(date, today: today))
                             .font(.footnote)
                             .foregroundStyle(Palette.textSecondary)
                     }
-                    if let result = vote.result { VoteResultBadge(result: result) }
                 }
                 Text(vote.title.capitalizingFirstLetter)
-                    .font(Typography.heading(.headline))
+                    .font(.subheadline)
                     .foregroundStyle(Palette.textPrimary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
                     .fixedSize(horizontal: false, vertical: typeSize.isAccessibilitySize)
-                if let scope = vote.scope {
-                    Text(scope)
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
                 position
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -303,7 +294,8 @@ struct HomeVoteRow: View {
                 .foregroundStyle(Palette.textMuted)
                 .accessibilityHidden(true)
         }
-        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
@@ -320,16 +312,50 @@ struct HomeVoteRow: View {
     }
 }
 
-/// Marks a scrutin held since the previous visit.
+/// Beside the count of scrutins held since the previous visit: shown once,
+/// in the accent, as the design draws it.
 struct NewBadge: View {
     var body: some View {
         Text("Nouveau")
             .font(.caption.weight(.semibold))
-            .foregroundStyle(Palette.onIdentity)
+            .foregroundStyle(Palette.onAccent)
             .fixedSize()
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(Palette.identityBackground, in: Capsule())
+            .background(Palette.accent, in: Capsule())
+    }
+}
+
+/// Marks one row held since the previous visit; read as "Nouveau".
+struct NewDot: View {
+    var body: some View {
+        Circle()
+            .fill(Palette.accent)
+            .frame(width: 8, height: 8)
+            .accessibilityElement()
+            .accessibilityLabel("Nouveau")
+    }
+}
+
+/// Vote rows in one card, divided by inset lines, as on Explorer and the profile.
+struct HomeVoteList<Item: Identifiable, Row: View>: View {
+    let items: [Item]
+    let row: (Item) -> Row
+
+    init<S: Sequence>(_ items: S, @ViewBuilder row: @escaping (Item) -> Row) where S.Element == Item {
+        self.items = Array(items)
+        self.row = row
+    }
+
+    var body: some View {
+        Card(padding: 0) {
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 { Divider().overlay(Palette.border).padding(.leading, 16) }
+                    row(item)
+                }
+            }
+        }
     }
 }
 
@@ -345,33 +371,18 @@ struct HomeLatestVotesSection: View {
     @Environment(\.openTab) private var openTab
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline) { title; Spacer(minLength: 12); seeAll }
-                VStack(alignment: .leading, spacing: 6) { title; seeAll }
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader("Les derniers votes") { seeAll }
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var title: some View {
-        Text("Les derniers votes")
-            .font(Typography.heading(.title2))
-            .foregroundStyle(Palette.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityAddTraits(.isHeader)
-    }
-
     private var seeAll: some View {
         Button { openTab(.explore) } label: {
-            HStack(spacing: 4) {
-                Text("Tout voir")
-                Image(systemName: "arrow.right")
-                    .accessibilityHidden(true)
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Palette.textPrimary)
+            Text("Tout voir")
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Voir tous les votes")
@@ -399,17 +410,13 @@ struct HomeLatestVotesSection: View {
                     .tint(Palette.accent)
             }
         case .loaded(let votes):
-            VStack(spacing: 0) {
-                ForEach(Array(votes.enumerated()), id: \.element.id) { index, vote in
-                    if index > 0 { Divider().overlay(Palette.border) }
-                    NavigationLink(value: AppRoute.vote(id: vote.id)) {
-                        HomeLatestVoteRow(vote: vote, isNew: since.isNew(date: vote.date))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("home.latest-vote")
+            HomeVoteList(votes) { vote in
+                NavigationLink(value: AppRoute.vote(id: vote.id)) {
+                    HomeLatestVoteRow(vote: vote, isNew: since.isNew(date: vote.date))
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.latest-vote")
             }
-            .padding(.top, 6)
         }
     }
 
@@ -436,7 +443,7 @@ struct HomeLatestVoteRow: View {
                     ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
                     : AnyLayout(HStackLayout(spacing: 8))
                 layout {
-                    if isNew { NewBadge() }
+                    if isNew { NewDot() }
                     if let result = vote.result { VoteResultBadge(result: result) }
                     if let date = vote.date {
                         Text(MonEluFormat.listDay(date, today: today))
@@ -460,6 +467,7 @@ struct HomeLatestVoteRow: View {
                 .foregroundStyle(Palette.textMuted)
                 .accessibilityHidden(true)
         }
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

@@ -42,7 +42,9 @@ public struct HomeScreen: View {
                             agenda: agendaEntries, latestVotes: latestVotes.state,
                             onRetryLatest: { Task { await latestVotes.load() } }
                         )
-                        .padding(16)
+                        // No top margin: the tagline sits right under the large
+                        // title, as one header.
+                        .padding([.horizontal, .bottom], 16)
                     }
                     .task { await latestVotes.loadIfNeeded() }
                     .task { await agenda.loadIfNeeded() }
@@ -79,7 +81,10 @@ public struct HomeScreen: View {
                     HomeQuizInvitation()
                 }
             }
-            .padding(16)
+            .padding([.horizontal, .bottom], 16)
+            // The tagline belongs to the title; without it the search needs
+            // its own margin.
+            .padding(.top, model.isChanging ? 16 : 0)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {

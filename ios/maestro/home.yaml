@@ -40,7 +40,10 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: "Suivre .*"
     timeout: 5000
+- waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}3b-postal-selected
+# Tapped by its label: the button's frame is the red pill alone (#518), so
+# its centre is no longer the Explorer tab under the bar.
 - tapOn: "Suivre .*"
 - extendedWaitUntil:
     visible: "Ses derniers votes"
