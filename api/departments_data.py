@@ -138,6 +138,16 @@ def normalize_code(raw: str) -> str | None:
     return upper if upper in DEPT_NAMES else None
 
 
+def department_name(raw: str) -> str:
+    """The full name to store for an AN department code: "33" is "Gironde",
+    and the zero-padded "099" the AN writes for deputies elected abroad is
+    "Français établis hors de France" (#517). A code DEPT_NAMES does not know
+    is returned as it came, for `check_deputy_labels` to report.
+    """
+    code = normalize_code(raw)
+    return DEPT_NAMES[code] if code else raw
+
+
 def db_department_values(code: str) -> list[str]:
     """All spellings under which deputies.department may store this code.
 

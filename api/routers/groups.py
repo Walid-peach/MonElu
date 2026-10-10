@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from starlette.requests import Request
 
 from api.db import get_conn
-from api.groups_data import GROUP_SLUGS, normalize_slug
+from api.groups_data import CANONICAL_SHORT_LABELS, GROUP_SLUGS, normalize_slug
 from api.limiter import limiter, tiered_limit
 from api.schemas import (
     GroupDetail,
@@ -89,7 +89,7 @@ def list_groups(request: Request):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT party, MAX(party_short) AS party_short, COUNT(*) AS seat_count
+                SELECT party, COUNT(*) AS seat_count
                 FROM deputies
                 WHERE mandate_end IS NULL AND party IS NOT NULL
                 GROUP BY party
@@ -102,7 +102,7 @@ def list_groups(request: Request):
         GroupSummary(
             slug=slugs[r["party"]],
             name=r["party"],
-            party_short=r["party_short"],
+            party_short=CANONICAL_SHORT_LABELS[r["party"]],
             seat_count=r["seat_count"],
         )
         for r in rows
