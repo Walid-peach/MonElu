@@ -1238,6 +1238,7 @@ _AGENDA_ROWS = [
         "summary_plain": "Les députés débattent du budget de l'État.",
         "theme": "budget",
         "dossier_id": "DLR5L17N1",
+        "dossier_title": "Projet de loi de finances pour 2027",
         "vote_id": None,
         "result": None,
     },
@@ -1250,6 +1251,7 @@ _AGENDA_ROWS = [
         "summary_plain": "Vote final sur le budget.",
         "theme": "budget",
         "dossier_id": "DLR5L17N1",
+        "dossier_title": "Projet de loi de finances pour 2027",
         "vote_id": "VTANR5L17V1",
         "result": "adopté",
     },
@@ -1268,6 +1270,7 @@ def test_get_agenda_default_week(client, mock_cursor):
         "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N1"
     )
     assert data["days"][0]["items"][0]["vote_id"] is None
+    assert data["days"][0]["items"][0]["dossier_title"] == "Projet de loi de finances pour 2027"
     assert data["days"][1]["items"][0]["vote_id"] == "VTANR5L17V1"
     assert data["days"][1]["items"][0]["result"] == "adopté"
 

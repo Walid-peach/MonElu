@@ -849,6 +849,10 @@ class AgendaItem(_Base):
     summary_plain: Optional[str] = None
     theme: Optional[str] = None
     dossier_id: Optional[str] = None
+    dossier_title: Optional[str] = Field(
+        default=None,
+        description="The bill's short official title, when the dossier is known (#525)",
+    )
     dossier_url: Optional[str] = Field(
         default=None, description="Official AN dossier page; set whenever dossier_id is known"
     )
@@ -885,6 +889,7 @@ class AgendaResponse(_Base):
                                 "summary_plain": None,
                                 "theme": None,
                                 "dossier_id": "DLR5L17N52985",
+                                "dossier_title": "Lutte contre les fraudes sociales et fiscales",
                                 "dossier_url": (
                                     "https://www.assemblee-nationale.fr/dyn/17/dossiers/"
                                     "DLR5L17N52985"

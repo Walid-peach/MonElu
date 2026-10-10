@@ -38,7 +38,8 @@ extension AgendaEntry {
         self.init(
             id: item.pointUid, start: item.sittingStart, pointType: item.pointType,
             summary: item.summaryPlain, objet: item.objet, theme: item.theme, voteID: item.voteId,
-            result: item.result, dossierURL: item.dossierUrl.flatMap(URL.init(string:))
+            result: item.result, dossierURL: item.dossierUrl.flatMap(URL.init(string:)),
+            dossierTitle: item.dossierTitle
         )
     }
 }
