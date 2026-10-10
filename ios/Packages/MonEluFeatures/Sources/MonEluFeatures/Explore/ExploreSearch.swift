@@ -74,8 +74,8 @@ struct ExploreSearch: Sendable {
 @MainActor @Observable
 final class ExploreSearchModel {
     var query = ""
+    /// Nil until the current query has answered; the view shows a spinner.
     private(set) var results: ExploreSearchResults?
-    private(set) var isSearching = false
 
     private let search: ExploreSearch
     private let lois: any LoisService
@@ -99,8 +99,6 @@ final class ExploreSearchModel {
             return
         }
         do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
-        isSearching = true
-        defer { isSearching = false }
         if loiList == nil { loiList = try? await lois.lois().items }
         let found = await search(query, lois: loiList ?? [])
         guard !Task.isCancelled else { return }
