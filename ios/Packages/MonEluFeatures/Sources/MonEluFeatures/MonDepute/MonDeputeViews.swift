@@ -234,6 +234,7 @@ struct PickerDeputyRow: View {
                     Text(deputy.name)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Palette.textPrimary)
+                        .multilineTextAlignment(.leading)
                     if let seat = deputy.seat {
                         Text(seat)
                             .font(.footnote)
@@ -272,21 +273,29 @@ struct FollowSelectionBar: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Text("Suivre \(deputy.name)")
-                .font(.body.weight(.semibold))
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .padding(.horizontal, 18)
-                .foregroundStyle(Palette.onAccent)
-                .background(Palette.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        // The bar's margins and background belong to a container, not to the
+        // button: on the button they made its frame reach down behind the
+        // floating tab bar, so its centre - where Maestro and VoiceOver tap -
+        // was the Explorer tab (#518).
+        VStack(spacing: 0) {
+            Button(action: action) {
+                Text("Suivre \(deputy.name)")
+                    .font(.body.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .padding(.horizontal, 18)
+                    .foregroundStyle(Palette.onAccent)
+                    .background(Palette.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("picker.follow")
         }
-        .buttonStyle(.plain)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Palette.pageBackground.opacity(0.94))
         .overlay(alignment: .top) { Divider().overlay(Palette.border) }
-        .accessibilityIdentifier("picker.follow")
+        .accessibilityElement(children: .contain)
     }
 }
