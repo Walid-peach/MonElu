@@ -110,11 +110,10 @@ struct CompositionView: View {
                 let available = max(0, proxy.size.width - spacing * CGFloat(composition.count - 1))
                 HStack(spacing: spacing) {
                     ForEach(composition) { entry in
-                        // The chip's own colors, so each segment matches its chip below.
-                        let colors = Palette.party(entry.short)
+                        // The group's solid color, as the design fills it (#528);
+                        // the chips below carry the names.
                         Rectangle()
-                            .fill(colors.background)
-                            .overlay(Rectangle().strokeBorder(colors.text, lineWidth: 1.5))
+                            .fill(Palette.partyFill(entry.short))
                             .frame(width: total > 0 ? available * CGFloat(entry.count) / CGFloat(total) : 0)
                     }
                 }

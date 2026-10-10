@@ -66,6 +66,17 @@ public enum Palette {
         return (token("party\(code)Background"), token("party\(code)Text"))
     }
 
+    /// A group's solid color, for a bar segment (#528): the website's
+    /// `--party-*` pair, lightened in dark mode (MON-197). A group without one
+    /// (non-inscrits) or an unknown code takes the non-votant grey.
+    public static func partyFill(_ short: String?) -> Color {
+        let code = short.flatMap { filledParties.contains($0) ? $0 : nil } ?? "Other"
+        return token("party\(code)Fill")
+    }
+
+    /// The groups with a solid color on the website (`--party-*`).
+    static let filledParties: Set<String> = ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR", "LIOT", "UDR", "GDR"]
+
     /// The groups `partyColor()` gives a color of their own.
     static let coloredParties: Set<String> = ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR"]
 

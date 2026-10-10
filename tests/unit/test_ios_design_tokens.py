@@ -82,6 +82,21 @@ WEB_SOURCES = {
     "partyHORText": ("#134E4A", "#CCFBF1"),
     "partyOtherBackground": ("#F3F4F6", "#374151"),
     "partyOtherText": ("#374151", "#F3F4F6"),
+    # Solid group fills for bars (#528): the website's --party-* pairs
+    # (MON-197 lightened the dark ones); a group without one takes the
+    # non-votant grey.
+    "partyRNFill": ("--party-rn", "--party-rn"),
+    "partyEPRFill": ("--party-epr", "--party-epr"),
+    "partyLFIFill": ("--party-lfi", "--party-lfi"),
+    "partySOCFill": ("--party-soc", "--party-soc"),
+    "partyDRFill": ("--party-dr", "--party-dr"),
+    "partyECSFill": ("--party-ecs", "--party-ecs"),
+    "partyDEMFill": ("--party-dem", "--party-dem"),
+    "partyHORFill": ("--party-hor", "--party-hor"),
+    "partyLIOTFill": ("--party-liot", "--party-liot"),
+    "partyUDRFill": ("--party-udr", "--party-udr"),
+    "partyGDRFill": ("--party-gdr", "--party-gdr"),
+    "partyOtherFill": ("#9CA3AF", "#9CA3AF"),
 }
 
 # A translucent fill (the badge backgrounds) can sit on either surface.
