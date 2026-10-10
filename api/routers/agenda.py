@@ -38,8 +38,12 @@ _CANCELLED_STATES = ("Annulé", "Supprimé")
 _AGENDA_QUERY = """
     SELECT a.point_uid, a.sitting_start, a.sitting_end, a.objet,
            a.point_type, a.summary_plain, a.theme, a.dossier_id,
+           d.titre AS dossier_title,
            v.vote_id, v.result
     FROM agenda_items a
+    -- The bill's short title (#525). A point whose dossier is outside the
+    -- L17 export, or not yet ingested, keeps a NULL title.
+    LEFT JOIN dossiers d ON d.dossier_uid = a.dossier_id
     -- Earliest scrutin on or after the sitting *date* (ADR-030 §4) — date,
     -- not sitting_start's time-of-day, so a same-day scrutin that happened
     -- earlier than this point's slot still links.
@@ -117,6 +121,12 @@ def get_agenda(
     dossier, which turns a scheduled item into a settled one; otherwise
     `dossier_url` points at the official dossier page. Séance publique only -
     committee work is not covered.
+
+    `dossier_title` is the bill's short official title (the dossier législatif's
+    `titre`), null when the item has no dossier or the dossier is not in the
+    17th-legislature export. It names the text; `objet` names this point of the
+    ordre du jour, and `summary_plain` is a machine-written one-line summary of
+    it, null by design for a stub `objet` (only `point_type` is meaningful then).
     """
     from_date, to_date = _resolve_window(from_date, to_date)
 
@@ -144,6 +154,7 @@ def get_agenda(
             summary_plain=row["summary_plain"],
             theme=row["theme"],
             dossier_id=row["dossier_id"],
+            dossier_title=row["dossier_title"],
             dossier_url=_dossier_url(row["dossier_id"]) if row["dossier_id"] else None,
             vote_id=row["vote_id"],
             result=row["result"],
