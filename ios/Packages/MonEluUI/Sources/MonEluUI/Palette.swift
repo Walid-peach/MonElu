@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// MonÉlu's color tokens. Each is a color set in `Colors.xcassets` with a light
 /// and a dark value mirroring the website's `--dp-*` variables in
@@ -29,8 +30,14 @@ public enum Palette {
     public static let positiveText = token("positiveText")
     /// Text on `negativeBackground` (the website's `--dp-badge-neg-text`).
     public static let negativeText = token("negativeText")
-    /// Neutral fill behind abstention and non-votant badges and bar tracks.
+    /// Neutral fill behind non-votant badges and bar tracks.
     public static let trackBackground = token("trackBackground")
+    /// An abstention badge's tint: amber, the hue of the abstention seat and
+    /// bar segment (#516; the website's `--dp-badge-abst-bg`).
+    public static let abstentionBackground = token("abstentionBackground")
+    /// Text on `abstentionBackground`, and an abstention count written as a
+    /// figure (`--dp-badge-abst-text`).
+    public static let abstentionText = token("abstentionText")
     /// An abstention's seat in the hemicycle: the website's amber, the same in
     /// both themes (`POSITION_COLORS` in `HemicycleChart.tsx`).
     public static let seatAbstention = token("seatAbstention")
@@ -61,6 +68,12 @@ public enum Palette {
 
     /// The groups `partyColor()` gives a color of their own.
     static let coloredParties: Set<String> = ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR"]
+
+    /// A token as a UIKit color, for the appearance proxies SwiftUI cannot
+    /// reach (the navigation bar's title font). It keeps both its values.
+    public static func uiColor(_ name: String) -> UIColor {
+        UIColor(named: name, in: .module, compatibleWith: nil) ?? .label
+    }
 
     private static func token(_ name: String) -> Color {
         Color(name, bundle: .module)

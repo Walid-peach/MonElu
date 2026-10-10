@@ -73,7 +73,7 @@ struct CompareContent: View {
             HStack(alignment: .top, spacing: 8) {
                 CompareIdentity(side: page.first)
                 Text("et")
-                    .font(Typography.heading(.title3).italic())
+                    .font(Typography.headingItalic(.title3))
                     .foregroundStyle(Palette.textSecondary)
                     .padding(.top, 28)
                 if let other = page.other {
@@ -254,6 +254,7 @@ struct DivergingSection: View {
 }
 
 struct DivergingVoteRow: View {
+    @Environment(\.today) private var today
     let vote: DivergingVote
     let a: DeputyItem
     let b: DeputyItem
@@ -265,7 +266,7 @@ struct DivergingVoteRow: View {
                     VoteResultBadge(result: result)
                 }
                 if let date = vote.date {
-                    Text(MonEluFormat.day(date))
+                    Text(MonEluFormat.listDay(date, today: today))
                         .font(.caption)
                         .foregroundStyle(Palette.textSecondary)
                 }

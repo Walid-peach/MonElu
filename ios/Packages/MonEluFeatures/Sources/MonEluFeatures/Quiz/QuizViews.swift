@@ -18,9 +18,6 @@ struct QuizIntroView: View {
                 CaveatNote(
                     "Sans compte. Vos réponses restent sur votre téléphone : rien n'est enregistré tant que vous ne partagez pas vos résultats."
                 )
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             if !themes.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {

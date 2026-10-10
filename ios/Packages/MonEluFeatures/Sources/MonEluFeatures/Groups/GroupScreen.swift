@@ -196,6 +196,7 @@ struct DissidentMemberRow: View {
 
 /// A scrutin that split a set of deputies: its result and their own tally.
 struct DividedVoteRow: View {
+    @Environment(\.today) private var today
     let vote: GroupDividedVote
     /// Whose tally it is: "Dans le groupe", "En Gironde".
     var scope = "Dans le groupe"
@@ -208,7 +209,7 @@ struct DividedVoteRow: View {
                         VoteResultBadge(result: result)
                     }
                     if let date = vote.date {
-                        Text(MonEluFormat.day(date))
+                        Text(MonEluFormat.listDay(date, today: today))
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                     }
