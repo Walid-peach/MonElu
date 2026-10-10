@@ -41,7 +41,10 @@ public struct VotesListScreen: View {
         .background(Palette.pageBackground)
         .navigationTitle("Votes")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $model.searchText, prompt: "Rechercher un scrutin")
+        // Always shown, as the design draws it (#522).
+        .searchable(
+            text: $model.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Rechercher un scrutin"
+        )
         .autocorrectionDisabled()
         .confirmationDialog("Thème", isPresented: $picksTheme, titleVisibility: .visible) {
             Button("Tous les thèmes") { model.theme = nil }
