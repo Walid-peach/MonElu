@@ -74,7 +74,7 @@ struct QuizIntroView: View {
             Text("Le quiz".uppercased())
                 .font(.caption.weight(.bold))
                 .tracking(1)
-                .opacity(0.85)
+                .foregroundStyle(Palette.onIdentityAccent)
             Text("Quel député vote comme vous ?")
                 .font(Typography.heading(.largeTitle))
                 .fixedSize(horizontal: false, vertical: true)
@@ -165,6 +165,7 @@ struct QuizPosterCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Mon résultat".uppercased())
+                    .foregroundStyle(Palette.onIdentityAccent)
                 Spacer()
                 Text("MonÉlu".uppercased()).opacity(0.7)
             }
@@ -172,7 +173,7 @@ struct QuizPosterCard: View {
             .tracking(1)
             if let top = result.topMatches.first {
                 Text("Je vote comme \(top.deputy.name)\(top.agreementPct.map { " à \(MonEluFormat.percentage($0))" } ?? "")")
-                    .font(Typography.heading(.title2))
+                    .font(Typography.heading(.title))
                     .fixedSize(horizontal: false, vertical: true)
                 Text(Self.detail(top))
                     .font(.footnote)
@@ -184,8 +185,8 @@ struct QuizPosterCard: View {
                     ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
                     : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
                 layout {
-                    themes("Vous votez pour", result.supportedThemes, dot: Palette.positive)
-                    themes("Vous votez contre", result.opposedThemes, dot: Palette.negative)
+                    themes("Vous votez pour", result.supportedThemes, dot: Palette.positive, label: Palette.onIdentityPositive)
+                    themes("Vous votez contre", result.opposedThemes, dot: Palette.negative, label: Palette.onIdentityAccent)
                 }
                 .padding(.top, 6)
             }
@@ -199,7 +200,7 @@ struct QuizPosterCard: View {
         .accessibilityIdentifier("quiz.poster")
     }
 
-    @ViewBuilder private func themes(_ title: String, _ names: [String], dot: Color) -> some View {
+    @ViewBuilder private func themes(_ title: String, _ names: [String], dot: Color, label: Color) -> some View {
         if !names.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -207,6 +208,7 @@ struct QuizPosterCard: View {
                     Text(title.uppercased())
                         .font(.caption.weight(.bold))
                         .tracking(0.6)
+                        .foregroundStyle(label)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 ForEach(names, id: \.self) { Text($0).font(.subheadline) }
@@ -328,7 +330,7 @@ struct QuizDeputyRow: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text(match.agreementPct.map(MonEluFormat.percentage) ?? "–")
-                    .font(.headline.monospacedDigit())
+                    .font(Typography.heading(.title3).monospacedDigit())
                     .foregroundStyle(Palette.textPrimary)
                     .fixedSize()
             }
