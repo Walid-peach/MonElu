@@ -14,11 +14,14 @@ public struct GroupPage: Hashable, Sendable {
     public let members: [GroupMember]
     public let mostDissident: [GroupMember]
     public let dividedVotes: [GroupDividedVote]
+    /// The group's place by current seats, as the API ranks it; nil for the
+    /// non-inscrits, who are not a group (#526).
+    public let seatRank: Int?
 
     public init(
         slug: String, name: String, short: String?, memberCount: Int, averagePresence: Double?,
         averageDissidence: Double?, members: [GroupMember], mostDissident: [GroupMember],
-        dividedVotes: [GroupDividedVote]
+        dividedVotes: [GroupDividedVote], seatRank: Int? = nil
     ) {
         self.slug = slug
         self.name = name
@@ -29,6 +32,14 @@ public struct GroupPage: Hashable, Sendable {
         self.members = members
         self.mostDissident = mostDissident
         self.dividedVotes = dividedVotes
+        self.seatRank = seatRank
+    }
+
+    /// "12 députés en mandat · 4e groupe de l'Assemblée" (#526).
+    var countLine: String {
+        let count = "\(MonEluFormat.count(memberCount)) député\(memberCount > 1 ? "s" : "") en mandat"
+        guard let seatRank else { return count }
+        return "\(count) · \(seatRank == 1 ? "1er" : "\(seatRank)e") groupe de l'Assemblée"
     }
 
     /// The members whose name contains `query`, ignoring case and accents.

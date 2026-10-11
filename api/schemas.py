@@ -630,6 +630,11 @@ class GroupDetail(_Base):
     slug: str
     name: str
     member_count: int
+    seat_rank: Optional[int] = Field(
+        default=None,
+        description="The group's place by current seats among the groups (1 = largest); "
+        "None for the non-inscrits (#526).",
+    )
     members: list[GroupMember]
     avg_presence_rate: Optional[float] = Field(
         default=None,

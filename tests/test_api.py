@@ -1033,12 +1033,14 @@ def test_list_groups_largest_first_with_slugs(client, mock_cursor):
 
 def test_get_group(client, mock_cursor):
     mock_cursor.fetchall.side_effect = [_GROUP_MEMBER_ROWS, _GROUP_VOTE_ROWS, _GROUP_RATE_ROWS]
+    mock_cursor.fetchone.return_value = {"seat_rank": 1}
     resp = client.get("/groups/rassemblement-national")
     assert resp.status_code == 200
     data = resp.json()
     assert data["slug"] == "rassemblement-national"
     assert data["name"] == "Rassemblement National"
     assert data["member_count"] == 2
+    assert data["seat_rank"] == 1
     assert data["avg_presence_rate"] == 0.7
     assert data["avg_dissident_rate"] == 0.1
     assert data["most_dissident_members"][0]["deputy_id"] == "PA2"
@@ -1059,6 +1061,7 @@ def test_get_group_unknown_slug(client, mock_cursor):
 
 def test_get_group_normalizes_slug_case(client, mock_cursor):
     mock_cursor.fetchall.side_effect = [_GROUP_MEMBER_ROWS, _GROUP_VOTE_ROWS, _GROUP_RATE_ROWS]
+    mock_cursor.fetchone.return_value = {"seat_rank": 1}
     resp = client.get("/groups/Rassemblement-National")
     assert resp.status_code == 200
     assert resp.json()["slug"] == "rassemblement-national"

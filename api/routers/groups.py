@@ -26,6 +26,9 @@ from api.schemas import (
     GroupVoteBreakdown,
 )
 
+# Not a group in any political sense: not ranked among the groups (#526).
+NON_INSCRITS = "Non inscrit"
+
 router = APIRouter()
 
 
@@ -143,6 +146,9 @@ def get_group(
     alphabetically), which is the same definition the per-deputy dissidence
     endpoints use.
 
+    `seat_rank` is the group's place by current seats among the groups (1 is the
+    largest; equal counts share a rank), null for `ni`.
+
     `avg_presence_rate` and `avg_dissident_rate` are null when the analytics
     layer is unavailable; the roster and the vote breakdowns still work. 404 on
     an unknown slug or a group with no sitting members.
@@ -170,6 +176,23 @@ def get_group(
 
             if not member_rows:
                 raise HTTPException(status_code=404, detail="No active deputies for this group")
+
+            # The group's place by current seats (#526): 1 is the largest, equal
+            # seat counts share a rank, and the non-inscrits, who are not a
+            # group, are neither ranked nor counted.
+            cur.execute(
+                """
+                SELECT seat_rank FROM (
+                    SELECT party, RANK() OVER (ORDER BY COUNT(*) DESC) AS seat_rank
+                    FROM deputies
+                    WHERE mandate_end IS NULL AND party IS NOT NULL AND party <> %s
+                    GROUP BY party
+                ) ranked
+                WHERE party = %s
+                """,
+                (NON_INSCRITS, party),
+            )
+            rank_row = cur.fetchone()
 
             deputy_ids = [r["deputy_id"] for r in member_rows]
 
@@ -246,6 +269,7 @@ def get_group(
         slug=canonical_slug,
         name=party,
         member_count=len(members),
+        seat_rank=rank_row["seat_rank"] if rank_row else None,
         members=members,
         avg_presence_rate=avg_presence,
         avg_dissident_rate=avg_dissident,

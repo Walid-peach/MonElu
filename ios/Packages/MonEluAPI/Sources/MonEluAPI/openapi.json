@@ -636,7 +636,7 @@
           "Groups"
         ],
         "summary": "A parliamentary group: roster, cohesion, and its most divided votes",
-        "description": "One parliamentary group, addressed by slug (`rn`, `lfi`, `epr`, `soc`, …).\n\nThere are 12 groups, including `ni` for the non-inscrits, who are not a group\nin any political sense - just deputies belonging to none. Treat any aggregate\nover `ni` as a statistical artefact rather than a position.\n\n**Current members only.** Deputies who have left the Assemblée or changed\ngroups are absent, and every rate here is computed over today's roster\napplied to the whole voting window. Group composition shifts during a\nlegislature, so this is a snapshot, not a history.\n\n`avg_dissident_rate` is the group's cohesion inverted: higher means members\nbreak ranks more often. `divided_votes` ranks by how close the internal\npour/contre split was, `recent_scrutins` is simply the newest. Both carry\n`majority_position`, the group's plurality on that scrutin (ties broken\nalphabetically), which is the same definition the per-deputy dissidence\nendpoints use.\n\n`avg_presence_rate` and `avg_dissident_rate` are null when the analytics\nlayer is unavailable; the roster and the vote breakdowns still work. 404 on\nan unknown slug or a group with no sitting members.",
+        "description": "One parliamentary group, addressed by slug (`rn`, `lfi`, `epr`, `soc`, …).\n\nThere are 12 groups, including `ni` for the non-inscrits, who are not a group\nin any political sense - just deputies belonging to none. Treat any aggregate\nover `ni` as a statistical artefact rather than a position.\n\n**Current members only.** Deputies who have left the Assemblée or changed\ngroups are absent, and every rate here is computed over today's roster\napplied to the whole voting window. Group composition shifts during a\nlegislature, so this is a snapshot, not a history.\n\n`avg_dissident_rate` is the group's cohesion inverted: higher means members\nbreak ranks more often. `divided_votes` ranks by how close the internal\npour/contre split was, `recent_scrutins` is simply the newest. Both carry\n`majority_position`, the group's plurality on that scrutin (ties broken\nalphabetically), which is the same definition the per-deputy dissidence\nendpoints use.\n\n`seat_rank` is the group's place by current seats among the groups (1 is the\nlargest; equal counts share a rank), null for `ni`.\n\n`avg_presence_rate` and `avg_dissident_rate` are null when the analytics\nlayer is unavailable; the roster and the vote breakdowns still work. 404 on\nan unknown slug or a group with no sitting members.",
         "operationId": "getGroup",
         "parameters": [
           {
@@ -4153,6 +4153,11 @@
           "member_count": {
             "type": "integer",
             "title": "Member Count"
+          },
+          "seat_rank": {
+            "title": "Seat Rank",
+            "description": "The group's place by current seats among the groups (1 = largest); None for the non-inscrits (#526).",
+            "type": "integer"
           },
           "members": {
             "items": {
