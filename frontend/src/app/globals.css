@@ -119,12 +119,12 @@
      lib/utils.ts repeats these for OG images. See .dark below for
      contrast-adjusted dark-mode values. */
   --party-rn: #003189;
-  --party-epr: #C79A2E;
+  --party-epr: #B58C2A;
   --party-lfi: #C9302A;
   --party-soc: #DB4F86;
   --party-dr: #0066CC;
   --party-ecs: #1F8A5B;
-  --party-dem: #F97316;
+  --party-dem: #F36706;
   --party-hor: #0D9488;
   --party-liot: #7C3AED;
   --party-udr: #3B5B8F;
@@ -182,18 +182,22 @@
 
   /* MON-197: lightened so each still clears 4.5:1 against --dp-card-bg
      (#121D30) — the originals (esp. --party-rn navy-on-navy) fell as low as
-     1.45:1. --party-epr/--party-dem/--party-hor already cleared 4.5:1
-     unmodified, so they're omitted here and fall through to :root.
+     1.45:1. --party-hor already cleared 4.5:1 unmodified, so it is omitted
+     here and falls through to :root. EPR and DEM keep their original values
+     here: the light ones were darkened to reach 3:1 on white as bar fills
+     (WCAG 1.4.11), which would only dim them on the dark card.
      #550: each group's hue sits in its bloc's family (left reds, pink and
      green; centre gold, orange, teal and violet; right blues), and every
      pair stays at least ΔE 21 apart in both themes, so no two segments of
      a bar read as one group, and none reads as the non-inscrits' grey.
      RN moved toward indigo, away from DR. */
   --party-rn: #9198FF;
+  --party-epr: #C79A2E;
   --party-lfi: #DB5A55;
   --party-soc: #F27DAE;
   --party-dr: #0482FF;
   --party-ecs: #229864;
+  --party-dem: #F97316;
   --party-liot: #9C6AF2;
   --party-udr: #86A6D6;
   --party-gdr: #E39A86;
@@ -281,12 +285,12 @@
     --dp-badge-abst-text: #92400E;
     --dp-sticky-bg: rgba(255,255,255,0.94);
     --party-rn: #003189;
-    --party-epr: #C79A2E;
+    --party-epr: #B58C2A;
     --party-lfi: #C9302A;
     --party-soc: #DB4F86;
     --party-dr: #0066CC;
     --party-ecs: #1F8A5B;
-    --party-dem: #F97316;
+    --party-dem: #F36706;
     --party-hor: #0D9488;
     --party-liot: #7C3AED;
     --party-udr: #3B5B8F;

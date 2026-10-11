@@ -61,12 +61,12 @@ export function groupVotesByParty(
 // browser-rendered React) use partyHex(), which is dark-mode aware.
 const PARTY_HEX_STATIC: Record<string, string> = {
   'Rassemblement National':                           '#003189',
-  'Ensemble pour la République':                      '#C79A2E',
+  'Ensemble pour la République':                      '#B58C2A',
   'La France insoumise - Nouveau Front Populaire':    '#C9302A',
   'Socialistes et apparentés':                        '#DB4F86',
   'Droite Républicaine':                              '#0066CC',
   'Écologiste et Social':                             '#1F8A5B',
-  'Les Démocrates':                                   '#F97316',
+  'Les Démocrates':                                   '#F36706',
   'Horizons & Indépendants':                          '#0D9488',
   'Libertés, Indépendants, Outre-mer et Territoires': '#7C3AED',
   'Union des droites pour la République':             '#3B5B8F',
