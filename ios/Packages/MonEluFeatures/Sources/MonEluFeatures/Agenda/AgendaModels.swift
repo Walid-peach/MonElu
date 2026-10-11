@@ -65,10 +65,13 @@ public struct AgendaEntry: Hashable, Sendable, Identifiable {
     public let dossierURL: URL?
     /// The bill's short official title, when the API knows the dossier (#525).
     public let dossierTitle: String?
+    /// The dossier uid when the bill has a MonÉlu page (the API's `lois_url`
+    /// is set only then, #511), so the row can open it in the app.
+    public let loiID: String?
 
     public init(
         id: String, start: Date, pointType: String?, summary: String?, objet: String?, theme: String?,
-        voteID: String?, result: String?, dossierURL: URL?, dossierTitle: String? = nil
+        voteID: String?, result: String?, dossierURL: URL?, dossierTitle: String? = nil, loiID: String? = nil
     ) {
         self.id = id
         self.start = start
@@ -80,6 +83,7 @@ public struct AgendaEntry: Hashable, Sendable, Identifiable {
         self.result = result
         self.dossierURL = dossierURL
         self.dossierTitle = dossierTitle
+        self.loiID = loiID
     }
 
     /// Design A's hierarchy (#525): the bill's short title leads, so a row

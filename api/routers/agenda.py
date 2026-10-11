@@ -22,6 +22,7 @@ from starlette.requests import Request
 
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
+from api.routers.lois import lois_url
 from api.schemas import AgendaDay, AgendaItem, AgendaResponse
 
 router = APIRouter()
@@ -38,11 +39,12 @@ _CANCELLED_STATES = ("Annulé", "Supprimé")
 _AGENDA_QUERY = """
     SELECT a.point_uid, a.sitting_start, a.sitting_end, a.objet,
            a.point_type, a.summary_plain, a.theme, a.dossier_id,
-           d.titre AS dossier_title,
+           d.titre AS dossier_title, d.has_scrutins,
            v.vote_id, v.result
     FROM agenda_items a
-    -- The bill's short title (#525). A point whose dossier is outside the
-    -- L17 export, or not yet ingested, keeps a NULL title.
+    -- The bill's short title (#525) and whether it has a MonÉlu page (#511).
+    -- A point whose dossier is outside the L17 export, or not yet ingested,
+    -- keeps a NULL title and no page.
     LEFT JOIN dossiers d ON d.dossier_uid = a.dossier_id
     -- Earliest scrutin on or after the sitting *date* (ADR-030 §4) — date,
     -- not sitting_start's time-of-day, so a same-day scrutin that happened
@@ -127,6 +129,11 @@ def get_agenda(
     17th-legislature export. It names the text; `objet` names this point of the
     ordre du jour, and `summary_plain` is a machine-written one-line summary of
     it, null by design for a stub `objet` (only `point_type` is meaningful then).
+
+    `lois_url` is the item's MonÉlu bill page, null unless the dossier has one -
+    a bill gets a page only once it has a scrutin (ADR-035), the same rule
+    `GET /votes/{vote_id}` applies to its `dossier` block. `dossier_url` stays
+    set either way.
     """
     from_date, to_date = _resolve_window(from_date, to_date)
 
@@ -156,6 +163,7 @@ def get_agenda(
             dossier_id=row["dossier_id"],
             dossier_title=row["dossier_title"],
             dossier_url=_dossier_url(row["dossier_id"]) if row["dossier_id"] else None,
+            lois_url=lois_url(row["dossier_id"]) if row["has_scrutins"] else None,
             vote_id=row["vote_id"],
             result=row["result"],
         )

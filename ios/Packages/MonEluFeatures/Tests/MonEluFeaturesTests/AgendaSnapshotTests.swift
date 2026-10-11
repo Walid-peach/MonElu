@@ -25,6 +25,25 @@ struct AgendaSnapshotTests {
         )
     }
 
+    /// A point whose bill has a page in the app (#511): a chevron, like a
+    /// scrutin, rather than the AN link's outward arrow.
+    @Test(arguments: Variant.all)
+    func agendaEntryOpeningTheBill(_ variant: Variant) async throws {
+        let entry = try await AgendaTests.week().days[1].items[0]
+        let withPage = AgendaEntry(
+            id: entry.id, start: entry.start, pointType: entry.pointType, summary: entry.summary,
+            objet: entry.objet, theme: entry.theme, voteID: nil, result: nil, dossierURL: entry.dossierURL,
+            dossierTitle: entry.dossierTitle, loiID: "DLR5L17N54777"
+        )
+        checkSnapshot(
+            NavigationStack {
+                AgendaEntryLink(entry: withPage).padding(16).background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 700 : 200
+        )
+    }
+
     @Test(arguments: Variant.all)
     func agendaFilteredByTheme(_ variant: Variant) async throws {
         let week = try await AgendaTests.week()

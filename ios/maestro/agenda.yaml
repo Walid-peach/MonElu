@@ -32,3 +32,20 @@ appId: ${APP_ID}
     visible: ".*Cette semaine.*"
     timeout: 20000
 - takeScreenshot: ${SCREENSHOT_PREFIX}3-agenda-from-home
+
+# A point whose bill has a page opens it in the app (#511), when this week
+# has one: most weeks' bills have no scrutin yet, so it is not asserted.
+- runFlow:
+    when:
+      visible:
+        id: "agenda.entry.loi"
+    commands:
+      - tapOn:
+          id: "agenda.entry.loi"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "loi.page"
+          timeout: 20000
+      - waitForAnimationToEnd
+      - takeScreenshot: ${SCREENSHOT_PREFIX}4-agenda-bill
