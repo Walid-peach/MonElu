@@ -110,7 +110,34 @@ struct AgendaTests {
     }
 
     @MainActor
-    @Test func movingAWeekAsksForThatWeek() async throws {
+    /// The week a date falls in, counted from the current one in Paris ISO
+    /// weeks (#512), across the end of summer time on 25 October 2026.
+    @Test func offsetCountsParisWeeks() throws {
+        let iso = ISO8601DateFormatter()
+        func date(_ s: String) throws -> Date { try #require(iso.date(from: s)) }
+        let tuesday = try date("2026-10-06T10:00:00Z")
+        #expect(AgendaWindow.offset(toWeekOf: try date("2026-10-15T13:00:00Z"), now: tuesday) == 1)
+        // Monday 00:30 and Sunday 23:30 in Paris both belong to this week.
+        #expect(AgendaWindow.offset(toWeekOf: try date("2026-10-04T22:30:00Z"), now: tuesday) == 0)
+        #expect(AgendaWindow.offset(toWeekOf: try date("2026-10-11T21:30:00Z"), now: tuesday) == 0)
+        #expect(AgendaWindow.offset(toWeekOf: try date("2026-09-29T08:00:00Z"), now: tuesday) == -1)
+        #expect(AgendaWindow.offset(toWeekOf: try date("2026-10-27T14:00:00Z"), now: try date("2026-10-20T10:00:00Z")) == 1)
+    }
+
+    /// The bill page's next sitting opens the agenda on that week (#512).
+    @MainActor @Test func opensOnTheWeekOfADate() async throws {
+        let recorder = RecordingAgendaService()
+        let iso = ISO8601DateFormatter()
+        let now = try #require(iso.date(from: "2026-10-06T10:00:00Z"))
+        let sitting = try #require(iso.date(from: "2026-10-15T13:00:00Z"))
+        let model = AgendaModel(service: recorder, weekOf: sitting, now: { now })
+        #expect(model.window.offset == 1)
+        await model.loader.load()
+        #expect(recorder.windows == [["2026-10-12", "2026-10-18"]])
+        #expect(model.window.relativeLabel == "Semaine prochaine")
+    }
+
+    @MainActor @Test func movingAWeekAsksForThatWeek() async throws {
         let recorder = RecordingAgendaService()
         let iso = ISO8601DateFormatter()
         let now = try #require(iso.date(from: "2026-10-06T10:00:00Z"))

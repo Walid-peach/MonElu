@@ -522,7 +522,7 @@ struct HomeAgendaSection: View {
     }
 
     private var agendaLink: some View {
-        NavigationLink(value: AppRoute.agenda) {
+        NavigationLink(value: AppRoute.agenda()) {
             HStack(spacing: 4) {
                 Text("Agenda")
                 Image(systemName: "arrow.right").accessibilityHidden(true)
@@ -537,7 +537,7 @@ struct HomeAgendaSection: View {
 
     private var cards: some View {
         ForEach(entries) { entry in
-            NavigationLink(value: AppRoute.agenda) {
+            NavigationLink(value: AppRoute.agenda()) {
                 HomeAgendaCard(entry: entry)
                     .frame(width: typeSize.isAccessibilitySize ? nil : 220)
             }
