@@ -79,7 +79,9 @@ export function HemicycleReplay({ deputies }: Props) {
     const balls = Array.from(svg.querySelectorAll('[data-ball]'))
     const landAt = new Array<number>(seats.length)
     order.forEach((n, i) => (landAt[n] = (DROP_SECONDS * i) / Math.max(1, order.length) + FALL_SECONDS))
+    // Every run starts from empty seats: a replay must clear the colours the last run left behind.
     const shown = new Array<string>(seats.length).fill('')
+    seatEls.forEach(el => el?.removeAttribute('data-pos'))
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const total = DROP_SECONDS + FALL_SECONDS
     const announce = (text: string) => { if (liveRef.current) liveRef.current.textContent = text }

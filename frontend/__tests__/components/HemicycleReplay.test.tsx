@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { HemicycleReplay } from '@/components/HemicycleReplay'
 import type { HemicycleDeputy } from '@/lib/hemicycle'
 
@@ -45,6 +45,24 @@ describe('HemicycleReplay', () => {
     expect(container.querySelectorAll('[data-seat][data-pos]')).toHaveLength(0)
     expect(screen.getByText('0 pour · 0 contre · 0 abst. · 0 non-votants')).toBeInTheDocument()
     raf.mockRestore()
+  })
+
+  it('empties the seats and plays again when a finished vote is replayed', () => {
+    mockReducedMotion(false)
+    const queue: FrameRequestCallback[] = []
+    let now = 0
+    const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => queue.push(cb))
+    const caf = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => { queue.length = 0 })
+    const flush = () => { while (queue.length) { now += 1000; queue.shift()!(now) } }
+    const { container } = render(<HemicycleReplay deputies={DEPUTIES} />)
+    act(flush)
+    expect(container.querySelectorAll('[data-seat][data-pos]')).toHaveLength(DEPUTIES.length)
+    fireEvent.click(screen.getByRole('button', { name: 'Rejouer le vote' }))
+    expect(container.querySelectorAll('[data-seat][data-pos]')).toHaveLength(0)
+    act(flush)
+    expect(container.querySelectorAll('[data-seat][data-pos]')).toHaveLength(DEPUTIES.length)
+    raf.mockRestore()
+    caf.mockRestore()
   })
 
   it('replays from the start when the button is pressed', () => {
