@@ -1242,6 +1242,7 @@ _AGENDA_ROWS = [
         "theme": "budget",
         "dossier_id": "DLR5L17N1",
         "dossier_title": "Projet de loi de finances pour 2027",
+        "has_scrutins": True,
         "vote_id": None,
         "result": None,
     },
@@ -1255,6 +1256,7 @@ _AGENDA_ROWS = [
         "theme": "budget",
         "dossier_id": "DLR5L17N1",
         "dossier_title": "Projet de loi de finances pour 2027",
+        "has_scrutins": True,
         "vote_id": "VTANR5L17V1",
         "result": "adopté",
     },
@@ -1276,6 +1278,26 @@ def test_get_agenda_default_week(client, mock_cursor):
     assert data["days"][0]["items"][0]["dossier_title"] == "Projet de loi de finances pour 2027"
     assert data["days"][1]["items"][0]["vote_id"] == "VTANR5L17V1"
     assert data["days"][1]["items"][0]["result"] == "adopté"
+
+
+def test_get_agenda_links_the_bill_page_only_when_it_exists(client, mock_cursor, monkeypatch):
+    """`lois_url` follows `dossiers.has_scrutins` (#511); `dossier_url` stays either way."""
+    monkeypatch.setenv("FRONTEND_BASE_URL", "https://monelu.fr")
+    no_page = {**_AGENDA_ROWS[0], "point_uid": "PT-NO-PAGE", "has_scrutins": False}
+    no_dossier = {
+        **_AGENDA_ROWS[0],
+        "point_uid": "PT-NO-DOSSIER",
+        "dossier_id": None,
+        "dossier_title": None,
+        "has_scrutins": None,
+    }
+    mock_cursor.fetchall.return_value = [_AGENDA_ROWS[0], no_page, no_dossier]
+    items = client.get("/agenda").json()["days"][0]["items"]
+    assert items[0]["lois_url"] == "https://monelu.fr/lois/DLR5L17N1"
+    assert items[1]["lois_url"] is None
+    assert items[1]["dossier_url"] == "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N1"
+    assert items[2]["lois_url"] is None
+    assert items[2]["dossier_url"] is None
 
 
 def test_get_agenda_groups_same_day_items(client, mock_cursor):

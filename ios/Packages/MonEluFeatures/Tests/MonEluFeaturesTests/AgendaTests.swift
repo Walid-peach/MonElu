@@ -21,6 +21,24 @@ struct AgendaTests {
         #expect(MonEluFormat.time(vote.start) == "15 h")
     }
 
+    /// A point opens the bill's page in the app only when the API gives it a
+    /// `lois_url` (#511); the recorded week has none, so this one adds it to
+    /// the third point, whose dossier has no scrutin yet in the recording.
+    @Test func aBillWithAPageIsOpenedInTheApp() async throws {
+        var json = try #require(JSONSerialization.jsonObject(with: fixture("agenda_week")) as? [String: Any])
+        var days = try #require(json["days"] as? [[String: Any]])
+        var items = try #require(days[1]["items"] as? [[String: Any]])
+        items[0]["lois_url"] = "https://monelu.fr/lois/DLR5L17N54777"
+        days[1]["items"] = items
+        json["days"] = days
+        let week = try await LiveAgendaService(client: stubClient(try JSONSerialization.data(withJSONObject: json)))
+            .week(from: "2026-09-28", to: "2026-10-04")
+        let entries = week.days.flatMap(\.items)
+        #expect(entries.map(\.loiID) == [nil, nil, "DLR5L17N54777"])
+        // The recording itself: no page anywhere, so the AN links stay.
+        #expect(try await Self.week().days.flatMap(\.items).allSatisfy { $0.loiID == nil })
+    }
+
     /// Accueil shows the week from today on, a sitting held earlier today
     /// included, and at most five items.
     @Test func accueilShowsTheNextItemsOnly() async throws {

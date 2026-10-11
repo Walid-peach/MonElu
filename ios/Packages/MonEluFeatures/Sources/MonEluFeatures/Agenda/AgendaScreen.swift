@@ -160,7 +160,8 @@ struct AgendaWeekContent: View {
     }
 }
 
-/// A point that opens its scrutin when one exists, else the AN dossier.
+/// A point opens its own scrutin when one exists, else the bill's page in the
+/// app when MonÉlu has one (#511), else the AN dossier.
 struct AgendaEntryLink: View {
     let entry: AgendaEntry
 
@@ -171,6 +172,13 @@ struct AgendaEntryLink: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("agenda.entry")
+        } else if let loiID = entry.loiID {
+            NavigationLink(value: AppRoute.loi(id: loiID)) {
+                AgendaEntryRow(entry: entry, trailing: "chevron.right")
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Ouvre la page du texte")
+            .accessibilityIdentifier("agenda.entry.loi")
         } else if let url = entry.dossierURL {
             Link(destination: url) {
                 AgendaEntryRow(entry: entry, trailing: "arrow.up.right")

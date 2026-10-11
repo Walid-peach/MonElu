@@ -862,6 +862,10 @@ class AgendaItem(_Base):
     dossier_url: Optional[str] = Field(
         default=None, description="Official AN dossier page; set whenever dossier_id is known"
     )
+    lois_url: Optional[str] = Field(
+        default=None,
+        description="The bill's MonÉlu page; null unless the dossier has one (ADR-035, #511)",
+    )
     vote_id: Optional[str] = Field(
         default=None, description="Set once a scrutin exists for this item's dossier"
     )
@@ -900,6 +904,7 @@ class AgendaResponse(_Base):
                                     "https://www.assemblee-nationale.fr/dyn/17/dossiers/"
                                     "DLR5L17N52985"
                                 ),
+                                "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N52985",
                                 "vote_id": None,
                                 "result": None,
                             }
