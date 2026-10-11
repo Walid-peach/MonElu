@@ -519,6 +519,7 @@ class ThemeMostDividedVote(_Base):
     vote_title: str
     votes_for: int
     votes_against: int
+    result: Optional[str] = Field(None, description="`adopté` or `rejeté`, as recorded (#527)")
 
 
 class ThemeDetail(_Base):
