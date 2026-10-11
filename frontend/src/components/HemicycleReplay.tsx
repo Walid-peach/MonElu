@@ -20,7 +20,7 @@ interface Props {
 const DROP_SECONDS = 6 // over which the votes come in
 const FALL_SECONDS = 0.6 // one ball's fall
 const FALL_HEIGHT = 70 // world units above the seat
-const BALLS = 70 // ball pool: enough for every vote in the air at once
+const BALL_MARGIN = 10 // spare balls on top of the most that can be in the air at once
 const COUNTED: SeatPosition[] = ['pour', 'contre', 'abstention', 'nonVotant']
 
 /** A stable shuffle keyed on deputy ids, so a vote always replays in the same order. */
@@ -32,6 +32,8 @@ function landingOrder(ids: string[]): number[] {
   }
   return ids.map((id, i) => [hash(id), i] as const).sort((a, b) => a[0] - b[0]).map(([, i]) => i)
 }
+
+const ZERO: Record<SeatPosition, number> = { pour: 0, contre: 0, abstention: 0, nonVotant: 0, absent: 0 }
 
 const faceClass = (f: Face) => (f.tone === 'top' ? 'hc3-top' : `hc3-s${f.tone}`)
 
@@ -46,7 +48,7 @@ const CSS = `
 .hc3 .hc3-s2{fill:color-mix(in srgb,var(--dp-text) 9%,var(--dp-card-bg))}
 .hc3 .hc3-s1{fill:color-mix(in srgb,var(--dp-text) 12%,var(--dp-card-bg))}
 .hc3 .hc3-s0{fill:color-mix(in srgb,var(--dp-text) 15%,var(--dp-card-bg))}
-${COUNTED.map(
+${(Object.keys(POSITION_COLORS) as SeatPosition[]).map(
   p => `.hc3 [data-pos="${p}"] .hc3-top{fill:${POSITION_COLORS[p]}}
 .hc3 [data-pos="${p}"] path:not(.hc3-top){fill:color-mix(in srgb,${POSITION_COLORS[p]} 72%,#000)}
 .hc3 circle[data-pos="${p}"]{fill:${POSITION_COLORS[p]}}`,
@@ -63,6 +65,9 @@ export function HemicycleReplay({ deputies }: Props) {
     for (const s of seats) c[s.position]++
     return c
   }, [seats])
+
+  // votes land evenly over DROP_SECONDS and each falls for FALL_SECONDS, so at most this many are in the air
+  const balls = Math.ceil((seats.length * FALL_SECONDS) / DROP_SECONDS) + BALL_MARGIN
 
   const svgRef = useRef<SVGSVGElement>(null)
   const readoutRef = useRef<HTMLSpanElement>(null)
@@ -155,6 +160,8 @@ export function HemicycleReplay({ deputies }: Props) {
       },
       { threshold: 0.35 },
     )
+    // until the drop starts the seats are empty, so the count must read zero, not the result
+    if (readoutRef.current) readoutRef.current.textContent = summary(ZERO)
     observer.observe(svg)
     return () => {
       observer.disconnect()
@@ -191,7 +198,7 @@ export function HemicycleReplay({ deputies }: Props) {
           ),
         )}
         <g>
-          {Array.from({ length: BALLS }, (_, i) => (
+          {Array.from({ length: balls }, (_, i) => (
             <circle key={i} data-ball="" r={2.6} cx={0} cy={0} visibility="hidden" />
           ))}
         </g>

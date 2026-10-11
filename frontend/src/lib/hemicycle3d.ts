@@ -218,23 +218,49 @@ export function buildChamber(seats: Seat[], { width = 680, pad = 16 } = {}): Cha
     }
   })
 
-  // ring by ring, outer first: the ring's tier blocks (far to near), then the seats on its tread
-  for (let ring = rings - 1; ring >= 0; ring--) {
+  // One group per ring and block: its tier, its seats and its desk. Groups are painted far to
+  // near by the depth of their centre - not simply outer ring first, because with the chamber
+  // turned for a three-quarter view the outer rows are the nearer ones on the left arm, where
+  // they must cover the lower rows behind them.
+  const blockOf = (a: number) => {
+    const i = blocks.findIndex(([a0, a1]) => a >= a0 && a <= a1)
+    if (i >= 0) return i
+    // a seat in an aisle gap (never produced by layoutSeats' angles, but be total): nearest block
+    let best = 0
+    blocks.forEach(([a0, a1], j) => {
+      const d = Math.min(Math.abs(a - a0), Math.abs(a - a1))
+      const b = Math.min(Math.abs(a - blocks[best]![0]), Math.abs(a - blocks[best]![1]))
+      if (d < b) best = j
+    })
+    return best
+  }
+  const seatsIn = new Map<string, Seat3D[]>()
+  for (const s3 of seats3d) {
+    const key = `${seats[s3.index]!.ring}:${blockOf(seatAngle(seats[s3.index]!))}`
+    if (!seatsIn.has(key)) seatsIn.set(key, [])
+    seatsIn.get(key)!.push(s3)
+  }
+  const groups: { depth: number; layers: Layer[] }[] = []
+  for (let ring = 0; ring < rings; ring++) {
     const r0 = ringRadius(ring) - ROW_D / 2
     const r1 = ringRadius(ring) + ROW_D / 2
-    blocks
-      .map(([a0, a1]) => {
-        const tier = prism(sector(r0, r1, a0, a1), 0, ringTop(ring), project)
-        const desk = prism(sector(r0 + 0.4, r0 + 2.2, a0 + 0.004, a1 - 0.004), ringTop(ring), 3.2, project)
-        return { faces: [...tier.faces, ...desk.faces], depth: tier.depth }
+    blocks.forEach(([a0, a1], b) => {
+      const mid = (a0 + a1) / 2
+      const tier: Layer = { kind: 'solid', solid: prism(sector(r0, r1, a0, a1), 0, ringTop(ring), project) }
+      const desk: Layer = { kind: 'solid', solid: prism(sector(r0 + 0.4, r0 + 2.2, a0 + 0.004, a1 - 0.004), ringTop(ring), 3.2, project) }
+      const onTread: Layer[] = (seatsIn.get(`${ring}:${b}`) ?? [])
+        .sort((p, q) => p.solid.depth - q.solid.depth)
+        .map(seat => ({ kind: 'seat', seat }))
+      // the desk runs along the row's inner edge: in front of the seats across from the tribune,
+      // behind them where the inner edge is the far one
+      const deskNearer = depthOf([...floorAt(r0 + 1.3, mid), 0]) > depthOf([...floorAt(ringRadius(ring) + 1.6, mid), 0])
+      groups.push({
+        depth: depthOf([...floorAt(ringRadius(ring), mid), 0]),
+        layers: deskNearer ? [tier, ...onTread, desk] : [tier, desk, ...onTread],
       })
-      .sort((p, q) => p.depth - q.depth)
-      .forEach(solid)
-    seats3d
-      .filter(s => seats[s.index]!.ring === ring)
-      .sort((p, q) => p.solid.depth - q.solid.depth)
-      .forEach(seat => layers.push({ kind: 'seat', seat }))
+    })
   }
+  groups.sort((p, q) => p.depth - q.depth).forEach(g => layers.push(...g.layers))
 
   // the floor in front of the first ring, then the perchoir and the tribune facing the tiers
   const floor: Point2[] = []

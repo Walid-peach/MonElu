@@ -1,5 +1,5 @@
 import { layoutSeats, type HemicycleDeputy } from '@/lib/hemicycle'
-import { buildChamber, floorAt, ringRadius, seatAngle } from '@/lib/hemicycle3d'
+import { buildChamber, depthOf, floorAt, ringRadius, seatAngle } from '@/lib/hemicycle3d'
 
 function makeDeputies(spec: Array<[party: string | null, position: string | null, count: number]>): HemicycleDeputy[] {
   const out: HemicycleDeputy[] = []
@@ -44,11 +44,34 @@ describe('buildChamber', () => {
     })
   })
 
-  it('paints every seat exactly once, inner rings after outer rings', () => {
+  it('paints every seat exactly once', () => {
     const painted = chamber.layers.flatMap(l => (l.kind === 'seat' ? [l.seat] : []))
+    expect(painted).toHaveLength(seats.length)
     expect(new Set(painted.map(s => s.index)).size).toBe(seats.length)
-    const rings = painted.map(s => seats[s.index]!.ring)
-    for (let i = 1; i < rings.length; i++) expect(rings[i]!).toBeLessThanOrEqual(rings[i - 1]!)
+  })
+
+  it('paints the nearer of two neighbouring rows last, on both arms of the chamber', () => {
+    // with the chamber turned three-quarters, the outer row is the nearer one on the left arm
+    // and the farther one across from the tribune; either way the nearer row must cover the other
+    const order = new Map<number, number>()
+    chamber.layers.forEach((l, i) => { if (l.kind === 'seat') order.set(l.seat.index, i) })
+    let checked = 0
+    for (const [left, right] of [[2.9, 3.05], [1.5, 1.64]] as const) {
+      const inArc = chamber.seats.filter(s => {
+        const a = seatAngle(seats[s.index]!)
+        return a >= left && a <= right
+      })
+      for (const p of inArc) for (const q of inArc) {
+        const rp = seats[p.index]!.ring, rq = seats[q.index]!.ring
+        // only seats in the same angular column of neighbouring rows overlap on screen
+        if (rq !== rp + 1 || Math.abs(seatAngle(seats[p.index]!) - seatAngle(seats[q.index]!)) > 0.012) continue
+        const nearer = depthOf(p.top) > depthOf(q.top) ? p : q
+        const farther = nearer === p ? q : p
+        expect(order.get(nearer.index)!).toBeGreaterThan(order.get(farther.index)!)
+        checked++
+      }
+    }
+    expect(checked).toBeGreaterThan(0)
   })
 
   it('keeps every projected seat inside the viewBox, with room above for the falling votes', () => {

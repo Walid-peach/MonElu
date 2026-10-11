@@ -77,6 +77,7 @@ describe('HemicycleReplay', () => {
     const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0)
     render(<HemicycleReplay deputies={DEPUTIES} />)
     expect(raf).not.toHaveBeenCalled()
+    expect(screen.getByText('0 pour · 0 contre · 0 abst. · 0 non-votants')).toBeInTheDocument()
     act(() => notify([{ isIntersecting: true }]))
     expect(raf).toHaveBeenCalled()
     expect(screen.getByText('0 pour · 0 contre · 0 abst. · 0 non-votants')).toBeInTheDocument()
@@ -89,6 +90,15 @@ describe('HemicycleReplay', () => {
     const { container } = render(<HemicycleReplay deputies={DEPUTIES} />)
     fireEvent.click(screen.getByRole('button', { name: 'Rejouer le vote' }))
     expect(container.querySelectorAll('[data-seat][data-pos]')).toHaveLength(DEPUTIES.length)
+  })
+
+  it('colours a seat whose position is not one of the four recorded ones instead of leaving it unstyled', () => {
+    mockReducedMotion(true)
+    const { container } = render(
+      <HemicycleReplay deputies={[...DEPUTIES, { deputy_id: 'PE0', full_name: 'Inconnu', party: 'RN', position: 'autre' }]} />,
+    )
+    expect(container.querySelector('[data-seat][data-pos="absent"]')).not.toBeNull()
+    expect(container.querySelector('style')!.textContent).toContain('[data-pos="absent"]')
   })
 
   it('renders nothing without deputies', () => {
