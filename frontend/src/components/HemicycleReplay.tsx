@@ -15,6 +15,8 @@ import { POSITION_COLORS, POSITION_LABELS } from '@/components/HemicycleChart'
 
 interface Props {
   deputies: HemicycleDeputy[]
+  /** A line shown under the chamber on phones only (below 640px, where seats are too small to read one by one). */
+  phoneHint?: string
 }
 
 const DROP_SECONDS = 6 // over which the votes come in
@@ -56,7 +58,7 @@ ${(Object.keys(POSITION_COLORS) as SeatPosition[]).map(
 .hc3 circle{stroke:var(--dp-card-bg);stroke-width:.6}
 `
 
-export function HemicycleReplay({ deputies }: Props) {
+export function HemicycleReplay({ deputies, phoneHint }: Props) {
   const seats = useMemo(() => layoutSeats(deputies), [deputies])
   const chamber = useMemo(() => buildChamber(seats), [seats])
   const order = useMemo(() => landingOrder(seats.map(s => s.deputy.deputy_id)), [seats])
@@ -227,6 +229,11 @@ export function HemicycleReplay({ deputies }: Props) {
           </span>
         ))}
       </div>
+      {phoneHint && (
+        <p className="sm:hidden" style={{ fontSize: 13, color: 'var(--dp-text-secondary)', margin: '12px 0 0' }}>
+          {phoneHint}
+        </p>
+      )}
       <p ref={liveRef} aria-live="polite" className="sr-only" />
     </div>
   )

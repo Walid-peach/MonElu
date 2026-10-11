@@ -341,7 +341,10 @@ export function VoteDetailClient(props: Props) {
                 </p>
                 <div style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, padding: '24px 28px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
                   {replay3d ? (
-                    <HemicycleReplay deputies={hemicycleDeputies} />
+                    <HemicycleReplay
+                      deputies={hemicycleDeputies}
+                      phoneHint={'Touchez «\u00a0Voir la vue à plat\u00a0» pour le détail par groupe.'}
+                    />
                   ) : (
                     <HemicycleChart deputies={hemicycleDeputies} />
                   )}

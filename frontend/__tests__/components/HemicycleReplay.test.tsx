@@ -101,6 +101,17 @@ describe('HemicycleReplay', () => {
     expect(container.querySelector('style')!.textContent).toContain('[data-pos="absent"]')
   })
 
+  it('shows the phone hint only when given, hidden from 640px up', () => {
+    const HINT = 'Touchez «\u00a0Voir la vue à plat\u00a0» pour le détail par groupe.'
+    mockReducedMotion(true)
+    const { rerender } = render(<HemicycleReplay deputies={DEPUTIES} />)
+    expect(screen.queryByText(/vue à plat/)).toBeNull()
+    rerender(<HemicycleReplay deputies={DEPUTIES} phoneHint={HINT} />)
+    const hint = screen.getByText(/Voir la vue à plat/)
+    expect(hint.textContent).toBe(HINT)
+    expect(hint).toHaveClass('sm:hidden')
+  })
+
   it('renders nothing without deputies', () => {
     mockReducedMotion(true)
     const { container } = render(<HemicycleReplay deputies={[]} />)
