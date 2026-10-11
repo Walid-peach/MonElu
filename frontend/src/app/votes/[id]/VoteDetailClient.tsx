@@ -10,8 +10,16 @@ import { groupSlug } from '@/lib/groups'
 import { resolvePostalCode } from '@/lib/postal'
 import { csvUrl } from '@/lib/api'
 import { anDossierUrl } from '@/lib/an'
+import dynamic from 'next/dynamic'
 import { HemicycleChart } from '@/components/HemicycleChart'
 import type { HemicycleDeputy } from '@/lib/hemicycle'
+
+// The 3D replay is loaded only when the reader asks for it, so the vote page
+// does not ship its geometry to every visitor.
+const HemicycleReplay = dynamic(
+  () => import('@/components/HemicycleReplay').then(m => m.HemicycleReplay),
+  { ssr: false, loading: () => <div style={{ height: 320 }} aria-busy="true" /> },
+)
 
 interface DeputyLookupEntry {
   deputy_id: string
@@ -93,6 +101,7 @@ export function VoteDetailClient(props: Props) {
   } = props
 
   const [showBar, setShowBar] = useState(false)
+  const [replay3d, setReplay3d] = useState(false)
   const obsRef = useRef<IntersectionObserver | null>(null)
 
   // ── "Comment a voté votre député ?" lookup ──
@@ -329,8 +338,24 @@ export function VoteDetailClient(props: Props) {
                   Un point par député ayant pris part au scrutin, placé selon son groupe parlementaire. Survolez ou touchez un siège pour voir le détail.
                 </p>
                 <div style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, padding: '24px 28px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
-                  <HemicycleChart deputies={hemicycleDeputies} />
+                  {replay3d ? (
+                    <HemicycleReplay deputies={hemicycleDeputies} />
+                  ) : (
+                    <HemicycleChart deputies={hemicycleDeputies} />
+                  )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setReplay3d(v => !v)}
+                  aria-pressed={replay3d}
+                  style={{
+                    marginTop: 12, border: '1px solid var(--dp-border)', background: 'var(--dp-card-bg)',
+                    color: 'var(--dp-text)', borderRadius: 999, padding: '8px 18px',
+                    fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  {replay3d ? 'Revenir à la vue à plat' : '▶ Voir le vote en 3D'}
+                </button>
               </section>
             )}
 

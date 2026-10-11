@@ -13,7 +13,7 @@ import {
   type SeatPosition,
 } from '@/lib/hemicycle'
 
-const POSITION_COLORS: Record<SeatPosition, string> = {
+export const POSITION_COLORS: Record<SeatPosition, string> = {
   pour: '#1F8A5B',
   contre: '#C9302A',
   abstention: '#D97706',
@@ -21,7 +21,7 @@ const POSITION_COLORS: Record<SeatPosition, string> = {
   absent: '#E4E6EA',
 }
 
-const POSITION_LABELS: Record<SeatPosition, string> = {
+export const POSITION_LABELS: Record<SeatPosition, string> = {
   pour: 'Pour',
   contre: 'Contre',
   abstention: 'Abstention',
