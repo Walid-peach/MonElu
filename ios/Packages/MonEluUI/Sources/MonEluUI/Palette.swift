@@ -61,13 +61,14 @@ public enum Palette {
     public static let onAccent = token("onAccent")
 
     /// A parliamentary group's chip colors, keyed by the API's `party_short`.
-    /// They mirror `partyColor()` in `frontend/src/lib/utils.ts` in light
-    /// mode; in dark mode the pair is reversed (the dark shade behind the
-    /// light one) so a chip never glows on the dark page. A group the website
-    /// leaves uncolored (LIOT, UDR, GDR, non-inscrits) or an unknown code
-    /// takes the neutral pair, as there.
+    /// Both are derived from the group's brand color, the one `partyFill`
+    /// paints its bar segment with, so a chip and its segment share a hue
+    /// (#550): a tint of it behind, and the same hue darkened (light) or
+    /// lightened (dark) to 4.5:1 as text. `test_ios_design_tokens.py`
+    /// recomputes both from the website's `--party-*`. The non-inscrits and
+    /// an unknown code take the neutral pair.
     public static func party(_ short: String?) -> (background: Color, text: Color) {
-        let code = short.flatMap { coloredParties.contains($0) ? $0 : nil } ?? "Other"
+        let code = short.flatMap { filledParties.contains($0) ? $0 : nil } ?? "Other"
         return (token("party\(code)Background"), token("party\(code)Text"))
     }
 
@@ -79,11 +80,9 @@ public enum Palette {
         return token("party\(code)Fill")
     }
 
-    /// The groups with a solid color on the website (`--party-*`).
+    /// The groups with a brand color on the website (`--party-*`), and so a
+    /// fill and a chip of their own.
     static let filledParties: Set<String> = ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR", "LIOT", "UDR", "GDR"]
-
-    /// The groups `partyColor()` gives a color of their own.
-    static let coloredParties: Set<String> = ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR"]
 
     /// A token as a UIKit color, for the appearance proxies SwiftUI cannot
     /// reach (the navigation bar's title font). It keeps both its values.

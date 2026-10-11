@@ -19,9 +19,9 @@ struct DesignAComponentTests {
         #expect(VoteSplitBar(pour: 2127, contre: 0, abstention: 0, nonVotant: 3).accessibilityText == "\(MonEluFormat.count(2127)) pour, 0 contre, 0 abstention, 3 non-votants")
     }
 
-    /// `partyColor()` on the website colors these eight groups and leaves
-    /// the rest neutral.
+    /// Every group the website gives a brand color (`--party-*`) has a fill
+    /// and a chip of its own (#550); the non-inscrits stay neutral.
     @Test func partyColorsCoverTheWebsitesGroups() {
-        #expect(Palette.coloredParties == ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR"])
+        #expect(Palette.filledParties == ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR", "LIOT", "UDR", "GDR"])
     }
 }

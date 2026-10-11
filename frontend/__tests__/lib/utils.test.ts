@@ -1,4 +1,4 @@
-import { formatDate, formatPct, getInitials, groupVotesByParty, normalizePartyShort, partyColor, partyHex, partyShort } from '@/lib/utils'
+import { formatDate, formatPct, getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyShort } from '@/lib/utils'
 
 describe('formatDate', () => {
   it('formats a valid ISO date in French locale', () => {
@@ -115,21 +115,5 @@ describe('partyHex', () => {
 
   it('returns fallback gray for an unrecognized value', () => {
     expect(partyHex('PO838901')).toBe('var(--dp-text-secondary)')
-  })
-})
-
-describe('partyColor', () => {
-  it('returns a Tailwind class string for a known party', () => {
-    const cls = partyColor('Rassemblement National')
-    expect(cls).toContain('bg-')
-    expect(cls).toContain('text-')
-  })
-
-  it('returns fallback classes for null', () => {
-    expect(partyColor(null)).toBe('bg-gray-100 text-gray-600')
-  })
-
-  it('returns fallback classes for unknown party', () => {
-    expect(partyColor('Parti Inconnu')).toBe('bg-gray-100 text-gray-700')
   })
 })

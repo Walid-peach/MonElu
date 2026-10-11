@@ -92,7 +92,7 @@ The work is tracked under epic #429, one phase epic at a time.
   A new token means a new color set and a row in that test's `WEB_SOURCES`.
   `textSecondary` and `textMuted` are deliberately darker than the website's, so every body text token reaches 4.5:1 on the page, card and track backgrounds in both themes (#480); the same test computes those ratios from the catalog, so a new text token or surface goes into its `TEXT_ON_BACKGROUNDS`.
   Text on `positiveBackground`/`negativeBackground` (badges, pills) uses `positiveText`/`negativeText`, never `positive`/`negative`, which are the fills for bars and hemicycle seats and miss 4.5:1 as badge text in light mode.
-  Group chips take their colors from `Palette.party(_:)`, keyed by the API's `party_short` and mirroring `partyColor()` in `frontend/src/lib/utils.ts`.
+  Group chips (`Palette.party(_:)`) and fills (`Palette.partyFill(_:)`) are keyed by the API's `party_short` and both derive from the group's brand color, the website's `--party-*` (MON-197), so a chip and its bar segment always share a hue (#550); the token test recomputes the chips from `globals.css`.
 - Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type), and an italic word in one `Typography.headingItalic(_:)` (the bundled italic face; `.italic()` on the roman face only slants it); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
 - Text that can grow with Dynamic Type must wrap, not truncate.
 - A Newsreader title that can run over several lines (a scrutin, a bill, a group) takes `.headingLineSpacing()`, so its lines do not touch (#519).
