@@ -134,9 +134,32 @@ export function HemicycleReplay({ deputies }: Props) {
     frameRef.current = requestAnimationFrame(tick)
   }, [seats, order, chamber, final])
 
+  // The first run waits until the chamber is on screen, since the vote section sits below the
+  // fold; a replay, reduced motion or a browser without IntersectionObserver plays at once.
   useEffect(() => {
-    play()
-    return () => cancelAnimationFrame(frameRef.current)
+    const svg = svgRef.current
+    const stop = () => cancelAnimationFrame(frameRef.current)
+    if (
+      run > 0 || !svg || typeof IntersectionObserver === 'undefined' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      play()
+      return stop
+    }
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries.some(e => e.isIntersecting)) {
+          observer.disconnect()
+          play()
+        }
+      },
+      { threshold: 0.35 },
+    )
+    observer.observe(svg)
+    return () => {
+      observer.disconnect()
+      stop()
+    }
   }, [play, run])
 
   if (seats.length === 0) return null

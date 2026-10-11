@@ -65,6 +65,25 @@ describe('HemicycleReplay', () => {
     caf.mockRestore()
   })
 
+  it('waits until the chamber is on screen before the first run', () => {
+    mockReducedMotion(false)
+    let notify: (entries: Array<{ isIntersecting: boolean }>) => void = () => {}
+    const original = (window as { IntersectionObserver?: unknown }).IntersectionObserver
+    ;(window as { IntersectionObserver?: unknown }).IntersectionObserver = class {
+      constructor(cb: typeof notify) { notify = cb }
+      observe() {}
+      disconnect() {}
+    }
+    const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0)
+    render(<HemicycleReplay deputies={DEPUTIES} />)
+    expect(raf).not.toHaveBeenCalled()
+    act(() => notify([{ isIntersecting: true }]))
+    expect(raf).toHaveBeenCalled()
+    expect(screen.getByText('0 pour · 0 contre · 0 abst. · 0 non-votants')).toBeInTheDocument()
+    raf.mockRestore()
+    ;(window as { IntersectionObserver?: unknown }).IntersectionObserver = original
+  })
+
   it('replays from the start when the button is pressed', () => {
     mockReducedMotion(true)
     const { container } = render(<HemicycleReplay deputies={DEPUTIES} />)

@@ -14,8 +14,8 @@ import dynamic from 'next/dynamic'
 import { HemicycleChart } from '@/components/HemicycleChart'
 import type { HemicycleDeputy } from '@/lib/hemicycle'
 
-// The 3D replay is loaded only when the reader asks for it, so the vote page
-// does not ship its geometry to every visitor.
+// The 3D replay is the default view. It is client-only and loaded as its own
+// chunk after hydration, so the vote page's server HTML and first bundle stay as they were.
 const HemicycleReplay = dynamic(
   () => import('@/components/HemicycleReplay').then(m => m.HemicycleReplay),
   { ssr: false, loading: () => <div style={{ height: 320 }} aria-busy="true" /> },
@@ -101,7 +101,7 @@ export function VoteDetailClient(props: Props) {
   } = props
 
   const [showBar, setShowBar] = useState(false)
-  const [replay3d, setReplay3d] = useState(false)
+  const [replay3d, setReplay3d] = useState(true)
   const obsRef = useRef<IntersectionObserver | null>(null)
 
   // ── "Comment a voté votre député ?" lookup ──
@@ -335,7 +335,9 @@ export function VoteDetailClient(props: Props) {
                 <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--dp-red)' }}>Hémicycle</div>
                 <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '12px 0 4px', letterSpacing: '-0.01em' }}>Le vote, siège par siège</h2>
                 <p style={{ fontSize: 15, color: 'var(--dp-text-secondary)', margin: '0 0 20px', maxWidth: 560 }}>
-                  Un point par député ayant pris part au scrutin, placé selon son groupe parlementaire. Survolez ou touchez un siège pour voir le détail.
+                  {replay3d
+                    ? 'Chaque vote tombe dans le siège de son député, placé selon son groupe parlementaire. La vue à plat permet de survoler chaque siège pour voir le détail.'
+                    : 'Un point par député ayant pris part au scrutin, placé selon son groupe parlementaire. Survolez ou touchez un siège pour voir le détail.'}
                 </p>
                 <div style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, padding: '24px 28px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
                   {replay3d ? (
@@ -354,7 +356,7 @@ export function VoteDetailClient(props: Props) {
                     fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
                   }}
                 >
-                  {replay3d ? 'Revenir à la vue à plat' : '▶ Voir le vote en 3D'}
+                  {replay3d ? 'Voir la vue à plat' : '▶ Voir le vote en 3D'}
                 </button>
               </section>
             )}
