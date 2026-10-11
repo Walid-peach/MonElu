@@ -63,14 +63,14 @@ const PARTY_HEX_STATIC: Record<string, string> = {
   'Rassemblement National':                           '#003189',
   'Ensemble pour la République':                      '#C79A2E',
   'La France insoumise - Nouveau Front Populaire':    '#C9302A',
-  'Socialistes et apparentés':                        '#E07A2E',
+  'Socialistes et apparentés':                        '#DB4F86',
   'Droite Républicaine':                              '#0066CC',
   'Écologiste et Social':                             '#1F8A5B',
   'Les Démocrates':                                   '#F97316',
   'Horizons & Indépendants':                          '#0D9488',
   'Libertés, Indépendants, Outre-mer et Territoires': '#7C3AED',
-  'Union des droites pour la République':             '#DC2626',
-  'Gauche Démocrate et Républicaine':                 '#B45309',
+  'Union des droites pour la République':             '#3B5B8F',
+  'Gauche Démocrate et Républicaine':                 '#7F1D2D',
 }
 
 // MON-197: values are CSS var() references, not raw hex — the vars are
