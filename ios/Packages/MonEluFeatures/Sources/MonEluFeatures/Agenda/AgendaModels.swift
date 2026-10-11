@@ -126,6 +126,16 @@ struct AgendaWindow: Hashable {
         to = MonEluFormat.isoDay(end)
     }
 
+    /// How many weeks from the one holding `now` to the one holding `date`,
+    /// Paris ISO weeks: 0 for this week, 1 for the next, -1 for the last.
+    static func offset(toWeekOf date: Date, now: Date) -> Int {
+        let calendar = MonEluFormat.parisCalendar
+        guard let thisMonday = calendar.dateInterval(of: .weekOfYear, for: now)?.start,
+              let thatMonday = calendar.dateInterval(of: .weekOfYear, for: date)?.start
+        else { return 0 }
+        return calendar.dateComponents([.weekOfYear], from: thisMonday, to: thatMonday).weekOfYear ?? 0
+    }
+
     /// "Cette semaine", "Semaine prochaine", or nil further away.
     var relativeLabel: String? {
         switch offset {

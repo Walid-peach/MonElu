@@ -123,7 +123,12 @@ struct LoiOverview: View {
                 StageStripView(strip: strip)
             }
             if let sitting = page.nextSitting {
-                NextSittingCard(sitting: sitting)
+                // Opens the agenda on that sitting's week (#512).
+                NavigationLink(value: AppRoute.agenda(weekOf: sitting.start)) {
+                    NextSittingCard(sitting: sitting)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Ouvre l'agenda de cette semaine")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -229,6 +234,9 @@ struct NextSittingCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .accessibilityHidden(true)
         }
         .foregroundStyle(Palette.onIdentity)
         .padding(.horizontal, 14)

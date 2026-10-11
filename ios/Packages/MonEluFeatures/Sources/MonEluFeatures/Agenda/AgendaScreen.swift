@@ -15,10 +15,12 @@ final class AgendaModel {
     private let service: any AgendaService
     private let now: @Sendable () -> Date
 
-    init(service: any AgendaService, now: @escaping @Sendable () -> Date = { .now }) {
+    /// Opens on the week holding `weekOf`, or the current week when nil.
+    init(service: any AgendaService, weekOf: Date? = nil, now: @escaping @Sendable () -> Date = { .now }) {
         self.service = service
         self.now = now
-        let window = AgendaWindow(offset: 0, now: now())
+        let today = now()
+        let window = AgendaWindow(offset: weekOf.map { AgendaWindow.offset(toWeekOf: $0, now: today) } ?? 0, now: today)
         self.window = window
         loader = Self.loader(service, window)
     }
@@ -40,8 +42,9 @@ final class AgendaModel {
 public struct AgendaScreen: View {
     @State private var model: AgendaModel
 
-    public init(service: any AgendaService) {
-        _model = State(initialValue: AgendaModel(service: service))
+    /// `weekOf` opens the week holding that date (#512); nil, this week.
+    public init(service: any AgendaService, weekOf: Date? = nil) {
+        _model = State(initialValue: AgendaModel(service: service, weekOf: weekOf))
     }
 
     public var body: some View {
@@ -263,7 +266,7 @@ struct AgendaEntryRow: View {
 /// Opens the agenda from Accueil and Explorer.
 struct AgendaToolbarLink: View {
     var body: some View {
-        NavigationLink(value: AppRoute.agenda) {
+        NavigationLink(value: AppRoute.agenda()) {
             Label("Agenda", systemImage: "calendar")
         }
         .accessibilityIdentifier("open.agenda")

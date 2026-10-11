@@ -5,8 +5,9 @@ import Foundation
 public enum AppRoute: Hashable, Sendable {
     case deputy(id: String)
     case vote(id: String)
-    /// The séance publique agenda, one ISO week at a time.
-    case agenda
+    /// The séance publique agenda, one ISO week at a time: the week holding
+    /// `weekOf` (a bill's next sitting, #512), the current one when nil.
+    case agenda(weekOf: Date? = nil)
     /// A bill's page, by its dossier uid (`DLR5L17N54372`).
     case loi(id: String)
     /// The amendment and article scrutins of a bill, all of them or those of

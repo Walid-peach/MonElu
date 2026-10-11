@@ -144,7 +144,7 @@ struct ExploreTiles: View {
                     ?? "Les textes votés",
                 "tag", .lois, id: "explore.lois"
             )
-            tile("Agenda", "Cette semaine", "calendar", .agenda, id: "explore.agenda")
+            tile("Agenda", "Cette semaine", "calendar", .agenda(), id: "explore.agenda")
         }
         .padding(.horizontal, 16)
     }
