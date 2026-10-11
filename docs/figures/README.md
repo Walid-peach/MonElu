@@ -29,3 +29,18 @@ lights once it is crossed. The balls that stay on the rack are the seats with no
   the hemicycle would need the per-deputy positions from `GET /votes/{id}`.
 - **Interaction.** Plays an idle loop; hover (or the arrow keys, Home, End) scrubs the count.
   Reduced motion shows the final state.
+
+## The other figures
+
+All share `_shared.mjs` (base plate, page writer, and one timeline loop: idle tour, hover scrub,
+arrow keys). Each `build.mjs` names its data source at the top.
+
+| Folder | Figure | Data |
+|---|---|---|
+| `navette/` | A loom weaving a bill's parcours; the shuttle crosses to the Sénat | `DLR5L17N54372`, the iOS `loi.json` fixture |
+| `pointeuse/` | A time clock punching one deputy's card three ways (95 / 88 / 66 %) | the `DeputyScorecard` example in `api/schemas.py`, name removed |
+| `table-lumineuse/` | The quiz as punched cards on a light box; click a row to flip an answer | the ten quiz questions (`api/quiz_data.py`); answers are examples |
+| `usine/` | The daily 06:00 UTC run as a factory line through three dbt sieves | `ingest_prod.yml`, the transform layers |
+| `bibliotheque/` | `/chat` as a pneumatic library: 5 closest cards out of 5,885 | chunk counts and `k = 5` from `rag/`; the question is an example |
+| `balance/` | `/verify` as a balance, locked below the 0.35 similarity floor | `rag/chain/verify.py`; real scrutins, illustrative similarities |
+| `dominos/` | Cache purge as rows of dominoes; the health tag topples the site | `cacheTags.ts`, `scripts/_cache_scope.py` |
