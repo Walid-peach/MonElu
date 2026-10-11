@@ -1,4 +1,9 @@
-import { formatDate, formatPct, getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyShort } from '@/lib/utils'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import {
+  formatDate, formatPct, getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyHexStatic,
+  partyShort, SHORT_TO_FULL_PARTY,
+} from '@/lib/utils'
 
 describe('formatDate', () => {
   it('formats a valid ISO date in French locale', () => {
@@ -115,5 +120,19 @@ describe('partyHex', () => {
 
   it('returns fallback gray for an unrecognized value', () => {
     expect(partyHex('PO838901')).toBe('var(--dp-text-secondary)')
+  })
+})
+
+// OG images cannot read CSS variables, so partyHexStatic() repeats the light
+// --party-* values; a group recolored in globals.css alone (#550) would keep
+// its old color on every share card.
+describe('partyHexStatic', () => {
+  const css = readFileSync(join(__dirname, '../../src/app/globals.css'), 'utf8')
+  const root = css.slice(css.indexOf(':root'), css.indexOf('}', css.indexOf(':root')))
+
+  it.each(Object.entries(SHORT_TO_FULL_PARTY))('%s matches its light --party-* value', (short, full) => {
+    const match = root.match(new RegExp(`--party-${short.toLowerCase()}:\\s*(#[0-9A-Fa-f]{6});`))
+    expect(match).not.toBeNull()
+    expect(partyHexStatic(full).toUpperCase()).toBe(match![1].toUpperCase())
   })
 })
