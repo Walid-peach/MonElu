@@ -6,7 +6,7 @@ import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as k from "../_kit/iso-kit.mjs";
-import { f1, tools, writePage } from "../_shared.mjs";
+import { f1, timelineLive, tools, writePage } from "../_shared.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -172,33 +172,115 @@ function backWall() {
   return out.join("");
 }
 
+// ---------------------------------------------------------------- the vote (DEMO DATA)
+// Not a real scrutin. Seven blocks of seats, left to right, each with a majority position and a
+// little dissent, so the drop can be judged before real per-deputy positions are wired in.
+// To use a real vote: replace POSITIONS with GET /votes/{id}'s positions, ordered by group then
+// name as frontend/src/lib/hemicycle.ts layoutSeats orders them (seat n = n-th deputy).
+function rng(seed) { return () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const rand = rng(2026);
+const DEMO_BLOCKS = [[64, "contre"], [72, "contre"], [58, "pour"], [96, "pour"], [92, "pour"], [70, "abstention"], [125, "contre"]];
+const POSITIONS = [];
+for (const [size, main] of DEMO_BLOCKS) for (let i = 0; i < size; i++) {
+  const r = rand();
+  POSITIONS.push(r < 0.06 ? "absent" : r < 0.08 ? "nonVotant" : r < 0.13 ? (main === "pour" ? "contre" : "pour") : main);
+}
+while (POSITIONS.length < SEATS) POSITIONS.push("absent");
+POSITIONS.length = SEATS;
+const COUNT = (p) => POSITIONS.filter((x) => x === p).length;
+// the order votes land in: shuffled, absents never land
+const ORDER = POSITIONS.map((_, n) => n).filter((n) => POSITIONS[n] !== "absent").sort(() => rand() - 0.5);
+
+const SEAT_XYZ = SEAT_LIST.map((s) => { const [x, y] = at2(rowR(s.row) + 1.6, s.angle); return [f1(x), f1(y), f1(rowZ(s.row) + 3.4)]; });
+
+const DROP = 7.5; // seconds over which the votes come in
+const FALL = 0.6;
+const START = 0.8;
+const END = START + DROP + FALL;
+const LOOP = END + 3.6;
+
 const svg = k.figureSvg({
   width: WIDTH,
   height: HEIGHT,
-  label: `L'hémicycle de l'Assemblée nationale : ${SEATS} sièges sur ${ROWS} rangs en gradins, séparés par ${AISLES} allées, face au perchoir et à la tribune.`,
+  label: `L'hémicycle de l'Assemblée nationale : ${SEATS} sièges sur ${ROWS} rangs en gradins, face au perchoir et à la tribune. Démonstration : des votes tombent dans les sièges et les colorent, pour en vert, contre en rouge, abstention en ambre. Données fictives.`,
   body: [
     `<path class="iso-halo" d="${k.extrude(PLINTH, -10, 10, P).fill}"/>`,
     S(k.extrude(PLINTH, -10, 10, P, { bevel: 1.2 }), { tone: "mid" }),
     L(k.onTop(PLINTH.map(([x, y]) => [x * 0.985, y * 0.985]), 0, P, true), { tone: "faint" }),
     backWall(), tiers(), floor(), tribune(),
+    `<g data-part="balls">${Array.from({ length: 80 }, () => `<circle class="hc-ball" r="${f1(1.9 * P.scale)}" cx="-99" cy="-99"/>`).join("")}</g>`,
   ],
 });
+
+const live = `
+const P = ${JSON.stringify(P)};
+const XYZ = ${JSON.stringify(SEAT_XYZ)};
+const POS = ${JSON.stringify(POSITIONS)};
+const ORDER = ${JSON.stringify(ORDER)};
+const START = ${START}, DROP = ${DROP}, FALL = ${FALL}, END = ${END};
+const seats = [...document.querySelectorAll(".hc-seat")].sort((a, b) => a.dataset.seat - b.dataset.seat);
+const pool = [...document.querySelectorAll(".hc-ball")];
+const readout = document.querySelector("[data-readout]");
+const landAt = new Array(XYZ.length).fill(Infinity);
+ORDER.forEach((n, i) => (landAt[n] = START + (DROP * i) / ORDER.length + FALL));
+const shown = new Array(XYZ.length).fill("");
+function draw(t) {
+  const counts = { pour: 0, contre: 0, abstention: 0, nonVotant: 0 };
+  let ball = 0;
+  for (let n = 0; n < XYZ.length; n++) {
+    const L = landAt[n];
+    let state = "";
+    if (t >= L) { state = POS[n]; counts[POS[n]]++; }
+    else if (t > L - FALL && ball < pool.length) {
+      // falling under gravity from 70 units above the seat
+      const u = (t - (L - FALL)) / FALL;
+      const [x, y, z] = XYZ[n];
+      const [sx, sy] = iso([x, y, z + 70 * (1 - u * u)], P);
+      const el = pool[ball++];
+      el.setAttribute("cx", sx.toFixed(1)); el.setAttribute("cy", sy.toFixed(1));
+      if (el.dataset.pos !== POS[n]) el.dataset.pos = POS[n];
+    }
+    if (shown[n] !== state) { shown[n] = state; state ? seats[n].setAttribute("data-pos", state) : seats[n].removeAttribute("data-pos"); }
+  }
+  for (; ball < pool.length; ball++) if (pool[ball].getAttribute("cx") !== "-99") { pool[ball].setAttribute("cx", "-99"); pool[ball].setAttribute("cy", "-99"); }
+  const text = "démo · pour " + counts.pour + " · contre " + counts.contre + " · abst. " + counts.abstention;
+  if (readout.textContent !== text) readout.textContent = text;
+}
+${timelineLive({ loop: LOOP, scrubFrom: 0, scrubTo: END, step: 0.5, rest: END })}
+`;
+
+const CSS = `
+.hc-ball{stroke:var(--anatomy-paper);stroke-width:.6px;vector-effect:non-scaling-stroke}
+.hc-ball[data-pos="pour"]{fill:var(--anatomy-green)}
+.hc-ball[data-pos="contre"]{fill:var(--anatomy-red)}
+.hc-ball[data-pos="abstention"]{fill:#d99a2b}
+.hc-ball[data-pos="nonVotant"]{fill:var(--anatomy-mid)}
+.hc-seat[data-pos="pour"] .iso-top{fill:var(--anatomy-green)}
+.hc-seat[data-pos="pour"] .iso-shade{fill:color-mix(in srgb,var(--anatomy-green) 60%,var(--anatomy-paper))}
+.hc-seat[data-pos="contre"] .iso-top{fill:var(--anatomy-red)}
+.hc-seat[data-pos="contre"] .iso-shade{fill:color-mix(in srgb,var(--anatomy-red) 60%,var(--anatomy-paper))}
+.hc-seat[data-pos="abstention"] .iso-top{fill:#d99a2b}
+.hc-seat[data-pos="abstention"] .iso-shade{fill:color-mix(in srgb,#d99a2b 60%,var(--anatomy-paper))}
+.hc-seat[data-pos="nonVotant"] .iso-top{fill:var(--anatomy-mid)}
+`;
 
 writePage({
   here: HERE,
   name: "hemicycle",
-  title: "L'hémicycle",
+  title: "L'hémicycle · démo",
   fig: "Fig 9",
-  hint: "577 sièges · 11 rangs",
-  readout: "en attente d'un scrutin",
+  hint: "Données de démonstration",
+  readout: "démo · pour 0 · contre 0 · abst. 0",
   keys: [
-    { mark: "raised", label: "Un siège par député, ordonnés de gauche à droite comme sur le site" },
-    { mark: "flat", label: "Le perchoir et la tribune, face aux gradins" },
+    { mark: "green", label: "Pour" },
+    { mark: "red", label: "Contre" },
+    { mark: "raised", label: "Ambre : abstention · gris : non-votant · vide : absent" },
   ],
-  caption: `L'hémicycle du Palais Bourbon en perspective isométrique : ${SEATS} sièges sur ${ROWS} rangs en gradins, ${AISLES} allées, le perchoir et la tribune au centre. Les sièges suivent la même règle que la carte des votes du site : ordonnés de gauche à droite, groupe par groupe. Prochaine étape : y faire tomber les votes d'un scrutin réel, député par député.`,
+  caption: `Données de démonstration, pas un scrutin réel : les positions sont inventées pour juger l'effet. L'hémicycle du Palais Bourbon compte ${SEATS} sièges sur ${ROWS} rangs, face au perchoir et à la tribune ; chaque vote tombe dans un siège et le colore. Ici ${COUNT("pour")} pour, ${COUNT("contre")} contre, ${COUNT("abstention")} abstentions, ${COUNT("nonVotant")} non-votants et ${COUNT("absent")} absents, tous fictifs. La version publiable utilisera les positions réelles d'un scrutin, député par député, dans l'ordre de la carte des votes du site.`,
   svg,
-  ariaLabel: "L'hémicycle de l'Assemblée nationale",
-  ariaValue: "577 sièges",
-  live: "",
+  ariaLabel: "Hémicycle, démonstration : flèches gauche et droite pour faire avancer le vote",
+  ariaValue: "Données de démonstration",
+  live,
+  css: CSS,
 });
 writeFileSync(join(HERE, "seats.json"), `${JSON.stringify(SEAT_LIST.map((s) => [s.row, f1(s.angle * 1000) / 1000]))}\n`);
