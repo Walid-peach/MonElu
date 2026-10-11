@@ -136,3 +136,37 @@ describe('partyHexStatic', () => {
     expect(partyHexStatic(full).toUpperCase()).toBe(match![1].toUpperCase())
   })
 })
+
+// Party colors are bar fills and dots, so each needs 3:1 against the surface
+// it sits on (WCAG 1.4.11): white cards in light mode. In dark mode they are
+// also written as text, so MON-197 holds them to 4.5:1 on --dp-card-bg.
+describe('party colors contrast', () => {
+  const css = readFileSync(join(__dirname, '../../src/app/globals.css'), 'utf8')
+  // The selector's own rule, not its first mention (`.dark` also appears in
+  // comments and nested selectors).
+  const block = (selector: RegExp) => {
+    const start = css.search(selector)
+    return css.slice(start, css.indexOf('\n}', start))
+  }
+  const vars = (text: string) =>
+    Object.fromEntries([...text.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(--[\w-]+):\s*(#[0-9A-Fa-f]{6});/g)].map(m => [m[1], m[2]]))
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map(i => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+    return (hi + 0.05) / (lo + 0.05)
+  }
+  const light = vars(block(/:root\s*\{/))
+  const dark = { ...light, ...vars(block(/\.dark\s*\{/)) }
+
+  it.each(Object.keys(SHORT_TO_FULL_PARTY))('%s reaches 3:1 on white and 4.5:1 on the dark card', short => {
+    const name = `--party-${short.toLowerCase()}`
+    expect(contrast(light[name], light['--dp-card-bg'])).toBeGreaterThanOrEqual(3)
+    expect(contrast(dark[name], dark['--dp-card-bg'])).toBeGreaterThanOrEqual(4.5)
+  })
+})
