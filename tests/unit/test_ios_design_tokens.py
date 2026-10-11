@@ -66,24 +66,8 @@ WEB_SOURCES = {
     "onAccent": ("#FFFFFF", "#0D1F3C"),
     # POSITION_COLORS.nonVotant in HemicycleChart.tsx, not theme-aware there.
     "seatNonVotant": ("#9CA3AF", "#9CA3AF"),
-    # Group chips: partyColor() in lib/utils.ts, Tailwind's 100/900 (950 for
-    # RN) shades. The web has no dark variant; the app reverses each pair.
-    "partyRNBackground": ("#172554", "#1E3A8A"),
-    "partyRNText": ("#DBEAFE", "#DBEAFE"),
-    "partyEPRBackground": ("#FEF3C7", "#78350F"),
-    "partyEPRText": ("#78350F", "#FEF3C7"),
-    "partyLFIBackground": ("#FEE2E2", "#7F1D1D"),
-    "partyLFIText": ("#7F1D1D", "#FEE2E2"),
-    "partySOCBackground": ("#FFE4E6", "#881337"),
-    "partySOCText": ("#881337", "#FFE4E6"),
-    "partyDRBackground": ("#E0F2FE", "#0C4A6E"),
-    "partyDRText": ("#0C4A6E", "#E0F2FE"),
-    "partyECSBackground": ("#DCFCE7", "#14532D"),
-    "partyECSText": ("#14532D", "#DCFCE7"),
-    "partyDEMBackground": ("#FFEDD5", "#7C2D12"),
-    "partyDEMText": ("#7C2D12", "#FFEDD5"),
-    "partyHORBackground": ("#CCFBF1", "#134E4A"),
-    "partyHORText": ("#134E4A", "#CCFBF1"),
+    # Group chips are derived from the brand colors (#550), see
+    # PARTY_CHIP_GROUPS below; non-inscrits and unknown groups stay neutral.
     "partyOtherBackground": ("#F3F4F6", "#374151"),
     "partyOtherText": ("#374151", "#F3F4F6"),
     # Solid group fills for bars (#528): the website's --party-* pairs
@@ -102,6 +86,30 @@ WEB_SOURCES = {
     "partyGDRFill": ("--party-gdr", "--party-gdr"),
     "partyOtherFill": ("#9CA3AF", "#9CA3AF"),
 }
+
+# Group chips (#550): every group's chip is derived from its brand color, the
+# website's --party-* (MON-197), the same color its bar segment fills with, so
+# a chip and its segment always share a hue. The background is that color
+# tinted over the card; the text is the same color darkened (light) or
+# lightened (dark) just enough to reach 4.5:1 on it. The website writes the
+# brand color itself as chip text, which misses 4.5:1 for several groups (#480).
+PARTY_CHIP_GROUPS = ("RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR", "LIOT", "UDR", "GDR")
+PARTY_CHIP_TOKENS = {
+    f"party{code}{part}" for code in PARTY_CHIP_GROUPS for part in ("Background", "Text")
+}
+PARTY_CHIP_TINT = {"light": 0.14, "dark": 0.24}
+
+
+def _party_chip(brand: str, card: str, appearance: str) -> tuple[str, str]:
+    """(background, text) for a group chip, from its brand color (#550)."""
+    background = _over(brand, PARTY_CHIP_TINT[appearance], card)
+    toward = "FFFFFF" if appearance == "dark" else "000000"
+    text, step = brand, 0
+    while _contrast(text, background) < 4.5:
+        step += 1
+        text = _over(toward, step * 0.05, brand)
+    return background, text
+
 
 # A translucent fill (the badge backgrounds) can sit on either surface.
 SURFACES = ("pageBackground", "cardBackground")
@@ -125,10 +133,7 @@ TEXT_ON_BACKGROUNDS = {
     # The quiz's filled Contre and Pour answers (#530).
     "onAccent": ["accent", "negative", "positiveText"],
     "cardBackground": ["textPrimary"],  # a selected FilterChipRow chip
-    **{
-        f"party{code}Text": [f"party{code}Background"]
-        for code in ("RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR", "Other")
-    },
+    **{f"party{code}Text": [f"party{code}Background"] for code in (*PARTY_CHIP_GROUPS, "Other")},
 }
 
 
@@ -174,7 +179,7 @@ def _colorsets() -> dict[str, dict]:
 
 def test_every_token_has_a_light_and_a_dark_value():
     colorsets = _colorsets()
-    assert set(colorsets) == set(WEB_SOURCES)
+    assert set(colorsets) == set(WEB_SOURCES) | PARTY_CHIP_TOKENS
     for name, contents in colorsets.items():
         appearances = [entry.get("appearances") for entry in contents["colors"]]
         assert None in appearances, f"{name} has no light (any-appearance) value"
@@ -189,6 +194,8 @@ def test_tokens_match_the_website_palette():
     dark_vars = light_vars | _css_vars(_css_block(css, ".dark"))
 
     for name, contents in _colorsets().items():
+        if name in PARTY_CHIP_TOKENS:
+            continue  # derived, see test_party_chips_derive_from_the_brand_colors
         light_source, dark_source = WEB_SOURCES[name]
         light = next(e for e in contents["colors"] if "appearances" not in e)
         dark = next(e for e in contents["colors"] if "appearances" in e)
@@ -196,6 +203,26 @@ def test_tokens_match_the_website_palette():
         expected_dark = dark_vars.get(dark_source, dark_source)
         assert _catalog_value(light) == _normalise(expected_light), f"{name} light"
         assert _catalog_value(dark) == _normalise(expected_dark), f"{name} dark"
+
+
+def test_party_chips_derive_from_the_brand_colors():
+    css = GLOBALS_CSS.read_text(encoding="utf-8")
+    palettes = {"light": _css_vars(_css_block(css, ":root"))}
+    palettes["dark"] = palettes["light"] | _css_vars(_css_block(css, ".dark"))
+    colorsets = _colorsets()
+    for code in PARTY_CHIP_GROUPS:
+        for appearance, css_vars in palettes.items():
+            brand = _normalise(css_vars[f"--party-{code.lower()}"])[0]
+            card = _normalise(css_vars["--dp-card-bg"])[0]
+            background, text = _party_chip(brand, card, appearance)
+            expected_tokens = {f"party{code}Background": background, f"party{code}Text": text}
+            for token, expected in expected_tokens.items():
+                entry = next(
+                    e
+                    for e in colorsets[token]["colors"]
+                    if ("appearances" in e) == (appearance == "dark")
+                )
+                assert _catalog_value(entry) == (expected, 1.0), f"{token} {appearance}"
 
 
 # A literal or system color in a component bypasses the tokens (and dark mode).

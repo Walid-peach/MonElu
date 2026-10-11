@@ -140,18 +140,3 @@ export function themeColors(theme: string | null): { c: string; bg: string } {
   }
   return map[theme ?? ''] ?? { c: '#6B7280', bg: '#F3F4F6' }
 }
-
-export function partyColor(party: string | null): string {
-  if (!party) return 'bg-gray-100 text-gray-600'
-  const map: Record<string, string> = {
-    'Rassemblement National': 'bg-blue-950 text-blue-100',
-    'Ensemble pour la République': 'bg-amber-100 text-amber-900',
-    'La France insoumise - Nouveau Front Populaire': 'bg-red-100 text-red-900',
-    'Socialistes et apparentés': 'bg-rose-100 text-rose-900',
-    'Droite Républicaine': 'bg-sky-100 text-sky-900',
-    'Écologiste et Social': 'bg-green-100 text-green-900',
-    'Les Démocrates': 'bg-orange-100 text-orange-900',
-    'Horizons & Indépendants': 'bg-teal-100 text-teal-900',
-  }
-  return map[party] || 'bg-gray-100 text-gray-700'
-}
