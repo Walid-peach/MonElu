@@ -11,3 +11,6 @@ build/
 Packages/*/.build/
 Packages/*/.swiftpm/
 xcuserdata/
+
+# A developer's signing team for on-device builds (`make ios-device`).
+Configs/Local.xcconfig
