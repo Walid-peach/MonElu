@@ -263,6 +263,8 @@ maestro() {
 LOCAL_XCCONFIG="$IOS_DIR/Configs/Local.xcconfig"
 
 # The first iPhone plugged in and ready, as devicectl reports it; empty if none.
+# devicectl also lists every device this Mac was ever paired with; one that is
+# not connected now reads tunnelState "unavailable" and is skipped.
 connected_iphone() {
     local json
     json="$(mktemp)"
@@ -275,6 +277,8 @@ except Exception:
     devices = []
 for d in devices:
     hardware = d.get("hardwareProperties", {})
+    if d.get("connectionProperties", {}).get("tunnelState") == "unavailable":
+        continue
     if hardware.get("reality") == "physical" and hardware.get("platform") == "iOS":
         print(hardware.get("udid") or d.get("identifier"))
         break
@@ -291,7 +295,8 @@ ensure_signing() {
     teams="$(defaults read com.apple.dt.Xcode IDEProvisioningTeamByIdentifier 2>/dev/null \
         | grep -oE 'teamID = [A-Z0-9]{10}' | awk '{print $3}' | sort -u)"
     if [[ -z "$teams" ]]; then
-        echo "No Apple ID is signed into Xcode. Open Xcode > Settings > Accounts, add your Apple ID, then run this again." >&2
+        echo "No signing team found in Xcode's settings. Open Xcode > Settings > Accounts, add your Apple ID, then run this again." >&2
+        echo "If it is already there, create $LOCAL_XCCONFIG with DEVELOPMENT_TEAM = <your team id>." >&2
         exit 1
     fi
     if [[ "$(echo "$teams" | wc -l | tr -d ' ')" != 1 ]]; then
@@ -323,16 +328,14 @@ device() {
     fi
     ensure_signing
     generate
-    xcodebuild build \
+    xcb build \
         -workspace MonElu.xcworkspace \
         -scheme MonElu \
         -configuration Debug \
         -destination "id=$udid" \
         -derivedDataPath "$BUILD_ROOT/Device" \
         -allowProvisioningUpdates \
-        -allowProvisioningDeviceRegistration \
-        -skipPackagePluginValidation \
-        -quiet
+        -allowProvisioningDeviceRegistration
     local app="$BUILD_ROOT/Device/Build/Products/Debug-iphoneos/MonElu.app" bundle_id
     bundle_id="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")"
     xcrun devicectl device install app --device "$udid" "$app"
