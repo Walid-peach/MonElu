@@ -378,12 +378,12 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: 14, color: 'var(--dp-text-secondary)' }}>
                   {[
-                    { color: 'var(--dp-green)', label: 'Pour',       pct: pourPct   },
-                    { color: RED,       label: 'Contre',     pct: contrePct },
-                    { color: 'var(--dp-text-muted)', label: 'Abstention', pct: abstPct   },
-                  ].map(({ color, label, pct }) => (
+                    { fill: 'var(--dp-green)', label: 'Pour',       pct: pourPct   },
+                    { fill: RED,       label: 'Contre',     pct: contrePct },
+                    { fill: 'var(--dp-abstention)', label: 'Abstention', pct: abstPct   },
+                  ].map(({ fill, label, pct }) => (
                     <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 999, background: color, flexShrink: 0 }} />
+                      <span style={{ width: 10, height: 10, borderRadius: 999, background: fill, flexShrink: 0 }} />
                       {label} <span className="font-mono" style={{ color: 'var(--dp-text-secondary)' }}>{pct}%</span>
                     </span>
                   ))}
@@ -402,7 +402,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {avgSolennelPct !== null && (
-                          <span style={{ fontSize: 13, color: solennelPct >= avgSolennelPct ? 'var(--dp-green)' : RED }}>
+                          <span style={{ fontSize: 13, color: solennelPct >= avgSolennelPct ? 'var(--dp-badge-pos-text)' : RED }}>
                             {solennelPct >= avgSolennelPct ? '↑' : '↓'} moy. {avgSolennelPct}%
                           </span>
                         )}
@@ -443,7 +443,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {avgVotingDaysPct !== null && (
-                          <span style={{ fontSize: 13, color: votingDaysPct >= avgVotingDaysPct ? 'var(--dp-green)' : RED }}>
+                          <span style={{ fontSize: 13, color: votingDaysPct >= avgVotingDaysPct ? 'var(--dp-badge-pos-text)' : RED }}>
                             {votingDaysPct >= avgVotingDaysPct ? '↑' : '↓'} moy. {avgVotingDaysPct}%
                           </span>
                         )}
@@ -484,7 +484,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {avgPresencePct !== null && (
-                          <span style={{ fontSize: 13, color: presencePct >= avgPresencePct ? 'var(--dp-green)' : RED }}>
+                          <span style={{ fontSize: 13, color: presencePct >= avgPresencePct ? 'var(--dp-badge-pos-text)' : RED }}>
                             {presencePct >= avgPresencePct ? '↑' : '↓'} moy. {avgPresencePct}%
                           </span>
                         )}

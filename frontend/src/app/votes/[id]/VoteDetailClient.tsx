@@ -249,8 +249,8 @@ export function VoteDetailClient(props: Props) {
               {/* Big numbers */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, textAlign: 'center', marginBottom: 22 }}>
                 <div style={{ borderRight: '1px solid var(--dp-track-bg)', padding: '0 12px' }}>
-                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-green)', letterSpacing: '-0.02em' }}>{votesFor.toLocaleString('fr-FR')}</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dp-green)', marginTop: 3, letterSpacing: '0.04em' }}>POUR</div>
+                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-badge-pos-text)', letterSpacing: '-0.02em' }}>{votesFor.toLocaleString('fr-FR')}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dp-badge-pos-text)', marginTop: 3, letterSpacing: '0.04em' }}>POUR</div>
                 </div>
                 <div style={{ borderRight: '1px solid var(--dp-track-bg)', padding: '0 12px' }}>
                   <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-red)', letterSpacing: '-0.02em' }}>{votesAgainst.toLocaleString('fr-FR')}</div>
@@ -474,7 +474,7 @@ export function VoteDetailClient(props: Props) {
                           </div>
                           <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 11px', borderRadius: 999, color: posColor, background: posBg, flexShrink: 0 }}>{g.position}</span>
                         </div>
-                        <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-green)', textAlign: 'right', fontWeight: 600 }}>{g.pour}</div>
+                        <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-badge-pos-text)', textAlign: 'right', fontWeight: 600 }}>{g.pour}</div>
                         <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-red)', textAlign: 'right', fontWeight: 600 }}>{g.contre}</div>
                         <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-text-muted)', textAlign: 'right' }}>{g.abst}</div>
                         <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-text-muted)', textAlign: 'right' }}>{g.nonVotant}</div>
