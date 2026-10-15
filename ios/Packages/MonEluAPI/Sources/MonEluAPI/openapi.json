@@ -1756,7 +1756,7 @@
           "Feed"
         ],
         "summary": "The app's Accueil feed for a followed deputy and themes",
-        "description": "Ready-to-show cards for the iPhone app's Accueil, one ISO week at a time.\n\nFollows are not stored anywhere: pass the followed deputy as `deputy_id` and\neach followed theme as a repeated `theme` slug. An unknown deputy is a 404\nand an unknown theme slug a 422, never an empty feed.\n\n`items` is already in screen order: `scrutin` cards newest first, then the\nnext seven days of séance publique `agenda`, then one `rollup`. Each item\ncarries exactly one of `scrutin`, `agenda` or `rollup`, named by `type`.\n\n**Which scrutins get a card** (ADR-042 §3): whole-text votes (`ensemble`)\nand motions always; an amendment, article or other vote only when pour and\ncontre were within 20 votes of each other. In `pour_vous` the followed\ndeputy's remaining votes of the week are counted in the `rollup` instead.\n\n- `pour_vous`: the deputy's carded votes, with `deputy_position`, plus\n  whole-text votes and motions in the followed themes, each scrutin once;\n  agenda items in the followed themes. Nothing followed means no items.\n- `assemblee`: the week's whole-text votes and motions, plus the closest\n  scrutin of the week (`closest: true`), and every agenda item.\n\n`deputy_position` is `pour`, `contre`, `abstention` or `nonVotant`, null when\nthe deputy has no recorded position. `abstention` was cast deliberately and\n`nonVotant` was not cast at all - do not merge them. `result` is the\nscrutin's outcome, not the deputy's choice, and for a `motion` an `adopté`\nresult means the motion passed (a motion de rejet adopted rejects the text).\n\nWeeks run Monday to Sunday, Paris time. When the requested week has no\nscrutin (recess), `no_sitting` is true and the scrutins come from the most\nrecent earlier week that had one, whose bounds are in `week_start` and\n`week_end`; `requested_week_start` keeps the week asked for. Production data\nstarts on 2025-07-01.",
+        "description": "Ready-to-show cards for the iPhone app's Accueil, one ISO week at a time.\n\nFollows are not stored anywhere: pass the followed deputy as `deputy_id` and\neach followed theme as a repeated `theme` slug. An unknown deputy is a 404\nand an unknown theme slug a 422, never an empty feed.\n\n`items` is already in screen order: `scrutin` cards newest first, then the\nnext seven days of séance publique `agenda`, then one `rollup`. Each item\ncarries exactly one of `scrutin`, `agenda` or `rollup`, named by `type`.\n\n**Which scrutins get a card** (ADR-042 §3): whole-text votes (`ensemble`)\nand motions always; an amendment, article or other vote only when pour and\ncontre were within 20 votes of each other. In `pour_vous` the followed\ndeputy's remaining votes of the week are counted in the `rollup` instead, with\n`nonVotant` positions counted apart in `non_votant` and left out of `total`.\n\n- `pour_vous`: the deputy's carded votes, with `deputy_position`, plus\n  whole-text votes and motions in the followed themes, each scrutin once;\n  agenda items in the followed themes. Nothing followed means no items.\n- `assemblee`: the week's whole-text votes and motions, plus the closest\n  scrutin of the week (`closest: true`), and every agenda item.\n\n`deputy_position` is `pour`, `contre`, `abstention` or `nonVotant`, null when\nthe deputy has no recorded position. `abstention` was cast deliberately and\n`nonVotant` was not cast at all - do not merge them. `result` is the\nscrutin's outcome, not the deputy's choice, and for a `motion` an `adopté`\nresult means the motion passed (a motion de rejet adopted rejects the text).\n\nWeeks run Monday to Sunday, Paris time. When the requested week has no\nscrutin (recess), `no_sitting` is true and the scrutins come from the most\nrecent earlier week that had one, whose bounds are in `week_start` and\n`week_end`; `requested_week_start` keeps the week asked for. Production data\nstarts on 2025-07-01.",
         "operationId": "getFeed",
         "parameters": [
           {
@@ -4358,6 +4358,7 @@
                 "amendement": 17,
                 "article": 2,
                 "autre": 1,
+                "non_votant": 3,
                 "total": 20
               },
               "type": "rollup"
@@ -4377,7 +4378,8 @@
         "properties": {
           "total": {
             "type": "integer",
-            "title": "Total"
+            "title": "Total",
+            "description": "Votes cast (pour, contre or abstention) with no card"
           },
           "amendement": {
             "type": "integer",
@@ -4390,6 +4392,11 @@
           "autre": {
             "type": "integer",
             "title": "Autre"
+          },
+          "non_votant": {
+            "type": "integer",
+            "title": "Non Votant",
+            "description": "Scrutins where the deputy is recorded nonVotant: present, no vote cast; not included in total"
           }
         },
         "type": "object",
@@ -4397,14 +4404,16 @@
           "total",
           "amendement",
           "article",
-          "autre"
+          "autre",
+          "non_votant"
         ],
         "title": "FeedRollup",
-        "description": "The followed deputy's votes of the week that earned no card.",
+        "description": "The followed deputy's positions of the week that earned no card.",
         "example": {
           "amendement": 17,
           "article": 2,
           "autre": 1,
+          "non_votant": 3,
           "total": 20
         }
       },

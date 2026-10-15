@@ -101,7 +101,9 @@ def test_pour_vous_keeps_carded_deputy_votes_and_rolls_up_the_rest():
     assert _ids(items) == ["M", "A4"]
     assert items[-1].type == "rollup"
     rollup = items[-1].rollup
-    assert (rollup.total, rollup.amendement, rollup.article, rollup.autre) == (3, 1, 1, 1)
+    # nonVotant is counted apart: it is not a vote cast.
+    assert (rollup.total, rollup.amendement, rollup.article, rollup.autre) == (2, 1, 1, 0)
+    assert rollup.non_votant == 1
     assert items[0].scrutin.deputy_position == "pour"
 
 

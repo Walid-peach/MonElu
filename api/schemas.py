@@ -1507,16 +1507,22 @@ class FeedScrutin(_Base):
 
 
 class FeedRollup(_Base):
-    """The followed deputy's votes of the week that earned no card."""
+    """The followed deputy's positions of the week that earned no card."""
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"total": 20, "amendement": 17, "article": 2, "autre": 1}}
+        json_schema_extra={
+            "example": {"total": 20, "amendement": 17, "article": 2, "autre": 1, "non_votant": 3}
+        }
     )
 
-    total: int
+    total: int = Field(description="Votes cast (pour, contre or abstention) with no card")
     amendement: int
     article: int
     autre: int
+    non_votant: int = Field(
+        description="Scrutins where the deputy is recorded nonVotant: present, no vote cast; "
+        "not included in total"
+    )
 
 
 class FeedItem(_Base):
@@ -1547,7 +1553,13 @@ class FeedResponse(_Base):
                     {"type": "scrutin", "scrutin": _FEED_SCRUTIN_EXAMPLE},
                     {
                         "type": "rollup",
-                        "rollup": {"total": 20, "amendement": 17, "article": 2, "autre": 1},
+                        "rollup": {
+                            "total": 20,
+                            "amendement": 17,
+                            "article": 2,
+                            "autre": 1,
+                            "non_votant": 3,
+                        },
                     },
                 ],
             }

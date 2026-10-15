@@ -42,8 +42,6 @@ HEADLINE_KINDS = ("ensemble", "motion")
 # Agenda items shown: from today through the next seven days.
 AGENDA_DAYS_AHEAD = 7
 
-MAX_THEMES = len(THEME_NAMES)
-
 Tab = Literal["pour_vous", "assemblee"]
 
 # One week of scrutins, with the followed deputy's position when there is one
@@ -164,18 +162,27 @@ def to_scrutin(row: dict, *, closest: bool = False) -> FeedScrutin:
 
 
 def rollup_of(rows: list[dict]) -> Optional[FeedRollup]:
-    """The deputy's votes that earned no card, counted by kind."""
+    """The deputy's positions that earned no card.
+
+    Cast votes are counted by kind; `nonVotant` positions are counted apart,
+    since a vote that was not cast is not one of "N autres votes".
+    """
     if not rows:
         return None
     counts = {"amendement": 0, "article": 0, "autre": 0}
+    non_votant = 0
     for row in rows:
+        if row.get("position") == "nonVotant":
+            non_votant += 1
+            continue
         kind = kind_of(row)
         counts[kind if kind in counts else "autre"] += 1
     return FeedRollup(
-        total=len(rows),
+        total=sum(counts.values()),
         amendement=counts["amendement"],
         article=counts["article"],
         autre=counts["autre"],
+        non_votant=non_votant,
     )
 
 
@@ -238,8 +245,6 @@ def resolve_themes(slugs: Optional[list[str]]) -> tuple[list[str], set[str]]:
             raise HTTPException(status_code=422, detail=f"Unknown theme: {raw}")
         if slug not in clean:
             clean.append(slug)
-    if len(clean) > MAX_THEMES:
-        raise HTTPException(status_code=422, detail=f"At most {MAX_THEMES} themes")
     return clean, {THEME_NAMES[s] for s in clean}
 
 
@@ -315,7 +320,8 @@ def get_feed(
     **Which scrutins get a card** (ADR-042 §3): whole-text votes (`ensemble`)
     and motions always; an amendment, article or other vote only when pour and
     contre were within 20 votes of each other. In `pour_vous` the followed
-    deputy's remaining votes of the week are counted in the `rollup` instead.
+    deputy's remaining votes of the week are counted in the `rollup` instead, with
+    `nonVotant` positions counted apart in `non_votant` and left out of `total`.
 
     - `pour_vous`: the deputy's carded votes, with `deputy_position`, plus
       whole-text votes and motions in the followed themes, each scrutin once;
