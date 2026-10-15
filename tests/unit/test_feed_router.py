@@ -20,6 +20,7 @@ from api.routers.feed import (
     earns_card,
     resolve_themes,
     week_bounds,
+    week_recap_counts,
 )
 from api.schemas import AgendaItem
 
@@ -290,3 +291,69 @@ def test_router_is_mounted_under_feed():
     from api.main import app
 
     assert "/feed" in app.openapi()["paths"]
+
+
+# ---------------------------------------------------------------------------
+# GET /feed/week (#563)
+# ---------------------------------------------------------------------------
+
+
+def _week():
+    return [
+        _row("MO", "motion", pour=149, contre=236, result="rejeté", pos="pour"),
+        _row("EN", "ensemble", pour=503, contre=0, pos="abstention"),
+        _row("EN2", "ensemble", pour=100, contre=300, result="rejeté", pos="contre"),
+        _row("A1", "amendement", pos="nonVotant"),
+        _row("A2", "amendement", pos="pour"),
+        _row("A3", "amendement"),  # absent: no recorded position
+    ]
+
+
+def test_recap_counts_the_week():
+    counts = week_recap_counts(_week(), has_deputy=False)
+    assert counts["scrutins"] == 6
+    assert (counts["laws_adopted"], counts["laws_rejected"]) == (1, 1)
+    assert (counts["motions_adopted"], counts["motions_rejected"]) == (0, 1)
+    assert counts["deputy"] is None
+
+
+def test_recap_keeps_non_votant_out_of_abstention_and_cast():
+    deputy = week_recap_counts(_week(), has_deputy=True)["deputy"]
+    assert (deputy.pour, deputy.contre, deputy.abstention) == (2, 1, 1)
+    assert deputy.non_votant == 1
+    assert deputy.cast == 4  # the absent scrutin and the nonVotant are not votes cast
+
+
+def test_recap_of_an_empty_week_is_all_zeros():
+    counts = week_recap_counts([], has_deputy=True)
+    assert counts["scrutins"] == 0
+    assert counts["deputy"].cast == 0
+
+
+def test_recap_unknown_deputy_is_404(client, mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    assert client.get("/feed/week?deputy_id=PA0").status_code == 404
+
+
+def test_recap_recess_week_reports_no_sitting_with_zero_counts(client, mock_cursor, monkeypatch):
+    monkeypatch.setattr(feed, "paris_today", lambda: date(2026, 10, 15))
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = {"latest": None}
+    body = client.get("/feed/week").json()
+    assert body["no_sitting"] is True
+    assert body["scrutins"] == 0
+    assert body["deputy"] is None
+    assert body["next_agenda"] is None
+
+
+def test_recap_describes_the_same_fallback_week_as_the_feed(client, mock_cursor, monkeypatch):
+    monkeypatch.setattr(feed, "paris_today", lambda: date(2026, 10, 15))
+    sat = _row("EN", "ensemble", day=2)
+    mock_cursor.fetchall.side_effect = [[], [sat], []]
+    mock_cursor.fetchone.return_value = {"latest": sat["voted_at"]}
+    body = client.get("/feed/week").json()
+    assert (body["no_sitting"], body["week_start"], body["laws_adopted"]) == (
+        True,
+        "2026-09-28",
+        1,
+    )
