@@ -1750,6 +1750,93 @@
         }
       }
     },
+    "/feed": {
+      "get": {
+        "tags": [
+          "Feed"
+        ],
+        "summary": "The app's Accueil feed for a followed deputy and themes",
+        "description": "Ready-to-show cards for the iPhone app's Accueil, one ISO week at a time.\n\nFollows are not stored anywhere: pass the followed deputy as `deputy_id` and\neach followed theme as a repeated `theme` slug. An unknown deputy is a 404\nand an unknown theme slug a 422, never an empty feed.\n\n`items` is already in screen order: `scrutin` cards newest first, then the\nnext seven days of séance publique `agenda`, then one `rollup`. Each item\ncarries exactly one of `scrutin`, `agenda` or `rollup`, named by `type`.\n\n**Which scrutins get a card** (ADR-042 §3): whole-text votes (`ensemble`)\nand motions always; an amendment, article or other vote only when pour and\ncontre were within 20 votes of each other. In `pour_vous` the followed\ndeputy's remaining votes of the week are counted in the `rollup` instead.\n\n- `pour_vous`: the deputy's carded votes, with `deputy_position`, plus\n  whole-text votes and motions in the followed themes, each scrutin once;\n  agenda items in the followed themes. Nothing followed means no items.\n- `assemblee`: the week's whole-text votes and motions, plus the closest\n  scrutin of the week (`closest: true`), and every agenda item.\n\n`deputy_position` is `pour`, `contre`, `abstention` or `nonVotant`, null when\nthe deputy has no recorded position. `abstention` was cast deliberately and\n`nonVotant` was not cast at all - do not merge them. `result` is the\nscrutin's outcome, not the deputy's choice, and for a `motion` an `adopté`\nresult means the motion passed (a motion de rejet adopted rejects the text).\n\nWeeks run Monday to Sunday, Paris time. When the requested week has no\nscrutin (recess), `no_sitting` is true and the scrutins come from the most\nrecent earlier week that had one, whose bounds are in `week_start` and\n`week_end`; `requested_week_start` keeps the week asked for. Production data\nstarts on 2025-07-01.",
+        "operationId": "getFeed",
+        "parameters": [
+          {
+            "name": "tab",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "pour_vous",
+                "assemblee"
+              ],
+              "type": "string",
+              "description": "`pour_vous` or `assemblee`",
+              "default": "pour_vous",
+              "title": "Tab"
+            },
+            "description": "`pour_vous` or `assemblee`"
+          },
+          {
+            "name": "deputy_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "The followed deputy, if any",
+              "title": "Deputy Id",
+              "type": "string"
+            },
+            "description": "The followed deputy, if any"
+          },
+          {
+            "name": "theme",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Followed theme slugs (repeat the parameter), e.g. `sante-social`",
+              "title": "Theme",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Followed theme slugs (repeat the parameter), e.g. `sante-social`"
+          },
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Any date inside the wanted ISO week; defaults to today (Paris)",
+              "title": "Week",
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Any date inside the wanted ISO week; defaults to today (Paris)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/account/me": {
       "get": {
         "tags": [
@@ -4135,6 +4222,302 @@
         ],
         "title": "ErrorReportRequest"
       },
+      "FeedItem": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "scrutin | agenda | rollup"
+          },
+          "scrutin": {
+            "$ref": "#/components/schemas/FeedScrutin"
+          },
+          "agenda": {
+            "$ref": "#/components/schemas/AgendaItem"
+          },
+          "rollup": {
+            "$ref": "#/components/schemas/FeedRollup"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "FeedItem",
+        "description": "One entry of the feed; exactly one of the three payloads is set, named by `type`.",
+        "example": {
+          "scrutin": {
+            "abstentions": 7,
+            "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+            "closest": false,
+            "deputy_position": "pour",
+            "dossier_id": "DLR5L17N53980",
+            "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N53980",
+            "margin": 172,
+            "result": "adopté",
+            "scrutin_kind": "ensemble",
+            "summary_plain": "Le texte issu de la commission mixte paritaire a été adopté.",
+            "theme": "Justice & Sécurité",
+            "theme_slug": "justice-securite",
+            "title": "l'ensemble du projet de loi visant à offrir des réponses immédiates aux phénomènes troublant l'ordre public (texte de la commission mixte paritaire).",
+            "vote_id": "VTANR5L17V8433",
+            "voted_at": "2026-07-21T00:00:00Z",
+            "votes_against": 179,
+            "votes_for": 351
+          },
+          "type": "scrutin"
+        }
+      },
+      "FeedResponse": {
+        "properties": {
+          "tab": {
+            "type": "string",
+            "title": "Tab",
+            "description": "pour_vous | assemblee"
+          },
+          "deputy_id": {
+            "title": "Deputy Id",
+            "type": "string"
+          },
+          "themes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Themes",
+            "description": "The followed theme slugs, validated and deduplicated"
+          },
+          "requested_week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Requested Week Start",
+            "description": "Monday of the week asked for"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start",
+            "description": "Monday of the week the scrutins come from"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "no_sitting": {
+            "type": "boolean",
+            "title": "No Sitting",
+            "description": "True when the requested week had no scrutin and an earlier week is shown"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FeedItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tab",
+          "themes",
+          "requested_week_start",
+          "week_start",
+          "week_end",
+          "no_sitting",
+          "items"
+        ],
+        "title": "FeedResponse",
+        "example": {
+          "deputy_id": "PA720892",
+          "items": [
+            {
+              "scrutin": {
+                "abstentions": 7,
+                "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+                "closest": false,
+                "deputy_position": "pour",
+                "dossier_id": "DLR5L17N53980",
+                "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N53980",
+                "margin": 172,
+                "result": "adopté",
+                "scrutin_kind": "ensemble",
+                "summary_plain": "Le texte issu de la commission mixte paritaire a été adopté.",
+                "theme": "Justice & Sécurité",
+                "theme_slug": "justice-securite",
+                "title": "l'ensemble du projet de loi visant à offrir des réponses immédiates aux phénomènes troublant l'ordre public (texte de la commission mixte paritaire).",
+                "vote_id": "VTANR5L17V8433",
+                "voted_at": "2026-07-21T00:00:00Z",
+                "votes_against": 179,
+                "votes_for": 351
+              },
+              "type": "scrutin"
+            },
+            {
+              "rollup": {
+                "amendement": 17,
+                "article": 2,
+                "autre": 1,
+                "total": 20
+              },
+              "type": "rollup"
+            }
+          ],
+          "no_sitting": false,
+          "requested_week_start": "2026-07-20",
+          "tab": "pour_vous",
+          "themes": [
+            "justice-securite"
+          ],
+          "week_end": "2026-07-26",
+          "week_start": "2026-07-20"
+        }
+      },
+      "FeedRollup": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "amendement": {
+            "type": "integer",
+            "title": "Amendement"
+          },
+          "article": {
+            "type": "integer",
+            "title": "Article"
+          },
+          "autre": {
+            "type": "integer",
+            "title": "Autre"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "amendement",
+          "article",
+          "autre"
+        ],
+        "title": "FeedRollup",
+        "description": "The followed deputy's votes of the week that earned no card.",
+        "example": {
+          "amendement": 17,
+          "article": 2,
+          "autre": 1,
+          "total": 20
+        }
+      },
+      "FeedScrutin": {
+        "properties": {
+          "vote_id": {
+            "type": "string",
+            "title": "Vote Id"
+          },
+          "voted_at": {
+            "title": "Voted At",
+            "type": "string",
+            "format": "date-time"
+          },
+          "scrutin_kind": {
+            "type": "string",
+            "title": "Scrutin Kind",
+            "description": "ensemble | motion | amendement | article | autre (unclassified reads autre)"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The scrutin's official title (`vote_title`)"
+          },
+          "summary_plain": {
+            "title": "Summary Plain",
+            "type": "string"
+          },
+          "theme": {
+            "title": "Theme",
+            "type": "string"
+          },
+          "theme_slug": {
+            "title": "Theme Slug",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result",
+            "description": "adopté | rejeté; the scrutin's",
+            "type": "string"
+          },
+          "votes_for": {
+            "title": "Votes For",
+            "type": "integer"
+          },
+          "votes_against": {
+            "title": "Votes Against",
+            "type": "integer"
+          },
+          "abstentions": {
+            "title": "Abstentions",
+            "type": "integer"
+          },
+          "margin": {
+            "title": "Margin",
+            "description": "|votes_for - votes_against|; null when a tally is missing",
+            "type": "integer"
+          },
+          "closest": {
+            "type": "boolean",
+            "title": "Closest",
+            "description": "True on the week's closest scrutin with a known result",
+            "default": false
+          },
+          "deputy_position": {
+            "title": "Deputy Position",
+            "description": "The followed deputy's position: pour | contre | abstention | nonVotant; null without a deputy or without a recorded position",
+            "type": "string"
+          },
+          "an_url": {
+            "type": "string",
+            "title": "An Url",
+            "description": "The scrutin's official page on assemblee-nationale.fr"
+          },
+          "dossier_id": {
+            "title": "Dossier Id",
+            "type": "string"
+          },
+          "lois_url": {
+            "title": "Lois Url",
+            "description": "The bill's MonÉlu page; null unless the dossier has one",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vote_id",
+          "scrutin_kind",
+          "title",
+          "an_url"
+        ],
+        "title": "FeedScrutin",
+        "description": "One scrutin card: everything the card shows, nothing left to compute.",
+        "example": {
+          "abstentions": 7,
+          "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+          "closest": false,
+          "deputy_position": "pour",
+          "dossier_id": "DLR5L17N53980",
+          "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N53980",
+          "margin": 172,
+          "result": "adopté",
+          "scrutin_kind": "ensemble",
+          "summary_plain": "Le texte issu de la commission mixte paritaire a été adopté.",
+          "theme": "Justice & Sécurité",
+          "theme_slug": "justice-securite",
+          "title": "l'ensemble du projet de loi visant à offrir des réponses immédiates aux phénomènes troublant l'ordre public (texte de la commission mixte paritaire).",
+          "vote_id": "VTANR5L17V8433",
+          "voted_at": "2026-07-21T00:00:00Z",
+          "votes_against": 179,
+          "votes_for": 351
+        }
+      },
       "FeedbackResponse": {
         "properties": {
           "status": {
@@ -6317,6 +6700,10 @@
     {
       "name": "Agenda",
       "description": "Upcoming séance publique sittings. Forward-looking and volatile - items are cancelled and rescheduled routinely."
+    },
+    {
+      "name": "Feed",
+      "description": "The iPhone app's Accueil: ready-to-show cards for a followed deputy and themes, one ISO week at a time (ADR-042). Follows are query parameters, never stored."
     },
     {
       "name": "Search",
