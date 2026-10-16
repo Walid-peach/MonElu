@@ -19,6 +19,7 @@ A PR that adds or changes anything a user sees (`frontend/` or `ios/`) embeds sc
 The four shared workflow skills and their `solve-issue/references/` resources are mirrored
 between `.agents/skills/` and `.claude/skills/`; update both when changing common behavior.
 The `ios-run` skill (run the iPhone app through a Maestro flow and save screenshots, #450) is mirrored the same way.
+So is the `ios-device` skill (install `master` on the user's own iPhone with `make ios-device`, keeping the installed app's data).
 Preserve Claude-specific presentation instructions in `plan-epic`.
 
 ## Project Overview

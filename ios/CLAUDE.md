@@ -175,6 +175,7 @@ make ios-device     # sign, build, install and launch on the plugged-in iPhone
 The phone needs Developer Mode on (Settings > Privacy & Security), and the first launch needs the developer certificate trusted (Settings > General > VPN & Device Management).
 The first run writes `Configs/Local.xcconfig`, git-ignored and included by `App.xcconfig`, with the team and a bundle id of its own (`fr.monelu.app.dev.<team>`), since a free team cannot sign an id another account registered; delete it to pick another team.
 The app calls the production API, as TestFlight builds may (rule 6).
+The `ios-device` skill (`.claude/skills/ios-device/`, mirrored in `.agents/skills/`) walks an agent through it: it checks that the build keeps the installed app's bundle id, so the update keeps its data.
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.
 A PR that changes a screen embeds the screenshots that show the change, published with `scripts/pr-screenshots.sh <pr-number> <image>...` (the Screenshots section of the `pr-create` skill), and names the flow it ran; CI also uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.
