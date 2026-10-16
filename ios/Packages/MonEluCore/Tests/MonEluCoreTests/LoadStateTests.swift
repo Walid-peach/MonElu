@@ -98,6 +98,63 @@ struct LoaderTests {
         await loader.refresh()
         #expect(loader.state.value == [5])
     }
+
+    /// A cancelled load is not a failure (#579): the loader is idle again, so
+    /// the `.task` that runs when its view returns loads for real.
+    @Test func aCancelledLoadIsIdleAndLoadsNextTime() async {
+        let loader = loader([.failure(CancellationError()), .success([1])])
+        await loader.loadIfNeeded()
+        #expect(loader.state.isIdle)
+        await loader.loadIfNeeded()
+        #expect(loader.state.value == [1])
+    }
+
+    /// URLSession reports a cancelled request as `URLError(.cancelled)`, which
+    /// the generated client wraps.
+    @Test func aWrappedURLCancellationIsACancellation() async {
+        let loader = loader([.failure(Wrapper(underlyingError: URLError(.cancelled)))])
+        await loader.load()
+        #expect(loader.state.isIdle)
+    }
+
+    /// A retry cancelled after a real failure keeps showing that failure.
+    @Test func aCancelledRetryKeepsTheEarlierFailure() async {
+        let loader = loader([.failure(Boom()), .failure(CancellationError())])
+        await loader.load()
+        await loader.load()
+        #expect(loader.state.failure == .server)
+    }
+
+    @Test func aCancelledRefreshKeepsContentWithoutAFailure() async {
+        let loader = loader([.success([1]), .failure(URLError(.cancelled))])
+        await loader.load()
+        await loader.refresh()
+        #expect(loader.state.value == [1])
+        #expect(loader.refreshFailure == nil)
+        #expect(loader.isRefreshing == false)
+    }
+
+    /// The case that happens in the app: the task running the load is
+    /// cancelled while the fetch is waiting.
+    @Test func cancellingTheTaskDuringAFetchLeavesTheLoaderIdle() async {
+        let (started, signal) = AsyncStream<Void>.makeStream()
+        let loader = Loader<[Int]> {
+            signal.yield()
+            try await Task.sleep(for: .seconds(60))
+            return [1]
+        }
+        let task = Task { await loader.load() }
+        for await _ in started { break }
+        task.cancel()
+        await task.value
+        #expect(loader.state.isIdle)
+    }
+
+    @Test func otherErrorsAreNotCancellations() {
+        #expect(!LoadFailure.isCancellation(URLError(.timedOut)))
+        #expect(!LoadFailure.isCancellation(Wrapper(underlyingError: Boom())))
+        #expect(LoadFailure.isCancellation(Wrapper(underlyingError: CancellationError())))
+    }
 }
 
 struct AppRouteTests {

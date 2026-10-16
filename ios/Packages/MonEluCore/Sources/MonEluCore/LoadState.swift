@@ -26,6 +26,21 @@ public enum LoadFailure: Equatable, Sendable {
         .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
         .internationalRoamingOff, .cannotFindHost, .cannotConnectToHost, .timedOut, .dnsLookupFailed,
     ]
+
+    /// Whether a load stopped because its task was cancelled (its `.task`
+    /// view left the screen, or its tab went behind another) rather than
+    /// because it failed. Nothing went wrong, so `Loader` shows no failure
+    /// for it (#579).
+    static func isCancellation(_ error: any Error) -> Bool {
+        if Task.isCancelled { return true }
+        var current: any Error = error
+        while true {
+            if current is CancellationError { return true }
+            if let urlError = current as? URLError, urlError.code == .cancelled { return true }
+            guard let wrapper = current as? any WrapsUnderlyingError else { return false }
+            current = wrapper.underlyingError
+        }
+    }
 }
 
 /// An error that carries the one that caused it, like the generated client's
@@ -65,6 +80,10 @@ public enum LoadState<Value: Sendable>: Sendable {
 /// A refresh keeps the loaded content on screen while it runs, and a failed
 /// refresh keeps it too: pulling to refresh offline must not blank a page the
 /// user was reading.
+///
+/// A cancelled load is not a failure: the loader goes back to the state it
+/// had, so the next `loadIfNeeded()` (a `.task` running again when its view
+/// returns) loads again instead of showing an error nobody caused (#579).
 @MainActor
 @Observable
 public final class Loader<Value: Sendable> {
@@ -93,10 +112,13 @@ public final class Loader<Value: Sendable> {
 
     /// Loads from scratch, showing the loading state (the retry action).
     public func load() async {
+        let previous = state
         state = .loading
         refreshFailure = nil
         do {
             state = settle(try await fetch())
+        } catch let error where LoadFailure.isCancellation(error) {
+            state = previous
         } catch {
             state = .failed(LoadFailure(error))
         }
@@ -110,6 +132,8 @@ public final class Loader<Value: Sendable> {
         do {
             state = settle(try await fetch())
             refreshFailure = nil
+        } catch let error where LoadFailure.isCancellation(error) {
+            // The content stays, and nothing failed that the user should hear of.
         } catch {
             refreshFailure = LoadFailure(error)
         }

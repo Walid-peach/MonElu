@@ -72,6 +72,7 @@ The work is tracked under epic #429, one phase epic at a time.
 - A screen gets its data through a `Loader` (`MonEluCore`) rendered by `LoadStateView` (`MonEluUI`), never by calling the client from a view.
   That one pattern gives every screen the same loading, empty, offline and error states, a retry, and pull-to-refresh; the content must be a `List` or `ScrollView`.
 - Offline and server failures are different states with different wording (`LoadFailure`); a failed refresh keeps the content and shows `RefreshFailureBanner`.
+  A cancelled load is neither: `Loader` goes back to the state it had, and a cancelled refresh keeps the content without a banner, so a `.task` that runs again when its view returns loads for real (#579).
 - Navigation to a deputy or a vote goes through `Router.open(_:)` with an `AppRoute`, from any tab.
   `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
