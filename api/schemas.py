@@ -1576,3 +1576,76 @@ class FeedResponse(_Base):
         description="True when the requested week had no scrutin and an earlier week is shown"
     )
     items: list[FeedItem]
+
+
+class FeedWeekDeputy(_Base):
+    """One deputy's positions over the week's scrutins."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"cast": 23, "pour": 14, "contre": 3, "abstention": 6, "non_votant": 2}
+        }
+    )
+
+    cast: int = Field(description="pour + contre + abstention: the votes actually cast")
+    pour: int
+    contre: int
+    abstention: int
+    non_votant: int = Field(
+        description="Recorded present but not voting; never part of cast or abstention"
+    )
+
+
+class FeedWeekResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "requested_week_start": "2026-10-12",
+                "week_start": "2026-10-12",
+                "week_end": "2026-10-18",
+                "no_sitting": False,
+                "scrutins": 87,
+                "laws_adopted": 1,
+                "laws_rejected": 0,
+                "motions_adopted": 0,
+                "motions_rejected": 1,
+                "deputy": {
+                    "cast": 23,
+                    "pour": 14,
+                    "contre": 3,
+                    "abstention": 6,
+                    "non_votant": 2,
+                },
+                "next_agenda": {
+                    "point_uid": "PTOD17_123456",
+                    "sitting_start": "2026-10-20T13:00:00Z",
+                    "objet": "Projet de loi de finances pour 2027 (vote solennel)",
+                    "point_type": "Vote solennel",
+                    "dossier_id": "DLR5L17N53001",
+                    "dossier_url": (
+                        "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N53001"
+                    ),
+                },
+            }
+        }
+    )
+
+    deputy_id: Optional[str] = None
+    requested_week_start: date = Field(description="Monday of the week asked for")
+    week_start: date = Field(description="Monday of the week counted")
+    week_end: date
+    no_sitting: bool = Field(
+        description="True when the requested week had no scrutin and an earlier week is counted"
+    )
+    scrutins: int = Field(description="Every scrutin of the week, all kinds")
+    laws_adopted: int = Field(description="Whole-text votes (ensemble) adopted")
+    laws_rejected: int = Field(description="Whole-text votes (ensemble) rejected")
+    motions_adopted: int
+    motions_rejected: int
+    deputy: Optional[FeedWeekDeputy] = Field(
+        default=None, description="The followed deputy's positions; null without deputy_id"
+    )
+    next_agenda: Optional[AgendaItem] = Field(
+        default=None, description="The next séance publique item within seven days"
+    )

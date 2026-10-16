@@ -1837,6 +1837,63 @@
         }
       }
     },
+    "/feed/week": {
+      "get": {
+        "tags": [
+          "Feed"
+        ],
+        "summary": "The weekly recap behind the app's « Votre semaine à l'Assemblée » card",
+        "description": "One ISO week at the Assemblée in counts, for the Accueil recap card.\n\nCounted from the week's scrutins, with no language model involved:\n`scrutins` is every scrutin of the week, `laws_adopted`/`laws_rejected` count\nwhole-text votes (`ensemble`) by result, and `motions_adopted`/\n`motions_rejected` count motions by result (a motion de rejet *rejected*\nmeans the text goes on to debate).\n\nWith `deputy_id`, `deputy` gives that deputy's positions on the week's\nscrutins: `cast` is `pour` + `contre` + `abstention`, the votes actually\ncast. `non_votant` counts scrutins where the deputy is recorded present but\nnot voting and is never part of `cast` or `abstention` - the two are\ndifferent things. Scrutins with no recorded position (absent) are in\nneither. Without `deputy_id`, `deputy` is null. An unknown deputy is a 404.\n\n`next_agenda` is the next séance publique item within seven days, null when\nnone is scheduled. Weeks run Monday to Sunday, Paris time; a week with no\nscrutin sets `no_sitting` and reports the last week that sat, exactly as\n`GET /feed` does, so the card and the feed always describe the same week.",
+        "operationId": "getFeedWeek",
+        "parameters": [
+          {
+            "name": "deputy_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "The followed deputy, if any",
+              "title": "Deputy Id",
+              "type": "string"
+            },
+            "description": "The followed deputy, if any"
+          },
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Any date inside the wanted ISO week; defaults to today (Paris)",
+              "title": "Week",
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Any date inside the wanted ISO week; defaults to today (Paris)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedWeekResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/account/me": {
       "get": {
         "tags": [
@@ -4525,6 +4582,150 @@
           "voted_at": "2026-07-21T00:00:00Z",
           "votes_against": 179,
           "votes_for": 351
+        }
+      },
+      "FeedWeekDeputy": {
+        "properties": {
+          "cast": {
+            "type": "integer",
+            "title": "Cast",
+            "description": "pour + contre + abstention: the votes actually cast"
+          },
+          "pour": {
+            "type": "integer",
+            "title": "Pour"
+          },
+          "contre": {
+            "type": "integer",
+            "title": "Contre"
+          },
+          "abstention": {
+            "type": "integer",
+            "title": "Abstention"
+          },
+          "non_votant": {
+            "type": "integer",
+            "title": "Non Votant",
+            "description": "Recorded present but not voting; never part of cast or abstention"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cast",
+          "pour",
+          "contre",
+          "abstention",
+          "non_votant"
+        ],
+        "title": "FeedWeekDeputy",
+        "description": "One deputy's positions over the week's scrutins.",
+        "example": {
+          "abstention": 6,
+          "cast": 23,
+          "contre": 3,
+          "non_votant": 2,
+          "pour": 14
+        }
+      },
+      "FeedWeekResponse": {
+        "properties": {
+          "deputy_id": {
+            "title": "Deputy Id",
+            "type": "string"
+          },
+          "requested_week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Requested Week Start",
+            "description": "Monday of the week asked for"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start",
+            "description": "Monday of the week counted"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "no_sitting": {
+            "type": "boolean",
+            "title": "No Sitting",
+            "description": "True when the requested week had no scrutin and an earlier week is counted"
+          },
+          "scrutins": {
+            "type": "integer",
+            "title": "Scrutins",
+            "description": "Every scrutin of the week, all kinds"
+          },
+          "laws_adopted": {
+            "type": "integer",
+            "title": "Laws Adopted",
+            "description": "Whole-text votes (ensemble) adopted"
+          },
+          "laws_rejected": {
+            "type": "integer",
+            "title": "Laws Rejected",
+            "description": "Whole-text votes (ensemble) rejected"
+          },
+          "motions_adopted": {
+            "type": "integer",
+            "title": "Motions Adopted"
+          },
+          "motions_rejected": {
+            "type": "integer",
+            "title": "Motions Rejected"
+          },
+          "deputy": {
+            "description": "The followed deputy's positions; null without deputy_id",
+            "$ref": "#/components/schemas/FeedWeekDeputy"
+          },
+          "next_agenda": {
+            "description": "The next séance publique item within seven days",
+            "$ref": "#/components/schemas/AgendaItem"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requested_week_start",
+          "week_start",
+          "week_end",
+          "no_sitting",
+          "scrutins",
+          "laws_adopted",
+          "laws_rejected",
+          "motions_adopted",
+          "motions_rejected"
+        ],
+        "title": "FeedWeekResponse",
+        "example": {
+          "deputy": {
+            "abstention": 6,
+            "cast": 23,
+            "contre": 3,
+            "non_votant": 2,
+            "pour": 14
+          },
+          "deputy_id": "PA720892",
+          "laws_adopted": 1,
+          "laws_rejected": 0,
+          "motions_adopted": 0,
+          "motions_rejected": 1,
+          "next_agenda": {
+            "dossier_id": "DLR5L17N53001",
+            "dossier_url": "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N53001",
+            "objet": "Projet de loi de finances pour 2027 (vote solennel)",
+            "point_type": "Vote solennel",
+            "point_uid": "PTOD17_123456",
+            "sitting_start": "2026-10-20T13:00:00Z"
+          },
+          "no_sitting": false,
+          "requested_week_start": "2026-10-12",
+          "scrutins": 87,
+          "week_end": "2026-10-18",
+          "week_start": "2026-10-12"
         }
       },
       "FeedbackResponse": {

@@ -26,7 +26,15 @@ from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from api.routers.agenda import _AGENDA_QUERY, _CANCELLED_STATES, _dossier_url
 from api.routers.lois import lois_url
-from api.schemas import AgendaItem, FeedItem, FeedResponse, FeedRollup, FeedScrutin
+from api.schemas import (
+    AgendaItem,
+    FeedItem,
+    FeedResponse,
+    FeedRollup,
+    FeedScrutin,
+    FeedWeekDeputy,
+    FeedWeekResponse,
+)
 from api.themes_data import SLUGS_BY_NAME, THEME_NAMES
 
 router = APIRouter()
@@ -229,6 +237,39 @@ def build_items(
     return items
 
 
+def week_recap_counts(rows: list[dict], *, has_deputy: bool) -> dict:
+    """The recap's counts over one week of scrutins (#563) - counted, no LLM.
+
+    `nonVotant` stays separate from `abstention`: one was not cast, the other
+    was cast deliberately.
+    """
+    deputy = None
+    if has_deputy:
+        positions = {"pour": 0, "contre": 0, "abstention": 0, "nonVotant": 0}
+        for row in rows:
+            if row.get("position") in positions:
+                positions[row["position"]] += 1
+        deputy = FeedWeekDeputy(
+            cast=positions["pour"] + positions["contre"] + positions["abstention"],
+            pour=positions["pour"],
+            contre=positions["contre"],
+            abstention=positions["abstention"],
+            non_votant=positions["nonVotant"],
+        )
+
+    def count(kind: str, result: str) -> int:
+        return sum(1 for r in rows if kind_of(r) == kind and r.get("result") == result)
+
+    return {
+        "scrutins": len(rows),
+        "laws_adopted": count("ensemble", "adopté"),
+        "laws_rejected": count("ensemble", "rejeté"),
+        "motions_adopted": count("motion", "adopté"),
+        "motions_rejected": count("motion", "rejeté"),
+        "deputy": deputy,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Validation and database reads
 # ---------------------------------------------------------------------------
@@ -290,6 +331,34 @@ def _week_rows(cur, monday: date, deputy_id: Optional[str]) -> list[dict]:
     return [dict(r) for r in cur.fetchall()]
 
 
+def _require_deputy(cur, deputy_id: Optional[str]) -> None:
+    """404 for a deputy MonÉlu does not know - never a silently empty feed."""
+    if deputy_id is None:
+        return
+    cur.execute(SQL_DEPUTY_EXISTS, (deputy_id,))
+    if cur.fetchone() is None:
+        raise HTTPException(status_code=404, detail="Deputy not found")
+
+
+def _sitting_week(
+    cur, requested_monday: date, deputy_id: Optional[str]
+) -> tuple[date, list[dict], bool]:
+    """The week to show: the requested one, or the last that sat (ADR-042 §5).
+
+    Returns that week's Monday, its scrutins, and whether the requested week
+    had none (`no_sitting`).
+    """
+    rows = _week_rows(cur, requested_monday, deputy_id)
+    if rows:
+        return requested_monday, rows, False
+    cur.execute(SQL_LATEST_BEFORE, {"end": paris_midnight(requested_monday)})
+    latest = cur.fetchone()["latest"]
+    if latest is None:
+        return requested_monday, [], True
+    monday, _ = week_bounds(latest.astimezone(PARIS).date())
+    return monday, _week_rows(cur, monday, deputy_id), True
+
+
 @router.get(
     "",
     response_model=FeedResponse,
@@ -347,21 +416,8 @@ def get_feed(
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            if deputy_id is not None:
-                cur.execute(SQL_DEPUTY_EXISTS, (deputy_id,))
-                if cur.fetchone() is None:
-                    raise HTTPException(status_code=404, detail="Deputy not found")
-
-            monday = requested_monday
-            rows = _week_rows(cur, monday, deputy_id)
-            no_sitting = not rows
-            if no_sitting:
-                cur.execute(SQL_LATEST_BEFORE, {"end": paris_midnight(requested_monday)})
-                latest = cur.fetchone()["latest"]
-                if latest is not None:
-                    monday, _ = week_bounds(latest.astimezone(PARIS).date())
-                    rows = _week_rows(cur, monday, deputy_id)
-
+            _require_deputy(cur, deputy_id)
+            monday, rows, no_sitting = _sitting_week(cur, requested_monday, deputy_id)
             agenda = _agenda_rows(cur, today)
 
     items = build_items(
@@ -377,4 +433,58 @@ def get_feed(
         week_end=sunday,
         no_sitting=no_sitting,
         items=items,
+    )
+
+
+@router.get(
+    "/week",
+    response_model=FeedWeekResponse,
+    summary="The weekly recap behind the app's « Votre semaine à l'Assemblée » card",
+)
+@limiter.limit(tiered_limit(30))
+def get_feed_week(
+    request: Request,
+    deputy_id: Optional[str] = Query(None, description="The followed deputy, if any"),
+    week: Optional[date] = Query(
+        None, description="Any date inside the wanted ISO week; defaults to today (Paris)"
+    ),
+):
+    """One ISO week at the Assemblée in counts, for the Accueil recap card.
+
+    Counted from the week's scrutins, with no language model involved:
+    `scrutins` is every scrutin of the week, `laws_adopted`/`laws_rejected` count
+    whole-text votes (`ensemble`) by result, and `motions_adopted`/
+    `motions_rejected` count motions by result (a motion de rejet *rejected*
+    means the text goes on to debate).
+
+    With `deputy_id`, `deputy` gives that deputy's positions on the week's
+    scrutins: `cast` is `pour` + `contre` + `abstention`, the votes actually
+    cast. `non_votant` counts scrutins where the deputy is recorded present but
+    not voting and is never part of `cast` or `abstention` - the two are
+    different things. Scrutins with no recorded position (absent) are in
+    neither. Without `deputy_id`, `deputy` is null. An unknown deputy is a 404.
+
+    `next_agenda` is the next séance publique item within seven days, null when
+    none is scheduled. Weeks run Monday to Sunday, Paris time; a week with no
+    scrutin sets `no_sitting` and reports the last week that sat, exactly as
+    `GET /feed` does, so the card and the feed always describe the same week.
+    """
+    today = paris_today()
+    requested_monday, _ = week_bounds(week or today)
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            _require_deputy(cur, deputy_id)
+            monday, rows, no_sitting = _sitting_week(cur, requested_monday, deputy_id)
+            agenda = _agenda_rows(cur, today)
+
+    _, sunday = week_bounds(monday)
+    return FeedWeekResponse(
+        deputy_id=deputy_id,
+        requested_week_start=requested_monday,
+        week_start=monday,
+        week_end=sunday,
+        no_sitting=no_sitting,
+        next_agenda=agenda[0] if agenda else None,
+        **week_recap_counts(rows, has_deputy=deputy_id is not None),
     )
