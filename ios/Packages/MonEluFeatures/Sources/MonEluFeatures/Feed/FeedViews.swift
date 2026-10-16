@@ -116,6 +116,7 @@ struct FeedScrutinCardView: View {
                 .font(.caption.weight(.bold))
                 .textCase(.uppercase)
                 .foregroundStyle(card.isClosest ? Palette.accent : Palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             if let date = card.date {
                 Text(MonEluFormat.listDay(date, today: today))
                     .font(.caption)
