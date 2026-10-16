@@ -75,7 +75,7 @@ struct FeedRecapCard: View {
     }
 
     /// "14 pour · 6 abstentions · 3 contre", then the non-votants apart.
-    static func positions(_ deputy: FeedWeekDeputy) -> String {
+    nonisolated static func positions(_ deputy: FeedWeekDeputy) -> String {
         var parts = [
             "\(MonEluFormat.count(deputy.pour)) pour",
             counted(deputy.abstention, "abstention"),
@@ -89,7 +89,7 @@ struct FeedRecapCard: View {
 
     /// "1 loi adoptée · 1 motion rejetée", or the scrutin count when the week
     /// carried neither.
-    static func outcomes(_ week: FeedWeek) -> String {
+    nonisolated static func outcomes(_ week: FeedWeek) -> String {
         var parts: [String] = []
         if week.lawsAdopted > 0 { parts.append(counted(week.lawsAdopted, "loi adoptée", plural: "lois adoptées")) }
         if week.lawsRejected > 0 { parts.append(counted(week.lawsRejected, "loi rejetée", plural: "lois rejetées")) }
@@ -102,7 +102,7 @@ struct FeedRecapCard: View {
         return parts.isEmpty ? counted(week.scrutins, "scrutin") + " cette semaine" : parts.joined(separator: " · ")
     }
 
-    static func counted(_ count: Int, _ singular: String, plural: String? = nil) -> String {
+    nonisolated static func counted(_ count: Int, _ singular: String, plural: String? = nil) -> String {
         "\(MonEluFormat.count(count)) \(count > 1 ? (plural ?? singular + "s") : singular)"
     }
 }
