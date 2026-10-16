@@ -73,4 +73,8 @@ public struct UnavailableFeedService: FeedService {
     public func feed(_ query: FeedQuery) async throws -> FeedPage {
         throw URLError(.notConnectedToInternet)
     }
+
+    public func week(deputyID: String?) async throws -> FeedWeek {
+        throw URLError(.notConnectedToInternet)
+    }
 }

@@ -13,9 +13,25 @@ struct FeedContent: View {
     let tab: FeedTab
     /// The followed deputy, for the roll-up's link to their votes.
     var deputyID: String?
+    /// The recap card's week (`GET /feed/week`); nil leaves it out.
+    var week: FeedWeek?
+    /// True in « Pour vous » while no deputy is followed: the card that finds one.
+    var showsFindDeputy = false
+    var onOpenRecap: () -> Void = {}
+    var onFindDeputy: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if page.noSitting {
+                NoSittingNote(weekStart: page.weekStart, weekEnd: page.weekEnd)
+            }
+            if tab == .pourVous {
+                if showsFindDeputy {
+                    FindDeputyCard(onFind: onFindDeputy)
+                } else if let week, week.deputy != nil {
+                    FeedRecapCard(week: week, onOpen: onOpenRecap)
+                }
+            }
             if page.entries.isEmpty {
                 FeedEmptyNote(tab: tab)
             }
