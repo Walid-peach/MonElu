@@ -142,11 +142,16 @@ struct FeedScrutinCardView: View {
         if let pour = card.votesFor, let contre = card.votesAgainst {
             VStack(alignment: .leading, spacing: 6) {
                 VoteSplitBar(pour: pour, contre: contre, abstention: card.abstentions ?? 0)
-                HStack(spacing: 8) {
+                // Stacked at accessibility sizes, so the counts wrap instead of truncating.
+                let layout = typeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                    : AnyLayout(HStackLayout(spacing: 8))
+                layout {
                     Text("\(MonEluFormat.count(pour)) pour · \(MonEluFormat.count(contre)) contre")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Palette.textPrimary)
-                    Spacer(minLength: 0)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
                     if let result = card.result { VoteResultBadge(result: result) }
                 }
             }
