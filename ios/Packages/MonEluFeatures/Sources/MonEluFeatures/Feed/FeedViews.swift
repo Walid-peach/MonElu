@@ -172,7 +172,11 @@ struct FeedScrutinCardView: View {
     }
 
     private func deputyLine(_ position: String) -> some View {
-        HStack(spacing: 8) {
+        // Stacked at accessibility sizes, so the label wraps instead of truncating.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
             Text("Votre député")
                 .font(.subheadline)
                 .foregroundStyle(Palette.textSecondary)
