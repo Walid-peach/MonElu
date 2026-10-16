@@ -79,22 +79,43 @@ struct FeedSnapshotTests {
             .feed(FeedQuery(tab: .pourVous, deputyID: "PA1008", themes: ["justice-securite"]))
     }
 
-    /// The three scrutin cards: the closest amendment, a whole text with a
-    /// summary, a motion with its explanation.
-    @Test(arguments: Variant.all)
-    func feedScrutinCards(_ variant: Variant) async throws {
-        let cards = try await page().entries.prefix(3)
+    /// One scrutin card at a time, so each image stays under the
+    /// repository's 500 KB limit.
+    func card(_ index: Int, _ variant: Variant, height: CGFloat, testName: String = #function) async throws {
+        guard case .scrutin(let card) = try await page().entries[index] else {
+            Issue.record("entry \(index) is not a scrutin")
+            return
+        }
         checkSnapshot(
             NavigationStack {
-                ScrollView {
-                    FeedContent(page: FeedPage(weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, entries: Array(cards)), tab: .pourVous)
-                        .padding(16)
-                }
-                .background(Palette.pageBackground)
+                FeedScrutinCardView(card: card)
+                    .padding(16)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .background(Palette.pageBackground)
             },
             variant,
-            height: variant.size.isAccessibilityCategory ? 4200 : 1500
+            height: variant.size.isAccessibilityCategory ? height * 3 : height,
+            testName: testName
         )
+    }
+
+    /// The week's closest scrutin: an amendment with no summary.
+    @Test(arguments: Variant.all)
+    func feedClosestCard(_ variant: Variant) async throws {
+        try await card(0, variant, height: 480)
+    }
+
+    /// A whole text, its summary as the headline over the official title.
+    @Test(arguments: Variant.all)
+    func feedWholeTextCard(_ variant: Variant) async throws {
+        try await card(1, variant, height: 500)
+    }
+
+    /// A motion: the deputy's position names the motion, with the one-line
+    /// explanation of what a motion does.
+    @Test(arguments: Variant.all)
+    func feedMotionCard(_ variant: Variant) async throws {
+        try await card(2, variant, height: 560)
     }
 
     /// The end of the feed: the agenda item, the roll-up and the quiz.
