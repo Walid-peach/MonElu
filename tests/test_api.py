@@ -1014,9 +1014,9 @@ def test_majority_position_tiebreak_matches_dbt():
 
 def test_list_groups_largest_first_with_slugs(client, mock_cursor):
     mock_cursor.fetchall.return_value = [
-        {"party": "Socialistes et apparentés", "party_short": "SOC", "seat_count": 66},
-        {"party": "Rassemblement National", "party_short": "RN", "seat_count": 123},
-        {"party": "Un label inconnu", "party_short": "X", "seat_count": 1},
+        {"party": "Socialistes et apparentés", "seat_count": 66},
+        {"party": "Rassemblement National", "seat_count": 123},
+        {"party": "Un label inconnu", "seat_count": 1},
     ]
     resp = client.get("/groups")
     assert resp.status_code == 200
@@ -1029,6 +1029,15 @@ def test_list_groups_largest_first_with_slugs(client, mock_cursor):
         "seat_count": 123,
     }
     assert "mandate_end IS NULL" in mock_cursor.execute.call_args.args[0]
+
+
+def test_list_groups_short_label_comes_from_the_canonical_map(client, mock_cursor):
+    # A stray raw organe uid on one deputy's row ("PO838901") used to win
+    # MAX(party_short) and become Droite Républicaine's chip (#517).
+    mock_cursor.fetchall.return_value = [{"party": "Droite Républicaine", "seat_count": 49}]
+    resp = client.get("/groups")
+    assert resp.json()["items"][0]["party_short"] == "DR"
+    assert "party_short" not in mock_cursor.execute.call_args.args[0]
 
 
 def test_get_group(client, mock_cursor):

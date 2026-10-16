@@ -28,6 +28,29 @@ GROUP_SLUGS: dict[str, str] = {
 }
 
 
+# Canonical full name -> short group code, one entry per
+# scripts/backfill_party_labels.py::CANONICAL_LABELS. GET /groups derives a
+# group's `party_short` from it rather than from the deputies table, so a stray
+# value on one deputy's row cannot become the group's chip (#517).
+# Keep in sync with frontend/src/lib/utils.ts::partyShort() — party_short is
+# read directly by the frontend (vote group breakdown, dissident detection)
+# and must match the keys that map/utils there expect.
+CANONICAL_SHORT_LABELS: dict[str, str] = {
+    "Rassemblement National": "RN",
+    "Ensemble pour la République": "EPR",
+    "La France insoumise - Nouveau Front Populaire": "LFI",
+    "Socialistes et apparentés": "SOC",
+    "Droite Républicaine": "DR",
+    "Écologiste et Social": "ECS",
+    "Les Démocrates": "DEM",
+    "Horizons & Indépendants": "HOR",
+    "Libertés, Indépendants, Outre-mer et Territoires": "LIOT",
+    "Union des droites pour la République": "UDR",
+    "Gauche Démocrate et Républicaine": "GDR",
+    "Non inscrit": "NI",
+}
+
+
 def normalize_slug(raw: str) -> str | None:
     """Canonical party label for a slug, or None if it doesn't match a known group."""
     return GROUP_SLUGS.get(raw.strip().lower())

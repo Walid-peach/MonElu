@@ -37,6 +37,12 @@ class TestDepartmentExpansion:
         record = parse_deputy(_deputy_item("974"))
         assert record["department"] == "La Réunion"
 
+    def test_zero_padded_abroad_code_expands_to_full_name(self):
+        # The AN writes "099" for deputies elected abroad; a plain DEPT_NAMES
+        # lookup missed it and stored the raw code (#517).
+        record = parse_deputy(_deputy_item("099"))
+        assert record["department"] == "Français établis hors de France"
+
     def test_unknown_code_falls_back_to_raw_code(self):
         record = parse_deputy(_deputy_item("999"))
         assert record["department"] == "999"
