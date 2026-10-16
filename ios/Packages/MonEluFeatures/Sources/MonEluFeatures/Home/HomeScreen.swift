@@ -2,61 +2,110 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// The Accueil tab (#477, #491): the followed deputy through their latest
-/// decisions, the week at the Assembly and its latest votes, or, before one
-/// is chosen, the postal-code search beside the Assembly's latest votes, so a
-/// first visit already shows something.
+/// The Accueil tab (#565, ADR-042, design « Accueil V1 »): the row of
+/// follows, then the feed the API builds for them, in two tabs. Before a
+/// deputy is chosen, the postal-code search beside the Assembly's latest
+/// votes, so a first visit already shows something.
 public struct HomeScreen: View {
     @State private var model: MonDeputeModel
     @State private var latestVotes: Loader<[VoteItem]>
-    @State private var agenda: Loader<[AgendaEntry]>
-    @Environment(\.appConfiguration) private var configuration
+    @State private var themeSlugs: [String]
+    @State private var tab: FeedTab = .pourVous
+    @State private var filter: FeedFilter = .all
+    @State private var showsFollows = false
+    private let feed: any FeedService
+    private let themesStore: any FollowedThemesStore
+    private let themes = (try? ReferenceData.themes()) ?? []
 
     public init(
         deputies: any DeputiesService, votes: any VotesService, postalCodes: any PostalCodeService,
-        agenda: any AgendaService, store: any FollowedDeputyStore
+        feed: any FeedService, store: any FollowedDeputyStore, themesStore: any FollowedThemesStore
     ) {
         _model = State(initialValue: MonDeputeModel(deputies: deputies, postalCodes: postalCodes, store: store))
         _latestVotes = State(initialValue: Loader(isEmpty: { $0.isEmpty }) {
             Array(try await votes.votes(VoteQuery()).items.prefix(HomeLatestVotesSection.count))
         })
-        _agenda = State(initialValue: Loader {
-            let week = AgendaWindow(offset: 0, now: Date())
-            let items = try await agenda.week(from: week.from, to: week.to).days.flatMap(\.items)
-            return HomeAgendaSection.upcoming(items, now: Date())
-        })
+        _themeSlugs = State(initialValue: themesStore.themeSlugs)
+        self.feed = feed
+        self.themesStore = themesStore
     }
 
     public var body: some View {
         Group {
             if model.showsPicker {
                 picker
-            } else if let home = model.home {
-                LoadStateView(
-                    home,
-                    empty: EmptyStateView(title: "Député introuvable", message: "Ce député n'existe pas ou plus.")
-                ) { home in
-                    ScrollView {
-                        HomeDeputyContent(
-                            home: home, offersQuestions: configuration.features.chat,
-                            agenda: agendaEntries, latestVotes: latestVotes.state,
-                            onRetryLatest: { Task { await latestVotes.load() } }
-                        )
-                        // No top margin: the tagline sits right under the large
-                        // title, as one header.
-                        .padding([.horizontal, .bottom], 16)
-                    }
-                    .task { await latestVotes.loadIfNeeded() }
-                    .task { await agenda.loadIfNeeded() }
+            } else {
+                FeedLoaderView(query: query, service: feed, tab: tab, deputyID: model.followedID) {
+                    feedHeader
                 }
-                // A new deputy is a new loader; a new identity starts its load.
-                .id(model.followedID)
+                // A new query is a new loader; a new identity starts its load.
+                .id(query)
+                .task { await model.home?.loadIfNeeded() }
             }
         }
         .background(Palette.pageBackground)
         .navigationTitle("Accueil")
         .toolbar { toolbar }
+        .sheet(isPresented: $showsFollows) { followsSheet }
         .accessibilityIdentifier("screen.home")
+    }
+
+    /// What the feed is asked for: the tab, and in « Pour vous » the follows,
+    /// narrowed to one when a circle is selected.
+    private var query: FeedQuery {
+        switch tab {
+        case .pourVous: FeedQuery.pourVous(deputyID: model.followedID, themes: themeSlugs, filter: filter)
+        case .assemblee: FeedQuery(tab: .assemblee, deputyID: model.followedID, themes: [])
+        }
+    }
+
+    /// The followed deputy once their home loaded; the circle waits for it.
+    private var followedDeputy: DeputyItem? {
+        model.home?.state.value?.profile.deputy
+    }
+
+    private var circles: [FollowCircle] {
+        // The deputy's ring uses the existing reading position: votes held
+        // after the newest one shown on the previous visit.
+        let deputyNews: Bool = {
+            guard case .votes(let votes, _)? = model.home?.state.value?.sinceLastVisit else { return false }
+            return !votes.isEmpty
+        }()
+        return FollowCircle.circles(
+            deputy: followedDeputy, themeSlugs: themeSlugs, themes: themes,
+            news: deputyNews ? ["deputy"] : []
+        )
+    }
+
+    @ViewBuilder private var feedHeader: some View {
+        HomeTagline()
+            .padding(.horizontal, 16)
+        FollowsRow(circles: circles, filter: $filter, onAdd: { showsFollows = true })
+        Picker("Fil", selection: $tab) {
+            ForEach(FeedTab.allCases, id: \.self) { tab in
+                Text(tab.title).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .accessibilityIdentifier("feed.tabs")
+    }
+
+    private var followsSheet: some View {
+        FollowsSheet(
+            deputyName: followedDeputy?.name, themes: themes, followed: Set(themeSlugs),
+            onToggle: { slug in
+                themesStore.toggle(slug)
+                themeSlugs = themesStore.themeSlugs
+                // A theme no longer followed cannot stay the filter.
+                if case .theme(let selected) = filter, !themeSlugs.contains(selected) { filter = .all }
+            },
+            onChooseDeputy: {
+                showsFollows = false
+                model.startChange()
+            },
+            onDone: { showsFollows = false }
+        )
     }
 
     /// While the user changes deputy, only the search shows; before any
@@ -94,16 +143,6 @@ public struct HomeScreen: View {
         }
     }
 
-    /// The week's items once loaded; nil while loading or when they failed,
-    /// and the home leaves the section out.
-    private var agendaEntries: [AgendaEntry]? {
-        switch agenda.state {
-        case .loaded(let entries): entries
-        case .empty: []
-        default: nil
-        }
-    }
-
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         if !model.isChanging {
             ToolbarItem(placement: .topBarLeading) {
@@ -130,6 +169,41 @@ public struct HomeScreen: View {
                     Label("Options", systemImage: "ellipsis.circle")
                 }
                 .accessibilityIdentifier("monDepute.options")
+            }
+        }
+    }
+}
+
+/// One feed query's loader and its page, under the header that chooses it.
+/// Rebuilt for every new query (`.id(query)` at the call site).
+private struct FeedLoaderView<Header: View>: View {
+    @State private var loader: Loader<FeedPage>
+    let tab: FeedTab
+    let deputyID: String?
+    let header: Header
+
+    init(
+        query: FeedQuery, service: any FeedService, tab: FeedTab, deputyID: String?,
+        @ViewBuilder header: () -> Header
+    ) {
+        _loader = State(initialValue: Loader { try await service.feed(query) })
+        self.tab = tab
+        self.deputyID = deputyID
+        self.header = header()
+    }
+
+    var body: some View {
+        LoadStateView(
+            loader,
+            empty: EmptyStateView(title: "Rien cette semaine", message: "Aucun scrutin à montrer pour l'instant.")
+        ) { page in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    header
+                    FeedContent(page: page, tab: tab, deputyID: deputyID)
+                        .padding(.horizontal, 16)
+                }
+                .padding(.bottom, 16)
             }
         }
     }
