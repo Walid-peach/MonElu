@@ -208,7 +208,7 @@ private struct FeedLoaderView<Header: View>: View {
     ) {
         _loader = State(initialValue: Loader {
             async let page = service.feed(query)
-            async let week = HomeScreenRecap.recap(for: query, service: service)
+            async let week = HomeScreenRecap.recap(tab: query.tab, deputyID: deputyID, service: service)
             return FeedScreen(page: try await page, week: await week)
         })
         self.tab = tab
@@ -280,8 +280,10 @@ struct FeedPageView<Header: View>: View {
 enum HomeScreenRecap {
     /// The recap card's week, in « Pour vous » with a deputy only. It is a
     /// bonus: when it fails, the feed still shows without it.
-    static func recap(for query: FeedQuery, service: any FeedService) async -> FeedWeek? {
-        guard query.tab == .pourVous, let deputyID = query.deputyID else { return nil }
+    /// Keyed on the followed deputy, not on the query: a theme circle narrows
+    /// the feed to that theme, but the recap is still the deputy's week.
+    static func recap(tab: FeedTab, deputyID: String?, service: any FeedService) async -> FeedWeek? {
+        guard tab == .pourVous, let deputyID else { return nil }
         return try? await service.week(deputyID: deputyID)
     }
 }

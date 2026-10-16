@@ -22,7 +22,7 @@ struct RecapTests {
 
     @Test func positionsReadAsASentence() {
         let deputy = FeedWeekDeputy(cast: 23, pour: 14, contre: 3, abstention: 6, nonVotant: 2)
-        #expect(FeedRecapCard.positions(deputy) == "14 pour · 6 abstentions · 3 contre · non-votant sur 2 scrutins")
+        #expect(FeedRecapCard.positions(deputy) == "14 pour · 3 contre · 6 abstentions · non-votant sur 2 scrutins")
     }
 
     @Test func outcomesNameLawsAndMotions() async throws {
@@ -37,16 +37,24 @@ struct RecapTests {
         #expect(FeedRecapCard.outcomes(week) == "41 scrutins cette semaine")
     }
 
-    /// The recap is only asked for in « Pour vous » with a deputy.
+    /// A recess week's count is not "cette semaine" (ADR-042 §5).
+    @Test func aRecessWeekIsNotThisWeek() {
+        let week = FeedWeek(
+            weekStart: "2026-09-28", weekEnd: "2026-10-04", noSitting: true, scrutins: 12, lawsAdopted: 0,
+            lawsRejected: 0, motionsAdopted: 0, motionsRejected: 0, deputy: nil, nextAgenda: nil
+        )
+        #expect(FeedRecapCard.outcomes(week) == "12 scrutins cette semaine-là")
+    }
+
+    /// The recap is only asked for in « Pour vous » with a followed deputy,
+    /// whichever circle narrows the feed.
     @Test func theRecapIsOnlyAskedForWithADeputy() async {
         let service = CountingFeedService()
-        _ = await HomeScreenRecap.recap(for: FeedQuery(tab: .assemblee, deputyID: "PA1", themes: []), service: service)
-        _ = await HomeScreenRecap.recap(
-            for: FeedQuery(tab: .pourVous, deputyID: nil, themes: ["sante-social"]), service: service
-        )
+        _ = await HomeScreenRecap.recap(tab: .assemblee, deputyID: "PA1", service: service)
+        _ = await HomeScreenRecap.recap(tab: .pourVous, deputyID: nil, service: service)
         #expect(service.weekCalls == 0)
         // A failed recap is nil, never an error that would hide the feed.
-        let week = await HomeScreenRecap.recap(for: FeedQuery(tab: .pourVous, deputyID: "PA1", themes: []), service: service)
+        let week = await HomeScreenRecap.recap(tab: .pourVous, deputyID: "PA1", service: service)
         #expect(week == nil)
         #expect(service.weekCalls == 1)
     }

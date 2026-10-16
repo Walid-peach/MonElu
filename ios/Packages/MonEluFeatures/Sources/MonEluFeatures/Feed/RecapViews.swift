@@ -74,12 +74,13 @@ struct FeedRecapCard: View {
             .opacity(0.85)
     }
 
-    /// "14 pour · 6 abstentions · 3 contre", then the non-votants apart.
+    /// "14 pour · 3 contre · 6 abstentions", in the bar's order, then the
+    /// non-votants apart.
     nonisolated static func positions(_ deputy: FeedWeekDeputy) -> String {
         var parts = [
             "\(MonEluFormat.count(deputy.pour)) pour",
-            counted(deputy.abstention, "abstention"),
             "\(MonEluFormat.count(deputy.contre)) contre",
+            counted(deputy.abstention, "abstention"),
         ]
         if deputy.nonVotant > 0 {
             parts.append("non-votant sur \(counted(deputy.nonVotant, "scrutin"))")
@@ -88,7 +89,7 @@ struct FeedRecapCard: View {
     }
 
     /// "1 loi adoptée · 1 motion rejetée", or the scrutin count when the week
-    /// carried neither.
+    /// carried neither; a recess week's count never reads as the current week.
     nonisolated static func outcomes(_ week: FeedWeek) -> String {
         var parts: [String] = []
         if week.lawsAdopted > 0 { parts.append(counted(week.lawsAdopted, "loi adoptée", plural: "lois adoptées")) }
@@ -99,7 +100,8 @@ struct FeedRecapCard: View {
         if week.motionsRejected > 0 {
             parts.append(counted(week.motionsRejected, "motion rejetée", plural: "motions rejetées"))
         }
-        return parts.isEmpty ? counted(week.scrutins, "scrutin") + " cette semaine" : parts.joined(separator: " · ")
+        guard parts.isEmpty else { return parts.joined(separator: " · ") }
+        return counted(week.scrutins, "scrutin") + (week.noSitting ? " cette semaine-là" : " cette semaine")
     }
 
     nonisolated static func counted(_ count: Int, _ singular: String, plural: String? = nil) -> String {
