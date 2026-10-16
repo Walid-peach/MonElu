@@ -286,7 +286,7 @@ export default async function DepartmentPage(
                         {v.vote_title}
                       </span>
                       <span style={{ display: 'flex', gap: 12, alignItems: 'baseline', whiteSpace: 'nowrap' }}>
-                        <span className="font-mono" style={{ fontSize: 12.5, color: 'var(--dp-green)' }}>{v.pour} pour</span>
+                        <span className="font-mono" style={{ fontSize: 12.5, color: 'var(--dp-badge-pos-text)' }}>{v.pour} pour</span>
                         <span className="font-mono" style={{ fontSize: 12.5, color: RED }}>{v.contre} contre</span>
                         {v.abstention > 0 && (
                           <span className="font-mono" style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{v.abstention} abst.</span>

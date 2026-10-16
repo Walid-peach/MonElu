@@ -33,11 +33,10 @@ WEB_SOURCES = {
     "cardBackground": ("--dp-card-bg", "--dp-card-bg"),
     "border": ("--dp-border", "--dp-border"),
     "textPrimary": ("#0D1F3C", "--dp-text"),  # :root --dp-text is navy via theme()
-    # Darker than the web in light mode (and textMuted in dark too): the web
-    # values miss 4.5:1 on the page and track backgrounds (#480). #5F6673 is
-    # the design A secondary text; see test_text_tokens_reach_aa_contrast.
-    "textSecondary": ("#5F6673", "--dp-text-secondary"),
-    "textMuted": ("#656C79", "#8A94A8"),
+    # The web adopted the app's AA values (#480, #513); see
+    # test_text_tokens_reach_aa_contrast.
+    "textSecondary": ("--dp-text-secondary", "--dp-text-secondary"),
+    "textMuted": ("--dp-text-muted", "--dp-text-muted"),
     "positive": ("--dp-green", "--dp-green"),
     "negative": ("--dp-red", "--dp-red"),
     "positiveBackground": ("--dp-badge-pos-bg", "--dp-badge-pos-bg"),
