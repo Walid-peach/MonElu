@@ -21,12 +21,13 @@ Put the latest `master` on the user's iPhone without losing what the installed a
    No `physical` row that is `available (paired)` means the phone is locked, untrusted or not in Developer Mode; tell the user, do not retry.
 3. Check that the build will reuse that bundle id, since a different id installs a second app with empty data:
    - `ios/Configs/Local.xcconfig` exists: its `MONELU_BUNDLE_ID` must equal the installed id.
-   - It is missing (a fresh clone): `ios/scripts/ios.sh` writes `fr.monelu.app.dev.<team, lowercased>` from the one team in Xcode's settings, so compare that with the installed id before running.
+   - It is missing (a fresh clone): `ensure_signing` in `ios/scripts/ios.sh` writes it from the one team in Xcode's settings; read that function for the id it will produce, and compare.
    If they differ, ask the user before going further.
-4. Run it, saving the log to the scratchpad (the build output is long):
+   If no MonÉlu app is installed, there is no data to keep: go ahead.
+4. Run it, saving the log outside the repository (the build output is long):
 
    ```bash
-   make ios-device > <scratchpad>/ios-device.log 2>&1; echo "exit=$?"
+   make ios-device > "$TMPDIR/ios-device.log" 2>&1; echo "exit=$?"
    ```
 
    Judge success by the exit status and the final `Launched application with <bundle id>` line, not by `error:` or `warning:` lines in the middle, which Xcode prints on successful builds too.
