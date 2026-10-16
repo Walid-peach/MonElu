@@ -1,9 +1,9 @@
 # Accueil (#463, #477, #491): before a deputy is chosen it shows the
 # Assembly's latest votes beside the postal-code search; a code finds the
 # département's deputies, a tap selects one and the pinned "Suivre" follows
-# them, the choice is kept on the device, a relaunch opens on their home with
-# the week's agenda and the latest votes, and the invitations lead to the
-# quiz and back.
+# them, the choice is kept on the device, a relaunch opens on the feed
+# (#565, ADR-042) with its follows row and two tabs, and the quiz invitation
+# at the end of the feed leads to the quiz and back.
 # Asserts on fixed labels, not on who is listed: rosters change.
 appId: ${APP_ID}
 ---
@@ -46,26 +46,25 @@ appId: ${APP_ID}
 # its centre is no longer the Explorer tab under the bar.
 - tapOn: "Suivre .*"
 - extendedWaitUntil:
-    visible: "Ses derniers votes"
+    visible: "Pour vous"
     timeout: 20000
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}4-home-first-visit
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-home-feed
 
-# The choice survives a relaunch, which opens straight on the home.
+# The choice survives a relaunch, which opens straight on the feed.
 - launchApp:
     stopApp: true
 - extendedWaitUntil:
-    visible: "Ses derniers votes"
+    visible: "Pour vous"
     timeout: 20000
 - assertNotVisible: "Trouvez votre député"
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}5-home-relaunch
-- scrollUntilVisible:
-    element: "Cette semaine à l'Assemblée"
-    direction: DOWN
-    centerElement: true
+
+# The other tab asks the API for the week's headline votes.
+- tapOn: "À l'Assemblée"
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}5b-home-week
+- takeScreenshot: ${SCREENSHOT_PREFIX}5b-home-assemblee
 - scrollUntilVisible:
     element: ".*Et si vous votiez.*"
     direction: DOWN

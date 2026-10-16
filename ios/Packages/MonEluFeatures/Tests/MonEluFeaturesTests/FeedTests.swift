@@ -1,0 +1,177 @@
+import Foundation
+import MonEluCore
+@testable import MonEluFeatures
+import MonEluUI
+import SnapshotTesting
+import SwiftUI
+import Testing
+
+/// The feed's client mapping and its query (#565, ADR-042): the app keeps the
+/// API's order and asks the API to narrow, never filters itself.
+struct FeedServiceTests {
+    func page() async throws -> FeedPage {
+        try await LiveFeedService(client: stubClient(try fixture("feed_pour_vous")))
+            .feed(FeedQuery(tab: .pourVous, deputyID: "PA1008", themes: ["justice-securite"]))
+    }
+
+    @Test func keepsTheAPIsOrderAndEveryKind() async throws {
+        let page = try await page()
+        #expect(page.entries.map(\.id) == [
+            "scrutin:VTANR5L17V9101", "scrutin:VTANR5L17V9100", "scrutin:VTANR5L17V9099",
+            "agenda:PTOD17_FEED01", "rollup",
+        ])
+        #expect(page.weekStart == "2026-10-12")
+        #expect(page.noSitting == false)
+    }
+
+    @Test func mapsACardAsTheAPIComputedIt() async throws {
+        guard case .scrutin(let closest) = try await page().entries.first else {
+            Issue.record("the first entry is not a scrutin")
+            return
+        }
+        #expect(closest.isClosest)
+        #expect(closest.kind == "amendement")
+        #expect(closest.deputyPosition == "pour")
+        #expect(closest.loiID == nil)
+        #expect(closest.officialURL?.absoluteString == "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9101")
+    }
+
+    @Test func aBillWithAPageKeepsItsID() async throws {
+        guard case .scrutin(let law) = try await page().entries[1] else {
+            Issue.record("the second entry is not a scrutin")
+            return
+        }
+        #expect(law.loiID == "DLR5L17N53980")
+    }
+
+    @Test func theRollupKeepsNonVotantApart() async throws {
+        guard case .rollup(let rollup) = try await page().entries.last else {
+            Issue.record("the last entry is not the rollup")
+            return
+        }
+        #expect(rollup == FeedRollup(total: 20, amendements: 17, articles: 2, autres: 1, nonVotant: 3))
+    }
+
+    @Test func aCircleAsksTheAPIForThatFollowAlone() {
+        let themes = ["justice-securite", "sante-social"]
+        #expect(FeedQuery.pourVous(deputyID: "PA1", themes: themes, filter: .all)
+            == FeedQuery(tab: .pourVous, deputyID: "PA1", themes: themes))
+        #expect(FeedQuery.pourVous(deputyID: "PA1", themes: themes, filter: .deputy)
+            == FeedQuery(tab: .pourVous, deputyID: "PA1", themes: []))
+        #expect(FeedQuery.pourVous(deputyID: "PA1", themes: themes, filter: .theme("sante-social"))
+            == FeedQuery(tab: .pourVous, deputyID: nil, themes: ["sante-social"]))
+    }
+
+    @Test func theRollupReadsAsASentence() {
+        let view = FeedRollupView(rollup: FeedRollup(total: 20, amendements: 17, articles: 2, autres: 1, nonVotant: 3))
+        #expect(view.headline == "Et 20 autres votes de votre député")
+        #expect(view.detail == "17 amendements · 2 articles · 1 autre scrutin · non-votant sur 3 scrutins")
+    }
+}
+
+/// The feed in light and dark at the default and an accessibility text size,
+/// from a response written from the API's schema.
+@MainActor
+@Suite(.snapshots(record: .missing))
+struct FeedSnapshotTests {
+    func page() async throws -> FeedPage {
+        try await LiveFeedService(client: stubClient(try fixture("feed_pour_vous")))
+            .feed(FeedQuery(tab: .pourVous, deputyID: "PA1008", themes: ["justice-securite"]))
+    }
+
+    /// One scrutin card at a time, so each image stays under the
+    /// repository's 500 KB limit.
+    func card(_ index: Int, _ variant: Variant, height: CGFloat, testName: String = #function) async throws {
+        guard case .scrutin(let card) = try await page().entries[index] else {
+            Issue.record("entry \(index) is not a scrutin")
+            return
+        }
+        checkSnapshot(
+            NavigationStack {
+                FeedScrutinCardView(card: card)
+                    .padding(16)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? height * 3 : height,
+            testName: testName
+        )
+    }
+
+    /// The week's closest scrutin: an amendment with no summary.
+    @Test(arguments: Variant.all)
+    func feedClosestCard(_ variant: Variant) async throws {
+        try await card(0, variant, height: 480)
+    }
+
+    /// A whole text, its summary as the headline over the official title.
+    @Test(arguments: Variant.all)
+    func feedWholeTextCard(_ variant: Variant) async throws {
+        try await card(1, variant, height: 500)
+    }
+
+    /// A motion: the deputy's position names the motion, with the one-line
+    /// explanation of what a motion does.
+    @Test(arguments: Variant.all)
+    func feedMotionCard(_ variant: Variant) async throws {
+        try await card(2, variant, height: 560)
+    }
+
+    /// The end of the feed: the agenda item, the roll-up and the quiz.
+    @Test(arguments: Variant.all)
+    func feedAgendaAndRollup(_ variant: Variant) async throws {
+        let rest = try await page().entries.suffix(2)
+        checkSnapshot(
+            NavigationStack {
+                ScrollView {
+                    FeedContent(
+                        page: FeedPage(weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, entries: Array(rest)),
+                        tab: .pourVous, deputyID: "PA1008"
+                    )
+                    .padding(16)
+                }
+                .background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2400 : 700
+        )
+    }
+
+    /// A failed feed keeps its header: the follows row and the tabs stay
+    /// usable above the failure and its retry.
+    @Test(arguments: Variant.all)
+    func feedFailedKeepsHeader(_ variant: Variant) {
+        let circles = FollowCircle.circles(
+            deputy: .sample, themeSlugs: ["justice-securite"], themes: (try? ReferenceData.themes()) ?? []
+        )
+        checkSnapshot(
+            NavigationStack {
+                FeedPageView(state: .failed(.offline), tab: .pourVous) {
+                    FollowsRow(circles: circles, filter: .constant(.all), onAdd: {})
+                    Picker("Fil", selection: .constant(FeedTab.pourVous)) {
+                        ForEach(FeedTab.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                }
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2000 : 640
+        )
+    }
+
+    @Test(arguments: Variant.all)
+    func feedEmpty(_ variant: Variant) {
+        checkSnapshot(
+            NavigationStack {
+                FeedContent(page: FeedPage(weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, entries: []), tab: .pourVous)
+                    .padding(16)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 1400 : 420
+        )
+    }
+}
