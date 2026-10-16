@@ -51,6 +51,11 @@ public struct HomeScreen: View {
         .navigationTitle("Accueil")
         .toolbar { toolbar }
         .sheet(isPresented: $showsFollows) { followsSheet }
+        // A deputy followed or unfollowed on another screen, such as their
+        // profile (#576), picked up on coming back. Not in `onChange`: Accueil
+        // stays alive behind the other tabs, and loads started there are
+        // cancelled, which `Loader` keeps as a failure that never retries.
+        .onAppear { model.syncWithStore() }
         .accessibilityIdentifier("screen.home")
     }
 
