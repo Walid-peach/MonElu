@@ -46,7 +46,7 @@ public struct AppServices: Sendable {
         ask: any AskService, quiz: any QuizService,
         postalCodes: any PostalCodeService, followedDeputy: any FollowedDeputyStore,
         feed: any FeedService = UnavailableFeedService(),
-        followedThemes: any FollowedThemesStore = UserDefaultsFollowedThemesStore(defaults: .init(suiteName: "AppServices.unused")!)
+        followedThemes: any FollowedThemesStore = EphemeralFollowedThemesStore()
     ) {
         self.votes = votes
         self.deputies = deputies
@@ -73,4 +73,32 @@ public struct UnavailableFeedService: FeedService {
     public func feed(_ query: FeedQuery) async throws -> FeedPage {
         throw URLError(.notConnectedToInternet)
     }
+}
+
+/// A `FollowedThemesStore` kept in memory only: the default for callers of
+/// the injecting initializer, so they never write to the device's defaults.
+public final class EphemeralFollowedThemesStore: FollowedThemesStore, @unchecked Sendable {
+    // Every access goes through the lock.
+    private let lock = NSLock()
+    private var slugs: [String] = []
+    private var seen: [String: Date] = [:]
+
+    public init() {}
+
+    public var themeSlugs: [String] { lock.withLock { slugs } }
+
+    public func follow(_ slug: String) {
+        lock.withLock { if !slugs.contains(slug) { slugs.append(slug) } }
+    }
+
+    public func unfollow(_ slug: String) {
+        lock.withLock {
+            slugs.removeAll { $0 == slug }
+            seen[slug] = nil
+        }
+    }
+
+    public func lastSeen(theme slug: String) -> Date? { lock.withLock { seen[slug] } }
+
+    public func setLastSeen(_ date: Date, theme slug: String) { lock.withLock { seen[slug] = date } }
 }

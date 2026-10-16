@@ -174,8 +174,8 @@ public struct HomeScreen: View {
     }
 }
 
-/// One feed query's loader and its page, under the header that chooses it.
-/// Rebuilt for every new query (`.id(query)` at the call site).
+/// One feed query's loader, under the header that chooses it. Rebuilt for
+/// every new query (`.id(query)` at the call site).
 private struct FeedLoaderView<Header: View>: View {
     @State private var loader: Loader<FeedPage>
     let tab: FeedTab
@@ -193,18 +193,54 @@ private struct FeedLoaderView<Header: View>: View {
     }
 
     var body: some View {
-        LoadStateView(
-            loader,
-            empty: EmptyStateView(title: "Rien cette semaine", message: "Aucun scrutin à montrer pour l'instant.")
-        ) { page in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
-                    FeedContent(page: page, tab: tab, deputyID: deputyID)
-                        .padding(.horizontal, 16)
-                }
-                .padding(.bottom, 16)
+        FeedPageView(
+            state: loader.state, refreshFailure: loader.refreshFailure, tab: tab, deputyID: deputyID,
+            retry: { await loader.load() }
+        ) {
+            header
+        }
+        .refreshable { await loader.refresh() }
+        .task { await loader.loadIfNeeded() }
+    }
+}
+
+/// The header, then one query's state below it. The header stays in every
+/// state, so the tabs and the follows row can still be used while the feed
+/// loads or after it failed; the states are `LoadStateView`'s own views.
+struct FeedPageView<Header: View>: View {
+    let state: LoadState<FeedPage>
+    var refreshFailure: LoadFailure?
+    let tab: FeedTab
+    var deputyID: String?
+    var retry: () async -> Void = {}
+    @ViewBuilder let header: Header
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                content
+                    .padding(.horizontal, 16)
             }
+            .padding(.bottom, 16)
+        }
+        .background(Palette.pageBackground)
+    }
+
+    @ViewBuilder private var content: some View {
+        switch state {
+        case .idle, .loading:
+            LoadingStateView()
+                .padding(.vertical, 48)
+        case .empty:
+            EmptyStateView(title: "Rien cette semaine", message: "Aucun scrutin à montrer pour l'instant.")
+        case .failed(let failure):
+            FailureStateView(failure: failure, retry: retry)
+        case .loaded(let page):
+            if let refreshFailure {
+                RefreshFailureBanner(failure: refreshFailure)
+            }
+            FeedContent(page: page, tab: tab, deputyID: deputyID)
         }
     }
 }
