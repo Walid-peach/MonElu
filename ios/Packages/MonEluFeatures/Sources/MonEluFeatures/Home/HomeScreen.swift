@@ -185,16 +185,16 @@ public struct HomeScreen: View {
     }
 }
 
-/// One feed query's loader and its page, under the header that chooses it.
-/// Rebuilt for every new query (`.id(query)` at the call site).
-private struct FeedLoaderView<Header: View>: View {
-    /// One query's feed and, in « Pour vous », the recap card's week.
-    struct Screen: Sendable {
-        let page: FeedPage
-        let week: FeedWeek?
-    }
+/// One query's feed and, in « Pour vous », the recap card's week.
+struct FeedScreen: Sendable {
+    let page: FeedPage
+    var week: FeedWeek?
+}
 
-    @State private var loader: Loader<Screen>
+/// One feed query's loader, under the header that chooses it. Rebuilt for
+/// every new query (`.id(query)` at the call site).
+private struct FeedLoaderView<Header: View>: View {
+    @State private var loader: Loader<FeedScreen>
     let tab: FeedTab
     let deputyID: String?
     let onOpenRecap: () -> Void
@@ -209,7 +209,7 @@ private struct FeedLoaderView<Header: View>: View {
         _loader = State(initialValue: Loader {
             async let page = service.feed(query)
             async let week = HomeScreenRecap.recap(for: query, service: service)
-            return Screen(page: try await page, week: await week)
+            return FeedScreen(page: try await page, week: await week)
         })
         self.tab = tab
         self.deputyID = deputyID
@@ -219,22 +219,60 @@ private struct FeedLoaderView<Header: View>: View {
     }
 
     var body: some View {
-        LoadStateView(
-            loader,
-            empty: EmptyStateView(title: "Rien cette semaine", message: "Aucun scrutin à montrer pour l'instant.")
-        ) { screen in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
-                    FeedContent(
-                        page: screen.page, tab: tab, deputyID: deputyID, week: screen.week,
-                        showsFindDeputy: deputyID == nil,
-                        onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
-                    )
+        FeedPageView(
+            state: loader.state, refreshFailure: loader.refreshFailure, tab: tab, deputyID: deputyID,
+            retry: { await loader.load() }, onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
+        ) {
+            header
+        }
+        .refreshable { await loader.refresh() }
+        .task { await loader.loadIfNeeded() }
+    }
+}
+
+/// The header, then one query's state below it. The header stays in every
+/// state, so the tabs and the follows row can still be used while the feed
+/// loads or after it failed; the states are `LoadStateView`'s own views.
+struct FeedPageView<Header: View>: View {
+    let state: LoadState<FeedScreen>
+    var refreshFailure: LoadFailure?
+    let tab: FeedTab
+    var deputyID: String?
+    var retry: () async -> Void = {}
+    var onOpenRecap: () -> Void = {}
+    var onFindDeputy: () -> Void = {}
+    @ViewBuilder let header: Header
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                content
                     .padding(.horizontal, 16)
-                }
-                .padding(.bottom, 16)
             }
+            .padding(.bottom, 16)
+        }
+        .background(Palette.pageBackground)
+    }
+
+    @ViewBuilder private var content: some View {
+        switch state {
+        case .idle, .loading:
+            LoadingStateView()
+                .padding(.vertical, 48)
+        case .empty:
+            EmptyStateView(title: "Rien cette semaine", message: "Aucun scrutin à montrer pour l'instant.")
+        case .failed(let failure):
+            FailureStateView(failure: failure, retry: retry)
+        case .loaded(let screen):
+            if let refreshFailure {
+                RefreshFailureBanner(failure: refreshFailure)
+            }
+            FeedContent(
+                page: screen.page, tab: tab, deputyID: deputyID, week: screen.week,
+                showsFindDeputy: deputyID == nil,
+                onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
+            )
         }
     }
 }

@@ -213,6 +213,8 @@ struct FeedScrutinCardView: View {
                 .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
+            // The headline above is the same link; VoiceOver reads it once.
+            .accessibilityHidden(true)
             Spacer(minLength: 8)
             if let url = card.officialURL {
                 Link(destination: url) {

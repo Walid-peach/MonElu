@@ -138,6 +138,29 @@ struct FeedSnapshotTests {
         )
     }
 
+    /// A failed feed keeps its header: the follows row and the tabs stay
+    /// usable above the failure and its retry.
+    @Test(arguments: Variant.all)
+    func feedFailedKeepsHeader(_ variant: Variant) {
+        let circles = FollowCircle.circles(
+            deputy: .sample, themeSlugs: ["justice-securite"], themes: (try? ReferenceData.themes()) ?? []
+        )
+        checkSnapshot(
+            NavigationStack {
+                FeedPageView(state: .failed(.offline), tab: .pourVous) {
+                    FollowsRow(circles: circles, filter: .constant(.all), onAdd: {})
+                    Picker("Fil", selection: .constant(FeedTab.pourVous)) {
+                        ForEach(FeedTab.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                }
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2000 : 640
+        )
+    }
+
     @Test(arguments: Variant.all)
     func feedEmpty(_ variant: Variant) {
         checkSnapshot(
