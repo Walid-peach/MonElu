@@ -32,10 +32,14 @@ public struct HomeScreen: View {
 
     public var body: some View {
         Group {
-            if model.showsPicker {
+            if showsPicker {
                 picker
             } else {
-                FeedLoaderView(query: query, service: feed, tab: tab, deputyID: model.followedID) {
+                FeedLoaderView(
+                    query: query, service: feed, tab: tab, deputyID: model.followedID,
+                    onOpenRecap: { tab = .assemblee },
+                    onFindDeputy: { model.startChange() }
+                ) {
                     feedHeader
                 }
                 // A new query is a new loader; a new identity starts its load.
@@ -48,6 +52,13 @@ public struct HomeScreen: View {
         .toolbar { toolbar }
         .sheet(isPresented: $showsFollows) { followsSheet }
         .accessibilityIdentifier("screen.home")
+    }
+
+    /// The postal-code picker shows while the user changes deputy, and on a
+    /// first visit with nothing followed. Themes alone are enough for a feed,
+    /// which then offers to find the deputy (#566).
+    private var showsPicker: Bool {
+        model.isChanging || (model.followedID == nil && themeSlugs.isEmpty)
     }
 
     /// What the feed is asked for: the tab, and in « Pour vous » the follows,
@@ -174,28 +185,43 @@ public struct HomeScreen: View {
     }
 }
 
+/// One query's feed and, in « Pour vous », the recap card's week.
+struct FeedScreen: Sendable {
+    let page: FeedPage
+    var week: FeedWeek?
+}
+
 /// One feed query's loader, under the header that chooses it. Rebuilt for
 /// every new query (`.id(query)` at the call site).
 private struct FeedLoaderView<Header: View>: View {
-    @State private var loader: Loader<FeedPage>
+    @State private var loader: Loader<FeedScreen>
     let tab: FeedTab
     let deputyID: String?
+    let onOpenRecap: () -> Void
+    let onFindDeputy: () -> Void
     let header: Header
 
     init(
         query: FeedQuery, service: any FeedService, tab: FeedTab, deputyID: String?,
+        onOpenRecap: @escaping () -> Void, onFindDeputy: @escaping () -> Void,
         @ViewBuilder header: () -> Header
     ) {
-        _loader = State(initialValue: Loader { try await service.feed(query) })
+        _loader = State(initialValue: Loader {
+            async let page = service.feed(query)
+            async let week = HomeScreenRecap.recap(tab: query.tab, deputyID: deputyID, service: service)
+            return FeedScreen(page: try await page, week: await week)
+        })
         self.tab = tab
         self.deputyID = deputyID
+        self.onOpenRecap = onOpenRecap
+        self.onFindDeputy = onFindDeputy
         self.header = header()
     }
 
     var body: some View {
         FeedPageView(
             state: loader.state, refreshFailure: loader.refreshFailure, tab: tab, deputyID: deputyID,
-            retry: { await loader.load() }
+            retry: { await loader.load() }, onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
         ) {
             header
         }
@@ -208,11 +234,13 @@ private struct FeedLoaderView<Header: View>: View {
 /// state, so the tabs and the follows row can still be used while the feed
 /// loads or after it failed; the states are `LoadStateView`'s own views.
 struct FeedPageView<Header: View>: View {
-    let state: LoadState<FeedPage>
+    let state: LoadState<FeedScreen>
     var refreshFailure: LoadFailure?
     let tab: FeedTab
     var deputyID: String?
     var retry: () async -> Void = {}
+    var onOpenRecap: () -> Void = {}
+    var onFindDeputy: () -> Void = {}
     @ViewBuilder let header: Header
 
     var body: some View {
@@ -236,11 +264,26 @@ struct FeedPageView<Header: View>: View {
             EmptyStateView(title: "Rien cette semaine", message: "Aucun scrutin à montrer pour l'instant.")
         case .failed(let failure):
             FailureStateView(failure: failure, retry: retry)
-        case .loaded(let page):
+        case .loaded(let screen):
             if let refreshFailure {
                 RefreshFailureBanner(failure: refreshFailure)
             }
-            FeedContent(page: page, tab: tab, deputyID: deputyID)
+            FeedContent(
+                page: screen.page, tab: tab, deputyID: deputyID, week: screen.week,
+                showsFindDeputy: deputyID == nil,
+                onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
+            )
         }
+    }
+}
+
+enum HomeScreenRecap {
+    /// The recap card's week, in « Pour vous » with a deputy only. It is a
+    /// bonus: when it fails, the feed still shows without it.
+    /// Keyed on the followed deputy, not on the query: a theme circle narrows
+    /// the feed to that theme, but the recap is still the deputy's week.
+    static func recap(tab: FeedTab, deputyID: String?, service: any FeedService) async -> FeedWeek? {
+        guard tab == .pourVous, let deputyID else { return nil }
+        return try? await service.week(deputyID: deputyID)
     }
 }

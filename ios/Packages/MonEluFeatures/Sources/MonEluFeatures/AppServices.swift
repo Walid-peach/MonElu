@@ -73,6 +73,10 @@ public struct UnavailableFeedService: FeedService {
     public func feed(_ query: FeedQuery) async throws -> FeedPage {
         throw URLError(.notConnectedToInternet)
     }
+
+    public func week(deputyID: String?) async throws -> FeedWeek {
+        throw URLError(.notConnectedToInternet)
+    }
 }
 
 /// A `FollowedThemesStore` kept in memory only: the default for callers of
