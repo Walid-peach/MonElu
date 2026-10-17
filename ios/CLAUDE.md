@@ -78,7 +78,7 @@ The work is tracked under epic #429, one phase epic at a time.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
 - What the app keeps about its user stays on the device (ADR-040 §6): the followed deputy and how far they have read live in `UserDefaults` behind `FollowedDeputyStore`.
   The store is `Observable` and is the only copy: a screen reads `deputyID` from it rather than keeping its own, or a follow made on another screen never reaches it (#576).
-  Accueil reconciles in `onAppear`, not `onChange`: it stays alive behind the other tabs, and a load started there is cancelled, which `Loader` keeps as a failure that never retries.
+  Accueil reconciles in `onAppear`, not `onChange`: it stays alive behind the other tabs, where a load would only start to be cancelled (#579).
   The appearance chosen in Réglages is the one other preference there (`AppearancePreference`, `@AppStorage`), applied by `LaunchGate` as the windows' `overrideUserInterfaceStyle`.
   The postal code is never stored, and goes only to geo.api.gouv.fr through an ephemeral session (`LivePostalCodeService`), never the shared one whose cache writes URLs to disk.
 - `verify`, `shareAnswer`, `submitChatFeedback` and `shareResult` each store a row in production (a verdict, a public share snapshot, feedback).
