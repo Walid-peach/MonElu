@@ -171,6 +171,20 @@ public final class MonDeputeModel {
         resetSearch()
     }
 
+    /// The store's deputy, as another screen may have changed it (a profile's
+    /// "Suivre", #576). `followedID` is the model's own copy so the picker
+    /// and the home change together; this brings both up to date. A change
+    /// this model made itself is already reflected, and does nothing.
+    public func syncWithStore() {
+        let stored = store.deputyID
+        guard stored != followedID else { return }
+        followedID = stored
+        isChanging = false
+        notice = nil
+        resetSearch()
+        home = stored.map(makeHome)
+    }
+
     private func resetSearch() {
         searchID += 1
         selection = nil

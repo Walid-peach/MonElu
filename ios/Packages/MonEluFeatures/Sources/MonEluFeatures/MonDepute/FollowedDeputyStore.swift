@@ -1,9 +1,14 @@
 import Foundation
+import Observation
 
 /// The deputy the user follows and how far they have read, kept on the
 /// device only: there is no account (ADR-040 §6). The postal code used to
 /// find the deputy is never part of it.
-public protocol FollowedDeputyStore: AnyObject, Sendable {
+///
+/// Observable, because several screens follow from the same store (Accueil,
+/// a deputy's profile): a view or model reading `deputyID` must hear of a
+/// follow made on another screen, not keep the value it read first (#576).
+public protocol FollowedDeputyStore: AnyObject, Sendable, Observable {
     var deputyID: String? { get }
     func follow(_ deputyID: String)
     /// Stops following, and forgets that deputy's reading position.
@@ -14,9 +19,17 @@ public protocol FollowedDeputyStore: AnyObject, Sendable {
 }
 
 /// `FollowedDeputyStore` in `UserDefaults`, which survives relaunches.
+///
+/// `UserDefaults` stays the only copy of the value; the registrar only
+/// reports reads and writes of `deputyID` to observers. The app holds one
+/// instance (`AppServices.followedDeputy`): a second instance on the same
+/// defaults would write the same value without telling the first one's
+/// observers.
 public final class UserDefaultsFollowedDeputyStore: FollowedDeputyStore, @unchecked Sendable {
-    // UserDefaults is thread-safe; this class holds no other state.
+    // UserDefaults and ObservationRegistrar are thread-safe; this class holds
+    // no other state.
     private let defaults: UserDefaults
+    private let registrar = ObservationRegistrar()
 
     static let deputyKey = "monelu.followedDeputyID"
     static let lastSeenPrefix = "monelu.lastSeenVoteAt."
@@ -26,18 +39,23 @@ public final class UserDefaultsFollowedDeputyStore: FollowedDeputyStore, @unchec
     }
 
     public var deputyID: String? {
-        defaults.string(forKey: Self.deputyKey)
+        registrar.access(self, keyPath: \.deputyID)
+        return defaults.string(forKey: Self.deputyKey)
     }
 
     public func follow(_ deputyID: String) {
-        defaults.set(deputyID, forKey: Self.deputyKey)
+        registrar.withMutation(of: self, keyPath: \.deputyID) {
+            defaults.set(deputyID, forKey: Self.deputyKey)
+        }
     }
 
     public func clear() {
-        if let deputyID {
-            defaults.removeObject(forKey: Self.lastSeenPrefix + deputyID)
+        registrar.withMutation(of: self, keyPath: \.deputyID) {
+            if let deputyID = defaults.string(forKey: Self.deputyKey) {
+                defaults.removeObject(forKey: Self.lastSeenPrefix + deputyID)
+            }
+            defaults.removeObject(forKey: Self.deputyKey)
         }
-        defaults.removeObject(forKey: Self.deputyKey)
     }
 
     public func lastSeenVote(for deputyID: String) -> Date? {
