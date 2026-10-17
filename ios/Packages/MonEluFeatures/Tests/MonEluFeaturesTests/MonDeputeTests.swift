@@ -1,6 +1,7 @@
 import Foundation
 import MonEluCore
 @testable import MonEluFeatures
+import Observation
 import Testing
 
 /// A postal-code lookup that records what it was asked and replays a result.
@@ -259,6 +260,55 @@ struct MonDeputeModelTests {
         #expect(model.showsPicker)
         #expect(model.notice != nil)
         #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == nil)
+    }
+
+    /// A deputy followed on their profile reaches Accueil without a relaunch
+    /// (#576): the profile and Accueil share one store, as in `AppServices`.
+    @Test func aFollowFromAnotherScreenReachesTheModel() {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
+        #expect(model.showsPicker)
+        store.switchTo("PA2")
+        model.syncWithStore()
+        #expect(model.followedID == "PA2")
+        #expect(!model.showsPicker)
+        #expect(model.home != nil)
+    }
+
+    @Test func anUnfollowFromAnotherScreenReachesTheModel() {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
+        model.choose(deputy("PA1"))
+        model.startChange()
+        store.clear()
+        model.syncWithStore()
+        #expect(model.followedID == nil)
+        #expect(model.home == nil)
+        #expect(!model.isChanging)
+    }
+
+    /// The model's own follow already matches the store: syncing keeps the
+    /// loaded home rather than starting it again.
+    @Test func syncingAfterItsOwnChangeKeepsTheHome() throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
+        model.choose(deputy("PA1"))
+        let home = try #require(model.home)
+        model.syncWithStore()
+        #expect(model.home === home)
+    }
+
+    /// A view reading `deputyID` re-renders because the store reports each
+    /// write to it: a profile left open on another tab turns « Suivi » back
+    /// into « Suivre » when the deputy is unfollowed on Accueil.
+    @Test func theStoreReportsFollowsAndUnfollowsToObservers() {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        for change in [{ store.follow("PA1") }, { store.clear() }] {
+            nonisolated(unsafe) var changed = false
+            withObservationTracking { _ = store.deputyID } onChange: { changed = true }
+            change()
+            #expect(changed)
+        }
     }
 }
 
