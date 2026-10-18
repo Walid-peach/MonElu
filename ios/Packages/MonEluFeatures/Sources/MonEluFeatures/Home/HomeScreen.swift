@@ -232,7 +232,8 @@ private struct FeedLoaderView<Header: View>: View {
     var body: some View {
         FeedPageView(
             state: loader.state, refreshFailure: loader.refreshFailure, tab: tab, deputyID: deputyID,
-            followsNothing: followsNothing, retry: { await loader.load() }, onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
+            followsNothing: followsNothing, retry: { await loader.load() },
+            onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
         ) {
             header
         }
