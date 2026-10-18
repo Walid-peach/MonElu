@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.departments_data import DEPT_NAMES  # noqa: E402
+from api.departments_data import department_name  # noqa: E402
 
 try:
     from scripts._http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
@@ -123,12 +123,14 @@ def parse_deputy(item: dict) -> dict | None:
         # the DB as a raw code and rely on the separate, non-critical
         # update_party.py step to expand it, so a soft-failed update_party
         # run left every deputy showing raw codes until the next successful
-        # run. Codes absent from DEPT_NAMES (should not happen for current
-        # mandates) fall back to the raw code, same as before this fix.
+        # run. The AN zero-pads some codes ("099" for deputies elected
+        # abroad), which a plain DEPT_NAMES lookup missed (#517). Codes absent
+        # from DEPT_NAMES fall back to the raw code, and update_party.py's
+        # check_deputy_labels fails the run on one.
         place = mandat.get("election", {}).get("lieu", {})
         circonscription = place.get("numCirco")
         department_code = str(place.get("numDepartement")) if place.get("numDepartement") else None
-        department = DEPT_NAMES.get(department_code, department_code) if department_code else None
+        department = department_name(department_code) if department_code else None
 
         # Party (groupe politique) — not available inline in AMO10; both
         # left NULL here and filled by update_party.py, which resolves them
