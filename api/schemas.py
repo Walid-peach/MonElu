@@ -1464,10 +1464,25 @@ _FEED_SCRUTIN_EXAMPLE = {
     "margin": 172,
     "closest": False,
     "deputy_position": "pour",
+    "positions": [
+        {"deputy_id": "PA720892", "position": "pour"},
+        {"deputy_id": "PA793218", "position": "contre"},
+    ],
     "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
     "dossier_id": "DLR5L17N53980",
     "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N53980",
 }
+
+
+class FeedPosition(_Base):
+    """One followed deputy's position on a scrutin (ADR-042 amendment, #582)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"deputy_id": "PA720892", "position": "pour"}}
+    )
+
+    deputy_id: str
+    position: str = Field(description="pour | contre | abstention | nonVotant")
 
 
 class FeedScrutin(_Base):
@@ -1496,8 +1511,13 @@ class FeedScrutin(_Base):
     )
     deputy_position: Optional[str] = Field(
         default=None,
-        description="The followed deputy's position: pour | contre | abstention | nonVotant; "
-        "null without a deputy or without a recorded position",
+        description="The first followed deputy's position: pour | contre | abstention | "
+        "nonVotant; null without a deputy or without a recorded position",
+    )
+    positions: list[FeedPosition] = Field(
+        default_factory=list,
+        description="Each followed deputy with a recorded position on this scrutin, in the "
+        "followed order; empty when none",
     )
     an_url: str = Field(description="The scrutin's official page on assemblee-nationale.fr")
     dossier_id: Optional[str] = None
@@ -1511,10 +1531,20 @@ class FeedRollup(_Base):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {"total": 20, "amendement": 17, "article": 2, "autre": 1, "non_votant": 3}
+            "example": {
+                "deputy_id": "PA720892",
+                "total": 20,
+                "amendement": 17,
+                "article": 2,
+                "autre": 1,
+                "non_votant": 3,
+            }
         }
     )
 
+    deputy_id: Optional[str] = Field(
+        default=None, description="The followed deputy these votes belong to"
+    )
     total: int = Field(description="Votes cast (pour, contre or abstention) with no card")
     amendement: int
     article: int
@@ -1544,6 +1574,7 @@ class FeedResponse(_Base):
             "example": {
                 "tab": "pour_vous",
                 "deputy_id": "PA720892",
+                "deputy_ids": ["PA720892", "PA793218"],
                 "themes": ["justice-securite"],
                 "requested_week_start": "2026-07-20",
                 "week_start": "2026-07-20",
@@ -1554,6 +1585,7 @@ class FeedResponse(_Base):
                     {
                         "type": "rollup",
                         "rollup": {
+                            "deputy_id": "PA720892",
                             "total": 20,
                             "amendement": 17,
                             "article": 2,
@@ -1567,7 +1599,13 @@ class FeedResponse(_Base):
     )
 
     tab: str = Field(description="pour_vous | assemblee")
-    deputy_id: Optional[str] = None
+    deputy_id: Optional[str] = Field(
+        default=None, description="The first followed deputy; null when none is followed"
+    )
+    deputy_ids: list[str] = Field(
+        default_factory=list,
+        description="Every followed deputy: `deputy_id` then `deputies`, deduplicated",
+    )
     themes: list[str] = Field(description="The followed theme slugs, validated and deduplicated")
     requested_week_start: date = Field(description="Monday of the week asked for")
     week_start: date = Field(description="Monday of the week the scrutins come from")
@@ -1596,11 +1634,38 @@ class FeedWeekDeputy(_Base):
     )
 
 
+class FeedWeekDeputyEntry(_Base):
+    """One followed deputy's positions over the week, named (ADR-042 amendment §5)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "cast": 23,
+                "pour": 14,
+                "contre": 3,
+                "abstention": 6,
+                "non_votant": 2,
+            }
+        }
+    )
+
+    deputy_id: str
+    cast: int = Field(description="pour + contre + abstention: the votes actually cast")
+    pour: int
+    contre: int
+    abstention: int
+    non_votant: int = Field(
+        description="Recorded present but not voting; never part of cast or abstention"
+    )
+
+
 class FeedWeekResponse(_Base):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "deputy_id": "PA720892",
+                "deputy_ids": ["PA720892"],
                 "requested_week_start": "2026-10-12",
                 "week_start": "2026-10-12",
                 "week_end": "2026-10-18",
@@ -1617,6 +1682,16 @@ class FeedWeekResponse(_Base):
                     "abstention": 6,
                     "non_votant": 2,
                 },
+                "deputies": [
+                    {
+                        "deputy_id": "PA720892",
+                        "cast": 23,
+                        "pour": 14,
+                        "contre": 3,
+                        "abstention": 6,
+                        "non_votant": 2,
+                    }
+                ],
                 "next_agenda": {
                     "point_uid": "PTOD17_123456",
                     "sitting_start": "2026-10-20T13:00:00Z",
@@ -1631,7 +1706,13 @@ class FeedWeekResponse(_Base):
         }
     )
 
-    deputy_id: Optional[str] = None
+    deputy_id: Optional[str] = Field(
+        default=None, description="The first followed deputy; null when none is followed"
+    )
+    deputy_ids: list[str] = Field(
+        default_factory=list,
+        description="Every followed deputy: `deputy_id` then `deputies`, deduplicated",
+    )
     requested_week_start: date = Field(description="Monday of the week asked for")
     week_start: date = Field(description="Monday of the week counted")
     week_end: date
@@ -1644,7 +1725,12 @@ class FeedWeekResponse(_Base):
     motions_adopted: int
     motions_rejected: int
     deputy: Optional[FeedWeekDeputy] = Field(
-        default=None, description="The followed deputy's positions; null without deputy_id"
+        default=None,
+        description="The first followed deputy's positions; null when none is followed",
+    )
+    deputies: list[FeedWeekDeputyEntry] = Field(
+        default_factory=list,
+        description="One entry per followed deputy, in the followed order; never summed",
     )
     next_agenda: Optional[AgendaItem] = Field(
         default=None, description="The next séance publique item within seven days"
