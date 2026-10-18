@@ -1,9 +1,11 @@
-# Accueil (#463, #477, #491): before a deputy is chosen it shows the
-# Assembly's latest votes beside the postal-code search; a code finds the
-# département's deputies, a tap selects one and the pinned "Suivre" follows
-# them, the choice is kept on the device, a relaunch opens on the feed
-# (#565, ADR-042) with its follows row and two tabs, and the quiz invitation
-# at the end of the feed leads to the quiz and back. A deputy followed on
+# Accueil (#463, #477, #491, #565, ADR-042): a clean install opens on the
+# feed, on « À l'Assemblée », with only « + Suivre » in the follows row
+# (#575); « Pour vous » is empty with its follow prompt, which opens the
+# postal-code search; a code finds the département's deputies, a tap selects
+# one and the pinned "Suivre" follows them, the choice is kept on the device,
+# a relaunch opens on « Pour vous », and the quiz invitation at the end of the
+# feed leads to the quiz and back. Unfollowing goes back to the empty feed,
+# never to the search. A deputy followed on
 # their profile then reaches Accueil without a relaunch, and unfollowing on
 # Accueil reaches the profile left open on Explorer (#576).
 # Asserts on fixed labels, not on who is listed: rosters change.
@@ -12,13 +14,32 @@ appId: ${APP_ID}
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: "Trouvez votre député"
-    timeout: 15000
+    visible:
+      text: "À l'Assemblée"
+      selected: true
+    timeout: 20000
+- assertVisible: "Suivre un député ou un thème"
+- assertNotVisible: "Mon député"
+- assertNotVisible: "Code postal"
+- assertNotVisible: "Chargement impossible"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-first-visit
+
+# « Pour vous » is empty by design and prompts a follow (ADR-042 §4).
+- tapOn: "Pour vous"
 - extendedWaitUntil:
-    visible: "Les derniers votes"
+    visible: "Vous ne suivez encore rien.*"
     timeout: 20000
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}1-before-choosing
+- takeScreenshot: ${SCREENSHOT_PREFIX}1b-pour-vous-empty
+
+# The prompt opens the postal-code search.
+- tapOn: "Trouvez votre député.*"
+- extendedWaitUntil:
+    visible: "Code postal"
+    timeout: 5000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1c-picker
 
 # Four digits are refused before anything is sent.
 - tapOn: "Code postal"
@@ -48,8 +69,9 @@ appId: ${APP_ID}
 # its centre is no longer the Explorer tab under the bar.
 - tapOn: "Suivre .*"
 - extendedWaitUntil:
-    visible: "Pour vous"
+    visible: "Mon député"
     timeout: 20000
+- assertNotVisible: "Code postal"
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}4-home-feed
 
@@ -88,11 +110,13 @@ appId: ${APP_ID}
 - tapOn: "Options"
 - tapOn: "Ne plus suivre"
 - extendedWaitUntil:
-    visible: "Trouvez votre député"
-    timeout: 10000
+    visible: "Vous ne suivez encore rien.*"
+    timeout: 20000
+- assertNotVisible: "Code postal"
+- waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}7-unfollowed
 
-# Follow from a profile: Accueil leaves the picker for the feed while the
+# Follow from a profile: Accueil leaves its follow prompt for the feed while the
 # app stays open (#576).
 - tapOn: "Explorer"
 - tapOn: "Députés, .*"
@@ -128,8 +152,8 @@ appId: ${APP_ID}
 - tapOn: "Options"
 - tapOn: "Ne plus suivre"
 - extendedWaitUntil:
-    visible: "Trouvez votre député"
-    timeout: 10000
+    visible: "Vous ne suivez encore rien.*"
+    timeout: 20000
 - tapOn: "Explorer"
 - extendedWaitUntil:
     visible: "Suivre"

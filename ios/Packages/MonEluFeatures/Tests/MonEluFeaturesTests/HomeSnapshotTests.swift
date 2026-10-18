@@ -122,29 +122,25 @@ struct HomeSnapshotTests {
         )
     }
 
-    /// Before a deputy is chosen: the search, the Assembly's latest votes and
-    /// the quiz, as `HomeScreen` lays them out.
+    /// A first visit with nothing followed (#575): the feed's header with
+    /// only « + Suivre » in the follows row, and « Pour vous » empty with its
+    /// follow prompt (ADR-042 §4), as `HomeScreen` lays them out.
     @Test(arguments: Variant.all)
-    func homeBeforeChoosing(_ variant: Variant) async throws {
-        let latest = try await LiveVotesService(client: stubClient(try fixture("votes"))).votes(VoteQuery())
-        let lastVisit = try APIDay.date("2026-07-20")
+    func homeFollowsNothing(_ variant: Variant) {
+        let empty = FeedPage(weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, entries: [])
         let view = NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    HomeTagline()
-                    PostalCodePickerContent(
-                        postalCode: .constant(""), search: .idle, notice: nil, onSearch: {}, onSelect: { _ in }
-                    )
-                    HomeLatestVotesSection(
-                        state: .loaded(Array(latest.items.prefix(HomeLatestVotesSection.count))), onRetry: {}
-                    )
-                    HomeQuizInvitation()
+            FeedPageView(state: .loaded(FeedScreen(page: empty)), tab: .pourVous, followsNothing: true) {
+                HomeTagline()
+                    .padding(.horizontal, 16)
+                FollowsRow(circles: [], filter: .constant(.all), onAdd: {})
+                Picker("Fil", selection: .constant(FeedTab.pourVous)) {
+                    ForEach(FeedTab.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
-                .padding(16)
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
             }
-            .background(Palette.pageBackground)
         }
-        checkSnapshot(view, variant, height: variant.size.isAccessibilityCategory ? 3600 : 1300)
+        checkSnapshot(view, variant, height: variant.size.isAccessibilityCategory ? 2600 : 900)
     }
 
     /// The week with no séance, and the latest votes still loading.

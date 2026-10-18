@@ -17,6 +17,9 @@ struct FeedContent: View {
     var week: FeedWeek?
     /// True in « Pour vous » while no deputy is followed: the card that finds one.
     var showsFindDeputy = false
+    /// True with no deputy and no theme followed: « Pour vous » is empty by
+    /// design (ADR-042 §4), and says how to fill it rather than "nothing this week".
+    var followsNothing = false
     var onOpenRecap: () -> Void = {}
     var onFindDeputy: () -> Void = {}
 
@@ -33,7 +36,7 @@ struct FeedContent: View {
                 }
             }
             if page.entries.isEmpty {
-                FeedEmptyNote(tab: tab)
+                FeedEmptyNote(tab: tab, followsNothing: followsNothing)
             }
             ForEach(page.entries) { entry in
                 switch entry {
@@ -61,17 +64,26 @@ struct FeedContent: View {
 /// Said when a tab has nothing this week.
 struct FeedEmptyNote: View {
     let tab: FeedTab
+    var followsNothing = false
 
     var body: some View {
-        Text(
-            tab == .pourVous
-                ? "Rien cette semaine pour ce que vous suivez. L'onglet « À l'Assemblée » montre les grands votes."
-                : "Aucun grand vote cette semaine."
-        )
+        Text(message)
         .font(.subheadline)
         .foregroundStyle(Palette.textSecondary)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 8)
+    }
+
+    var message: String {
+        switch tab {
+        case .pourVous where followsNothing:
+            "Vous ne suivez encore rien. Suivez votre député ou un thème avec « + Suivre » "
+                + "pour voir ici leurs votes de la semaine."
+        case .pourVous:
+            "Rien cette semaine pour ce que vous suivez. L'onglet « À l'Assemblée » montre les grands votes."
+        case .assemblee:
+            "Aucun grand vote cette semaine."
+        }
     }
 }
 
