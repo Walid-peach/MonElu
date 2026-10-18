@@ -21,7 +21,14 @@ public struct DeputyProfileScreen: View {
     /// Read from the store on every render, never copied: the deputy can be
     /// unfollowed on Accueil while this page stays on another tab's stack (#576).
     private var isFollowed: Bool {
-        followedDeputy?.deputyID == id
+        followedDeputy?.isFollowing(id) ?? false
+    }
+
+    /// « Suivre » adds this deputy to those followed (#584); at the cap it is
+    /// replaced by a note saying why.
+    private var atCap: Bool {
+        guard let followedDeputy else { return false }
+        return !isFollowed && !followedDeputy.canFollowMore
     }
 
     public var body: some View {
@@ -31,9 +38,9 @@ public struct DeputyProfileScreen: View {
         ) { page in
             ScrollView {
                 DeputyProfileContent(
-                    page: page, configuration: configuration, isFollowed: isFollowed,
+                    page: page, configuration: configuration, isFollowed: isFollowed, atFollowCap: atCap,
                     onFollow: followedDeputy.map { store in
-                        { store.switchTo(id) }
+                        { store.follow(id) }
                     }
                 )
                 .padding(16)
@@ -50,13 +57,17 @@ struct DeputyProfileContent: View {
     let page: DeputyProfilePage
     let configuration: AppConfiguration
     var isFollowed = false
+    /// The device already follows the most deputies it can.
+    var atFollowCap = false
     /// Follows this deputy on the device; nil hides the button.
     var onFollow: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             DeputyHeader(profile: page.profile)
-            DeputyActions(deputyID: page.profile.deputy.id, isFollowed: isFollowed, onFollow: onFollow)
+            DeputyActions(
+                deputyID: page.profile.deputy.id, isFollowed: isFollowed, atFollowCap: atFollowCap, onFollow: onFollow
+            )
             if let scorecard = page.scorecard {
                 DeputyScorecardSection(scorecard: scorecard, configuration: configuration)
             }
@@ -76,14 +87,27 @@ struct DeputyProfileContent: View {
 struct DeputyActions: View {
     let deputyID: String
     let isFollowed: Bool
+    var atFollowCap = false
     let onFollow: (() -> Void)?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            buttons
+            if atFollowCap && onFollow != nil {
+                Text("Vous suivez déjà \(FollowedDeputies.cap) députés : retirez-en un sur l'Accueil pour suivre celui-ci.")
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var buttons: some View {
         let layout = dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(spacing: 10))
             : AnyLayout(HStackLayout(spacing: 10))
-        layout {
+        return layout {
             if let onFollow {
                 Button(action: onFollow) {
                     Label(isFollowed ? "Suivi" : "Suivre", systemImage: isFollowed ? "checkmark" : "plus")
@@ -100,8 +124,8 @@ struct DeputyActions: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .disabled(isFollowed)
-                .accessibilityHint(isFollowed ? "" : "Suit ce député sur l'Accueil")
+                .disabled(isFollowed || atFollowCap)
+                .accessibilityHint(isFollowed || atFollowCap ? "" : "Ajoute ce député à ceux suivis sur l'Accueil")
                 .accessibilityIdentifier("deputy.follow")
             }
             NavigationLink(value: AppRoute.compare(deputyID: deputyID)) {

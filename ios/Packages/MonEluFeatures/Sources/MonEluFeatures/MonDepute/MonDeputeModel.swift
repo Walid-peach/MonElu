@@ -62,8 +62,9 @@ public struct MonDeputeHome: Hashable, Sendable {
     }
 }
 
-/// Accueil's state (#463, #477): the followed deputy, kept on the device, the
-/// postal-code search that chooses one, and the home that loads them.
+/// Accueil's state (#463, #477): the deputy shown, one of those followed on
+/// the device, the postal-code search that adds one, and the home that loads
+/// them. Several deputies can be followed (#584); this model shows one.
 @MainActor
 @Observable
 public final class MonDeputeModel {
@@ -142,9 +143,17 @@ public final class MonDeputeModel {
         if let selection { choose(selection) }
     }
 
-    /// Follows `deputy` and opens their home.
+    /// Follows `deputy` and opens their home. While changing deputy, `deputy`
+    /// takes the shown one's place; otherwise it is added to the followed
+    /// deputies, and the picker stays with a notice when they are at the cap.
     public func choose(_ deputy: DeputyItem) {
-        store.switchTo(deputy.id)
+        if isChanging, let followedID, followedID != deputy.id, !store.isFollowing(deputy.id) {
+            store.unfollow(followedID)
+        }
+        guard store.follow(deputy.id) else {
+            notice = "Vous suivez déjà \(FollowedDeputies.cap) députés. Retirez-en un pour en suivre un autre."
+            return
+        }
         followedID = deputy.id
         isChanging = false
         notice = nil
@@ -162,20 +171,23 @@ public final class MonDeputeModel {
         resetSearch()
     }
 
-    /// Forgets the followed deputy and their reading position.
+    /// Stops following the shown deputy and forgets their reading position;
+    /// the next followed deputy, if any, is shown instead.
     public func unfollow() {
-        store.clear()
-        followedID = nil
+        if let followedID { store.unfollow(followedID) }
+        followedID = store.deputyID
         isChanging = false
-        home = nil
+        home = followedID.map(makeHome)
         resetSearch()
     }
 
-    /// The store's deputy, as another screen may have changed it (a profile's
-    /// "Suivre", #576). `followedID` is the model's own copy so the picker
-    /// and the home change together; this brings both up to date. A change
-    /// this model made itself is already reflected, and does nothing.
+    /// The store's deputies, as another screen may have changed them (a
+    /// profile's "Suivre", #576). `followedID` is the model's own copy so the
+    /// picker and the home change together; this brings both up to date. The
+    /// shown deputy stays while still followed, so a change this model made
+    /// itself, or a follow added elsewhere, does nothing.
     public func syncWithStore() {
+        if let followedID, store.isFollowing(followedID) { return }
         let stored = store.deputyID
         guard stored != followedID else { return }
         followedID = stored

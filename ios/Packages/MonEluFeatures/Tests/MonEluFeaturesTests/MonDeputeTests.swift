@@ -227,15 +227,51 @@ struct MonDeputeModelTests {
         #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == "PA2")
     }
 
-    @Test func switchingDeputyForgetsThePreviousPosition() {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        store.follow("PA1")
+    @Test func changingDeputyForgetsThePreviousPosition() {
+        let defaults = freshDefaults()
+        let store = UserDefaultsFollowedDeputyStore(defaults: defaults)
+        let model = model(defaults: defaults)
+        model.choose(deputy("PA1"))
         store.setLastSeenVote(Date(), for: "PA1")
-        store.switchTo("PA1")
-        #expect(store.lastSeenVote(for: "PA1") != nil)
-        store.switchTo("PA2")
-        #expect(store.deputyID == "PA2")
+        model.startChange()
+        model.choose(deputy("PA2"))
+        #expect(store.deputyIDs == ["PA2"])
         #expect(store.lastSeenVote(for: "PA1") == nil)
+    }
+
+    /// Finding a deputy by postal code adds them to those followed (ADR-042
+    /// amendment §6): all follows are equal.
+    @Test func findingAnotherDeputyAddsThemToTheFollowed() {
+        let defaults = freshDefaults()
+        let store = UserDefaultsFollowedDeputyStore(defaults: defaults)
+        store.follow("PA1")
+        let model = model(defaults: defaults)
+        model.choose(deputy("PA2"))
+        #expect(store.deputyIDs == ["PA1", "PA2"])
+        #expect(model.followedID == "PA2")
+    }
+
+    @Test func choosingAtTheCapKeepsThePickerWithANotice() {
+        let defaults = freshDefaults()
+        let store = UserDefaultsFollowedDeputyStore(defaults: defaults)
+        for n in 0..<FollowedDeputies.cap { store.follow("PA\(n)") }
+        let model = model(defaults: defaults)
+        model.choose(deputy("PAX"))
+        #expect(!store.isFollowing("PAX"))
+        #expect(model.notice != nil)
+        #expect(model.followedID == "PA0")
+    }
+
+    @Test func unfollowingTheShownDeputyShowsTheNextOne() {
+        let defaults = freshDefaults()
+        let store = UserDefaultsFollowedDeputyStore(defaults: defaults)
+        store.follow("PA1")
+        store.follow("PA2")
+        let model = model(defaults: defaults)
+        model.unfollow()
+        #expect(store.deputyIDs == ["PA2"])
+        #expect(model.followedID == "PA2")
+        #expect(model.home != nil)
     }
 
     @Test func unfollowingForgetsTheDeputyAndTheirPosition() {
@@ -268,7 +304,7 @@ struct MonDeputeModelTests {
         let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
         let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
         #expect(model.showsPicker)
-        store.switchTo("PA2")
+        store.follow("PA2")
         model.syncWithStore()
         #expect(model.followedID == "PA2")
         #expect(!model.showsPicker)
@@ -280,7 +316,7 @@ struct MonDeputeModelTests {
         let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
         model.choose(deputy("PA1"))
         model.startChange()
-        store.clear()
+        store.unfollow("PA1")
         model.syncWithStore()
         #expect(model.followedID == nil)
         #expect(model.home == nil)
@@ -303,12 +339,61 @@ struct MonDeputeModelTests {
     /// into « Suivre » when the deputy is unfollowed on Accueil.
     @Test func theStoreReportsFollowsAndUnfollowsToObservers() {
         let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        for change in [{ store.follow("PA1") }, { store.clear() }] {
+        for change: () -> Void in [{ store.follow("PA1") }, { store.unfollow("PA1") }] {
             nonisolated(unsafe) var changed = false
-            withObservationTracking { _ = store.deputyID } onChange: { changed = true }
+            withObservationTracking { _ = store.deputyIDs } onChange: { changed = true }
             change()
             #expect(changed)
         }
+    }
+}
+
+/// The followed deputies are a list kept in `UserDefaults` (#584, ADR-042
+/// amendment).
+struct FollowedDeputyStoreTests {
+    /// An install from before the list keeps its one deputy.
+    @Test func theSingleDeputyOfAnOlderBuildMovesIntoTheList() {
+        let defaults = freshDefaults()
+        defaults.set("PA1", forKey: "monelu.followedDeputyID")
+        defaults.set(Date(timeIntervalSince1970: 1), forKey: "monelu.lastSeenVoteAt.PA1")
+        let store = UserDefaultsFollowedDeputyStore(defaults: defaults)
+        #expect(store.deputyIDs == ["PA1"])
+        #expect(store.deputyID == "PA1")
+        #expect(store.lastSeenVote(for: "PA1") == Date(timeIntervalSince1970: 1))
+        #expect(defaults.string(forKey: "monelu.followedDeputyID") == nil)
+        // A second launch finds the list, not the old key.
+        #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyIDs == ["PA1"])
+    }
+
+    @Test func followingAnotherDeputyKeepsTheFirst() {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        store.follow("PA1")
+        store.follow("PA2")
+        store.follow("PA1")
+        #expect(store.deputyIDs == ["PA1", "PA2"])
+        #expect(store.isFollowing("PA1") && store.isFollowing("PA2"))
+    }
+
+    @Test func unfollowingOneDeputyLeavesTheOthers() {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        store.follow("PA1")
+        store.follow("PA2")
+        store.setLastSeenVote(Date(), for: "PA1")
+        store.setLastSeenVote(Date(), for: "PA2")
+        store.unfollow("PA1")
+        #expect(store.deputyIDs == ["PA2"])
+        #expect(store.lastSeenVote(for: "PA1") == nil)
+        #expect(store.lastSeenVote(for: "PA2") != nil)
+    }
+
+    @Test func theListStopsAtTheCap() {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        for n in 0..<FollowedDeputies.cap { #expect(store.follow("PA\(n)")) }
+        #expect(!store.canFollowMore)
+        #expect(!store.follow("PAX"))
+        #expect(store.deputyIDs.count == FollowedDeputies.cap)
+        // Following one already followed still succeeds.
+        #expect(store.follow("PA0"))
     }
 }
 
