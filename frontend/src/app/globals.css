@@ -58,8 +58,12 @@
   --dp-border: #E4E6EA;
   --dp-border-subtle: #ECE7DC;
   --dp-text: theme('colors.navy.DEFAULT');
-  --dp-text-secondary: #6B7280;
-  --dp-text-muted: #9CA3AF;
+  /* #513: darkened from #6B7280 and #9CA3AF, which reached only 4.23:1 and
+     2.22:1 on --dp-track-bg. Each now clears WCAG AA (4.5:1) on the page,
+     card, header and track backgrounds, and matches the iPhone app (#480).
+     __tests__/lib/text-token-contrast.test.ts enforces it. */
+  --dp-text-secondary: #5F6673;
+  --dp-text-muted: #656C79;
   --dp-green: #1F8A5B;
   --dp-red: #C9302A;
   --dp-accent: #E0786E;
@@ -151,7 +155,8 @@
   --dp-border-subtle: #1B2740;
   --dp-text: #F1F0EC;
   --dp-text-secondary: #B8C0CE;
-  --dp-text-muted: #7C879C;
+  /* #513: lightened from #7C879C, which was 4.11:1 on --dp-track-bg. */
+  --dp-text-muted: #8A94A8;
   --dp-green: #34C283;
   --dp-red: #FF6B60;
   --dp-accent: #E88E85;
@@ -258,8 +263,8 @@
     --dp-border: #E4E6EA;
     --dp-border-subtle: #ECE7DC;
     --dp-text: theme('colors.navy.DEFAULT');
-    --dp-text-secondary: #6B7280;
-    --dp-text-muted: #9CA3AF;
+    --dp-text-secondary: #5F6673;
+    --dp-text-muted: #656C79;
     --dp-green: #1F8A5B;
     --dp-red: #C9302A;
     --dp-accent: #E0786E;
