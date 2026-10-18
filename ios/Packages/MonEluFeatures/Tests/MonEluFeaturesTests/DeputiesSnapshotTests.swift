@@ -62,6 +62,26 @@ struct DeputiesSnapshotTests {
         )
     }
 
+    /// The profile's actions in the two states #584 adds beside « Suivre »: a
+    /// second followed deputy reads « Suivi », and at the cap the button is
+    /// disabled with a note saying why.
+    @Test(arguments: Variant.all)
+    func deputyActionsFollowStates(_ variant: Variant) {
+        checkSnapshot(
+            NavigationStack {
+                VStack(spacing: 24) {
+                    DeputyActions(deputyID: "PA2", isFollowed: true, onFollow: {})
+                    DeputyActions(deputyID: "PA3", isFollowed: false, atFollowCap: true, onFollow: {})
+                }
+                .padding(16)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .background(Palette.pageBackground)
+            },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 640 : 220
+        )
+    }
+
     /// Three recorded dissident votes, each with both positions.
     @Test(arguments: Variant.all)
     func dissidentVotes(_ variant: Variant) async throws {
