@@ -3,14 +3,13 @@ import MonEluUI
 import SwiftUI
 
 /// The Accueil tab (#565, ADR-042, design « Accueil V1 »): the row of
-/// follows, then the feed the API builds for them, in two tabs. Before a
-/// deputy is chosen, the postal-code search beside the Assembly's latest
-/// votes, so a first visit already shows something.
+/// follows, then the feed the API builds for them, in two tabs. A first
+/// visit with nothing followed opens on the feed too, on « À l'Assemblée »
+/// (#575); the postal-code search shows only while choosing a deputy.
 public struct HomeScreen: View {
     @State private var model: MonDeputeModel
-    @State private var latestVotes: Loader<[VoteItem]>
     @State private var themeSlugs: [String]
-    @State private var tab: FeedTab = .pourVous
+    @State private var tab: FeedTab
     @State private var filter: FeedFilter = .all
     @State private var showsFollows = false
     private let feed: any FeedService
@@ -18,25 +17,25 @@ public struct HomeScreen: View {
     private let themes = (try? ReferenceData.themes()) ?? []
 
     public init(
-        deputies: any DeputiesService, votes: any VotesService, postalCodes: any PostalCodeService,
+        deputies: any DeputiesService, postalCodes: any PostalCodeService,
         feed: any FeedService, store: any FollowedDeputyStore, themesStore: any FollowedThemesStore
     ) {
         _model = State(initialValue: MonDeputeModel(deputies: deputies, postalCodes: postalCodes, store: store))
-        _latestVotes = State(initialValue: Loader(isEmpty: { $0.isEmpty }) {
-            Array(try await votes.votes(VoteQuery()).items.prefix(HomeLatestVotesSection.count))
-        })
         _themeSlugs = State(initialValue: themesStore.themeSlugs)
+        _tab = State(initialValue: HomeTabDefault.tab(
+            followsNothing: store.deputyID == nil && themesStore.themeSlugs.isEmpty
+        ))
         self.feed = feed
         self.themesStore = themesStore
     }
 
     public var body: some View {
         Group {
-            if showsPicker {
+            if model.isChanging {
                 picker
             } else {
                 FeedLoaderView(
-                    query: query, service: feed, tab: tab, deputyID: model.followedID,
+                    query: query, service: feed, tab: tab, deputyID: model.followedID, followsNothing: followsNothing,
                     onOpenRecap: { tab = .assemblee },
                     onFindDeputy: { model.startChange() }
                 ) {
@@ -44,7 +43,11 @@ public struct HomeScreen: View {
                 }
                 // A new query is a new loader; a new identity starts its load.
                 .id(query)
-                .task { await model.home?.loadIfNeeded() }
+                // Keyed on the deputy: the feed now stays on screen when one
+                // is followed (#575), so a plain `.task` would never run for a
+                // deputy followed after it appeared, and their circle, which
+                // waits for this home, would never show.
+                .task(id: model.followedID) { await model.home?.loadIfNeeded() }
             }
         }
         .background(Palette.pageBackground)
@@ -56,14 +59,20 @@ public struct HomeScreen: View {
         // stays alive behind the other tabs, where its loads would only start
         // to be cancelled, and load again on return anyway (#579).
         .onAppear { model.syncWithStore() }
+        // The first follow, from the prompt, the follows sheet or a profile,
+        // opens « Pour vous » on what was just followed. Only a tab changes
+        // here; the load waits for the feed's own `.task`.
+        .onChange(of: followsNothing) { _, nothing in
+            if !nothing { tab = .pourVous }
+        }
         .accessibilityIdentifier("screen.home")
     }
 
-    /// The postal-code picker shows while the user changes deputy, and on a
-    /// first visit with nothing followed. Themes alone are enough for a feed,
-    /// which then offers to find the deputy (#566).
-    private var showsPicker: Bool {
-        model.isChanging || (model.followedID == nil && themeSlugs.isEmpty)
+    /// No deputy and no theme followed: « Pour vous » is empty and shows its
+    /// follow prompt (ADR-042 §4). The postal-code picker is never the
+    /// default screen, only what the prompt or « + Suivre » opens (#575).
+    private var followsNothing: Bool {
+        model.followedID == nil && themeSlugs.isEmpty
     }
 
     /// What the feed is asked for: the tab, and in « Pour vous » the follows,
@@ -124,32 +133,18 @@ public struct HomeScreen: View {
         )
     }
 
-    /// While the user changes deputy, only the search shows; before any
-    /// deputy is chosen, the Assembly's latest votes and the quiz follow it.
+    /// The postal-code search, while the user chooses or changes deputy.
     private var picker: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                if !model.isChanging { HomeTagline() }
-                PostalCodePickerContent(
-                    postalCode: $model.postalCode,
-                    search: model.search,
-                    notice: model.notice,
-                    selection: model.selection,
-                    onSearch: { Task { await model.runSearch() } },
-                    onSelect: { model.select($0) }
-                )
-                if !model.isChanging {
-                    HomeLatestVotesSection(state: latestVotes.state) {
-                        Task { await latestVotes.load() }
-                    }
-                    .task { await latestVotes.loadIfNeeded() }
-                    HomeQuizInvitation()
-                }
-            }
-            .padding([.horizontal, .bottom], 16)
-            // The tagline belongs to the title; without it the search needs
-            // its own margin.
-            .padding(.top, model.isChanging ? 16 : 0)
+            PostalCodePickerContent(
+                postalCode: $model.postalCode,
+                search: model.search,
+                notice: model.notice,
+                selection: model.selection,
+                onSearch: { Task { await model.runSearch() } },
+                onSelect: { model.select($0) }
+            )
+            .padding(16)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -190,6 +185,15 @@ public struct HomeScreen: View {
     }
 }
 
+/// The tab Accueil opens on: « Pour vous » once something is followed, and
+/// « À l'Assemblée » before, so a first screen has content. The app chooses
+/// the tab; the API never substitutes one (ADR-042 §4).
+enum HomeTabDefault {
+    static func tab(followsNothing: Bool) -> FeedTab {
+        followsNothing ? .assemblee : .pourVous
+    }
+}
+
 /// One query's feed and, in « Pour vous », the recap card's week.
 struct FeedScreen: Sendable {
     let page: FeedPage
@@ -202,12 +206,13 @@ private struct FeedLoaderView<Header: View>: View {
     @State private var loader: Loader<FeedScreen>
     let tab: FeedTab
     let deputyID: String?
+    let followsNothing: Bool
     let onOpenRecap: () -> Void
     let onFindDeputy: () -> Void
     let header: Header
 
     init(
-        query: FeedQuery, service: any FeedService, tab: FeedTab, deputyID: String?,
+        query: FeedQuery, service: any FeedService, tab: FeedTab, deputyID: String?, followsNothing: Bool,
         onOpenRecap: @escaping () -> Void, onFindDeputy: @escaping () -> Void,
         @ViewBuilder header: () -> Header
     ) {
@@ -218,6 +223,7 @@ private struct FeedLoaderView<Header: View>: View {
         })
         self.tab = tab
         self.deputyID = deputyID
+        self.followsNothing = followsNothing
         self.onOpenRecap = onOpenRecap
         self.onFindDeputy = onFindDeputy
         self.header = header()
@@ -226,7 +232,8 @@ private struct FeedLoaderView<Header: View>: View {
     var body: some View {
         FeedPageView(
             state: loader.state, refreshFailure: loader.refreshFailure, tab: tab, deputyID: deputyID,
-            retry: { await loader.load() }, onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
+            followsNothing: followsNothing, retry: { await loader.load() },
+            onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
         ) {
             header
         }
@@ -243,6 +250,7 @@ struct FeedPageView<Header: View>: View {
     var refreshFailure: LoadFailure?
     let tab: FeedTab
     var deputyID: String?
+    var followsNothing = false
     var retry: () async -> Void = {}
     var onOpenRecap: () -> Void = {}
     var onFindDeputy: () -> Void = {}
@@ -275,7 +283,7 @@ struct FeedPageView<Header: View>: View {
             }
             FeedContent(
                 page: screen.page, tab: tab, deputyID: deputyID, week: screen.week,
-                showsFindDeputy: deputyID == nil,
+                showsFindDeputy: deputyID == nil, followsNothing: followsNothing,
                 onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
             )
         }

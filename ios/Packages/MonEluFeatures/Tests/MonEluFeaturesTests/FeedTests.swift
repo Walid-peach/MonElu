@@ -62,6 +62,22 @@ struct FeedServiceTests {
             == FeedQuery(tab: .pourVous, deputyID: nil, themes: ["sante-social"]))
     }
 
+    /// With nothing followed Accueil opens on « À l'Assemblée », so the
+    /// first screen has content; once something is followed, « Pour vous »
+    /// (#575).
+    @Test func accueilOpensOnTheAssemblyUntilSomethingIsFollowed() {
+        #expect(HomeTabDefault.tab(followsNothing: true) == .assemblee)
+        #expect(HomeTabDefault.tab(followsNothing: false) == .pourVous)
+    }
+
+    /// An empty « Pour vous » with nothing followed asks for a follow; with
+    /// follows, it says the week was quiet for them.
+    @MainActor @Test func anEmptyPourVousSaysWhy() {
+        #expect(FeedEmptyNote(tab: .pourVous, followsNothing: true).message.hasPrefix("Vous ne suivez encore rien"))
+        #expect(FeedEmptyNote(tab: .pourVous).message.hasPrefix("Rien cette semaine pour ce que vous suivez"))
+        #expect(FeedEmptyNote(tab: .assemblee, followsNothing: true).message == "Aucun grand vote cette semaine.")
+    }
+
     @Test func theRollupReadsAsASentence() {
         let view = FeedRollupView(rollup: FeedRollup(total: 20, amendements: 17, articles: 2, autres: 1, nonVotant: 3))
         #expect(view.headline == "Et 20 autres votes de votre député")

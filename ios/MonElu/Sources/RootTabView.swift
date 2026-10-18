@@ -53,7 +53,7 @@ struct RootTabView: View {
         switch tab {
         case .home:
             HomeScreen(
-                deputies: services.deputies, votes: services.votes, postalCodes: services.postalCodes,
+                deputies: services.deputies, postalCodes: services.postalCodes,
                 feed: services.feed, store: services.followedDeputy, themesStore: services.followedThemes
             )
         case .explore:
