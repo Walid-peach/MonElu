@@ -76,6 +76,8 @@ The work is tracked under epic #429, one phase epic at a time.
   `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
 - What the app keeps about its user stays on the device (ADR-040 §6): the followed deputy and how far they have read live in `UserDefaults` behind `FollowedDeputyStore`.
+  The store is `Observable` and is the only copy: a screen reads `deputyID` from it rather than keeping its own, or a follow made on another screen never reaches it (#576).
+  Accueil reconciles in `onAppear`, not `onChange`: it stays alive behind the other tabs, and a load started there is cancelled, which `Loader` keeps as a failure that never retries.
   The appearance chosen in Réglages is the one other preference there (`AppearancePreference`, `@AppStorage`), applied by `LaunchGate` as the windows' `overrideUserInterfaceStyle`.
   The postal code is never stored, and goes only to geo.api.gouv.fr through an ephemeral session (`LivePostalCodeService`), never the shared one whose cache writes URLs to disk.
 - `verify`, `shareAnswer`, `submitChatFeedback` and `shareResult` each store a row in production (a verdict, a public share snapshot, feedback).
@@ -175,6 +177,7 @@ make ios-device     # sign, build, install and launch on the plugged-in iPhone
 The phone needs Developer Mode on (Settings > Privacy & Security), and the first launch needs the developer certificate trusted (Settings > General > VPN & Device Management).
 The first run writes `Configs/Local.xcconfig`, git-ignored and included by `App.xcconfig`, with the team and a bundle id of its own (`fr.monelu.app.dev.<team>`), since a free team cannot sign an id another account registered; delete it to pick another team.
 The app calls the production API, as TestFlight builds may (rule 6).
+The `ios-device` skill (`.claude/skills/ios-device/`, mirrored in `.agents/skills/`) walks an agent through it: it checks that the build keeps the installed app's bundle id, so the update keeps its data.
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.
 A PR that changes a screen embeds the screenshots that show the change, published with `scripts/pr-screenshots.sh <pr-number> <image>...` (the Screenshots section of the `pr-create` skill), and names the flow it ran; CI also uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.

@@ -31,6 +31,7 @@ from api.routers import (
     app_config,
     departments,
     deputies,
+    feed,
     feedback,
     groups,
     keys,
@@ -62,6 +63,7 @@ ROUTER_PREFIXES = [
     ("/keys", keys.router),
     ("/feedback", feedback.router),
     ("/agenda", agenda.router),
+    ("/feed", feed.router),
     ("/account", account.router),
     ("/app", app_config.router),
 ]

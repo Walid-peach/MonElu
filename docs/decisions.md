@@ -1688,6 +1688,75 @@ Keeping Android on the PWA matches where the web is already good, with a written
 
 ---
 
+## ADR-042 - The app's Accueil is a feed the API computes from data we already ingest, with local follows and no engagement mechanics (#561, #560)
+
+**Date:** 2026-10-15
+**Status:** Final
+
+**Decision:** The iPhone app's Accueil tab becomes a feed with two tabs, *Pour vous* and *À l'Assemblée*, a row of followed items above it and a weekly recap card at the top.
+The API builds both the feed and the recap: `GET /feed` returns ready-to-show items and `GET /feed/week` returns the week's counts.
+Follows stay on the phone and travel as query parameters.
+Only scrutins, positions and agenda items feed it - the data MonÉlu already ingests.
+
+### 1. The API computes the feed, the app shows it
+
+The app could assemble the feed from `/deputies/{id}/votes`, `/votes` and `/agenda`, but those shapes were not made for it: `DeputyVoteItem` carries no tallies or theme and `VoteSummary` carries no `scrutin_kind`.
+Merging, deduplicating, applying the noise rule (§3) and counting the recap in Swift would put business logic in the app, which ADR-041 §4 forbids, and would freeze that logic in every installed build.
+So `GET /feed` returns typed items (`scrutin`, `agenda`, `rollup`) with everything a card shows, including the deputy's position, the AN scrutin URL (`https://www.assemblee-nationale.fr/dyn/scrutins/{vote_id}`) and `lois_url`.
+The recap is a separate route, `GET /feed/week`, so each stays small; the app loads them in parallel.
+
+### 2. Follows are local and the request stays anonymous
+
+Following needs no account: reading stays anonymous permanently (ADR-040 §6, rule 25).
+The app keeps one followed deputy (already the case) and any number of followed themes in `UserDefaults`, and sends them as `deputy_id` and repeated `theme` parameters (theme slugs from `api/themes_data.py`).
+Nothing about a follow is stored server-side.
+The `app_private.followed_*` tables can sync follows later for signed-in users (#434); the feed endpoint never reads them.
+
+Validation: an unknown `deputy_id` is a 404 and an unknown theme slug a 422, never a silently empty feed.
+
+### 3. The noise rule
+
+About 96 % of dossier-tagged scrutins are amendment or article votes (ADR-035 §4), so a feed of every vote is unreadable.
+
+- `ensemble` and `motion` scrutins get a full card.
+- An `amendement`, `article` or `autre` scrutin gets a full card only when it was **close**: `|votes_for - votes_against| <= 20` and a result is known.
+- In *Pour vous*, every other vote of the followed deputy that week collapses into one `rollup` item carrying the count by `scrutin_kind`.
+- An unclassified scrutin (`scrutin_kind` null) is treated as `autre`.
+
+The threshold is a constant in the router, not a query parameter, so the app cannot drift from it.
+
+### 4. What each tab holds
+
+- **Pour vous**: the followed deputy's votes that pass §3 (with their position), plus `ensemble`/`motion` scrutins in followed themes, deduplicated by `vote_id` (a vote in both keeps the deputy's position), newest first; the `rollup`; and agenda items of the next seven days in followed themes.
+- **À l'Assemblée**: the week's `ensemble` and `motion` scrutins, the closest scrutin of the week whatever its kind, and every agenda item of the next seven days.
+- With nothing followed, *Pour vous* is empty and the app shows its follow prompt; the API does not substitute the other tab.
+
+### 5. Which week
+
+A week is the ISO week, Monday to Sunday, in Europe/Paris - the same window `GET /agenda` defaults to.
+`week` takes any date inside the wanted week and defaults to today.
+When the requested week has no scrutin at all (recess, a week before the session opens), the response sets `no_sitting: true` and the items come from the most recent earlier week that had one, with that week's bounds in `week_start`/`week_end`, so the screen is never blank and never pretends the old week is current.
+
+### 6. What is deliberately out
+
+- **Editorial stories** ("why it matters" slides): they need verified prose every week and would repeat the feed. A later version may generate story slides from the same data, never from an LLM-written analysis.
+- **Amendment authorship and interventions in séance**: neither is ingested. Each needs its own ingestion issue with the parse guards MON-220 requires before a card can claim "votre député a déposé".
+- **Engagement mechanics**: no likes, reactions, public counts, trending, daily streaks or notifications (ADR-002, #359).
+- **The feed on the website**: the endpoints are public and could serve it, but nothing is planned.
+
+**Reason (summary):** A feed answers "what did my deputy do this week" in one screen, and every card can be built from tables that are already ingested, tested and cached.
+Computing it in the API keeps ADR-041's rule and lets the noise rule change without an app release; keeping follows on the phone keeps reading anonymous.
+
+**Impact:**
+- #562 adds `GET /feed`, #563 adds `GET /feed/week`; both are public `GET`s with the standard `Cache-Control` and rate limit, and land in the OpenAPI snapshot.
+- #564 adds a local theme store beside `FollowedDeputyStore`; #565 and #566 rebuild the Accueil screen.
+- Do **not** merge or filter feed items in the app, and do **not** read the account follow tables from `/feed`.
+- Do **not** add a card type that needs data MonÉlu does not ingest.
+
+**Trigger to revisit:** amendment authorship or comptes rendus being ingested; accounts in the app (#434) wanting server-side follows; the #359 hold lifting; or the feed reaching the website.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1717,3 +1786,4 @@ Keeping Android on the PWA matches where the web is already good, with a written
 25. Accounts are Supabase Auth with email codes, a Next-held session and a restricted DB role (ADR-040, #411/#365) - never store a password or add a social sign-in without amending that ADR, never let the browser hold the access token (Next route handlers read the session server-side and forward it; FastAPI verifies the JWT itself rather than trusting an asserted user id), never use the owner connection or a session-scoped `SET` on an account route (PgBouncer transaction pooling leaks it to the next caller - `SET LOCAL` inside an explicit transaction is the only safe form), and never put a public read behind sign-in: reading deputies, votes and every other public surface stays anonymous permanently
 26. The iPhone app is SwiftUI in `ios/`, and the API is its source of truth (ADR-041, #429) - never put business logic in the app that the API already computes, never rename, retype or remove an API field, route or operationId the app reads without ADR-041 §5's add-first sequence and a raised minimum version in `GET /app/config`, never ship a public App Store build that talks to a Railway hostname, and keep `railway.json`'s `!/ios/**` watch pattern and `deploy.yml`'s `ios/**` ignore so iOS-only commits never redeploy the API or re-run dbt against production
 27. Native clients keep the Supabase session in the Keychain and call FastAPI with the bearer token directly (ADR-041 §6, amending ADR-040 §4) - the browser rule in rule 25 is unchanged; `/account/*` is rate-limited per verified account, never per IP, and CORS stays `allow_credentials=False`
+28. The app's Accueil feed and weekly recap are computed by the API (`GET /feed`, `GET /feed/week`) from scrutins, positions and agenda items only (ADR-042, #560) - follows stay on the phone and travel as `deputy_id`/`theme` query parameters, never in the account tables; the noise rule (full cards for `ensemble`/`motion`, others only within 20 votes, the rest rolled up) lives in the router, not the app; never add a card that needs data MonÉlu does not ingest (amendment authors, interventions), and never add likes, reactions, streaks or notifications to it

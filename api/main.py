@@ -200,6 +200,14 @@ OPENAPI_TAGS = [
         ),
     },
     {
+        "name": "Feed",
+        "description": (
+            "The iPhone app's Accueil: ready-to-show cards for a followed deputy and "
+            "themes, one ISO week at a time (ADR-042). Follows are query parameters, "
+            "never stored."
+        ),
+    },
+    {
         "name": "Search",
         "description": (
             "Natural-language question answering over the corpus (RAG). Costs an LLM "
@@ -379,6 +387,7 @@ from api.routers import (  # noqa: E402
     app_config,
     departments,
     deputies,
+    feed,
     feedback,
     groups,
     keys,
@@ -402,6 +411,7 @@ app.include_router(verify_router, prefix="/verify", tags=["Verify"])
 app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
 app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
 app.include_router(agenda.router, prefix="/agenda", tags=["Agenda"])
+app.include_router(feed.router, prefix="/feed", tags=["Feed"])
 app.include_router(account.router, prefix="/account", tags=["Account"])
 app.include_router(app_config.router, prefix="/app", tags=["App"])
 

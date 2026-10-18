@@ -10,14 +10,18 @@ public struct DeputyProfileScreen: View {
     /// The device's followed deputy (ADR-040 §6); nil hides "Suivre".
     let followedDeputy: (any FollowedDeputyStore)?
     @State private var loader: Loader<DeputyProfilePage>
-    @State private var isFollowed: Bool
     @Environment(\.appConfiguration) private var configuration
 
     public init(id: String, service: any DeputiesService, followedDeputy: (any FollowedDeputyStore)? = nil) {
         self.id = id
         self.followedDeputy = followedDeputy
         _loader = State(initialValue: Loader { try await service.profilePage(id: id) })
-        _isFollowed = State(initialValue: followedDeputy?.deputyID == id)
+    }
+
+    /// Read from the store on every render, never copied: the deputy can be
+    /// unfollowed on Accueil while this page stays on another tab's stack (#576).
+    private var isFollowed: Bool {
+        followedDeputy?.deputyID == id
     }
 
     public var body: some View {
@@ -29,10 +33,7 @@ public struct DeputyProfileScreen: View {
                 DeputyProfileContent(
                     page: page, configuration: configuration, isFollowed: isFollowed,
                     onFollow: followedDeputy.map { store in
-                        {
-                            store.switchTo(id)
-                            isFollowed = true
-                        }
+                        { store.switchTo(id) }
                     }
                 )
                 .padding(16)
