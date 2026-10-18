@@ -67,19 +67,24 @@ struct FollowCircleTests {
     /// The bundled table, which `FollowCircle.circles` is given in the app.
     let themes = (try? ReferenceData.themes()) ?? []
 
-    @Test func theDeputyComesFirstThenThemesInFollowOrder() {
-        let deputy = DeputyItem.sample
+    @Test func theDeputiesComeFirstThenThemesInFollowOrder() {
         let circles = FollowCircle.circles(
-            deputy: deputy, themeSlugs: ["justice-securite", "sante-social"], themes: themes,
-            news: ["theme:sante-social"]
+            deputies: [.sample, .sampleOther], themeSlugs: ["justice-securite", "sante-social"], themes: themes,
+            news: ["deputy:PA2", "theme:sante-social"]
         )
-        #expect(circles.map(\.id) == ["deputy", "theme:justice-securite", "theme:sante-social"])
-        #expect(circles.map(\.hasNews) == [false, false, true])
-        #expect(circles.map(\.filter) == [.deputy, .theme("justice-securite"), .theme("sante-social")])
+        #expect(circles.map(\.id) == [
+            "deputy:PA1008", "deputy:PA2", "theme:justice-securite", "theme:sante-social",
+        ])
+        #expect(circles.map(\.hasNews) == [false, true, false, true])
+        #expect(circles.map(\.filter) == [
+            .deputy("PA1008"), .deputy("PA2"), .theme("justice-securite"), .theme("sante-social"),
+        ])
+        // Each deputy under their own name: all follows are equal.
+        #expect(circles.prefix(2).map(\.label) == ["Nadège Abomangoli", "Marie Dupont"])
     }
 
     @Test func aSlugWithoutATableEntryHasNoCircle() {
-        let circles = FollowCircle.circles(deputy: nil, themeSlugs: ["budget"], themes: themes)
+        let circles = FollowCircle.circles(deputies: [], themeSlugs: ["budget"], themes: themes)
         #expect(circles.isEmpty)
     }
 
@@ -94,5 +99,10 @@ extension DeputyItem {
     static let sample = DeputyItem(
         id: "PA1008", name: "Nadège Abomangoli", group: "La France insoumise - Nouveau Front Populaire",
         groupShort: "LFI", department: "Seine-Saint-Denis", circonscription: "10", photoURL: nil, lastName: "Abomangoli"
+    )
+
+    static let sampleOther = DeputyItem(
+        id: "PA2", name: "Marie Dupont", group: "Ensemble pour la République",
+        groupShort: "EPR", department: "Gironde", circonscription: "1", photoURL: nil, lastName: "Dupont"
     )
 }

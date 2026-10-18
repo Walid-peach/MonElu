@@ -31,17 +31,17 @@ struct FollowsSnapshotTests {
 
     @Test(arguments: Variant.all)
     func followsTheDeputyOnly(_ variant: Variant) {
-        let circles = FollowCircle.circles(deputy: .sample, themeSlugs: [], themes: themes)
+        let circles = FollowCircle.circles(deputies: [.sample], themeSlugs: [], themes: themes)
         checkSnapshot(row(circles), variant, height: height(variant))
     }
 
-    /// The deputy and three themes, two with something new (the red ring),
+    /// Two deputies and three themes, two with something new (the red ring),
     /// and the feed filtered to one of them.
     @Test(arguments: Variant.all)
     func followsDeputyAndThemes(_ variant: Variant) {
         let circles = FollowCircle.circles(
-            deputy: .sample, themeSlugs: ["economie-budget", "justice-securite", "sante-social"], themes: themes,
-            news: ["deputy", "theme:economie-budget"]
+            deputies: [.sample, .sampleOther], themeSlugs: ["economie-budget", "justice-securite", "sante-social"],
+            themes: themes, news: ["deputy:PA1008", "theme:economie-budget"]
         )
         checkSnapshot(row(circles, filter: .theme("justice-securite")), variant, height: height(variant))
     }
@@ -50,7 +50,7 @@ struct FollowsSnapshotTests {
     func followsSheet(_ variant: Variant) {
         checkSnapshot(
             FollowsSheet(
-                deputyName: DeputyItem.sample.name, themes: themes, followed: ["justice-securite", "sante-social"],
+                deputies: [.sample, .sampleOther], themes: themes, followed: ["justice-securite", "sante-social"],
                 onToggle: { _ in }, onChooseDeputy: {}, onDone: {}
             ),
             variant,

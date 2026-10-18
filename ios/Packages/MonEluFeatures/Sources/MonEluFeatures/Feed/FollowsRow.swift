@@ -6,15 +6,16 @@ import SwiftUI
 /// follow alone after a tap on its circle.
 public enum FeedFilter: Hashable, Sendable {
     case all
-    case deputy
+    /// One followed deputy alone, by id.
+    case deputy(String)
     case theme(String)
 }
 
-/// One circle of the follows row: the followed deputy or a followed theme,
+/// One circle of the follows row: a followed deputy or a followed theme,
 /// and whether something new arrived since it was last seen (the red ring).
 public struct FollowCircle: Identifiable, Hashable, Sendable {
     public enum Kind: Hashable, Sendable {
-        case deputy(name: String, photoURL: URL?)
+        case deputy(id: String, name: String, photoURL: URL?)
         case theme(ReferenceData.Theme)
     }
 
@@ -28,7 +29,7 @@ public struct FollowCircle: Identifiable, Hashable, Sendable {
 
     public var id: String {
         switch kind {
-        case .deputy: "deputy"
+        case .deputy(let id, _, _): "deputy:\(id)"
         case .theme(let theme): "theme:\(theme.slug)"
         }
     }
@@ -36,27 +37,36 @@ public struct FollowCircle: Identifiable, Hashable, Sendable {
     /// The filter a tap on this circle selects.
     public var filter: FeedFilter {
         switch kind {
-        case .deputy: .deputy
+        case .deputy(let id, _, _): .deputy(id)
         case .theme(let theme): .theme(theme.slug)
         }
     }
 
+    /// Each deputy under their own name: all follows are equal (ADR-042
+    /// amendment §6).
     var label: String {
         switch kind {
-        case .deputy: "Mon député"
+        case .deputy(_, let name, _): name
         case .theme(let theme): theme.name
         }
     }
 
-    /// The circles for what is followed: the deputy first, then the themes in
-    /// the order they were followed.
-    public static func circles(
-        deputy: DeputyItem?, themeSlugs: [String], themes: [ReferenceData.Theme], news: Set<String> = []
-    ) -> [FollowCircle] {
-        var circles: [FollowCircle] = []
-        if let deputy {
-            circles.append(FollowCircle(.deputy(name: deputy.name, photoURL: deputy.photoURL)))
+    /// What VoiceOver reads: a deputy's name says it is a followed deputy,
+    /// which their name alone does not.
+    var accessibilityLabel: String {
+        switch kind {
+        case .deputy(_, let name, _): "\(name), député suivi"
+        case .theme(let theme): theme.name
         }
+    }
+
+    /// The circles for what is followed: the deputies first, then the themes,
+    /// each in the order they were followed. A deputy whose profile has not
+    /// loaded yet has no circle until it does.
+    public static func circles(
+        deputies: [DeputyItem], themeSlugs: [String], themes: [ReferenceData.Theme], news: Set<String> = []
+    ) -> [FollowCircle] {
+        var circles = deputies.map { FollowCircle(.deputy(id: $0.id, name: $0.name, photoURL: $0.photoURL)) }
         let bySlug = Dictionary(themes.map { ($0.slug, $0) }, uniquingKeysWith: { first, _ in first })
         circles += themeSlugs.compactMap { bySlug[$0] }.map { FollowCircle(.theme($0)) }
         return circles.map { circle in
@@ -107,7 +117,7 @@ struct FollowsRow: View {
                         FollowCircleLabel(circle: circle, selected: selected)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(circle.label)
+                    .accessibilityLabel(circle.accessibilityLabel)
                     .accessibilityValue(circle.hasNews ? "Du nouveau" : "")
                     .accessibilityHint(selected ? "Affiche à nouveau tout le fil" : "Filtre le fil")
                     .accessibilityAddTraits(selected ? .isSelected : [])
@@ -157,7 +167,7 @@ private struct FollowCircleLabel: View {
 
     @ViewBuilder private var content: some View {
         switch circle.kind {
-        case .deputy(let name, let photoURL):
+        case .deputy(_, let name, let photoURL):
             DeputyPortrait(name: name, url: photoURL, size: followDiscDiameter - 10)
         case .theme(let theme):
             Circle()
@@ -200,13 +210,17 @@ private struct FollowCircleFrame<Disc: View>: View {
     }
 }
 
-/// The sheet behind « Suivre »: the deputy to change, and the ten themes to
-/// follow or stop following. Changes apply at once and stay on the device.
+/// The sheet behind « Suivre »: the followed deputies, each with « Ne plus
+/// suivre », the way to add one, and the ten themes to follow or stop
+/// following. Changes apply at once and stay on the device.
 struct FollowsSheet: View {
-    let deputyName: String?
+    let deputies: [DeputyItem]
     let themes: [ReferenceData.Theme]
     let followed: Set<String>
+    /// False at `FollowedDeputies.cap`: the add row says why instead.
+    var canAddDeputy = true
     var onToggle: (String) -> Void
+    var onUnfollowDeputy: (String) -> Void = { _ in }
     var onChooseDeputy: () -> Void
     var onDone: () -> Void
 
@@ -214,27 +228,44 @@ struct FollowsSheet: View {
         NavigationStack {
             List {
                 Section {
-                    Button(action: onChooseDeputy) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(deputyName ?? "Trouver votre député")
-                                    .foregroundStyle(Palette.textPrimary)
-                                if deputyName != nil {
-                                    Text("Changer de député")
-                                        .font(.subheadline)
-                                        .foregroundStyle(Palette.accent)
-                                }
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(Palette.textMuted)
-                                .accessibilityHidden(true)
+                    ForEach(deputies) { deputy in
+                        HStack(spacing: 12) {
+                            DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 36)
+                            Text(deputy.name)
+                                .foregroundStyle(Palette.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 8)
+                            Button("Ne plus suivre", role: .destructive) { onUnfollowDeputy(deputy.id) }
+                                .font(.subheadline)
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel("Ne plus suivre \(deputy.name)")
+                                .accessibilityIdentifier("follows.sheet.unfollow.\(deputy.id)")
                         }
                     }
-                    .accessibilityIdentifier("follows.sheet.deputy")
+                    if canAddDeputy {
+                        Button(action: onChooseDeputy) {
+                            HStack {
+                                Label(
+                                    deputies.isEmpty ? "Trouver votre député" : "Ajouter un député",
+                                    systemImage: "plus"
+                                )
+                                .foregroundStyle(Palette.accent)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(Palette.textMuted)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .accessibilityIdentifier("follows.sheet.deputy")
+                    } else {
+                        Text("Vous suivez déjà \(FollowedDeputies.cap) députés : retirez-en un pour en ajouter un autre.")
+                            .font(.subheadline)
+                            .foregroundStyle(Palette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 } header: {
-                    Text("Votre député")
+                    Text("Députés")
                 }
                 Section {
                     ForEach(themes) { theme in

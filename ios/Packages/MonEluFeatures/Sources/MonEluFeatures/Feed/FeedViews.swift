@@ -11,8 +11,11 @@ import SwiftUI
 struct FeedContent: View {
     let page: FeedPage
     let tab: FeedTab
-    /// The followed deputy, for the roll-up's link to their votes.
-    var deputyID: String?
+    /// The followed deputies, in the followed order.
+    var deputyIDs: [String] = []
+    /// Their names by id, once their profiles loaded: a card names each
+    /// deputy when more than one is followed.
+    var deputyNames: [String: String] = [:]
     /// The recap card's week (`GET /feed/week`); nil leaves it out.
     var week: FeedWeek?
     /// True in « Pour vous » while no deputy is followed: the card that finds one.
@@ -31,8 +34,8 @@ struct FeedContent: View {
             if tab == .pourVous {
                 if showsFindDeputy {
                     FindDeputyCard(onFind: onFindDeputy)
-                } else if let week, week.deputy != nil {
-                    FeedRecapCard(week: week, onOpen: onOpenRecap)
+                } else if let week, !week.deputies.isEmpty {
+                    FeedRecapPager(week: week, names: names, onOpen: onOpenRecap)
                 }
             }
             if page.entries.isEmpty {
@@ -41,7 +44,7 @@ struct FeedContent: View {
             ForEach(page.entries) { entry in
                 switch entry {
                 case .scrutin(let card):
-                    FeedScrutinCardView(card: card)
+                    FeedScrutinCardView(card: card, names: names)
                 case .agenda(let agenda):
                     NavigationLink(value: AppRoute.agenda()) {
                         HomeAgendaCard(entry: agenda)
@@ -50,7 +53,7 @@ struct FeedContent: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("feed.agenda")
                 case .rollup(let rollup):
-                    FeedRollupView(rollup: rollup, deputyID: deputyID)
+                    FeedRollupView(rollup: rollup, name: rollup.deputyID.flatMap { names.name(of: $0) })
                 }
             }
             HomeQuizInvitation()
@@ -58,6 +61,22 @@ struct FeedContent: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("feed.\(tab.rawValue)")
+    }
+
+    private var names: FollowedDeputyNames {
+        FollowedDeputyNames(names: deputyNames, count: deputyIDs.count)
+    }
+}
+
+/// How a card names a followed deputy: « Votre député » while only one is
+/// followed, their own name once there are several (ADR-042 amendment §3).
+struct FollowedDeputyNames: Hashable, Sendable {
+    var names: [String: String] = [:]
+    var count = 1
+
+    /// Nil when one deputy is followed: the card says « Votre député ».
+    func name(of id: String) -> String? {
+        count > 1 ? (names[id] ?? "Député suivi") : nil
     }
 }
 
@@ -87,10 +106,11 @@ struct FeedEmptyNote: View {
     }
 }
 
-/// One scrutin: what kind of vote and when, what it decided, its split, the
+/// One scrutin: what kind of vote and when, what it decided, its split, each
 /// followed deputy's position, and the ways to the detail and the source.
 struct FeedScrutinCardView: View {
     let card: FeedScrutinCard
+    var names = FollowedDeputyNames()
     @Environment(\.today) private var today
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -121,8 +141,8 @@ struct FeedScrutinCardView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("feed.scrutin")
                 tally
-                if let position = card.deputyPosition {
-                    deputyLine(position)
+                ForEach(card.positions, id: \.deputyID) { entry in
+                    deputyLine(entry.position, name: names.name(of: entry.deputyID))
                 }
                 if card.kind == "motion" {
                     Text("Une motion adoptée rejette le texte ou le renvoie en commission ; rejetée, le débat continue.")
@@ -189,15 +209,16 @@ struct FeedScrutinCardView: View {
         }
     }
 
-    private func deputyLine(_ position: String) -> some View {
+    private func deputyLine(_ position: String, name: String?) -> some View {
         // Stacked at accessibility sizes, so the label wraps instead of truncating.
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
             : AnyLayout(HStackLayout(spacing: 8))
         return layout {
-            Text("Votre député")
+            Text(name ?? "Votre député")
                 .font(.subheadline)
                 .foregroundStyle(Palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             VotePositionBadge(position: position)
             // A position on a motion is a position on the motion, not on the
             // text: say so, since "pour" here can mean against the bill.
@@ -244,10 +265,11 @@ struct FeedScrutinCardView: View {
     }
 }
 
-/// The followed deputy's other votes of the week, counted by the API.
+/// One followed deputy's other votes of the week, counted by the API.
 struct FeedRollupView: View {
     let rollup: FeedRollup
-    var deputyID: String?
+    /// The deputy's name when several are followed; nil says « votre député ».
+    var name: String?
 
     var body: some View {
         let content = VStack(alignment: .leading, spacing: 4) {
@@ -268,7 +290,7 @@ struct FeedRollupView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(Palette.border, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
         )
-        if let deputyID {
+        if let deputyID = rollup.deputyID {
             NavigationLink(value: AppRoute.deputy(id: deputyID)) { content }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("feed.rollup")
@@ -278,10 +300,11 @@ struct FeedRollupView: View {
     }
 
     var headline: String {
-        switch rollup.total {
-        case 0: "Pas d'autre vote de votre député cette semaine"
-        case 1: "Et 1 autre vote de votre député"
-        default: "Et \(MonEluFormat.count(rollup.total)) autres votes de votre député"
+        let whose = name.map { "de \($0)" } ?? "de votre député"
+        return switch rollup.total {
+        case 0: "Pas d'autre vote \(whose) cette semaine"
+        case 1: "Et 1 autre vote \(whose)"
+        default: "Et \(MonEluFormat.count(rollup.total)) autres votes \(whose)"
         }
     }
 

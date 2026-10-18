@@ -82,7 +82,7 @@ public final class MonDeputeModel {
     public var postalCode = ""
     public private(set) var search: Search = .idle
     public private(set) var followedID: String?
-    /// True while the user picks another deputy over the one they follow.
+    /// True while the user picks a deputy to add over the feed.
     public private(set) var isChanging = false
     /// The deputy picked in the results, followed once the user confirms.
     public private(set) var selection: DeputyItem?
@@ -143,13 +143,10 @@ public final class MonDeputeModel {
         if let selection { choose(selection) }
     }
 
-    /// Follows `deputy` and opens their home. While changing deputy, `deputy`
-    /// takes the shown one's place; otherwise it is added to the followed
-    /// deputies, and the picker stays with a notice when they are at the cap.
+    /// Adds `deputy` to the followed deputies and opens their home; at the
+    /// cap the picker stays with a notice. All follows are equal (ADR-042
+    /// amendment §6), so choosing never replaces another deputy (#585).
     public func choose(_ deputy: DeputyItem) {
-        if isChanging, let followedID, followedID != deputy.id, !store.isFollowing(deputy.id) {
-            store.unfollow(followedID)
-        }
         guard store.follow(deputy.id) else {
             notice = "Vous suivez déjà \(FollowedDeputies.cap) députés. Retirez-en un pour en suivre un autre."
             return
@@ -161,7 +158,7 @@ public final class MonDeputeModel {
         home = makeHome(deputy.id)
     }
 
-    /// Shows the picker over the followed deputy, who stays until another is chosen.
+    /// Shows the picker to add a deputy; the followed ones stay.
     public func startChange() {
         isChanging = true
     }

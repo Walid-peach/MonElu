@@ -6,9 +6,11 @@
 # a relaunch opens on « Pour vous », and the quiz invitation at the end of the
 # feed leads to the quiz and back. Unfollowing goes back to the empty feed,
 # never to the search. A deputy followed on
-# their profile then reaches Accueil without a relaunch, and unfollowing on
-# Accueil reaches the profile left open on Explorer (#576).
-# Asserts on fixed labels, not on who is listed: rosters change.
+# their profile then reaches Accueil without a relaunch (#576); a second one
+# added from « + Suivre » gets a circle of their own (#585), and unfollowing
+# one on Accueil reaches the profile left open on Explorer.
+# Asserts on fixed labels, not on who is listed: rosters change. A deputy's
+# circle reads "<name>, député suivi" to VoiceOver, which is what is matched.
 appId: ${APP_ID}
 ---
 - launchApp:
@@ -19,7 +21,7 @@ appId: ${APP_ID}
       selected: true
     timeout: 20000
 - assertVisible: "Suivre un député ou un thème"
-- assertNotVisible: "Mon député"
+- assertNotVisible: ".*député suivi"
 - assertNotVisible: "Code postal"
 - assertNotVisible: "Chargement impossible"
 - waitForAnimationToEnd
@@ -69,7 +71,7 @@ appId: ${APP_ID}
 # its centre is no longer the Explorer tab under the bar.
 - tapOn: "Suivre .*"
 - extendedWaitUntil:
-    visible: "Mon député"
+    visible: ".*député suivi"
     timeout: 20000
 - assertNotVisible: "Code postal"
 - waitForAnimationToEnd
@@ -108,7 +110,7 @@ appId: ${APP_ID}
 - tapOn: "Accueil"
 
 - tapOn: "Options"
-- tapOn: "Ne plus suivre"
+- tapOn: "Ne plus suivre .*"
 - extendedWaitUntil:
     visible: "Vous ne suivez encore rien.*"
     timeout: 20000
@@ -140,20 +142,56 @@ appId: ${APP_ID}
     timeout: 20000
 - assertNotVisible: "Trouvez votre député"
 # The tabs alone would show over a failed load: the deputy's circle needs
-# their home, and the feed must not be an error.
+# their profile, and the feed must not be an error.
 - extendedWaitUntil:
-    visible: "Mon député"
+    visible: ".*député suivi"
     timeout: 20000
 - waitForAnimationToEnd
 - assertNotVisible: "Chargement impossible"
 - takeScreenshot: ${SCREENSHOT_PREFIX}8-followed-from-profile
 
-# Unfollow on Accueil: the profile still open on Explorer offers "Suivre" again.
-- tapOn: "Options"
-- tapOn: "Ne plus suivre"
+# A second deputy, added from « + Suivre » by postal code: both are followed,
+# each with a circle, and the feed asks the API for both (#585).
+- tapOn: "Suivre un député ou un thème"
+- tapOn: "Ajouter un député"
 - extendedWaitUntil:
-    visible: "Vous ne suivez encore rien.*"
+    visible: "Code postal"
+    timeout: 5000
+- tapOn: "Code postal"
+- inputText: "33000"
+- tapOn: "Rechercher"
+- extendedWaitUntil:
+    visible: ".*Gironde \\(33\\).*"
     timeout: 20000
+- tapOn: ".*1re circonscription.*"
+- tapOn: "Suivre .*"
+- extendedWaitUntil:
+    visible:
+      text: ".*député suivi"
+      index: 1
+    timeout: 20000
+- waitForAnimationToEnd
+- assertNotVisible: "Chargement impossible"
+- takeScreenshot: ${SCREENSHOT_PREFIX}9-two-deputies
+# One scroll down to the cards: two deputies' week runs past any timeout
+# to its end. The toolbar stays reachable from there.
+- scroll
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}9b-two-deputies-feed
+
+# Unfollow the profile's deputy on Accueil, the first in the menu (they were
+# followed first): the other stays, and the profile still open on Explorer
+# offers "Suivre" again.
+- tapOn: "Options"
+- tapOn:
+    text: "Ne plus suivre .*"
+    index: 0
+- extendedWaitUntil:
+    notVisible:
+      text: ".*député suivi"
+      index: 1
+    timeout: 20000
+- assertVisible: ".*député suivi"
 - tapOn: "Explorer"
 - extendedWaitUntil:
     visible: "Suivre"
