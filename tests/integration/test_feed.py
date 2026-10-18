@@ -2,7 +2,7 @@
 Integration tests for GET /feed's SQL (#562, ADR-042).
 
 A mocked cursor cannot catch a time-zone slip at a week boundary or a join
-that drops the deputy's position, so the week query and the recess fallback
+that drops a followed deputy's position, so the week query and the recess fallback
 run here against a live Postgres. The weeks used (March 2020) sit far from the
 January 2026 votes the shared fixtures seed.
 """
@@ -10,9 +10,11 @@ January 2026 votes the shared fixtures seed.
 from datetime import date, datetime, timezone
 
 import pytest
+from fastapi import HTTPException
 
 from api.routers.feed import (
     SQL_LATEST_BEFORE,
+    _require_deputies,
     _week_rows,
     build_items,
     paris_midnight,
@@ -54,7 +56,8 @@ def _feed_votes(db_conn):
             )
         cur.execute(
             "INSERT INTO vote_positions (vote_id, deputy_id, position) "
-            "VALUES ('VT-FEED-SUNDAY', 'PA001', 'abstention') "
+            "VALUES ('VT-FEED-SUNDAY', 'PA001', 'abstention'), "
+            "('VT-FEED-SUNDAY', 'PA002', 'contre'), ('VT-FEED-MONDAY', 'PA002', 'pour') "
             "ON CONFLICT (vote_id, deputy_id) DO UPDATE SET position = EXCLUDED.position"
         )
     yield
@@ -67,27 +70,55 @@ def _feed_votes(db_conn):
 @pytest.mark.integration
 def test_week_runs_monday_to_sunday_in_paris(db_conn, _feed_votes):
     with db_conn.cursor() as cur:
-        rows = _week_rows(cur, date(2020, 3, 9), None)
+        rows = _week_rows(cur, date(2020, 3, 9), [])
     assert [r["vote_id"] for r in rows] == ["VT-FEED-SUNDAY", "VT-FEED-MONDAY"]
 
 
 @pytest.mark.integration
 def test_deputy_position_and_bill_page_are_joined(db_conn, _feed_votes):
     with db_conn.cursor() as cur:
-        rows = _week_rows(cur, date(2020, 3, 9), "PA001")
+        rows = _week_rows(cur, date(2020, 3, 9), ["PA001"])
     by_id = {r["vote_id"]: r for r in rows}
-    assert by_id["VT-FEED-SUNDAY"]["position"] == "abstention"
-    assert by_id["VT-FEED-MONDAY"]["position"] is None
+    assert by_id["VT-FEED-SUNDAY"]["positions"] == {"PA001": "abstention"}
+    assert by_id["VT-FEED-MONDAY"]["positions"] == {}
     assert by_id["VT-FEED-MONDAY"]["has_scrutins"] is True
 
-    items = build_items("pour_vous", rows, [], has_deputy=True, theme_names=set())
+    items = build_items("pour_vous", rows, [], deputy_ids=["PA001"], theme_names=set())
     assert [i.scrutin.vote_id for i in items if i.type == "scrutin"] == ["VT-FEED-SUNDAY"]
+
+
+@pytest.mark.integration
+def test_every_followed_deputy_position_is_joined(db_conn, _feed_votes):
+    """Several deputies (#583): one row per scrutin, a position per deputy."""
+    with db_conn.cursor() as cur:
+        rows = _week_rows(cur, date(2020, 3, 9), ["PA001", "PA002"])
+    by_id = {r["vote_id"]: r for r in rows}
+    assert len(rows) == 2
+    assert by_id["VT-FEED-SUNDAY"]["positions"] == {"PA001": "abstention", "PA002": "contre"}
+    assert by_id["VT-FEED-MONDAY"]["positions"] == {"PA002": "pour"}
+
+    items = build_items("pour_vous", rows, [], deputy_ids=["PA001", "PA002"], theme_names=set())
+    cards = {i.scrutin.vote_id: i.scrutin for i in items if i.type == "scrutin"}
+    assert [(p.deputy_id, p.position) for p in cards["VT-FEED-SUNDAY"].positions] == [
+        ("PA001", "abstention"),
+        ("PA002", "contre"),
+    ]
+    assert cards["VT-FEED-MONDAY"].deputy_position is None
+
+
+@pytest.mark.integration
+def test_one_unknown_deputy_fails_the_whole_set(db_conn):
+    with db_conn.cursor() as cur:
+        _require_deputies(cur, ["PA001", "PA002"])
+        with pytest.raises(HTTPException) as exc:
+            _require_deputies(cur, ["PA001", "PA-UNKNOWN"])
+    assert exc.value.status_code == 404
 
 
 @pytest.mark.integration
 def test_recess_fallback_finds_the_last_week_that_sat(db_conn, _feed_votes):
     with db_conn.cursor() as cur:
-        assert _week_rows(cur, date(2020, 3, 23), None) == []
+        assert _week_rows(cur, date(2020, 3, 23), []) == []
         cur.execute(SQL_LATEST_BEFORE, {"end": paris_midnight(date(2020, 3, 23))})
         latest = cur.fetchone()["latest"]
     assert latest == datetime(2020, 3, 15, 23, 30, tzinfo=timezone.utc)
