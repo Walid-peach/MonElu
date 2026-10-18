@@ -18,14 +18,18 @@ public struct QuizScreen: View {
         ) { questions in
             content(questions)
         }
-        .navigationTitle(model.phase == .questions ? "" : "Quiz")
-        .navigationBarTitleDisplayMode(model.phase == .questions ? .inline : .automatic)
+        // The deck and the results carry their own heading ("Vos résultats"),
+        // so only the intro shows the large title (#530).
+        .navigationTitle(showsLargeTitle ? "Quiz" : "")
+        .navigationBarTitleDisplayMode(showsLargeTitle ? .automatic : .inline)
         .accessibilityIdentifier("screen.quiz")
         .sheet(item: $model.sharedLink) { link in
             ActivitySheet(url: link.url)
                 .presentationDetents([.medium, .large])
         }
     }
+
+    private var showsLargeTitle: Bool { model.phase == .intro || model.phase == .notEnough }
 
     @ViewBuilder private func content(_ questions: [QuizQuestion]) -> some View {
         switch model.phase {

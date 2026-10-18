@@ -102,25 +102,33 @@
   --dp-badge-neutral-text: #B45309;
   --dp-badge-info-bg: #E8EFFE;
   --dp-badge-info-text: #2A5DB0;
+  /* #516: the abstention badge, in the amber the hemicycle and split bars
+     already use for abstention (6.3:1 on its tint). The iOS app mirrors it
+     as abstentionText/abstentionBackground. */
+  --dp-badge-abst-bg: #FDF1DC;
+  --dp-badge-abst-text: #92400E;
   /* MON-166: translucent sticky-header backdrop (backdrop-filter: blur).
      Needs its own token since it is not opaque like --dp-card-bg. */
   --dp-sticky-bg: rgba(255,255,255,0.94);
 
   /* MON-197: per-party brand colors, referenced via partyHex() in lib/utils.ts
      for text/border/fill usage on the quiz results page (and anywhere else
-     that needs a party-tinted accent). Light values are the parties' actual
-     brand colors; see .dark below for contrast-adjusted dark-mode values. */
+     that needs a party-tinted accent). Light values are the parties' own
+     colors where those are distinct; SOC, GDR and UDR were moved within their
+     bloc's family so no two groups look alike (#550). PARTY_HEX_STATIC in
+     lib/utils.ts repeats these for OG images. See .dark below for
+     contrast-adjusted dark-mode values. */
   --party-rn: #003189;
-  --party-epr: #C79A2E;
+  --party-epr: #B58C2A;
   --party-lfi: #C9302A;
-  --party-soc: #E07A2E;
+  --party-soc: #DB4F86;
   --party-dr: #0066CC;
   --party-ecs: #1F8A5B;
-  --party-dem: #F97316;
+  --party-dem: #F36706;
   --party-hor: #0D9488;
   --party-liot: #7C3AED;
-  --party-udr: #DC2626;
-  --party-gdr: #B45309;
+  --party-udr: #3B5B8F;
+  --party-gdr: #7F1D2D;
 
   /* MON-193: global keyboard-focus indicator color (RGAA 10.7 / WCAG 2.4.7).
      #2563EB clears 3:1 (WCAG 1.4.11 non-text contrast) against every light
@@ -168,19 +176,31 @@
   --dp-badge-neutral-text: #E0B84D;
   --dp-badge-info-bg: rgba(74,144,226,0.18);
   --dp-badge-info-text: #7EB0F0;
+  --dp-badge-abst-bg: rgba(217,119,6,0.18);
+  --dp-badge-abst-text: #F5B759;
   --dp-sticky-bg: rgba(18,29,48,0.92);
 
   /* MON-197: lightened so each still clears 4.5:1 against --dp-card-bg
      (#121D30) — the originals (esp. --party-rn navy-on-navy) fell as low as
-     1.45:1. --party-epr/--party-soc/--party-dem/--party-hor already cleared
-     4.5:1 unmodified, so they're omitted here and fall through to :root. */
-  --party-rn: #3980FF;
+     1.45:1. --party-hor already cleared 4.5:1 unmodified, so it is omitted
+     here and falls through to :root. EPR and DEM keep their original values
+     here: the light ones were darkened to reach 3:1 on white as bar fills
+     (WCAG 1.4.11), which would only dim them on the dark card.
+     #550: each group's hue sits in its bloc's family (left reds, pink and
+     green; centre gold, orange, teal and violet; right blues), and every
+     pair stays at least ΔE 21 apart in both themes, so no two segments of
+     a bar read as one group, and none reads as the non-inscrits' grey.
+     RN moved toward indigo, away from DR. */
+  --party-rn: #9198FF;
+  --party-epr: #C79A2E;
   --party-lfi: #DB5A55;
+  --party-soc: #F27DAE;
   --party-dr: #0482FF;
   --party-ecs: #229864;
-  --party-liot: #9A67F1;
-  --party-udr: #E35454;
-  --party-gdr: #D6630B;
+  --party-dem: #F97316;
+  --party-liot: #9C6AF2;
+  --party-udr: #86A6D6;
+  --party-gdr: #E39A86;
 
   /* MON-193: lighter blue keeps 3:1+ against dark surfaces (--dp-page-bg
      #0B1424, --dp-card-bg #121D30) where the light-mode --focus-ring value
@@ -261,17 +281,19 @@
     --dp-badge-neutral-text: #B45309;
     --dp-badge-info-bg: #E8EFFE;
     --dp-badge-info-text: #2A5DB0;
+    --dp-badge-abst-bg: #FDF1DC;
+    --dp-badge-abst-text: #92400E;
     --dp-sticky-bg: rgba(255,255,255,0.94);
     --party-rn: #003189;
-    --party-epr: #C79A2E;
+    --party-epr: #B58C2A;
     --party-lfi: #C9302A;
-    --party-soc: #E07A2E;
+    --party-soc: #DB4F86;
     --party-dr: #0066CC;
     --party-ecs: #1F8A5B;
-    --party-dem: #F97316;
+    --party-dem: #F36706;
     --party-hor: #0D9488;
     --party-liot: #7C3AED;
-    --party-udr: #DC2626;
-    --party-gdr: #B45309;
+    --party-udr: #3B5B8F;
+    --party-gdr: #7F1D2D;
   }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// MonÉlu's color tokens. Each is a color set in `Colors.xcassets` with a light
 /// and a dark value mirroring the website's `--dp-*` variables in
@@ -29,8 +30,14 @@ public enum Palette {
     public static let positiveText = token("positiveText")
     /// Text on `negativeBackground` (the website's `--dp-badge-neg-text`).
     public static let negativeText = token("negativeText")
-    /// Neutral fill behind abstention and non-votant badges and bar tracks.
+    /// Neutral fill behind non-votant badges and bar tracks.
     public static let trackBackground = token("trackBackground")
+    /// An abstention badge's tint: amber, the hue of the abstention seat and
+    /// bar segment (#516; the website's `--dp-badge-abst-bg`).
+    public static let abstentionBackground = token("abstentionBackground")
+    /// Text on `abstentionBackground`, and an abstention count written as a
+    /// figure (`--dp-badge-abst-text`).
+    public static let abstentionText = token("abstentionText")
     /// An abstention's seat in the hemicycle: the website's amber, the same in
     /// both themes (`POSITION_COLORS` in `HemicycleChart.tsx`).
     public static let seatAbstention = token("seatAbstention")
@@ -42,6 +49,11 @@ public enum Palette {
     public static let identityBackground = token("identityBackground")
     /// Text and icons on `identityBackground`.
     public static let onIdentity = token("onIdentity")
+    /// An eyebrow on `identityBackground` ("LE QUIZ", "VOUS VOTEZ CONTRE"):
+    /// the design's salmon, the same in both themes like the navy under it.
+    public static let onIdentityAccent = token("onIdentityAccent")
+    /// The positive eyebrow on `identityBackground` ("VOUS VOTEZ POUR").
+    public static let onIdentityPositive = token("onIdentityPositive")
     /// Civic red, for calls to action.
     public static let accent = token("accent")
     /// Text on an accent-filled button: white in light mode, navy in dark,
@@ -49,18 +61,34 @@ public enum Palette {
     public static let onAccent = token("onAccent")
 
     /// A parliamentary group's chip colors, keyed by the API's `party_short`.
-    /// They mirror `partyColor()` in `frontend/src/lib/utils.ts` in light
-    /// mode; in dark mode the pair is reversed (the dark shade behind the
-    /// light one) so a chip never glows on the dark page. A group the website
-    /// leaves uncolored (LIOT, UDR, GDR, non-inscrits) or an unknown code
-    /// takes the neutral pair, as there.
+    /// Both are derived from the group's brand color, the one `partyFill`
+    /// paints its bar segment with, so a chip and its segment share a hue
+    /// (#550): a tint of it behind, and the same hue darkened (light) or
+    /// lightened (dark) to 4.5:1 as text. `test_ios_design_tokens.py`
+    /// recomputes both from the website's `--party-*`. The non-inscrits and
+    /// an unknown code take the neutral pair.
     public static func party(_ short: String?) -> (background: Color, text: Color) {
-        let code = short.flatMap { coloredParties.contains($0) ? $0 : nil } ?? "Other"
+        let code = short.flatMap { filledParties.contains($0) ? $0 : nil } ?? "Other"
         return (token("party\(code)Background"), token("party\(code)Text"))
     }
 
-    /// The groups `partyColor()` gives a color of their own.
-    static let coloredParties: Set<String> = ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR"]
+    /// A group's solid color, for a bar segment (#528): the website's
+    /// `--party-*` pair, lightened in dark mode (MON-197). A group without one
+    /// (non-inscrits) or an unknown code takes the non-votant grey.
+    public static func partyFill(_ short: String?) -> Color {
+        let code = short.flatMap { filledParties.contains($0) ? $0 : nil } ?? "Other"
+        return token("party\(code)Fill")
+    }
+
+    /// The groups with a brand color on the website (`--party-*`), and so a
+    /// fill and a chip of their own.
+    static let filledParties: Set<String> = ["RN", "EPR", "LFI", "SOC", "DR", "ECS", "DEM", "HOR", "LIOT", "UDR", "GDR"]
+
+    /// A token as a UIKit color, for the appearance proxies SwiftUI cannot
+    /// reach (the navigation bar's title font). It keeps both its values.
+    public static func uiColor(_ name: String) -> UIColor {
+        UIColor(named: name, in: .module, compatibleWith: nil) ?? .label
+    }
 
     private static func token(_ name: String) -> Color {
         Color(name, bundle: .module)

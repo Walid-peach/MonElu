@@ -60,6 +60,7 @@ struct DissidentVotesList: View {
 }
 
 struct DissidentVoteRow: View {
+    @Environment(\.today) private var today
     let vote: DissidentVote
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -70,7 +71,7 @@ struct DissidentVoteRow: View {
                     VoteResultBadge(result: result)
                 }
                 if let date = vote.date {
-                    Text(MonEluFormat.day(date))
+                    Text(MonEluFormat.listDay(date, today: today))
                         .font(.caption)
                         .foregroundStyle(Palette.textSecondary)
                 }

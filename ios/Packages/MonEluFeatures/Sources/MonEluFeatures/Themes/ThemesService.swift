@@ -36,7 +36,7 @@ extension ThemePage {
             mostDivided: theme.mostDividedVote.map {
                 ThemeDividedVote(
                     id: $0.voteId, title: $0.voteTitle, date: $0.votedAt,
-                    votesFor: $0.votesFor, votesAgainst: $0.votesAgainst
+                    votesFor: $0.votesFor, votesAgainst: $0.votesAgainst, result: $0.result
                 )
             },
             partyPositions: theme.partyPositions.map {

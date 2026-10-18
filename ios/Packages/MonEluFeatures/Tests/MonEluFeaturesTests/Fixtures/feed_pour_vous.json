@@ -1,0 +1,88 @@
+{
+  "tab": "pour_vous",
+  "deputy_id": "PA1008",
+  "themes": ["justice-securite"],
+  "requested_week_start": "2026-10-12",
+  "week_start": "2026-10-12",
+  "week_end": "2026-10-18",
+  "no_sitting": false,
+  "items": [
+    {
+      "type": "scrutin",
+      "scrutin": {
+        "vote_id": "VTANR5L17V9101",
+        "voted_at": "2026-10-13T00:00:00Z",
+        "scrutin_kind": "amendement",
+        "title": "l'amendement n° 4 de M. Dupont à l'article 2 de la proposition de loi visant à renforcer la lutte contre les violences sexuelles et sexistes (première lecture).",
+        "theme": "Justice & Sécurité",
+        "theme_slug": "justice-securite",
+        "result": "rejeté",
+        "votes_for": 167,
+        "votes_against": 177,
+        "abstentions": 0,
+        "margin": 10,
+        "closest": true,
+        "deputy_position": "pour",
+        "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9101"
+      }
+    },
+    {
+      "type": "scrutin",
+      "scrutin": {
+        "vote_id": "VTANR5L17V9100",
+        "voted_at": "2026-10-13T00:00:00Z",
+        "scrutin_kind": "ensemble",
+        "title": "l'ensemble de la proposition de loi visant à renforcer la lutte contre les violences sexuelles et sexistes (première lecture).",
+        "summary_plain": "Le texte contre les violences sexuelles et sexistes est adopté sans aucune voix contre.",
+        "theme": "Justice & Sécurité",
+        "theme_slug": "justice-securite",
+        "result": "adopté",
+        "votes_for": 503,
+        "votes_against": 0,
+        "abstentions": 10,
+        "margin": 503,
+        "closest": false,
+        "deputy_position": "abstention",
+        "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9100",
+        "dossier_id": "DLR5L17N53980",
+        "lois_url": "https://monelu.fr/lois/DLR5L17N53980"
+      }
+    },
+    {
+      "type": "scrutin",
+      "scrutin": {
+        "vote_id": "VTANR5L17V9099",
+        "voted_at": "2026-10-13T00:00:00Z",
+        "scrutin_kind": "motion",
+        "title": "la motion de rejet préalable, déposée par M. Martin, du projet de loi de finances pour 2027 (première lecture).",
+        "summary_plain": "Les députés ont refusé d'arrêter le budget avant le débat : l'examen continue en séance.",
+        "theme": "Économie & Budget",
+        "theme_slug": "economie-budget",
+        "result": "rejeté",
+        "votes_for": 149,
+        "votes_against": 236,
+        "abstentions": 0,
+        "margin": 87,
+        "closest": false,
+        "deputy_position": "pour",
+        "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9099"
+      }
+    },
+    {
+      "type": "agenda",
+      "agenda": {
+        "point_uid": "PTOD17_FEED01",
+        "sitting_start": "2026-10-20T13:00:00Z",
+        "objet": "Projet de loi de finances pour 2027 (vote solennel)",
+        "point_type": "Vote solennel",
+        "theme": "Justice & Sécurité",
+        "dossier_id": "DLR5L17N53001",
+        "dossier_url": "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N53001"
+      }
+    },
+    {
+      "type": "rollup",
+      "rollup": {"total": 20, "amendement": 17, "article": 2, "autre": 1, "non_votant": 3}
+    }
+  ]
+}

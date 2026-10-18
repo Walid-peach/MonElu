@@ -15,10 +15,12 @@ final class AgendaModel {
     private let service: any AgendaService
     private let now: @Sendable () -> Date
 
-    init(service: any AgendaService, now: @escaping @Sendable () -> Date = { .now }) {
+    /// Opens on the week holding `weekOf`, or the current week when nil.
+    init(service: any AgendaService, weekOf: Date? = nil, now: @escaping @Sendable () -> Date = { .now }) {
         self.service = service
         self.now = now
-        let window = AgendaWindow(offset: 0, now: now())
+        let today = now()
+        let window = AgendaWindow(offset: weekOf.map { AgendaWindow.offset(toWeekOf: $0, now: today) } ?? 0, now: today)
         self.window = window
         loader = Self.loader(service, window)
     }
@@ -40,8 +42,9 @@ final class AgendaModel {
 public struct AgendaScreen: View {
     @State private var model: AgendaModel
 
-    public init(service: any AgendaService) {
-        _model = State(initialValue: AgendaModel(service: service))
+    /// `weekOf` opens the week holding that date (#512); nil, this week.
+    public init(service: any AgendaService, weekOf: Date? = nil) {
+        _model = State(initialValue: AgendaModel(service: service, weekOf: weekOf))
     }
 
     public var body: some View {
@@ -160,7 +163,8 @@ struct AgendaWeekContent: View {
     }
 }
 
-/// A point that opens its scrutin when one exists, else the AN dossier.
+/// A point opens its own scrutin when one exists, else the bill's page in the
+/// app when MonÉlu has one (#511), else the AN dossier.
 struct AgendaEntryLink: View {
     let entry: AgendaEntry
 
@@ -171,6 +175,13 @@ struct AgendaEntryLink: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("agenda.entry")
+        } else if let loiID = entry.loiID {
+            NavigationLink(value: AppRoute.loi(id: loiID)) {
+                AgendaEntryRow(entry: entry, trailing: "chevron.right")
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Ouvre la page du texte")
+            .accessibilityIdentifier("agenda.entry.loi")
         } else if let url = entry.dossierURL {
             Link(destination: url) {
                 AgendaEntryRow(entry: entry, trailing: "arrow.up.right")
@@ -185,7 +196,7 @@ struct AgendaEntryLink: View {
     }
 }
 
-/// Time, point type, the headline and the official wording, theme and result.
+/// Time, point type, the bill's title, its one-liner, theme and result.
 struct AgendaEntryRow: View {
     let entry: AgendaEntry
     let trailing: String?
@@ -211,10 +222,12 @@ struct AgendaEntryRow: View {
                     Text(headline.lead)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Palette.textPrimary)
-                    if let official = headline.official {
-                        Text(official)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
+                    if let detail = headline.detail {
+                        Text(detail)
                             .font(.footnote)
                             .foregroundStyle(Palette.textSecondary)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
                     }
                     if entry.theme != nil || entry.result != nil {
                         HStack(spacing: 8) {
@@ -253,7 +266,7 @@ struct AgendaEntryRow: View {
 /// Opens the agenda from Accueil and Explorer.
 struct AgendaToolbarLink: View {
     var body: some View {
-        NavigationLink(value: AppRoute.agenda) {
+        NavigationLink(value: AppRoute.agenda()) {
             Label("Agenda", systemImage: "calendar")
         }
         .accessibilityIdentifier("open.agenda")

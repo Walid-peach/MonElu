@@ -159,6 +159,15 @@ struct ComponentSnapshotTests {
         }, variant)
     }
 
+    /// Boxed, with a code span set in the body font, not monospace (#516).
+    @Test(arguments: variants)
+    func caveatNote(_ variant: Variant) {
+        check(
+            CaveatNote("Un député `nonVotant` était présent mais n'a pas voté ; ce n'est pas une **abstention**."),
+            variant
+        )
+    }
+
     @Test(arguments: variants)
     func hemicycleChart(_ variant: Variant) {
         // 180 deputies across the chamber, positions cycling by group.

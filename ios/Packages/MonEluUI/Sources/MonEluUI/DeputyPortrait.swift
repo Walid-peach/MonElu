@@ -34,8 +34,10 @@ public struct DeputyPortrait: View {
 
     private var initials: some View {
         Text(Self.initials(of: name))
-            .font(.system(size: size * 0.38, weight: .semibold))
-            .foregroundStyle(Palette.textSecondary)
+            // Newsreader, like the design's portraits (#516). Sized to the
+            // disc, not to Dynamic Type: the disc does not grow either.
+            .font(.custom(Typography.headingFace, fixedSize: size * 0.4))
+            .foregroundStyle(Palette.textPrimary)
             .frame(width: size, height: size)
             .background(Palette.trackBackground)
     }

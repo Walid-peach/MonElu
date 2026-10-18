@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start ios-generate ios-build ios-test ios-run ios-flow ios-smoke
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start ios-generate ios-build ios-test ios-run ios-flow ios-smoke ios-device
 
 start:
 	docker compose up -d
@@ -123,3 +123,8 @@ ios-flow:
 
 ios-smoke:
 	ios/scripts/ios.sh smoke
+
+# Signs, builds, installs and launches on the plugged-in iPhone with the Apple
+# ID signed into Xcode; the team is saved in ios/Configs/Local.xcconfig.
+ios-device:
+	ios/scripts/ios.sh device

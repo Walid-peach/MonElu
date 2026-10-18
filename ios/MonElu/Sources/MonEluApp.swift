@@ -10,6 +10,7 @@ struct MonEluApp: App {
 
     init() {
         Typography.registerFonts()
+        NavigationBarStyle.apply()
         MonEluAPI.configureURLCache()
         let client = MonEluAPI.client(baseURL: AppEnvironment.apiBaseURL)
         configService = AppConfigService(client: client)

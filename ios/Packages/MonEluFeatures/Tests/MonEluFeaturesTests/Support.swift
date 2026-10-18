@@ -76,6 +76,10 @@ func item(_ id: String, title: String = "l'ensemble du projet de loi de finances
     )
 }
 
+/// The day every snapshot is taken on (2026-10-10, noon UTC), so a list's
+/// short dates leave out the year exactly as they did when it was recorded.
+let snapshotToday = Date(timeIntervalSince1970: 1_791_633_600)
+
 /// The snapshot variants every screen is checked in (ADR-041 §8).
 struct Variant: CustomTestStringConvertible, Sendable {
     let name: String
@@ -103,6 +107,7 @@ func checkSnapshot<V: View>(
         .background(Palette.pageBackground)
         .environment(\.colorScheme, variant.style == .dark ? .dark : .light)
         .environment(\.dynamicTypeSize, DynamicTypeSize(variant.size) ?? .large)
+        .environment(\.today, snapshotToday)
     let traits = UITraitCollection { traits in
         traits.userInterfaceStyle = variant.style
         traits.preferredContentSizeCategory = variant.size

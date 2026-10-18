@@ -15,6 +15,28 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-loi-overview
 
+# The next sitting opens the agenda on its week (#512), when the bill is on
+# the agenda in the next 28 days. The page's id masks the card's, so the card
+# is matched by its label; the bill is then reopened for the steps below.
+- runFlow:
+    when:
+      visible: ".*PROCHAINE SÉANCE.*"
+    commands:
+      - tapOn: ".*PROCHAINE SÉANCE.*"
+      - extendedWaitUntil:
+          visible:
+            id: "screen.agenda"
+          timeout: 20000
+      - waitForAnimationToEnd
+      - takeScreenshot: ${SCREENSHOT_PREFIX}1b-loi-next-sitting-agenda
+      - launchApp:
+          stopApp: true
+          arguments:
+            MonEluOpenURL: "monelu://lois/DLR5L17N54372"
+      - extendedWaitUntil:
+          visible: "Parcours"
+          timeout: 20000
+
 - scrollUntilVisible:
     element: ".*amendements.*votés"
     direction: DOWN

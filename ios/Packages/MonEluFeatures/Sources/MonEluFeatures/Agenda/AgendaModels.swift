@@ -63,10 +63,15 @@ public struct AgendaEntry: Hashable, Sendable, Identifiable {
     public let result: String?
     /// The official AN dossier page, when the point has a dossier.
     public let dossierURL: URL?
+    /// The bill's short official title, when the API knows the dossier (#525).
+    public let dossierTitle: String?
+    /// The dossier uid when the bill has a MonÉlu page (the API's `lois_url`
+    /// is set only then, #511), so the row can open it in the app.
+    public let loiID: String?
 
     public init(
         id: String, start: Date, pointType: String?, summary: String?, objet: String?, theme: String?,
-        voteID: String?, result: String?, dossierURL: URL?
+        voteID: String?, result: String?, dossierURL: URL?, dossierTitle: String? = nil, loiID: String? = nil
     ) {
         self.id = id
         self.start = start
@@ -77,17 +82,21 @@ public struct AgendaEntry: Hashable, Sendable, Identifiable {
         self.voteID = voteID
         self.result = result
         self.dossierURL = dossierURL
+        self.dossierTitle = dossierTitle
+        self.loiID = loiID
     }
 
-    /// The website's hierarchy (`agendaHeadline` in `frontend/src/lib/agenda.ts`):
-    /// the one-liner when there is one, with the official wording under it;
-    /// otherwise the official wording alone.
-    var headline: (lead: String, official: String?) {
+    /// Design A's hierarchy (#525): the bill's short title leads, so a row
+    /// names the text in two or three lines; without a dossier, the AN's
+    /// wording of the point leads (a stub `objet` such as "Questions au
+    /// Gouvernement" included, ADR-030 §5). The plain-language one-liner, when
+    /// there is one, follows as the detail.
+    var headline: (lead: String, detail: String?) {
+        let title = dossierTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let summary = summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let objet = objet?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !summary.isEmpty { return (summary, objet.isEmpty ? nil : objet) }
-        if !objet.isEmpty { return (objet, nil) }
-        return ("Point inscrit à l'ordre du jour", nil)
+        let lead = [title, objet, summary].first { !$0.isEmpty } ?? "Point inscrit à l'ordre du jour"
+        return (lead, summary.isEmpty || summary == lead ? nil : summary)
     }
 
     /// The point type, unless it would repeat the headline ("Questions au
@@ -115,6 +124,16 @@ struct AgendaWindow: Hashable {
         self.offset = offset
         from = MonEluFormat.isoDay(start)
         to = MonEluFormat.isoDay(end)
+    }
+
+    /// How many weeks from the one holding `now` to the one holding `date`,
+    /// Paris ISO weeks: 0 for this week, 1 for the next, -1 for the last.
+    static func offset(toWeekOf date: Date, now: Date) -> Int {
+        let calendar = MonEluFormat.parisCalendar
+        guard let thisMonday = calendar.dateInterval(of: .weekOfYear, for: now)?.start,
+              let thatMonday = calendar.dateInterval(of: .weekOfYear, for: date)?.start
+        else { return 0 }
+        return calendar.dateComponents([.weekOfYear], from: thisMonday, to: thatMonday).weekOfYear ?? 0
     }
 
     /// "Cette semaine", "Semaine prochaine", or nil further away.

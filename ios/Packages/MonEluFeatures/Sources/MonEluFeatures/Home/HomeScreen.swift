@@ -2,59 +2,126 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// The Accueil tab (#477, #491): the followed deputy through their latest
-/// decisions, the week at the Assembly and its latest votes, or, before one
-/// is chosen, the postal-code search beside the Assembly's latest votes, so a
-/// first visit already shows something.
+/// The Accueil tab (#565, ADR-042, design « Accueil V1 »): the row of
+/// follows, then the feed the API builds for them, in two tabs. Before a
+/// deputy is chosen, the postal-code search beside the Assembly's latest
+/// votes, so a first visit already shows something.
 public struct HomeScreen: View {
     @State private var model: MonDeputeModel
     @State private var latestVotes: Loader<[VoteItem]>
-    @State private var agenda: Loader<[AgendaEntry]>
-    @Environment(\.appConfiguration) private var configuration
+    @State private var themeSlugs: [String]
+    @State private var tab: FeedTab = .pourVous
+    @State private var filter: FeedFilter = .all
+    @State private var showsFollows = false
+    private let feed: any FeedService
+    private let themesStore: any FollowedThemesStore
+    private let themes = (try? ReferenceData.themes()) ?? []
 
     public init(
         deputies: any DeputiesService, votes: any VotesService, postalCodes: any PostalCodeService,
-        agenda: any AgendaService, store: any FollowedDeputyStore
+        feed: any FeedService, store: any FollowedDeputyStore, themesStore: any FollowedThemesStore
     ) {
         _model = State(initialValue: MonDeputeModel(deputies: deputies, postalCodes: postalCodes, store: store))
         _latestVotes = State(initialValue: Loader(isEmpty: { $0.isEmpty }) {
             Array(try await votes.votes(VoteQuery()).items.prefix(HomeLatestVotesSection.count))
         })
-        _agenda = State(initialValue: Loader {
-            let week = AgendaWindow(offset: 0, now: Date())
-            let items = try await agenda.week(from: week.from, to: week.to).days.flatMap(\.items)
-            return HomeAgendaSection.upcoming(items, now: Date())
-        })
+        _themeSlugs = State(initialValue: themesStore.themeSlugs)
+        self.feed = feed
+        self.themesStore = themesStore
     }
 
     public var body: some View {
         Group {
-            if model.showsPicker {
+            if showsPicker {
                 picker
-            } else if let home = model.home {
-                LoadStateView(
-                    home,
-                    empty: EmptyStateView(title: "Député introuvable", message: "Ce député n'existe pas ou plus.")
-                ) { home in
-                    ScrollView {
-                        HomeDeputyContent(
-                            home: home, offersQuestions: configuration.features.chat,
-                            agenda: agendaEntries, latestVotes: latestVotes.state,
-                            onRetryLatest: { Task { await latestVotes.load() } }
-                        )
-                        .padding(16)
-                    }
-                    .task { await latestVotes.loadIfNeeded() }
-                    .task { await agenda.loadIfNeeded() }
+            } else {
+                FeedLoaderView(
+                    query: query, service: feed, tab: tab, deputyID: model.followedID,
+                    onOpenRecap: { tab = .assemblee },
+                    onFindDeputy: { model.startChange() }
+                ) {
+                    feedHeader
                 }
-                // A new deputy is a new loader; a new identity starts its load.
-                .id(model.followedID)
+                // A new query is a new loader; a new identity starts its load.
+                .id(query)
+                .task { await model.home?.loadIfNeeded() }
             }
         }
         .background(Palette.pageBackground)
         .navigationTitle("Accueil")
         .toolbar { toolbar }
+        .sheet(isPresented: $showsFollows) { followsSheet }
+        // A deputy followed or unfollowed on another screen, such as their
+        // profile (#576), picked up on coming back. Not in `onChange`: Accueil
+        // stays alive behind the other tabs, and loads started there are
+        // cancelled, which `Loader` keeps as a failure that never retries.
+        .onAppear { model.syncWithStore() }
         .accessibilityIdentifier("screen.home")
+    }
+
+    /// The postal-code picker shows while the user changes deputy, and on a
+    /// first visit with nothing followed. Themes alone are enough for a feed,
+    /// which then offers to find the deputy (#566).
+    private var showsPicker: Bool {
+        model.isChanging || (model.followedID == nil && themeSlugs.isEmpty)
+    }
+
+    /// What the feed is asked for: the tab, and in « Pour vous » the follows,
+    /// narrowed to one when a circle is selected.
+    private var query: FeedQuery {
+        switch tab {
+        case .pourVous: FeedQuery.pourVous(deputyID: model.followedID, themes: themeSlugs, filter: filter)
+        case .assemblee: FeedQuery(tab: .assemblee, deputyID: model.followedID, themes: [])
+        }
+    }
+
+    /// The followed deputy once their home loaded; the circle waits for it.
+    private var followedDeputy: DeputyItem? {
+        model.home?.state.value?.profile.deputy
+    }
+
+    private var circles: [FollowCircle] {
+        // The deputy's ring uses the existing reading position: votes held
+        // after the newest one shown on the previous visit.
+        let deputyNews: Bool = {
+            guard case .votes(let votes, _)? = model.home?.state.value?.sinceLastVisit else { return false }
+            return !votes.isEmpty
+        }()
+        return FollowCircle.circles(
+            deputy: followedDeputy, themeSlugs: themeSlugs, themes: themes,
+            news: deputyNews ? ["deputy"] : []
+        )
+    }
+
+    @ViewBuilder private var feedHeader: some View {
+        HomeTagline()
+            .padding(.horizontal, 16)
+        FollowsRow(circles: circles, filter: $filter, onAdd: { showsFollows = true })
+        Picker("Fil", selection: $tab) {
+            ForEach(FeedTab.allCases, id: \.self) { tab in
+                Text(tab.title).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .accessibilityIdentifier("feed.tabs")
+    }
+
+    private var followsSheet: some View {
+        FollowsSheet(
+            deputyName: followedDeputy?.name, themes: themes, followed: Set(themeSlugs),
+            onToggle: { slug in
+                themesStore.toggle(slug)
+                themeSlugs = themesStore.themeSlugs
+                // A theme no longer followed cannot stay the filter.
+                if case .theme(let selected) = filter, !themeSlugs.contains(selected) { filter = .all }
+            },
+            onChooseDeputy: {
+                showsFollows = false
+                model.startChange()
+            },
+            onDone: { showsFollows = false }
+        )
     }
 
     /// While the user changes deputy, only the search shows; before any
@@ -79,23 +146,16 @@ public struct HomeScreen: View {
                     HomeQuizInvitation()
                 }
             }
-            .padding(16)
+            .padding([.horizontal, .bottom], 16)
+            // The tagline belongs to the title; without it the search needs
+            // its own margin.
+            .padding(.top, model.isChanging ? 16 : 0)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let selection = model.selection {
                 FollowSelectionBar(deputy: selection) { model.followSelection() }
             }
-        }
-    }
-
-    /// The week's items once loaded; nil while loading or when they failed,
-    /// and the home leaves the section out.
-    private var agendaEntries: [AgendaEntry]? {
-        switch agenda.state {
-        case .loaded(let entries): entries
-        case .empty: []
-        default: nil
         }
     }
 
@@ -127,5 +187,108 @@ public struct HomeScreen: View {
                 .accessibilityIdentifier("monDepute.options")
             }
         }
+    }
+}
+
+/// One query's feed and, in « Pour vous », the recap card's week.
+struct FeedScreen: Sendable {
+    let page: FeedPage
+    var week: FeedWeek?
+}
+
+/// One feed query's loader, under the header that chooses it. Rebuilt for
+/// every new query (`.id(query)` at the call site).
+private struct FeedLoaderView<Header: View>: View {
+    @State private var loader: Loader<FeedScreen>
+    let tab: FeedTab
+    let deputyID: String?
+    let onOpenRecap: () -> Void
+    let onFindDeputy: () -> Void
+    let header: Header
+
+    init(
+        query: FeedQuery, service: any FeedService, tab: FeedTab, deputyID: String?,
+        onOpenRecap: @escaping () -> Void, onFindDeputy: @escaping () -> Void,
+        @ViewBuilder header: () -> Header
+    ) {
+        _loader = State(initialValue: Loader {
+            async let page = service.feed(query)
+            async let week = HomeScreenRecap.recap(tab: query.tab, deputyID: deputyID, service: service)
+            return FeedScreen(page: try await page, week: await week)
+        })
+        self.tab = tab
+        self.deputyID = deputyID
+        self.onOpenRecap = onOpenRecap
+        self.onFindDeputy = onFindDeputy
+        self.header = header()
+    }
+
+    var body: some View {
+        FeedPageView(
+            state: loader.state, refreshFailure: loader.refreshFailure, tab: tab, deputyID: deputyID,
+            retry: { await loader.load() }, onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
+        ) {
+            header
+        }
+        .refreshable { await loader.refresh() }
+        .task { await loader.loadIfNeeded() }
+    }
+}
+
+/// The header, then one query's state below it. The header stays in every
+/// state, so the tabs and the follows row can still be used while the feed
+/// loads or after it failed; the states are `LoadStateView`'s own views.
+struct FeedPageView<Header: View>: View {
+    let state: LoadState<FeedScreen>
+    var refreshFailure: LoadFailure?
+    let tab: FeedTab
+    var deputyID: String?
+    var retry: () async -> Void = {}
+    var onOpenRecap: () -> Void = {}
+    var onFindDeputy: () -> Void = {}
+    @ViewBuilder let header: Header
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                content
+                    .padding(.horizontal, 16)
+            }
+            .padding(.bottom, 16)
+        }
+        .background(Palette.pageBackground)
+    }
+
+    @ViewBuilder private var content: some View {
+        switch state {
+        case .idle, .loading:
+            LoadingStateView()
+                .padding(.vertical, 48)
+        case .empty:
+            EmptyStateView(title: "Rien cette semaine", message: "Aucun scrutin à montrer pour l'instant.")
+        case .failed(let failure):
+            FailureStateView(failure: failure, retry: retry)
+        case .loaded(let screen):
+            if let refreshFailure {
+                RefreshFailureBanner(failure: refreshFailure)
+            }
+            FeedContent(
+                page: screen.page, tab: tab, deputyID: deputyID, week: screen.week,
+                showsFindDeputy: deputyID == nil,
+                onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
+            )
+        }
+    }
+}
+
+enum HomeScreenRecap {
+    /// The recap card's week, in « Pour vous » with a deputy only. It is a
+    /// bonus: when it fails, the feed still shows without it.
+    /// Keyed on the followed deputy, not on the query: a theme circle narrows
+    /// the feed to that theme, but the recap is still the deputy's week.
+    static func recap(tab: FeedTab, deputyID: String?, service: any FeedService) async -> FeedWeek? {
+        guard tab == .pourVous, let deputyID else { return nil }
+        return try? await service.week(deputyID: deputyID)
     }
 }

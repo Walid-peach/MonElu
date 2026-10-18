@@ -37,10 +37,16 @@ struct LoisSnapshotTests {
     }
 
     /// Procedure, title, status with the AN's own wording, the strip with the
-    /// Sénat current, and the next séance.
+    /// Sénat current, and the next séance as a link to its agenda week (#512),
+    /// hosted in a NavigationStack so the link renders enabled.
     @Test(arguments: Variant.all)
     func loiOverview(_ variant: Variant) async throws {
-        checkSnapshot(LoiOverview(page: try await page()).padding(16), variant)
+        let page = try await page()
+        checkSnapshot(
+            stacked(LoiOverview(page: page)),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 1100 : 300
+        )
     }
 
     /// The first reading: grouping nodes, folded séances, amendment counts

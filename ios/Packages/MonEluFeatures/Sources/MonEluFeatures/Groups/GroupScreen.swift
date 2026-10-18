@@ -74,8 +74,9 @@ struct GroupContent: View {
                 .foregroundStyle(Palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text("\(MonEluFormat.count(group.memberCount)) député\(group.memberCount > 1 ? "s" : "") en mandat")
+            Text(group.countLine)
                 .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(Palette.textSecondary)
             if group.averagePresence != nil || group.averageDissidence != nil {
                 StatTileGrid {
@@ -196,6 +197,7 @@ struct DissidentMemberRow: View {
 
 /// A scrutin that split a set of deputies: its result and their own tally.
 struct DividedVoteRow: View {
+    @Environment(\.today) private var today
     let vote: GroupDividedVote
     /// Whose tally it is: "Dans le groupe", "En Gironde".
     var scope = "Dans le groupe"
@@ -208,7 +210,7 @@ struct DividedVoteRow: View {
                         VoteResultBadge(result: result)
                     }
                     if let date = vote.date {
-                        Text(MonEluFormat.day(date))
+                        Text(MonEluFormat.listDay(date, today: today))
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                     }

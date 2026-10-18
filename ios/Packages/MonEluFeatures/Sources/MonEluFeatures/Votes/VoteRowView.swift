@@ -4,6 +4,7 @@ import SwiftUI
 
 /// One scrutin in the list: what was voted, when, and how it ended.
 struct VoteRowView: View {
+    @Environment(\.today) private var today
     let vote: VoteItem
 
     var body: some View {
@@ -13,7 +14,7 @@ struct VoteRowView: View {
                     VoteResultBadge(result: result)
                 }
                 if let date = vote.date {
-                    Text(MonEluFormat.day(date))
+                    Text(MonEluFormat.listDay(date, today: today))
                         .font(.caption)
                         .foregroundStyle(Palette.textSecondary)
                 }

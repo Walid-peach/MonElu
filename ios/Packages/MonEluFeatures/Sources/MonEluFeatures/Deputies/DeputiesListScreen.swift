@@ -44,7 +44,10 @@ public struct DeputiesListScreen: View {
         .background(Palette.pageBackground)
         .navigationTitle("Députés")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $model.searchText, prompt: "Rechercher un député")
+        // Always shown, as the design draws it (#523).
+        .searchable(
+            text: $model.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Rechercher un député"
+        )
         .autocorrectionDisabled()
         .confirmationDialog("Groupe", isPresented: $picksGroup, titleVisibility: .visible) {
             Button("Tous les groupes") { model.groupSlug = nil }

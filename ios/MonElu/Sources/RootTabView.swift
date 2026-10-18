@@ -23,10 +23,18 @@ struct RootTabView: View {
                             RouteDestination(route: $0, services: services)
                         }
                 }
-                .tabItem { Label(tab.title, systemImage: tab.systemImage) }
+                .tabItem {
+                    // Outlined when selected too, as the design draws them;
+                    // iOS fills a tab's symbol by default.
+                    Label(tab.title, systemImage: tab.systemImage)
+                        .environment(\.symbolVariants, .none)
+                }
                 .tag(tab)
             }
         }
+        // The selected tab, back chevrons, toolbar buttons, toggles and links
+        // take MonÉlu's red rather than the system blue (#516).
+        .tint(Palette.accent)
         // Accueil's invitations switch tabs through this, never the router.
         .environment(\.openTab, OpenTabAction { [router] in router.selection = $0 })
         .onOpenURL { router.open(url: $0) }
@@ -46,12 +54,12 @@ struct RootTabView: View {
         case .home:
             HomeScreen(
                 deputies: services.deputies, votes: services.votes, postalCodes: services.postalCodes,
-                agenda: services.agenda, store: services.followedDeputy
+                feed: services.feed, store: services.followedDeputy, themesStore: services.followedThemes
             )
         case .explore:
             ExploreScreen(
-                deputies: services.deputies, lois: services.lois, groups: services.groups,
-                store: services.followedDeputy
+                deputies: services.deputies, votes: services.votes, lois: services.lois, groups: services.groups,
+                postalCodes: services.postalCodes, store: services.followedDeputy
             )
         case .quiz:
             QuizScreen(service: services.quiz)

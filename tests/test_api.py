@@ -1042,12 +1042,14 @@ def test_list_groups_short_label_comes_from_the_canonical_map(client, mock_curso
 
 def test_get_group(client, mock_cursor):
     mock_cursor.fetchall.side_effect = [_GROUP_MEMBER_ROWS, _GROUP_VOTE_ROWS, _GROUP_RATE_ROWS]
+    mock_cursor.fetchone.return_value = {"seat_rank": 1}
     resp = client.get("/groups/rassemblement-national")
     assert resp.status_code == 200
     data = resp.json()
     assert data["slug"] == "rassemblement-national"
     assert data["name"] == "Rassemblement National"
     assert data["member_count"] == 2
+    assert data["seat_rank"] == 1
     assert data["avg_presence_rate"] == 0.7
     assert data["avg_dissident_rate"] == 0.1
     assert data["most_dissident_members"][0]["deputy_id"] == "PA2"
@@ -1068,6 +1070,7 @@ def test_get_group_unknown_slug(client, mock_cursor):
 
 def test_get_group_normalizes_slug_case(client, mock_cursor):
     mock_cursor.fetchall.side_effect = [_GROUP_MEMBER_ROWS, _GROUP_VOTE_ROWS, _GROUP_RATE_ROWS]
+    mock_cursor.fetchone.return_value = {"seat_rank": 1}
     resp = client.get("/groups/Rassemblement-National")
     assert resp.status_code == 200
     assert resp.json()["slug"] == "rassemblement-national"
@@ -1247,6 +1250,8 @@ _AGENDA_ROWS = [
         "summary_plain": "Les députés débattent du budget de l'État.",
         "theme": "budget",
         "dossier_id": "DLR5L17N1",
+        "dossier_title": "Projet de loi de finances pour 2027",
+        "has_scrutins": True,
         "vote_id": None,
         "result": None,
     },
@@ -1259,6 +1264,8 @@ _AGENDA_ROWS = [
         "summary_plain": "Vote final sur le budget.",
         "theme": "budget",
         "dossier_id": "DLR5L17N1",
+        "dossier_title": "Projet de loi de finances pour 2027",
+        "has_scrutins": True,
         "vote_id": "VTANR5L17V1",
         "result": "adopté",
     },
@@ -1277,8 +1284,29 @@ def test_get_agenda_default_week(client, mock_cursor):
         "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N1"
     )
     assert data["days"][0]["items"][0]["vote_id"] is None
+    assert data["days"][0]["items"][0]["dossier_title"] == "Projet de loi de finances pour 2027"
     assert data["days"][1]["items"][0]["vote_id"] == "VTANR5L17V1"
     assert data["days"][1]["items"][0]["result"] == "adopté"
+
+
+def test_get_agenda_links_the_bill_page_only_when_it_exists(client, mock_cursor, monkeypatch):
+    """`lois_url` follows `dossiers.has_scrutins` (#511); `dossier_url` stays either way."""
+    monkeypatch.setenv("FRONTEND_BASE_URL", "https://monelu.fr")
+    no_page = {**_AGENDA_ROWS[0], "point_uid": "PT-NO-PAGE", "has_scrutins": False}
+    no_dossier = {
+        **_AGENDA_ROWS[0],
+        "point_uid": "PT-NO-DOSSIER",
+        "dossier_id": None,
+        "dossier_title": None,
+        "has_scrutins": None,
+    }
+    mock_cursor.fetchall.return_value = [_AGENDA_ROWS[0], no_page, no_dossier]
+    items = client.get("/agenda").json()["days"][0]["items"]
+    assert items[0]["lois_url"] == "https://monelu.fr/lois/DLR5L17N1"
+    assert items[1]["lois_url"] is None
+    assert items[1]["dossier_url"] == "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N1"
+    assert items[2]["lois_url"] is None
+    assert items[2]["dossier_url"] is None
 
 
 def test_get_agenda_groups_same_day_items(client, mock_cursor):
@@ -1327,3 +1355,24 @@ def test_get_agenda_empty_window_returns_empty_list(client, mock_cursor):
     resp = client.get("/agenda")
     assert resp.status_code == 200
     assert resp.json()["days"] == []
+
+
+def test_get_theme_most_divided_vote_carries_its_result(client, mock_cursor):
+    # #527: the closest scrutin shows its result badge, so the API returns it.
+    mock_cursor.fetchone.side_effect = [
+        {"total": 12, "adopted": 7, "decided": 10},
+        {
+            "vote_id": "VTANR5L17V1",
+            "voted_at": datetime(2026, 7, 21, tzinfo=timezone.utc),
+            "vote_title": "l'amendement n° 12",
+            "votes_for": 140,
+            "votes_against": 141,
+            "result": "rejeté",
+        },
+    ]
+    mock_cursor.fetchall.side_effect = [[], []]
+    resp = client.get("/themes/institutions")
+    assert resp.status_code == 200
+    divided = resp.json()["most_divided_vote"]
+    assert divided["result"] == "rejeté"
+    assert divided["votes_against"] == 141

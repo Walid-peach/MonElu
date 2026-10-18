@@ -122,8 +122,14 @@ struct SettingsContent: View {
         .tint(Palette.accent)
     }
 
+    /// The app's eyebrow style, as on "RÉPARTITION PAR GROUPE" and the votes
+    /// list's day headers (#532).
     private func header(_ text: String) -> some View {
-        Text(text).foregroundStyle(Palette.textSecondary)
+        Text(text)
+            .font(.footnote.weight(.semibold))
+            .textCase(.uppercase)
+            .tracking(0.6)
+            .foregroundStyle(Palette.textSecondary)
     }
 
     private func footer(_ text: String) -> some View {

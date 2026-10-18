@@ -11,8 +11,10 @@ public final class DeputiesListModel {
     public var groupSlug: String?
     /// "Mon département": only the followed deputy's département.
     public var onlyMyDepartment = false
-    /// "En mandat": only current mandates.
-    public var inMandateOnly = false
+    /// "En mandat": only current mandates. On by default (#523): the list
+    /// opens on the sitting Assembly, as Explorer's tile counts it; former
+    /// deputies are one tap away.
+    public var inMandateOnly = true
     /// The followed deputy's département, which the "Mon département" chip
     /// needs; nil while unknown, and the chip is not offered.
     public private(set) var myDepartment: String?

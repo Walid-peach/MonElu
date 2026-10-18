@@ -52,11 +52,12 @@ let testGroups = try! JSONDecoder().decode([ReferenceData.Group].self, from: Dat
 
 @MainActor
 struct DeputiesListModelTests {
-    @Test func firstLoadAsksForEveryone() async {
+    /// The list opens on current mandates (#523).
+    @Test func firstLoadAsksForCurrentMandates() async {
         let service = RecordingDeputiesService(pages: [.success(DeputyPage(items: [deputy("PA1")], total: 1, offset: 0))])
         let model = DeputiesListModel(service: service, groups: testGroups)
         await model.loader.loadIfNeeded()
-        #expect(service.queries == [DeputyQuery()])
+        #expect(service.queries == [DeputyQuery(active: true)])
         #expect(model.loader.state.value?.map(\.id) == ["PA1"])
         #expect(model.needsReload == false)
     }
@@ -69,7 +70,7 @@ struct DeputiesListModelTests {
         #expect(model.needsReload)
         #expect(model.groupName == "Socialistes et apparentés")
         await model.reload()
-        #expect(service.queries == [DeputyQuery(search: "david", group: "Socialistes et apparentés")])
+        #expect(service.queries == [DeputyQuery(search: "david", group: "Socialistes et apparentés", active: true)])
         #expect(model.needsReload == false)
     }
 
@@ -81,13 +82,13 @@ struct DeputiesListModelTests {
         let model = DeputiesListModel(service: service, groups: testGroups, followedDeputyID: "PA1008")
         await model.loadMyDepartment()
         #expect(model.myDepartment == "Gironde")
-        model.inMandateOnly = true
-        await model.reload()
         model.onlyMyDepartment = true
         await model.reload()
+        model.inMandateOnly = false
+        await model.reload()
         #expect(service.queries == [
-            DeputyQuery(active: true),
             DeputyQuery(department: "Gironde", active: true),
+            DeputyQuery(department: "Gironde"),
         ])
     }
 
@@ -290,5 +291,15 @@ struct LiveDeputiesServiceTests {
     @Test func profilePageFailsWithoutTheProfile() async throws {
         let service = LiveDeputiesService(client: operationClient(["getScorecard": try fixture("deputy_scorecard")]))
         await #expect(throws: (any Error).self) { try await service.profilePage(id: "PA1008") }
+    }
+}
+
+/// The president's presence note shows only where the figure it explains
+/// does: a presence of 100 % as the API returns it (#520).
+struct PresidentNoteTests {
+    @Test func onlyAFullPresenceShowsThePresidentNote() {
+        #expect(DeputyScorecardSection.showsPresidentNote(presenceRate: 1))
+        #expect(!DeputyScorecardSection.showsPresidentNote(presenceRate: 0.0628))
+        #expect(!DeputyScorecardSection.showsPresidentNote(presenceRate: 0.998))
     }
 }

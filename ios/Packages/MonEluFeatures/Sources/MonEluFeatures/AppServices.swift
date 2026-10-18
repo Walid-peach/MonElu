@@ -1,3 +1,4 @@
+import Foundation
 import MonEluAPI
 
 /// The services the app's screens use, built once from the generated client.
@@ -16,6 +17,10 @@ public struct AppServices: Sendable {
     public let postalCodes: any PostalCodeService
     /// The followed deputy, on the device only (ADR-040 §6).
     public let followedDeputy: any FollowedDeputyStore
+    /// Accueil's feed (ADR-042).
+    public let feed: any FeedService
+    /// The followed themes, on the device only (ADR-042 §2).
+    public let followedThemes: any FollowedThemesStore
 
     public init(client: Client) {
         votes = LiveVotesService(client: client)
@@ -30,6 +35,8 @@ public struct AppServices: Sendable {
         quiz = LiveQuizService(client: client)
         postalCodes = LivePostalCodeService()
         followedDeputy = UserDefaultsFollowedDeputyStore()
+        feed = LiveFeedService(client: client)
+        followedThemes = UserDefaultsFollowedThemesStore()
     }
 
     public init(
@@ -37,7 +44,9 @@ public struct AppServices: Sendable {
         groups: any GroupsService, themes: any ThemesService,
         departments: any DepartmentsService, compare: any CompareService,
         ask: any AskService, quiz: any QuizService,
-        postalCodes: any PostalCodeService, followedDeputy: any FollowedDeputyStore
+        postalCodes: any PostalCodeService, followedDeputy: any FollowedDeputyStore,
+        feed: any FeedService = UnavailableFeedService(),
+        followedThemes: any FollowedThemesStore = EphemeralFollowedThemesStore()
     ) {
         self.votes = votes
         self.deputies = deputies
@@ -51,5 +60,49 @@ public struct AppServices: Sendable {
         self.quiz = quiz
         self.postalCodes = postalCodes
         self.followedDeputy = followedDeputy
+        self.feed = feed
+        self.followedThemes = followedThemes
     }
+}
+
+/// A `FeedService` that always fails: the default for callers of the
+/// injecting initializer that do not exercise Accueil's feed.
+public struct UnavailableFeedService: FeedService {
+    public init() {}
+
+    public func feed(_ query: FeedQuery) async throws -> FeedPage {
+        throw URLError(.notConnectedToInternet)
+    }
+
+    public func week(deputyID: String?) async throws -> FeedWeek {
+        throw URLError(.notConnectedToInternet)
+    }
+}
+
+/// A `FollowedThemesStore` kept in memory only: the default for callers of
+/// the injecting initializer, so they never write to the device's defaults.
+public final class EphemeralFollowedThemesStore: FollowedThemesStore, @unchecked Sendable {
+    // Every access goes through the lock.
+    private let lock = NSLock()
+    private var slugs: [String] = []
+    private var seen: [String: Date] = [:]
+
+    public init() {}
+
+    public var themeSlugs: [String] { lock.withLock { slugs } }
+
+    public func follow(_ slug: String) {
+        lock.withLock { if !slugs.contains(slug) { slugs.append(slug) } }
+    }
+
+    public func unfollow(_ slug: String) {
+        lock.withLock {
+            slugs.removeAll { $0 == slug }
+            seen[slug] = nil
+        }
+    }
+
+    public func lastSeen(theme slug: String) -> Date? { lock.withLock { seen[slug] } }
+
+    public func setLastSeen(_ date: Date, theme slug: String) { lock.withLock { seen[slug] = date } }
 }

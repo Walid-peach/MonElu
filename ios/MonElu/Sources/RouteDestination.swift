@@ -28,8 +28,8 @@ struct RouteDestination: View {
             CompareScreen(deputyID: deputyID, deputies: services.deputies, compare: services.compare)
         case .dissidentVotes(let deputyID):
             DissidentVotesScreen(deputyID: deputyID, service: services.deputies)
-        case .agenda:
-            AgendaScreen(service: services.agenda)
+        case .agenda(let weekOf):
+            AgendaScreen(service: services.agenda, weekOf: weekOf)
         case .votes:
             VotesListScreen(service: services.votes)
         case .deputies:

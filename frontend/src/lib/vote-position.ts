@@ -4,10 +4,11 @@
 // throughout MON-103's dark-mode sub-issues (MON-155/162/163/165/166).
 // `color` is text: pour/contre use the badge text tokens, which reach 4.5:1
 // on their tint, not --dp-green/--dp-red, which are for bars and seats.
+// Abstention is amber, the hue the hemicycle and split bars use for it (#516).
 export const POS = {
   pour:       { label: 'Pour',       color: 'var(--dp-badge-pos-text)', bg: 'var(--dp-badge-pos-bg)' },
   contre:     { label: 'Contre',     color: 'var(--dp-badge-neg-text)', bg: 'var(--dp-badge-neg-bg)' },
-  abstention: { label: 'Abstention', color: 'var(--dp-text-secondary)', bg: 'var(--dp-track-bg)' },
+  abstention: { label: 'Abstention', color: 'var(--dp-badge-abst-text)', bg: 'var(--dp-badge-abst-bg)' },
   nonVotant:  { label: 'Non votant', color: 'var(--dp-text-muted)',     bg: 'var(--dp-track-bg)' },
 } as const
 

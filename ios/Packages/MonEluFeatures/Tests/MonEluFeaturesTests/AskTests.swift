@@ -287,9 +287,36 @@ struct ChatMarkdownTests {
         ])
     }
 
+    /// The model's narrow spaces (#531): gone inside a date, a plain
+    /// no-break space elsewhere ("12\u{00A0}bis", "semaines\u{00A0}:").
+    @Test func narrowSpacesAreNormalized() {
+        #expect(MarkdownBlock.normalizingSpaces("21\u{202F}/07\u{202F}/2026") == "21/07/2026")
+        #expect(MarkdownBlock.normalizingSpaces("Article 12\u{202F}bis") == "Article 12\u{00A0}bis")
+        #expect(MarkdownBlock.normalizingSpaces("semaines\u{2009}:") == "semaines\u{00A0}:")
+    }
+
+    /// The recorded answer carries narrow spaces in its dates and before ":".
+    @Test func aRecordedAnswerHasNoNarrowSpaceLeft() throws {
+        let answer = try JSONDecoder().decode([String: AnyCodableString].self, from: fixture("search_answer"))
+        let text = try #require(answer["answer"]?.value)
+        #expect(text.contains("\u{202F}"))
+        let rendered = MarkdownBlock.parse(text)
+        let all = rendered.map { "\($0)" }.joined()
+        #expect(!all.contains("\u{202F}") && !all.contains("\u{2009}"))
+        #expect(all.contains("21/07/2026"))
+    }
+
     @Test func plainTextIsOneParagraph() {
         #expect(MarkdownBlock.parse("Je ne dispose pas de cette information.") == [
             .paragraph("Je ne dispose pas de cette information."),
         ])
+    }
+}
+
+/// Decodes only the string values of a JSON object, skipping the rest.
+private struct AnyCodableString: Decodable {
+    let value: String?
+    init(from decoder: any Decoder) throws {
+        value = try? decoder.singleValueContainer().decode(String.self)
     }
 }

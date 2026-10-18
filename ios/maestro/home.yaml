@@ -1,9 +1,11 @@
 # Accueil (#463, #477, #491): before a deputy is chosen it shows the
 # Assembly's latest votes beside the postal-code search; a code finds the
 # département's deputies, a tap selects one and the pinned "Suivre" follows
-# them, the choice is kept on the device, a relaunch opens on their home with
-# the week's agenda and the latest votes, and the invitations lead to the
-# quiz and back.
+# them, the choice is kept on the device, a relaunch opens on the feed
+# (#565, ADR-042) with its follows row and two tabs, and the quiz invitation
+# at the end of the feed leads to the quiz and back. A deputy followed on
+# their profile then reaches Accueil without a relaunch, and unfollowing on
+# Accueil reaches the profile left open on Explorer (#576).
 # Asserts on fixed labels, not on who is listed: rosters change.
 appId: ${APP_ID}
 ---
@@ -40,33 +42,41 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: "Suivre .*"
     timeout: 5000
+- waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}3b-postal-selected
+# Tapped by its label: the button's frame is the red pill alone (#518), so
+# its centre is no longer the Explorer tab under the bar.
 - tapOn: "Suivre .*"
 - extendedWaitUntil:
-    visible: "Ses derniers votes"
+    visible: "Pour vous"
     timeout: 20000
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}4-home-first-visit
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-home-feed
 
-# The choice survives a relaunch, which opens straight on the home.
+# The choice survives a relaunch, which opens straight on the feed.
 - launchApp:
     stopApp: true
 - extendedWaitUntil:
-    visible: "Ses derniers votes"
+    visible: "Pour vous"
     timeout: 20000
 - assertNotVisible: "Trouvez votre député"
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}5-home-relaunch
-- scrollUntilVisible:
-    element: "Cette semaine à l'Assemblée"
-    direction: DOWN
-    centerElement: true
+
+# The other tab asks the API for the week's headline votes.
+- tapOn: "À l'Assemblée"
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}5b-home-week
+- takeScreenshot: ${SCREENSHOT_PREFIX}5b-home-assemblee
+# Both tabs end on the quiz invitation, but « À l'Assemblée » lists every
+# agenda item of the next seven days (ADR-042 §4): in a busy week it runs
+# past the scroll's timeout. « Pour vous » holds one deputy's week.
+# The invitation is the last element, so it can never be centred: asking
+# for it scrolls until the timeout whenever the feed is short.
+- tapOn: "Pour vous"
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element: ".*Et si vous votiez.*"
     direction: DOWN
-    centerElement: true
 - takeScreenshot: ${SCREENSHOT_PREFIX}6-home-invitations
 
 # The quiz invitation switches tabs.
@@ -81,3 +91,47 @@ appId: ${APP_ID}
     visible: "Trouvez votre député"
     timeout: 10000
 - takeScreenshot: ${SCREENSHOT_PREFIX}7-unfollowed
+
+# Follow from a profile: Accueil leaves the picker for the feed while the
+# app stays open (#576).
+- tapOn: "Explorer"
+- tapOn: "Députés, .*"
+- extendedWaitUntil:
+    visible:
+      id: "deputy.row"
+    timeout: 20000
+- tapOn:
+    id: "deputy.row"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "deputy.profile"
+    timeout: 20000
+# The profile's id masks the button's, so it is tapped by its label.
+- tapOn: "Suivre"
+- assertVisible: "Suivi"
+- tapOn: "Accueil"
+- extendedWaitUntil:
+    visible: "Pour vous"
+    timeout: 20000
+- assertNotVisible: "Trouvez votre député"
+# The tabs alone would show over a failed load: the deputy's circle needs
+# their home, and the feed must not be an error.
+- extendedWaitUntil:
+    visible: "Mon député"
+    timeout: 20000
+- waitForAnimationToEnd
+- assertNotVisible: "Chargement impossible"
+- takeScreenshot: ${SCREENSHOT_PREFIX}8-followed-from-profile
+
+# Unfollow on Accueil: the profile still open on Explorer offers "Suivre" again.
+- tapOn: "Options"
+- tapOn: "Ne plus suivre"
+- extendedWaitUntil:
+    visible: "Trouvez votre député"
+    timeout: 10000
+- tapOn: "Explorer"
+- extendedWaitUntil:
+    visible: "Suivre"
+    timeout: 5000
+- assertNotVisible: "Suivi"

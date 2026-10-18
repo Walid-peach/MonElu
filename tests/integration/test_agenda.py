@@ -49,6 +49,7 @@ def _cleanup_agenda(db_conn):
     with db_conn.cursor() as cur:
         cur.execute("DELETE FROM agenda_items WHERE point_uid LIKE 'IT-AGENDA-%'")
         cur.execute("DELETE FROM votes WHERE vote_id LIKE 'VT-AGENDA-%'")
+        cur.execute("DELETE FROM dossiers WHERE dossier_uid LIKE 'DLR-AGENDA-%'")
 
 
 @pytest.mark.integration
@@ -169,3 +170,35 @@ def test_stale_item_excluded(db_conn, _cleanup_agenda):
         )
         rows = _run_query(cur, now.date(), now.date())
         assert all(r["point_uid"] != "IT-AGENDA-STALE" for r in rows)
+
+
+@pytest.mark.integration
+def test_item_carries_its_dossier_title(db_conn, _cleanup_agenda):
+    """The bill's short title comes from `dossiers` (#525); no dossier row, no title."""
+    now = datetime.now(timezone.utc)
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO dossiers (dossier_uid, titre, status, last_seen_at) "
+            "VALUES ('DLR-AGENDA-TITLE', 'Fraudes sociales et fiscales', 'en_cours', %s)",
+            (now,),
+        )
+        for uid, dossier in (
+            ("IT-AGENDA-TITLED", "DLR-AGENDA-TITLE"),
+            ("IT-AGENDA-NOTITLE", "DLR-AGENDA-NONE"),
+        ):
+            cur.execute(
+                _AGENDA_UPSERT,
+                {
+                    "point_uid": uid,
+                    "reunion_uid": f"RU-{uid}",
+                    "sitting_start": now,
+                    "objet": "Discussion générale",
+                    "dossier_id": dossier,
+                    "reunion_etat": "Confirmé",
+                    "point_etat": None,
+                    "last_seen_at": now,
+                },
+            )
+        rows = {r["point_uid"]: r for r in _run_query(cur, now.date(), now.date())}
+        assert rows["IT-AGENDA-TITLED"]["dossier_title"] == "Fraudes sociales et fiscales"
+        assert rows["IT-AGENDA-NOTITLE"]["dossier_title"] is None

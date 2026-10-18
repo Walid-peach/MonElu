@@ -519,6 +519,7 @@ class ThemeMostDividedVote(_Base):
     vote_title: str
     votes_for: int
     votes_against: int
+    result: Optional[str] = Field(None, description="`adopté` or `rejeté`, as recorded (#527)")
 
 
 class ThemeDetail(_Base):
@@ -630,6 +631,11 @@ class GroupDetail(_Base):
     slug: str
     name: str
     member_count: int
+    seat_rank: Optional[int] = Field(
+        default=None,
+        description="The group's place by current seats among the groups (1 = largest); "
+        "None for the non-inscrits (#526).",
+    )
     members: list[GroupMember]
     avg_presence_rate: Optional[float] = Field(
         default=None,
@@ -849,8 +855,16 @@ class AgendaItem(_Base):
     summary_plain: Optional[str] = None
     theme: Optional[str] = None
     dossier_id: Optional[str] = None
+    dossier_title: Optional[str] = Field(
+        default=None,
+        description="The bill's short official title, when the dossier is known (#525)",
+    )
     dossier_url: Optional[str] = Field(
         default=None, description="Official AN dossier page; set whenever dossier_id is known"
+    )
+    lois_url: Optional[str] = Field(
+        default=None,
+        description="The bill's MonÉlu page; null unless the dossier has one (ADR-035, #511)",
     )
     vote_id: Optional[str] = Field(
         default=None, description="Set once a scrutin exists for this item's dossier"
@@ -885,10 +899,12 @@ class AgendaResponse(_Base):
                                 "summary_plain": None,
                                 "theme": None,
                                 "dossier_id": "DLR5L17N52985",
+                                "dossier_title": "Lutte contre les fraudes sociales et fiscales",
                                 "dossier_url": (
                                     "https://www.assemblee-nationale.fr/dyn/17/dossiers/"
                                     "DLR5L17N52985"
                                 ),
+                                "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N52985",
                                 "vote_id": None,
                                 "result": None,
                             }
@@ -1423,4 +1439,213 @@ class AppConfig(_Base):
         default=None,
         description="The public website's origin, without a trailing slash: the base of "
         "every link the app shares (`<site_url>/votes/<vote_id>`)",
+    )
+
+
+# ---------------------------------------------------------------------------
+# The app's Accueil feed (#562, ADR-042)
+# ---------------------------------------------------------------------------
+
+_FEED_SCRUTIN_EXAMPLE = {
+    "vote_id": "VTANR5L17V8433",
+    "voted_at": "2026-07-21T00:00:00Z",
+    "scrutin_kind": "ensemble",
+    "title": (
+        "l'ensemble du projet de loi visant à offrir des réponses immédiates aux "
+        "phénomènes troublant l'ordre public (texte de la commission mixte paritaire)."
+    ),
+    "summary_plain": "Le texte issu de la commission mixte paritaire a été adopté.",
+    "theme": "Justice & Sécurité",
+    "theme_slug": "justice-securite",
+    "result": "adopté",
+    "votes_for": 351,
+    "votes_against": 179,
+    "abstentions": 7,
+    "margin": 172,
+    "closest": False,
+    "deputy_position": "pour",
+    "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+    "dossier_id": "DLR5L17N53980",
+    "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N53980",
+}
+
+
+class FeedScrutin(_Base):
+    """One scrutin card: everything the card shows, nothing left to compute."""
+
+    model_config = ConfigDict(json_schema_extra={"example": _FEED_SCRUTIN_EXAMPLE})
+
+    vote_id: str
+    voted_at: Optional[datetime] = None
+    scrutin_kind: str = Field(
+        description="ensemble | motion | amendement | article | autre (unclassified reads autre)"
+    )
+    title: str = Field(description="The scrutin's official title (`vote_title`)")
+    summary_plain: Optional[str] = None
+    theme: Optional[str] = None
+    theme_slug: Optional[str] = None
+    result: Optional[str] = Field(default=None, description="adopté | rejeté; the scrutin's")
+    votes_for: Optional[int] = None
+    votes_against: Optional[int] = None
+    abstentions: Optional[int] = None
+    margin: Optional[int] = Field(
+        default=None, description="|votes_for - votes_against|; null when a tally is missing"
+    )
+    closest: bool = Field(
+        default=False, description="True on the week's closest scrutin with a known result"
+    )
+    deputy_position: Optional[str] = Field(
+        default=None,
+        description="The followed deputy's position: pour | contre | abstention | nonVotant; "
+        "null without a deputy or without a recorded position",
+    )
+    an_url: str = Field(description="The scrutin's official page on assemblee-nationale.fr")
+    dossier_id: Optional[str] = None
+    lois_url: Optional[str] = Field(
+        default=None, description="The bill's MonÉlu page; null unless the dossier has one"
+    )
+
+
+class FeedRollup(_Base):
+    """The followed deputy's positions of the week that earned no card."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"total": 20, "amendement": 17, "article": 2, "autre": 1, "non_votant": 3}
+        }
+    )
+
+    total: int = Field(description="Votes cast (pour, contre or abstention) with no card")
+    amendement: int
+    article: int
+    autre: int
+    non_votant: int = Field(
+        description="Scrutins where the deputy is recorded nonVotant: present, no vote cast; "
+        "not included in total"
+    )
+
+
+class FeedItem(_Base):
+    """One entry of the feed; exactly one of the three payloads is set, named by `type`."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"type": "scrutin", "scrutin": _FEED_SCRUTIN_EXAMPLE}}
+    )
+
+    type: str = Field(description="scrutin | agenda | rollup")
+    scrutin: Optional[FeedScrutin] = None
+    agenda: Optional[AgendaItem] = None
+    rollup: Optional[FeedRollup] = None
+
+
+class FeedResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "tab": "pour_vous",
+                "deputy_id": "PA720892",
+                "themes": ["justice-securite"],
+                "requested_week_start": "2026-07-20",
+                "week_start": "2026-07-20",
+                "week_end": "2026-07-26",
+                "no_sitting": False,
+                "items": [
+                    {"type": "scrutin", "scrutin": _FEED_SCRUTIN_EXAMPLE},
+                    {
+                        "type": "rollup",
+                        "rollup": {
+                            "total": 20,
+                            "amendement": 17,
+                            "article": 2,
+                            "autre": 1,
+                            "non_votant": 3,
+                        },
+                    },
+                ],
+            }
+        }
+    )
+
+    tab: str = Field(description="pour_vous | assemblee")
+    deputy_id: Optional[str] = None
+    themes: list[str] = Field(description="The followed theme slugs, validated and deduplicated")
+    requested_week_start: date = Field(description="Monday of the week asked for")
+    week_start: date = Field(description="Monday of the week the scrutins come from")
+    week_end: date
+    no_sitting: bool = Field(
+        description="True when the requested week had no scrutin and an earlier week is shown"
+    )
+    items: list[FeedItem]
+
+
+class FeedWeekDeputy(_Base):
+    """One deputy's positions over the week's scrutins."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"cast": 23, "pour": 14, "contre": 3, "abstention": 6, "non_votant": 2}
+        }
+    )
+
+    cast: int = Field(description="pour + contre + abstention: the votes actually cast")
+    pour: int
+    contre: int
+    abstention: int
+    non_votant: int = Field(
+        description="Recorded present but not voting; never part of cast or abstention"
+    )
+
+
+class FeedWeekResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deputy_id": "PA720892",
+                "requested_week_start": "2026-10-12",
+                "week_start": "2026-10-12",
+                "week_end": "2026-10-18",
+                "no_sitting": False,
+                "scrutins": 87,
+                "laws_adopted": 1,
+                "laws_rejected": 0,
+                "motions_adopted": 0,
+                "motions_rejected": 1,
+                "deputy": {
+                    "cast": 23,
+                    "pour": 14,
+                    "contre": 3,
+                    "abstention": 6,
+                    "non_votant": 2,
+                },
+                "next_agenda": {
+                    "point_uid": "PTOD17_123456",
+                    "sitting_start": "2026-10-20T13:00:00Z",
+                    "objet": "Projet de loi de finances pour 2027 (vote solennel)",
+                    "point_type": "Vote solennel",
+                    "dossier_id": "DLR5L17N53001",
+                    "dossier_url": (
+                        "https://www.assemblee-nationale.fr/dyn/17/dossiers/DLR5L17N53001"
+                    ),
+                },
+            }
+        }
+    )
+
+    deputy_id: Optional[str] = None
+    requested_week_start: date = Field(description="Monday of the week asked for")
+    week_start: date = Field(description="Monday of the week counted")
+    week_end: date
+    no_sitting: bool = Field(
+        description="True when the requested week had no scrutin and an earlier week is counted"
+    )
+    scrutins: int = Field(description="Every scrutin of the week, all kinds")
+    laws_adopted: int = Field(description="Whole-text votes (ensemble) adopted")
+    laws_rejected: int = Field(description="Whole-text votes (ensemble) rejected")
+    motions_adopted: int
+    motions_rejected: int
+    deputy: Optional[FeedWeekDeputy] = Field(
+        default=None, description="The followed deputy's positions; null without deputy_id"
+    )
+    next_agenda: Optional[AgendaItem] = Field(
+        default=None, description="The next séance publique item within seven days"
     )

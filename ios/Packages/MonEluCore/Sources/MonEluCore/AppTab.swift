@@ -21,14 +21,16 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// SF Symbol name for the tab bar. The quiz is a stack of cards rather
-    /// than a question mark, which reads as Help.
+    /// SF Symbol name for the tab bar, drawn outlined in both states (#516):
+    /// a compass to browse rather than a magnifying glass, which promises a
+    /// search field, and a checklist for the quiz rather than a question
+    /// mark, which reads as Help.
     public var systemImage: String {
         switch self {
         case .home: "house"
-        case .explore: "magnifyingglass"
-        case .quiz: "rectangle.stack"
-        case .ask: "bubble.left.and.text.bubble.right"
+        case .explore: "safari"
+        case .quiz: "checklist"
+        case .ask: "bubble.left"
         }
     }
 }

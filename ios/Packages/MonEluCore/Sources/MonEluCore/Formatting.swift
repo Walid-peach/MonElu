@@ -36,6 +36,17 @@ public enum MonEluFormat {
         return date.formatted(style)
     }
 
+    /// "21 juil.": a scrutin's date in a list row (#516), with the year only
+    /// when it is not the year of `today` ("21 juil. 2025"), both in Paris.
+    public static func listDay(_ date: Date, today: Date) -> String {
+        var style = Date.FormatStyle(locale: french).day().month(.abbreviated)
+        if parisCalendar.component(.year, from: date) != parisCalendar.component(.year, from: today) {
+            style = style.year()
+        }
+        style.timeZone = paris
+        return date.formatted(style)
+    }
+
     /// "lundi 5 octobre à 16 h": when a séance starts, in Paris time. Minutes
     /// show only when they are not zero ("16 h 30").
     public static func sitting(_ date: Date) -> String {

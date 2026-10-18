@@ -88,6 +88,8 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | GET | `/groups/{slug}` | 30 | Parliamentary group page data - members, dissidence, divided votes (ADR-026) |
 | GET | `/themes/{slug}` | 30 | Theme hub - per-theme stats, party positioning, vote list (MON-106) |
 | GET | `/agenda` | 30 | Upcoming séance publique items grouped by day, `from`/`to` window (MON-212, ADR-030) |
+| GET | `/feed` | 30 | The iPhone app's Accueil feed: cards for a followed `deputy_id` and `theme`s, `tab` `pour_vous` or `assemblee`, one ISO week (#562, ADR-042) |
+| GET | `/feed/week` | 30 | The recap behind the app's « Votre semaine » card: the week's scrutin counts and the followed deputy's positions, `nonVotant` kept apart (#563, ADR-042) |
 
 ### CSV exports (MON-97)
 

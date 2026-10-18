@@ -76,6 +76,8 @@ The work is tracked under epic #429, one phase epic at a time.
   `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
 - What the app keeps about its user stays on the device (ADR-040 §6): the followed deputy and how far they have read live in `UserDefaults` behind `FollowedDeputyStore`.
+  The store is `Observable` and is the only copy: a screen reads `deputyID` from it rather than keeping its own, or a follow made on another screen never reaches it (#576).
+  Accueil reconciles in `onAppear`, not `onChange`: it stays alive behind the other tabs, and a load started there is cancelled, which `Loader` keeps as a failure that never retries.
   The appearance chosen in Réglages is the one other preference there (`AppearancePreference`, `@AppStorage`), applied by `LaunchGate` as the windows' `overrideUserInterfaceStyle`.
   The postal code is never stored, and goes only to geo.api.gouv.fr through an ephemeral session (`LivePostalCodeService`), never the shared one whose cache writes URLs to disk.
 - `verify`, `shareAnswer`, `submitChatFeedback` and `shareResult` each store a row in production (a verdict, a public share snapshot, feedback).
@@ -88,13 +90,18 @@ The work is tracked under epic #429, one phase epic at a time.
 ## Design
 
 - Colors come only from `Palette` (`MonEluUI`), whose tokens are color sets in `Colors.xcassets` with a light and a dark value each, mirroring the website's `--dp-*` variables in `frontend/src/app/globals.css`.
-  Never write a literal or system color (`.red`, `Color(red:…)`, `UIColor(…)`): `tests/unit/test_ios_design_tokens.py` fails on one, on a token missing its dark value, and on a token that drifts from the web palette.
+  Never write a literal or system color (`.red`, `Color(red:…)`, `UIColor(…)`; `Palette.uiColor` is the one way to hand a token to UIKit): `tests/unit/test_ios_design_tokens.py` fails on one, on a token missing its dark value, and on a token that drifts from the web palette.
   A new token means a new color set and a row in that test's `WEB_SOURCES`.
   `textSecondary` and `textMuted` are deliberately darker than the website's, so every body text token reaches 4.5:1 on the page, card and track backgrounds in both themes (#480); the same test computes those ratios from the catalog, so a new text token or surface goes into its `TEXT_ON_BACKGROUNDS`.
   Text on `positiveBackground`/`negativeBackground` (badges, pills) uses `positiveText`/`negativeText`, never `positive`/`negative`, which are the fills for bars and hemicycle seats and miss 4.5:1 as badge text in light mode.
-  Group chips take their colors from `Palette.party(_:)`, keyed by the API's `party_short` and mirroring `partyColor()` in `frontend/src/lib/utils.ts`.
-- Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
+  Group chips (`Palette.party(_:)`) and fills (`Palette.partyFill(_:)`) are keyed by the API's `party_short` and both derive from the group's brand color, the website's `--party-*` (MON-197), so a chip and its bar segment always share a hue (#550); the token test recomputes the chips from `globals.css`.
+- Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type), and an italic word in one `Typography.headingItalic(_:)` (the bundled italic face; `.italic()` on the roman face only slants it); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
 - Text that can grow with Dynamic Type must wrap, not truncate.
+- A Newsreader title that can run over several lines (a scrutin, a bill, a group) takes `.headingLineSpacing()`, so its lines do not touch (#519).
+- Navigation titles are styled once at launch by `NavigationBarStyle.apply()` (Newsreader large titles, `textPrimary`), and the tab bar and every control take `Palette.accent` through `.tint` on `RootTabView`; never restyle a bar per screen or replace the system bar (#516).
+- Cards are 12 pt radius (`Card`); a screen built on `List(.insetGrouped)` (Votes, Députés, Départements, Réglages) keeps the system's own corner radius rather than imitating 12 (#516).
+  The system list brings sections, swipe actions, VoiceOver rotors and cell reuse for hundreds of rows, and its radius follows the platform as iOS changes it; a hand-built `LazyVStack` in a `Card` would give those up for a few points of radius.
+- A scrutin's date in a list row is `MonEluFormat.listDay` ("21 juil.", the year only when it is not the current one), relative to `@Environment(\.today)`, which snapshot tests pin; a page's own header keeps the long date.
 - Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
   A new component gets the same four snapshots.
   A missing reference is recorded and the test fails once: look at the new image, commit it, re-run.
@@ -161,7 +168,16 @@ make ios-run        # build, install and launch in the Simulator
 make ios-flow FLOW=tabs  # run ios/maestro/tabs.yaml in light and dark; screenshots in ios/build/screenshots/tabs/
 IOS_APPEARANCES=light make ios-flow FLOW=tabs  # light only
 make ios-smoke      # every flow in SMOKE_FLOWS (scripts/ios.sh), in one Maestro launch per appearance
+make ios-device     # sign, build, install and launch on the plugged-in iPhone
 ```
+
+### On a real iPhone
+
+`make ios-device` installs the Debug app on the iPhone plugged into the Mac, with the Apple ID signed into Xcode (Settings > Accounts); a free Apple ID is enough, and its installs expire after 7 days.
+The phone needs Developer Mode on (Settings > Privacy & Security), and the first launch needs the developer certificate trusted (Settings > General > VPN & Device Management).
+The first run writes `Configs/Local.xcconfig`, git-ignored and included by `App.xcconfig`, with the team and a bundle id of its own (`fr.monelu.app.dev.<team>`), since a free team cannot sign an id another account registered; delete it to pick another team.
+The app calls the production API, as TestFlight builds may (rule 6).
+The `ios-device` skill (`.claude/skills/ios-device/`, mirrored in `.agents/skills/`) walks an agent through it: it checks that the build keeps the installed app's bundle id, so the update keeps its data.
 
 To look at a change, use the `ios-run` skill (`.claude/skills/ios-run/`, mirrored in `.agents/skills/`): it runs a Maestro flow and saves light and dark screenshots.
 A PR that changes a screen embeds the screenshots that show the change, published with `scripts/pr-screenshots.sh <pr-number> <image>...` (the Screenshots section of the `pr-create` skill), and names the flow it ran; CI also uploads the smoke flow's screenshots as the `smoke-screenshots` artifact on every run.
