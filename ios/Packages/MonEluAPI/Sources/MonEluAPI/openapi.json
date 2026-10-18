@@ -1755,8 +1755,8 @@
         "tags": [
           "Feed"
         ],
-        "summary": "The app's Accueil feed for a followed deputy and themes",
-        "description": "Ready-to-show cards for the iPhone app's Accueil, one ISO week at a time.\n\nFollows are not stored anywhere: pass the followed deputy as `deputy_id` and\neach followed theme as a repeated `theme` slug. An unknown deputy is a 404\nand an unknown theme slug a 422, never an empty feed.\n\n`items` is already in screen order: `scrutin` cards newest first, then the\nnext seven days of séance publique `agenda`, then one `rollup`. Each item\ncarries exactly one of `scrutin`, `agenda` or `rollup`, named by `type`.\n\n**Which scrutins get a card** (ADR-042 §3): whole-text votes (`ensemble`)\nand motions always; an amendment, article or other vote only when pour and\ncontre were within 20 votes of each other. In `pour_vous` the followed\ndeputy's remaining votes of the week are counted in the `rollup` instead, with\n`nonVotant` positions counted apart in `non_votant` and left out of `total`.\n\n- `pour_vous`: the deputy's carded votes, with `deputy_position`, plus\n  whole-text votes and motions in the followed themes, each scrutin once;\n  agenda items in the followed themes. Nothing followed means no items.\n- `assemblee`: the week's whole-text votes and motions, plus the closest\n  scrutin of the week (`closest: true`), and every agenda item.\n\n`deputy_position` is `pour`, `contre`, `abstention` or `nonVotant`, null when\nthe deputy has no recorded position. `abstention` was cast deliberately and\n`nonVotant` was not cast at all - do not merge them. `result` is the\nscrutin's outcome, not the deputy's choice, and for a `motion` an `adopté`\nresult means the motion passed (a motion de rejet adopted rejects the text).\n\nWeeks run Monday to Sunday, Paris time. When the requested week has no\nscrutin (recess), `no_sitting` is true and the scrutins come from the most\nrecent earlier week that had one, whose bounds are in `week_start` and\n`week_end`; `requested_week_start` keeps the week asked for. Production data\nstarts on 2025-07-01.",
+        "summary": "The app's Accueil feed for followed deputies and themes",
+        "description": "Ready-to-show cards for the iPhone app's Accueil, one ISO week at a time.\n\nFollows are not stored anywhere: pass each followed deputy as a repeated\n`deputies` id and each followed theme as a repeated `theme` slug. The older\nsingle `deputy_id` is still accepted and merged first; `deputy_ids` echoes\nthe merged set, deduplicated, in that order. More than 10 deputies is a 422.\nAn unknown deputy anywhere in the set is a 404 and an unknown theme slug a\n422, never a shorter or empty feed.\n\n`items` is already in screen order: `scrutin` cards newest first, then the\nnext seven days of séance publique `agenda`, then one `rollup` per followed\ndeputy who has one, in the followed order. Each item\ncarries exactly one of `scrutin`, `agenda` or `rollup`, named by `type`.\n\n**Which scrutins get a card** (ADR-042 §3): whole-text votes (`ensemble`)\nand motions always; an amendment, article or other vote only when pour and\ncontre were within 20 votes of each other. In `pour_vous` each followed\ndeputy's remaining votes of the week are counted in that deputy's `rollup`\ninstead, with `nonVotant` positions counted apart in `non_votant` and left\nout of `total`.\n\n- `pour_vous`: every carded scrutin at least one followed deputy voted on,\n  plus whole-text votes and motions in the followed themes, each scrutin\n  once; agenda items in the followed themes. Nothing followed means no items.\n- `assemblee`: the week's whole-text votes and motions, plus the closest\n  scrutin of the week (`closest: true`), and every agenda item.\n\n`positions` lists `{deputy_id, position}` for each followed deputy with a\nrecorded position on the scrutin, in the followed order; `deputy_position`\nis the first followed deputy's, null when that deputy has none. A position\nis `pour`, `contre`, `abstention` or `nonVotant`. `abstention` was cast deliberately and\n`nonVotant` was not cast at all - do not merge them. `result` is the\nscrutin's outcome, not the deputy's choice, and for a `motion` an `adopté`\nresult means the motion passed (a motion de rejet adopted rejects the text).\n\nWeeks run Monday to Sunday, Paris time. When the requested week has no\nscrutin (recess), `no_sitting` is true and the scrutins come from the most\nrecent earlier week that had one, whose bounds are in `week_start` and\n`week_end`; `requested_week_start` keeps the week asked for. Production data\nstarts on 2025-07-01.",
         "operationId": "getFeed",
         "parameters": [
           {
@@ -1780,11 +1780,25 @@
             "in": "query",
             "required": false,
             "schema": {
-              "description": "The followed deputy, if any",
+              "description": "A followed deputy; older builds send their one deputy here",
               "title": "Deputy Id",
               "type": "string"
             },
-            "description": "The followed deputy, if any"
+            "description": "A followed deputy; older builds send their one deputy here"
+          },
+          {
+            "name": "deputies",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Followed deputy ids (repeat the parameter), merged after `deputy_id`; at most 10",
+              "title": "Deputies",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Followed deputy ids (repeat the parameter), merged after `deputy_id`; at most 10"
           },
           {
             "name": "theme",
@@ -1843,7 +1857,7 @@
           "Feed"
         ],
         "summary": "The weekly recap behind the app's « Votre semaine à l'Assemblée » card",
-        "description": "One ISO week at the Assemblée in counts, for the Accueil recap card.\n\nCounted from the week's scrutins, with no language model involved:\n`scrutins` is every scrutin of the week, `laws_adopted`/`laws_rejected` count\nwhole-text votes (`ensemble`) by result, and `motions_adopted`/\n`motions_rejected` count motions by result (a motion de rejet *rejected*\nmeans the text goes on to debate).\n\nWith `deputy_id`, `deputy` gives that deputy's positions on the week's\nscrutins: `cast` is `pour` + `contre` + `abstention`, the votes actually\ncast. `non_votant` counts scrutins where the deputy is recorded present but\nnot voting and is never part of `cast` or `abstention` - the two are\ndifferent things. Scrutins with no recorded position (absent) are in\nneither. Without `deputy_id`, `deputy` is null. An unknown deputy is a 404.\n\n`next_agenda` is the next séance publique item within seven days, null when\nnone is scheduled. Weeks run Monday to Sunday, Paris time; a week with no\nscrutin sets `no_sitting` and reports the last week that sat, exactly as\n`GET /feed` does, so the card and the feed always describe the same week.",
+        "description": "One ISO week at the Assemblée in counts, for the Accueil recap card.\n\nCounted from the week's scrutins, with no language model involved:\n`scrutins` is every scrutin of the week, `laws_adopted`/`laws_rejected` count\nwhole-text votes (`ensemble`) by result, and `motions_adopted`/\n`motions_rejected` count motions by result (a motion de rejet *rejected*\nmeans the text goes on to debate).\n\nFollowed deputies arrive as a repeated `deputies` id, with the older single\n`deputy_id` merged first, exactly as on `GET /feed` (at most 10; an unknown\none is a 404). `deputies` gives one entry per followed deputy, in that order,\nwith their positions on the week's scrutins; positions are never summed\nacross deputies. `deputy` repeats the first entry without its id, null when\nnothing is followed. `cast` is `pour` + `contre` + `abstention`, the votes\nactually cast. `non_votant` counts scrutins where the deputy is recorded\npresent but not voting and is never part of `cast` or `abstention` - the two\nare different things. Scrutins with no recorded position (absent) are in\nneither.\n\n`next_agenda` is the next séance publique item within seven days, null when\nnone is scheduled. Weeks run Monday to Sunday, Paris time; a week with no\nscrutin sets `no_sitting` and reports the last week that sat, exactly as\n`GET /feed` does, so the card and the feed always describe the same week.",
         "operationId": "getFeedWeek",
         "parameters": [
           {
@@ -1851,11 +1865,25 @@
             "in": "query",
             "required": false,
             "schema": {
-              "description": "The followed deputy, if any",
+              "description": "A followed deputy; older builds send their one deputy here",
               "title": "Deputy Id",
               "type": "string"
             },
-            "description": "The followed deputy, if any"
+            "description": "A followed deputy; older builds send their one deputy here"
+          },
+          {
+            "name": "deputies",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Followed deputy ids (repeat the parameter), merged after `deputy_id`; at most 10",
+              "title": "Deputies",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Followed deputy ids (repeat the parameter), merged after `deputy_id`; at most 10"
           },
           {
             "name": "week",
@@ -4311,6 +4339,16 @@
             "dossier_id": "DLR5L17N53980",
             "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N53980",
             "margin": 172,
+            "positions": [
+              {
+                "deputy_id": "PA720892",
+                "position": "pour"
+              },
+              {
+                "deputy_id": "PA793218",
+                "position": "contre"
+              }
+            ],
             "result": "adopté",
             "scrutin_kind": "ensemble",
             "summary_plain": "Le texte issu de la commission mixte paritaire a été adopté.",
@@ -4325,6 +4363,30 @@
           "type": "scrutin"
         }
       },
+      "FeedPosition": {
+        "properties": {
+          "deputy_id": {
+            "type": "string",
+            "title": "Deputy Id"
+          },
+          "position": {
+            "type": "string",
+            "title": "Position",
+            "description": "pour | contre | abstention | nonVotant"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deputy_id",
+          "position"
+        ],
+        "title": "FeedPosition",
+        "description": "One followed deputy's position on a scrutin (ADR-042 amendment, #582).",
+        "example": {
+          "deputy_id": "PA720892",
+          "position": "pour"
+        }
+      },
       "FeedResponse": {
         "properties": {
           "tab": {
@@ -4334,7 +4396,16 @@
           },
           "deputy_id": {
             "title": "Deputy Id",
+            "description": "The first followed deputy; null when none is followed",
             "type": "string"
+          },
+          "deputy_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deputy Ids",
+            "description": "Every followed deputy: `deputy_id` then `deputies`, deduplicated"
           },
           "themes": {
             "items": {
@@ -4387,6 +4458,10 @@
         "title": "FeedResponse",
         "example": {
           "deputy_id": "PA720892",
+          "deputy_ids": [
+            "PA720892",
+            "PA793218"
+          ],
           "items": [
             {
               "scrutin": {
@@ -4397,6 +4472,16 @@
                 "dossier_id": "DLR5L17N53980",
                 "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N53980",
                 "margin": 172,
+                "positions": [
+                  {
+                    "deputy_id": "PA720892",
+                    "position": "pour"
+                  },
+                  {
+                    "deputy_id": "PA793218",
+                    "position": "contre"
+                  }
+                ],
                 "result": "adopté",
                 "scrutin_kind": "ensemble",
                 "summary_plain": "Le texte issu de la commission mixte paritaire a été adopté.",
@@ -4415,6 +4500,7 @@
                 "amendement": 17,
                 "article": 2,
                 "autre": 1,
+                "deputy_id": "PA720892",
                 "non_votant": 3,
                 "total": 20
               },
@@ -4433,6 +4519,11 @@
       },
       "FeedRollup": {
         "properties": {
+          "deputy_id": {
+            "title": "Deputy Id",
+            "description": "The followed deputy these votes belong to",
+            "type": "string"
+          },
           "total": {
             "type": "integer",
             "title": "Total",
@@ -4470,6 +4561,7 @@
           "amendement": 17,
           "article": 2,
           "autre": 1,
+          "deputy_id": "PA720892",
           "non_votant": 3,
           "total": 20
         }
@@ -4537,8 +4629,16 @@
           },
           "deputy_position": {
             "title": "Deputy Position",
-            "description": "The followed deputy's position: pour | contre | abstention | nonVotant; null without a deputy or without a recorded position",
+            "description": "The first followed deputy's position: pour | contre | abstention | nonVotant; null without a deputy or without a recorded position",
             "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/FeedPosition"
+            },
+            "type": "array",
+            "title": "Positions",
+            "description": "Each followed deputy with a recorded position on this scrutin, in the followed order; empty when none"
           },
           "an_url": {
             "type": "string",
@@ -4572,6 +4672,16 @@
           "dossier_id": "DLR5L17N53980",
           "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N53980",
           "margin": 172,
+          "positions": [
+            {
+              "deputy_id": "PA720892",
+              "position": "pour"
+            },
+            {
+              "deputy_id": "PA793218",
+              "position": "contre"
+            }
+          ],
           "result": "adopté",
           "scrutin_kind": "ensemble",
           "summary_plain": "Le texte issu de la commission mixte paritaire a été adopté.",
@@ -4627,11 +4737,69 @@
           "pour": 14
         }
       },
+      "FeedWeekDeputyEntry": {
+        "properties": {
+          "deputy_id": {
+            "type": "string",
+            "title": "Deputy Id"
+          },
+          "cast": {
+            "type": "integer",
+            "title": "Cast",
+            "description": "pour + contre + abstention: the votes actually cast"
+          },
+          "pour": {
+            "type": "integer",
+            "title": "Pour"
+          },
+          "contre": {
+            "type": "integer",
+            "title": "Contre"
+          },
+          "abstention": {
+            "type": "integer",
+            "title": "Abstention"
+          },
+          "non_votant": {
+            "type": "integer",
+            "title": "Non Votant",
+            "description": "Recorded present but not voting; never part of cast or abstention"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deputy_id",
+          "cast",
+          "pour",
+          "contre",
+          "abstention",
+          "non_votant"
+        ],
+        "title": "FeedWeekDeputyEntry",
+        "description": "One followed deputy's positions over the week, named (ADR-042 amendment §5).",
+        "example": {
+          "abstention": 6,
+          "cast": 23,
+          "contre": 3,
+          "deputy_id": "PA720892",
+          "non_votant": 2,
+          "pour": 14
+        }
+      },
       "FeedWeekResponse": {
         "properties": {
           "deputy_id": {
             "title": "Deputy Id",
+            "description": "The first followed deputy; null when none is followed",
             "type": "string"
+          },
+          "deputy_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deputy Ids",
+            "description": "Every followed deputy: `deputy_id` then `deputies`, deduplicated"
           },
           "requested_week_start": {
             "type": "string",
@@ -4679,8 +4847,16 @@
             "title": "Motions Rejected"
           },
           "deputy": {
-            "description": "The followed deputy's positions; null without deputy_id",
+            "description": "The first followed deputy's positions; null when none is followed",
             "$ref": "#/components/schemas/FeedWeekDeputy"
+          },
+          "deputies": {
+            "items": {
+              "$ref": "#/components/schemas/FeedWeekDeputyEntry"
+            },
+            "type": "array",
+            "title": "Deputies",
+            "description": "One entry per followed deputy, in the followed order; never summed"
           },
           "next_agenda": {
             "description": "The next séance publique item within seven days",
@@ -4701,6 +4877,16 @@
         ],
         "title": "FeedWeekResponse",
         "example": {
+          "deputies": [
+            {
+              "abstention": 6,
+              "cast": 23,
+              "contre": 3,
+              "deputy_id": "PA720892",
+              "non_votant": 2,
+              "pour": 14
+            }
+          ],
           "deputy": {
             "abstention": 6,
             "cast": 23,
@@ -4709,6 +4895,9 @@
             "pour": 14
           },
           "deputy_id": "PA720892",
+          "deputy_ids": [
+            "PA720892"
+          ],
           "laws_adopted": 1,
           "laws_rejected": 0,
           "motions_adopted": 0,
