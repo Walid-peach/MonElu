@@ -74,7 +74,7 @@ public struct UnavailableFeedService: FeedService {
         throw URLError(.notConnectedToInternet)
     }
 
-    public func week(deputyID: String?) async throws -> FeedWeek {
+    public func week(deputyIDs: [String]) async throws -> FeedWeek {
         throw URLError(.notConnectedToInternet)
     }
 }

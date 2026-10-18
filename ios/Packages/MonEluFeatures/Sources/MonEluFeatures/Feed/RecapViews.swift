@@ -6,11 +6,50 @@ import SwiftUI
 // when a deputy is followed, the way to find one when none is, and a note
 // when the week shown is not the current one.
 
-/// « Votre semaine à l'Assemblée »: the followed deputy's positions and the
+/// The recap cards, one per followed deputy (ADR-042 amendment §5): one card
+/// alone, or a horizontal pager when several deputies are followed. The
+/// deputies' positions are never added up.
+struct FeedRecapPager: View {
+    let week: FeedWeek
+    var names = FollowedDeputyNames()
+    var onOpen: () -> Void = {}
+
+    var body: some View {
+        if week.deputies.count == 1, let deputy = week.deputies.first {
+            FeedRecapCard(week: week, deputy: deputy, name: names.name(of: deputy.deputyID), onOpen: onOpen)
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                // At most ten cards, so a plain stack; fixed to its tallest
+                // card's height so every card fills it.
+                HStack(alignment: .top, spacing: 10) {
+                    ForEach(week.deputies, id: \.deputyID) { deputy in
+                        FeedRecapCard(
+                            week: week, deputy: deputy, name: names.name(of: deputy.deputyID),
+                            fillsHeight: true, onOpen: onOpen
+                        )
+                        // The next card peeks in, so the row reads as more than one.
+                        .containerRelativeFrame(.horizontal) { width, _ in width - 28 }
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.viewAligned)
+            .accessibilityIdentifier("feed.recaps")
+        }
+    }
+}
+
+/// « Votre semaine à l'Assemblée »: one followed deputy's positions and the
 /// week's laws and motions, all counted by the API (`GET /feed/week`). A tap
 /// shows the week's headline votes (the « À l'Assemblée » tab).
 struct FeedRecapCard: View {
     let week: FeedWeek
+    let deputy: FeedWeekDeputy
+    /// The deputy's name when several are followed; nil says « votre député ».
+    var name: String?
+    /// In the pager: as tall as the tallest card beside it.
+    var fillsHeight = false
     var onOpen: () -> Void = {}
 
     var body: some View {
@@ -20,25 +59,23 @@ struct FeedRecapCard: View {
                     HStack(alignment: .firstTextBaseline) { eyebrow; Spacer(minLength: 8); span }
                     VStack(alignment: .leading, spacing: 2) { eyebrow; span }
                 }
-                if let deputy = week.deputy {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(MonEluFormat.count(deputy.cast))
-                            .font(Typography.heading(.largeTitle))
-                        Text(deputy.cast == 1 ? "vote de votre député" : "votes de votre député")
-                            .font(.subheadline)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if deputy.cast + deputy.nonVotant > 0 {
-                        VoteSplitBar(
-                            pour: deputy.pour, contre: deputy.contre, abstention: deputy.abstention,
-                            nonVotant: deputy.nonVotant
-                        )
-                    }
-                    Text(Self.positions(deputy))
-                        .font(.footnote)
-                        .opacity(0.9)
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(MonEluFormat.count(deputy.cast))
+                        .font(Typography.heading(.largeTitle))
+                    Text(Self.castLabel(deputy.cast, name: name))
+                        .font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                if deputy.cast + deputy.nonVotant > 0 {
+                    VoteSplitBar(
+                        pour: deputy.pour, contre: deputy.contre, abstention: deputy.abstention,
+                        nonVotant: deputy.nonVotant
+                    )
+                }
+                Text(Self.positions(deputy))
+                    .font(.footnote)
+                    .opacity(0.9)
+                    .fixedSize(horizontal: false, vertical: true)
                 Divider().overlay(Palette.onIdentity.opacity(0.25))
                 HStack {
                     Text(Self.outcomes(week))
@@ -53,7 +90,7 @@ struct FeedRecapCard: View {
             .foregroundStyle(Palette.onIdentity)
             .multilineTextAlignment(.leading)
             .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
             .background(Palette.identityBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -72,6 +109,11 @@ struct FeedRecapCard: View {
         Text(MonEluFormat.span(from: week.weekStart, to: week.weekEnd))
             .font(.footnote)
             .opacity(0.85)
+    }
+
+    /// "votes de votre député", or of the named deputy when several are followed.
+    nonisolated static func castLabel(_ cast: Int, name: String?) -> String {
+        "\(cast == 1 ? "vote" : "votes") de \(name ?? "votre député")"
     }
 
     /// "14 pour · 3 contre · 6 abstentions", in the bar's order, then the

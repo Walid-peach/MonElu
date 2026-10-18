@@ -19,23 +19,37 @@ public enum FeedTab: String, CaseIterable, Hashable, Sendable {
 /// What the feed is asked for: one tab, and the follows that narrow it.
 public struct FeedQuery: Hashable, Sendable {
     public var tab: FeedTab
-    public var deputyID: String?
+    /// The followed deputies, in the order they were followed (ADR-042
+    /// amendment, #582), sent as the repeated `deputies` parameter.
+    public var deputyIDs: [String]
     public var themes: [String]
 
-    public init(tab: FeedTab, deputyID: String?, themes: [String]) {
+    public init(tab: FeedTab, deputyIDs: [String], themes: [String]) {
         self.tab = tab
-        self.deputyID = deputyID
+        self.deputyIDs = deputyIDs
         self.themes = themes
     }
 
     /// The query for `filter`: a tap on one circle asks the API for that
     /// follow alone, so the app never filters the feed itself (ADR-042 §1).
-    static func pourVous(deputyID: String?, themes: [String], filter: FeedFilter) -> FeedQuery {
+    static func pourVous(deputyIDs: [String], themes: [String], filter: FeedFilter) -> FeedQuery {
         switch filter {
-        case .all: FeedQuery(tab: .pourVous, deputyID: deputyID, themes: themes)
-        case .deputy: FeedQuery(tab: .pourVous, deputyID: deputyID, themes: [])
-        case .theme(let slug): FeedQuery(tab: .pourVous, deputyID: nil, themes: [slug])
+        case .all: FeedQuery(tab: .pourVous, deputyIDs: deputyIDs, themes: themes)
+        case .deputy(let id): FeedQuery(tab: .pourVous, deputyIDs: [id], themes: [])
+        case .theme(let slug): FeedQuery(tab: .pourVous, deputyIDs: [], themes: [slug])
         }
+    }
+}
+
+/// One followed deputy's position on a scrutin, as the API returned it.
+public struct FeedDeputyPosition: Hashable, Sendable {
+    public let deputyID: String
+    /// `pour`, `contre`, `abstention` or `nonVotant`.
+    public let position: String
+
+    public init(deputyID: String, position: String) {
+        self.deputyID = deputyID
+        self.position = position
     }
 }
 
@@ -54,8 +68,8 @@ public struct FeedScrutinCard: Hashable, Sendable, Identifiable {
     public let abstentions: Int?
     /// The week's closest scrutin with a known result.
     public let isClosest: Bool
-    /// The followed deputy's position: `pour`, `contre`, `abstention` or `nonVotant`.
-    public let deputyPosition: String?
+    /// Each followed deputy with a recorded position, in the followed order.
+    public let positions: [FeedDeputyPosition]
     /// The scrutin's official page on assemblee-nationale.fr.
     public let officialURL: URL?
     /// The bill's id when it has a MonÉlu page.
@@ -63,7 +77,7 @@ public struct FeedScrutinCard: Hashable, Sendable, Identifiable {
 
     public init(
         id: String, date: Date?, kind: String, title: String, summary: String?, theme: String?, result: String?,
-        votesFor: Int?, votesAgainst: Int?, abstentions: Int?, isClosest: Bool, deputyPosition: String?,
+        votesFor: Int?, votesAgainst: Int?, abstentions: Int?, isClosest: Bool, positions: [FeedDeputyPosition],
         officialURL: URL?, loiID: String?
     ) {
         self.id = id
@@ -77,14 +91,16 @@ public struct FeedScrutinCard: Hashable, Sendable, Identifiable {
         self.votesAgainst = votesAgainst
         self.abstentions = abstentions
         self.isClosest = isClosest
-        self.deputyPosition = deputyPosition
+        self.positions = positions
         self.officialURL = officialURL
         self.loiID = loiID
     }
 }
 
-/// The followed deputy's other positions of the week, as the API counted them.
+/// One followed deputy's other positions of the week, as the API counted them.
 public struct FeedRollup: Hashable, Sendable {
+    /// The deputy these votes belong to; one roll-up per followed deputy.
+    public let deputyID: String?
     /// Votes cast (pour, contre, abstention) that earned no card.
     public let total: Int
     public let amendements: Int
@@ -93,7 +109,8 @@ public struct FeedRollup: Hashable, Sendable {
     /// Present but not voting; never part of `total`.
     public let nonVotant: Int
 
-    public init(total: Int, amendements: Int, articles: Int, autres: Int, nonVotant: Int) {
+    public init(deputyID: String?, total: Int, amendements: Int, articles: Int, autres: Int, nonVotant: Int) {
+        self.deputyID = deputyID
         self.total = total
         self.amendements = amendements
         self.articles = articles
@@ -112,7 +129,7 @@ public enum FeedEntry: Hashable, Sendable, Identifiable {
         switch self {
         case .scrutin(let card): "scrutin:\(card.id)"
         case .agenda(let entry): "agenda:\(entry.id)"
-        case .rollup: "rollup"
+        case .rollup(let rollup): "rollup:\(rollup.deputyID ?? "")"
         }
     }
 }
@@ -134,8 +151,9 @@ public struct FeedPage: Hashable, Sendable {
     }
 }
 
-/// The followed deputy's positions over the week, as the API counted them.
+/// One followed deputy's positions over the week, as the API counted them.
 public struct FeedWeekDeputy: Hashable, Sendable {
+    public let deputyID: String
     /// pour + contre + abstention: the votes actually cast.
     public let cast: Int
     public let pour: Int
@@ -144,7 +162,8 @@ public struct FeedWeekDeputy: Hashable, Sendable {
     /// Present but not voting; never part of `cast` or `abstention`.
     public let nonVotant: Int
 
-    public init(cast: Int, pour: Int, contre: Int, abstention: Int, nonVotant: Int) {
+    public init(deputyID: String, cast: Int, pour: Int, contre: Int, abstention: Int, nonVotant: Int) {
+        self.deputyID = deputyID
         self.cast = cast
         self.pour = pour
         self.contre = contre
@@ -164,13 +183,14 @@ public struct FeedWeek: Hashable, Sendable {
     public let lawsRejected: Int
     public let motionsAdopted: Int
     public let motionsRejected: Int
-    /// Nil without a followed deputy.
-    public let deputy: FeedWeekDeputy?
+    /// One entry per followed deputy, in the followed order; never summed
+    /// (ADR-042 amendment §5). Empty without a followed deputy.
+    public let deputies: [FeedWeekDeputy]
     public let nextAgenda: AgendaEntry?
 
     public init(
         weekStart: String, weekEnd: String, noSitting: Bool, scrutins: Int, lawsAdopted: Int, lawsRejected: Int,
-        motionsAdopted: Int, motionsRejected: Int, deputy: FeedWeekDeputy?, nextAgenda: AgendaEntry?
+        motionsAdopted: Int, motionsRejected: Int, deputies: [FeedWeekDeputy], nextAgenda: AgendaEntry?
     ) {
         self.weekStart = weekStart
         self.weekEnd = weekEnd
@@ -180,7 +200,7 @@ public struct FeedWeek: Hashable, Sendable {
         self.lawsRejected = lawsRejected
         self.motionsAdopted = motionsAdopted
         self.motionsRejected = motionsRejected
-        self.deputy = deputy
+        self.deputies = deputies
         self.nextAgenda = nextAgenda
     }
 }
@@ -188,8 +208,8 @@ public struct FeedWeek: Hashable, Sendable {
 /// The feed's data, behind a protocol so the screen is tested with a stub.
 public protocol FeedService: Sendable {
     func feed(_ query: FeedQuery) async throws -> FeedPage
-    /// The current week's recap, with the deputy's positions when one is given.
-    func week(deputyID: String?) async throws -> FeedWeek
+    /// The current week's recap, with each given deputy's positions.
+    func week(deputyIDs: [String]) async throws -> FeedWeek
 }
 
 /// `FeedService` on the generated client (`getFeed`).
@@ -203,14 +223,14 @@ public struct LiveFeedService: FeedService {
     public func feed(_ query: FeedQuery) async throws -> FeedPage {
         let response = try await client.getFeed(query: .init(
             tab: .init(rawValue: query.tab.rawValue),
-            deputyId: query.deputyID,
+            deputies: query.deputyIDs.isEmpty ? nil : query.deputyIDs,
             theme: query.themes.isEmpty ? nil : query.themes
         ))
         return FeedPage(try response.ok.body.json)
     }
 
-    public func week(deputyID: String?) async throws -> FeedWeek {
-        FeedWeek(try await client.getFeedWeek(query: .init(deputyId: deputyID)).ok.body.json)
+    public func week(deputyIDs: [String]) async throws -> FeedWeek {
+        FeedWeek(try await client.getFeedWeek(query: .init(deputies: deputyIDs.isEmpty ? nil : deputyIDs)).ok.body.json)
     }
 }
 
@@ -220,8 +240,11 @@ extension FeedWeek {
             weekStart: week.weekStart, weekEnd: week.weekEnd, noSitting: week.noSitting, scrutins: week.scrutins,
             lawsAdopted: week.lawsAdopted, lawsRejected: week.lawsRejected,
             motionsAdopted: week.motionsAdopted, motionsRejected: week.motionsRejected,
-            deputy: week.deputy.map {
-                FeedWeekDeputy(cast: $0.cast, pour: $0.pour, contre: $0.contre, abstention: $0.abstention, nonVotant: $0.nonVotant)
+            deputies: (week.deputies ?? []).map {
+                FeedWeekDeputy(
+                    deputyID: $0.deputyId, cast: $0.cast, pour: $0.pour, contre: $0.contre,
+                    abstention: $0.abstention, nonVotant: $0.nonVotant
+                )
             },
             nextAgenda: week.nextAgenda.map { AgendaEntry($0) }
         )
@@ -251,7 +274,8 @@ extension FeedScrutinCard {
             id: scrutin.voteId, date: scrutin.votedAt, kind: scrutin.scrutinKind, title: scrutin.title,
             summary: scrutin.summaryPlain, theme: scrutin.theme, result: scrutin.result,
             votesFor: scrutin.votesFor, votesAgainst: scrutin.votesAgainst, abstentions: scrutin.abstentions,
-            isClosest: scrutin.closest ?? false, deputyPosition: scrutin.deputyPosition,
+            isClosest: scrutin.closest ?? false,
+            positions: (scrutin.positions ?? []).map { FeedDeputyPosition(deputyID: $0.deputyId, position: $0.position) },
             officialURL: URL(string: scrutin.anUrl),
             loiID: scrutin.loisUrl == nil ? nil : scrutin.dossierId
         )
@@ -261,7 +285,7 @@ extension FeedScrutinCard {
 extension FeedRollup {
     init(_ rollup: Components.Schemas.FeedRollup) {
         self.init(
-            total: rollup.total, amendements: rollup.amendement, articles: rollup.article,
+            deputyID: rollup.deputyId, total: rollup.total, amendements: rollup.amendement, articles: rollup.article,
             autres: rollup.autre, nonVotant: rollup.nonVotant
         )
     }

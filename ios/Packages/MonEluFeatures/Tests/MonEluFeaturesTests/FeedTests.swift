@@ -11,14 +11,14 @@ import Testing
 struct FeedServiceTests {
     func page() async throws -> FeedPage {
         try await LiveFeedService(client: stubClient(try fixture("feed_pour_vous")))
-            .feed(FeedQuery(tab: .pourVous, deputyID: "PA1008", themes: ["justice-securite"]))
+            .feed(FeedQuery(tab: .pourVous, deputyIDs: ["PA1008"], themes: ["justice-securite"]))
     }
 
     @Test func keepsTheAPIsOrderAndEveryKind() async throws {
         let page = try await page()
         #expect(page.entries.map(\.id) == [
             "scrutin:VTANR5L17V9101", "scrutin:VTANR5L17V9100", "scrutin:VTANR5L17V9099",
-            "agenda:PTOD17_FEED01", "rollup",
+            "agenda:PTOD17_FEED01", "rollup:PA1008",
         ])
         #expect(page.weekStart == "2026-10-12")
         #expect(page.noSitting == false)
@@ -31,7 +31,7 @@ struct FeedServiceTests {
         }
         #expect(closest.isClosest)
         #expect(closest.kind == "amendement")
-        #expect(closest.deputyPosition == "pour")
+        #expect(closest.positions == [FeedDeputyPosition(deputyID: "PA1008", position: "pour")])
         #expect(closest.loiID == nil)
         #expect(closest.officialURL?.absoluteString == "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9101")
     }
@@ -49,17 +49,20 @@ struct FeedServiceTests {
             Issue.record("the last entry is not the rollup")
             return
         }
-        #expect(rollup == FeedRollup(total: 20, amendements: 17, articles: 2, autres: 1, nonVotant: 3))
+        #expect(rollup == FeedRollup(
+            deputyID: "PA1008", total: 20, amendements: 17, articles: 2, autres: 1, nonVotant: 3
+        ))
     }
 
     @Test func aCircleAsksTheAPIForThatFollowAlone() {
         let themes = ["justice-securite", "sante-social"]
-        #expect(FeedQuery.pourVous(deputyID: "PA1", themes: themes, filter: .all)
-            == FeedQuery(tab: .pourVous, deputyID: "PA1", themes: themes))
-        #expect(FeedQuery.pourVous(deputyID: "PA1", themes: themes, filter: .deputy)
-            == FeedQuery(tab: .pourVous, deputyID: "PA1", themes: []))
-        #expect(FeedQuery.pourVous(deputyID: "PA1", themes: themes, filter: .theme("sante-social"))
-            == FeedQuery(tab: .pourVous, deputyID: nil, themes: ["sante-social"]))
+        let deputies = ["PA1", "PA2"]
+        #expect(FeedQuery.pourVous(deputyIDs: deputies, themes: themes, filter: .all)
+            == FeedQuery(tab: .pourVous, deputyIDs: deputies, themes: themes))
+        #expect(FeedQuery.pourVous(deputyIDs: deputies, themes: themes, filter: .deputy("PA2"))
+            == FeedQuery(tab: .pourVous, deputyIDs: ["PA2"], themes: []))
+        #expect(FeedQuery.pourVous(deputyIDs: deputies, themes: themes, filter: .theme("sante-social"))
+            == FeedQuery(tab: .pourVous, deputyIDs: [], themes: ["sante-social"]))
     }
 
     /// With nothing followed Accueil opens on « À l'Assemblée », so the
@@ -78,10 +81,33 @@ struct FeedServiceTests {
         #expect(FeedEmptyNote(tab: .assemblee, followsNothing: true).message == "Aucun grand vote cette semaine.")
     }
 
-    @Test func theRollupReadsAsASentence() {
-        let view = FeedRollupView(rollup: FeedRollup(total: 20, amendements: 17, articles: 2, autres: 1, nonVotant: 3))
+    @MainActor @Test func theRollupReadsAsASentence() {
+        let rollup = FeedRollup(deputyID: "PA1", total: 20, amendements: 17, articles: 2, autres: 1, nonVotant: 3)
+        let view = FeedRollupView(rollup: rollup)
         #expect(view.headline == "Et 20 autres votes de votre député")
         #expect(view.detail == "17 amendements · 2 articles · 1 autre scrutin · non-votant sur 3 scrutins")
+        // With several deputies followed, each roll-up names its deputy.
+        #expect(FeedRollupView(rollup: rollup, name: "Marie Dupont").headline == "Et 20 autres votes de Marie Dupont")
+    }
+
+    /// « Votre député » while one deputy is followed, each name once there
+    /// are several (ADR-042 amendment §3).
+    @Test func cardsNameEachDeputyOnlyWhenSeveralAreFollowed() {
+        #expect(FollowedDeputyNames(names: ["PA1": "Marie Dupont"], count: 1).name(of: "PA1") == nil)
+        let several = FollowedDeputyNames(names: ["PA1": "Marie Dupont"], count: 2)
+        #expect(several.name(of: "PA1") == "Marie Dupont")
+        #expect(several.name(of: "PA2") == "Député suivi")
+    }
+
+    /// The live service sends every followed deputy as the repeated
+    /// `deputies` parameter, never the older `deputy_id`.
+    @Test func everyFollowedDeputyIsSentToTheAPI() async throws {
+        let recorder = RequestRecorder()
+        _ = try await LiveFeedService(client: stubClient(try fixture("feed_pour_vous"), recorder: recorder))
+            .feed(FeedQuery(tab: .pourVous, deputyIDs: ["PA1", "PA2"], themes: []))
+        let query = try #require(recorder.urls.first?.query)
+        #expect(query.contains("deputies=PA1&deputies=PA2"))
+        #expect(!query.contains("deputy_id"))
     }
 }
 
@@ -92,7 +118,7 @@ struct FeedServiceTests {
 struct FeedSnapshotTests {
     func page() async throws -> FeedPage {
         try await LiveFeedService(client: stubClient(try fixture("feed_pour_vous")))
-            .feed(FeedQuery(tab: .pourVous, deputyID: "PA1008", themes: ["justice-securite"]))
+            .feed(FeedQuery(tab: .pourVous, deputyIDs: ["PA1008"], themes: ["justice-securite"]))
     }
 
     /// One scrutin card at a time, so each image stays under the
@@ -143,7 +169,7 @@ struct FeedSnapshotTests {
                 ScrollView {
                     FeedContent(
                         page: FeedPage(weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, entries: Array(rest)),
-                        tab: .pourVous, deputyID: "PA1008"
+                        tab: .pourVous, deputyIDs: ["PA1008"]
                     )
                     .padding(16)
                 }
@@ -159,7 +185,7 @@ struct FeedSnapshotTests {
     @Test(arguments: Variant.all)
     func feedFailedKeepsHeader(_ variant: Variant) {
         let circles = FollowCircle.circles(
-            deputy: .sample, themeSlugs: ["justice-securite"], themes: (try? ReferenceData.themes()) ?? []
+            deputies: [.sample], themeSlugs: ["justice-securite"], themes: (try? ReferenceData.themes()) ?? []
         )
         checkSnapshot(
             NavigationStack {

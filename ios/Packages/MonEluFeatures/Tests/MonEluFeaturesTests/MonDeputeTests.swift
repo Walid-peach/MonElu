@@ -214,7 +214,9 @@ struct MonDeputeModelTests {
         #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == "PA1")
     }
 
-    @Test func changingKeepsTheDeputyUntilAnotherIsChosen() {
+    /// The picker adds a deputy over the feed; cancelling keeps the followed
+    /// ones, and choosing never replaces another (ADR-042 amendment §6, #585).
+    @Test func thePickerAddsWithoutReplacing() {
         let defaults = freshDefaults()
         let model = model(defaults: defaults)
         model.choose(deputy("PA1"))
@@ -224,19 +226,8 @@ struct MonDeputeModelTests {
         #expect(model.followedID == "PA1")
         model.startChange()
         model.choose(deputy("PA2"))
-        #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == "PA2")
-    }
-
-    @Test func changingDeputyForgetsThePreviousPosition() {
-        let defaults = freshDefaults()
-        let store = UserDefaultsFollowedDeputyStore(defaults: defaults)
-        let model = model(defaults: defaults)
-        model.choose(deputy("PA1"))
-        store.setLastSeenVote(Date(), for: "PA1")
-        model.startChange()
-        model.choose(deputy("PA2"))
-        #expect(store.deputyIDs == ["PA2"])
-        #expect(store.lastSeenVote(for: "PA1") == nil)
+        #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyIDs == ["PA1", "PA2"])
+        #expect(!model.isChanging)
     }
 
     /// Finding a deputy by postal code adds them to those followed (ADR-042

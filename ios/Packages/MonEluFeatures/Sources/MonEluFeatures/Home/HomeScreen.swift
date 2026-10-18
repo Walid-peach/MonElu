@@ -5,14 +5,17 @@ import SwiftUI
 /// The Accueil tab (#565, ADR-042, design « Accueil V1 »): the row of
 /// follows, then the feed the API builds for them, in two tabs. A first
 /// visit with nothing followed opens on the feed too, on « À l'Assemblée »
-/// (#575); the postal-code search shows only while choosing a deputy.
+/// (#575); the postal-code search shows only while adding a deputy. Every
+/// followed deputy is sent to the feed and has a circle (#585).
 public struct HomeScreen: View {
     @State private var model: MonDeputeModel
+    @State private var followed: FollowedDeputiesModel
     @State private var themeSlugs: [String]
     @State private var tab: FeedTab
     @State private var filter: FeedFilter = .all
     @State private var showsFollows = false
     private let feed: any FeedService
+    private let store: any FollowedDeputyStore
     private let themesStore: any FollowedThemesStore
     private let themes = (try? ReferenceData.themes()) ?? []
 
@@ -21,11 +24,13 @@ public struct HomeScreen: View {
         feed: any FeedService, store: any FollowedDeputyStore, themesStore: any FollowedThemesStore
     ) {
         _model = State(initialValue: MonDeputeModel(deputies: deputies, postalCodes: postalCodes, store: store))
+        _followed = State(initialValue: FollowedDeputiesModel(service: deputies, store: store))
         _themeSlugs = State(initialValue: themesStore.themeSlugs)
         _tab = State(initialValue: HomeTabDefault.tab(
-            followsNothing: store.deputyID == nil && themesStore.themeSlugs.isEmpty
+            followsNothing: store.deputyIDs.isEmpty && themesStore.themeSlugs.isEmpty
         ))
         self.feed = feed
+        self.store = store
         self.themesStore = themesStore
     }
 
@@ -35,7 +40,8 @@ public struct HomeScreen: View {
                 picker
             } else {
                 FeedLoaderView(
-                    query: query, service: feed, tab: tab, deputyID: model.followedID, followsNothing: followsNothing,
+                    query: query, service: feed, tab: tab, deputyIDs: store.deputyIDs,
+                    deputyNames: followed.deputies.mapValues(\.name), followsNothing: followsNothing,
                     onOpenRecap: { tab = .assemblee },
                     onFindDeputy: { model.startChange() }
                 ) {
@@ -43,11 +49,11 @@ public struct HomeScreen: View {
                 }
                 // A new query is a new loader; a new identity starts its load.
                 .id(query)
-                // Keyed on the deputy: the feed now stays on screen when one
-                // is followed (#575), so a plain `.task` would never run for a
+                // Keyed on the deputies: the feed stays on screen when one is
+                // followed (#575), so a plain `.task` would never run for a
                 // deputy followed after it appeared, and their circle, which
-                // waits for this home, would never show.
-                .task(id: model.followedID) { await model.home?.loadIfNeeded() }
+                // waits for their profile, would never show.
+                .task(id: store.deputyIDs) { await followed.load() }
             }
         }
         .background(Palette.pageBackground)
@@ -72,40 +78,50 @@ public struct HomeScreen: View {
     /// follow prompt (ADR-042 §4). The postal-code picker is never the
     /// default screen, only what the prompt or « + Suivre » opens (#575).
     private var followsNothing: Bool {
-        model.followedID == nil && themeSlugs.isEmpty
+        store.deputyIDs.isEmpty && themeSlugs.isEmpty
     }
 
-    /// What the feed is asked for: the tab, and in « Pour vous » the follows,
-    /// narrowed to one when a circle is selected.
-    private var query: FeedQuery {
-        switch tab {
-        case .pourVous: FeedQuery.pourVous(deputyID: model.followedID, themes: themeSlugs, filter: filter)
-        case .assemblee: FeedQuery(tab: .assemblee, deputyID: model.followedID, themes: [])
+    /// The selected circle, or everything once that follow is gone.
+    private var activeFilter: FeedFilter {
+        switch filter {
+        case .deputy(let id) where !store.isFollowing(id): .all
+        case .theme(let slug) where !themeSlugs.contains(slug): .all
+        default: filter
         }
     }
 
-    /// The followed deputy once their home loaded; the circle waits for it.
-    private var followedDeputy: DeputyItem? {
-        model.home?.state.value?.profile.deputy
+    /// What the feed is asked for: the tab, and in « Pour vous » the follows,
+    /// narrowed to one when a circle is selected. « À l'Assemblée » sends the
+    /// deputies too, so its cards carry their positions.
+    private var query: FeedQuery {
+        switch tab {
+        case .pourVous: FeedQuery.pourVous(deputyIDs: store.deputyIDs, themes: themeSlugs, filter: activeFilter)
+        case .assemblee: FeedQuery(tab: .assemblee, deputyIDs: store.deputyIDs, themes: [])
+        }
     }
 
     private var circles: [FollowCircle] {
-        // The deputy's ring uses the existing reading position: votes held
-        // after the newest one shown on the previous visit.
-        let deputyNews: Bool = {
-            guard case .votes(let votes, _)? = model.home?.state.value?.sinceLastVisit else { return false }
-            return !votes.isEmpty
-        }()
-        return FollowCircle.circles(
-            deputy: followedDeputy, themeSlugs: themeSlugs, themes: themes,
-            news: deputyNews ? ["deputy"] : []
+        // A deputy's ring uses their reading position: votes held after the
+        // newest one shown on the previous visit.
+        FollowCircle.circles(
+            deputies: followed.loaded, themeSlugs: themeSlugs, themes: themes,
+            news: Set(followed.news.map { "deputy:\($0)" })
         )
+    }
+
+    private func unfollow(_ id: String) {
+        store.unfollow(id)
+        model.syncWithStore()
     }
 
     @ViewBuilder private var feedHeader: some View {
         HomeTagline()
             .padding(.horizontal, 16)
-        FollowsRow(circles: circles, filter: $filter, onAdd: { showsFollows = true })
+        FollowsRow(
+            circles: circles,
+            filter: Binding(get: { activeFilter }, set: { filter = $0 }),
+            onAdd: { showsFollows = true }
+        )
         Picker("Fil", selection: $tab) {
             ForEach(FeedTab.allCases, id: \.self) { tab in
                 Text(tab.title).tag(tab)
@@ -118,13 +134,15 @@ public struct HomeScreen: View {
 
     private var followsSheet: some View {
         FollowsSheet(
-            deputyName: followedDeputy?.name, themes: themes, followed: Set(themeSlugs),
+            deputies: followed.loaded, themes: themes, followed: Set(themeSlugs),
+            canAddDeputy: store.canFollowMore,
             onToggle: { slug in
                 themesStore.toggle(slug)
                 themeSlugs = themesStore.themeSlugs
                 // A theme no longer followed cannot stay the filter.
                 if case .theme(let selected) = filter, !themeSlugs.contains(selected) { filter = .all }
             },
+            onUnfollowDeputy: { unfollow($0) },
             onChooseDeputy: {
                 showsFollows = false
                 model.startChange()
@@ -171,11 +189,16 @@ public struct HomeScreen: View {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Annuler") { model.cancelChange() }
             }
-        } else if model.followedID != nil {
+        } else if !store.deputyIDs.isEmpty {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button("Changer de député", systemImage: "arrow.left.arrow.right") { model.startChange() }
-                    Button("Ne plus suivre", systemImage: "person.badge.minus", role: .destructive) { model.unfollow() }
+                    Button("Ajouter un député", systemImage: "person.badge.plus") { model.startChange() }
+                        .disabled(!store.canFollowMore)
+                    ForEach(followed.loaded) { deputy in
+                        Button("Ne plus suivre \(deputy.name)", systemImage: "person.badge.minus", role: .destructive) {
+                            unfollow(deputy.id)
+                        }
+                    }
                 } label: {
                     Label("Options", systemImage: "ellipsis.circle")
                 }
@@ -205,24 +228,27 @@ struct FeedScreen: Sendable {
 private struct FeedLoaderView<Header: View>: View {
     @State private var loader: Loader<FeedScreen>
     let tab: FeedTab
-    let deputyID: String?
+    let deputyIDs: [String]
+    let deputyNames: [String: String]
     let followsNothing: Bool
     let onOpenRecap: () -> Void
     let onFindDeputy: () -> Void
     let header: Header
 
     init(
-        query: FeedQuery, service: any FeedService, tab: FeedTab, deputyID: String?, followsNothing: Bool,
+        query: FeedQuery, service: any FeedService, tab: FeedTab, deputyIDs: [String],
+        deputyNames: [String: String], followsNothing: Bool,
         onOpenRecap: @escaping () -> Void, onFindDeputy: @escaping () -> Void,
         @ViewBuilder header: () -> Header
     ) {
         _loader = State(initialValue: Loader {
             async let page = service.feed(query)
-            async let week = HomeScreenRecap.recap(tab: query.tab, deputyID: deputyID, service: service)
+            async let week = HomeScreenRecap.recap(tab: query.tab, deputyIDs: deputyIDs, service: service)
             return FeedScreen(page: try await page, week: await week)
         })
         self.tab = tab
-        self.deputyID = deputyID
+        self.deputyIDs = deputyIDs
+        self.deputyNames = deputyNames
         self.followsNothing = followsNothing
         self.onOpenRecap = onOpenRecap
         self.onFindDeputy = onFindDeputy
@@ -231,7 +257,8 @@ private struct FeedLoaderView<Header: View>: View {
 
     var body: some View {
         FeedPageView(
-            state: loader.state, refreshFailure: loader.refreshFailure, tab: tab, deputyID: deputyID,
+            state: loader.state, refreshFailure: loader.refreshFailure, tab: tab, deputyIDs: deputyIDs,
+            deputyNames: deputyNames,
             followsNothing: followsNothing, retry: { await loader.load() },
             onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
         ) {
@@ -249,7 +276,9 @@ struct FeedPageView<Header: View>: View {
     let state: LoadState<FeedScreen>
     var refreshFailure: LoadFailure?
     let tab: FeedTab
-    var deputyID: String?
+    var deputyIDs: [String] = []
+    /// Followed deputies' names by id, once their profiles loaded.
+    var deputyNames: [String: String] = [:]
     var followsNothing = false
     var retry: () async -> Void = {}
     var onOpenRecap: () -> Void = {}
@@ -282,8 +311,8 @@ struct FeedPageView<Header: View>: View {
                 RefreshFailureBanner(failure: refreshFailure)
             }
             FeedContent(
-                page: screen.page, tab: tab, deputyID: deputyID, week: screen.week,
-                showsFindDeputy: deputyID == nil, followsNothing: followsNothing,
+                page: screen.page, tab: tab, deputyIDs: deputyIDs, deputyNames: deputyNames, week: screen.week,
+                showsFindDeputy: deputyIDs.isEmpty, followsNothing: followsNothing,
                 onOpenRecap: onOpenRecap, onFindDeputy: onFindDeputy
             )
         }
@@ -293,10 +322,10 @@ struct FeedPageView<Header: View>: View {
 enum HomeScreenRecap {
     /// The recap card's week, in « Pour vous » with a deputy only. It is a
     /// bonus: when it fails, the feed still shows without it.
-    /// Keyed on the followed deputy, not on the query: a theme circle narrows
-    /// the feed to that theme, but the recap is still the deputy's week.
-    static func recap(tab: FeedTab, deputyID: String?, service: any FeedService) async -> FeedWeek? {
-        guard tab == .pourVous, let deputyID else { return nil }
-        return try? await service.week(deputyID: deputyID)
+    /// Keyed on the followed deputies, not on the query: a circle narrows the
+    /// feed, but the recap is still every followed deputy's week, one card each.
+    static func recap(tab: FeedTab, deputyIDs: [String], service: any FeedService) async -> FeedWeek? {
+        guard tab == .pourVous, !deputyIDs.isEmpty else { return nil }
+        return try? await service.week(deputyIDs: deputyIDs)
     }
 }

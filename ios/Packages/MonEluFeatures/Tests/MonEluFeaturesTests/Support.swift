@@ -14,22 +14,42 @@ func fixture(_ name: String) throws -> Data {
     return try Data(contentsOf: url)
 }
 
+/// Keeps the path and query of every request a stub transport answered.
+final class RequestRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var paths: [String] = []
+
+    func record(_ path: String) {
+        lock.withLock { paths.append(path) }
+    }
+
+    /// Each request as a URL relative to the stub base.
+    var urls: [URL] {
+        lock.withLock { paths.compactMap { URL(string: "https://api.test\($0)") } }
+    }
+}
+
 /// Answers every request with one recorded JSON body.
 struct StubTransport: ClientTransport {
     var status: HTTPResponse.Status = .ok
     let json: Data
+    var recorder: RequestRecorder?
 
     func send(
         _ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String
     ) async throws -> (HTTPResponse, HTTPBody?) {
+        if let path = request.path { recorder?.record(path) }
         var response = HTTPResponse(status: status)
         response.headerFields[.contentType] = "application/json"
         return (response, HTTPBody(json))
     }
 }
 
-func stubClient(_ json: Data, status: HTTPResponse.Status = .ok) -> Client {
-    MonEluAPI.client(baseURL: URL(string: "https://api.test")!, transport: StubTransport(status: status, json: json))
+func stubClient(_ json: Data, status: HTTPResponse.Status = .ok, recorder: RequestRecorder? = nil) -> Client {
+    MonEluAPI.client(
+        baseURL: URL(string: "https://api.test")!,
+        transport: StubTransport(status: status, json: json, recorder: recorder)
+    )
 }
 
 /// Answers each operation with its own recorded body, and any other with 500.

@@ -1,5 +1,6 @@
 {
   "deputy_id": "PA1008",
+  "deputy_ids": ["PA1008"],
   "requested_week_start": "2026-10-12",
   "week_start": "2026-10-12",
   "week_end": "2026-10-18",
@@ -10,6 +11,9 @@
   "motions_adopted": 0,
   "motions_rejected": 1,
   "deputy": {"cast": 23, "pour": 14, "contre": 3, "abstention": 6, "non_votant": 2},
+  "deputies": [
+    {"deputy_id": "PA1008", "cast": 23, "pour": 14, "contre": 3, "abstention": 6, "non_votant": 2}
+  ],
   "next_agenda": {
     "point_uid": "PTOD17_FEED01",
     "sitting_start": "2026-10-20T13:00:00Z",
