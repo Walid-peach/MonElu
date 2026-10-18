@@ -477,7 +477,9 @@ struct HomeLatestVoteRow: View {
 /// The week's next séance items, side by side; each opens the agenda, which
 /// holds the full week.
 struct HomeAgendaSection: View {
-    static let count = 5
+    // `nonisolated`: a `View`'s statics are main-actor isolated, and
+    // `upcoming` below reads this one from outside the main actor (#579).
+    nonisolated static let count = 5
 
     let entries: [AgendaEntry]
     @Environment(\.dynamicTypeSize) private var typeSize

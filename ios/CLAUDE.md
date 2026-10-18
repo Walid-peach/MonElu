@@ -72,12 +72,13 @@ The work is tracked under epic #429, one phase epic at a time.
 - A screen gets its data through a `Loader` (`MonEluCore`) rendered by `LoadStateView` (`MonEluUI`), never by calling the client from a view.
   That one pattern gives every screen the same loading, empty, offline and error states, a retry, and pull-to-refresh; the content must be a `List` or `ScrollView`.
 - Offline and server failures are different states with different wording (`LoadFailure`); a failed refresh keeps the content and shows `RefreshFailureBanner`.
+  A cancelled load is neither: `Loader` goes back to the state it had, and a cancelled refresh keeps the content without a banner, so a `.task` that runs again when its view returns loads for real (#579).
 - Navigation to a deputy or a vote goes through `Router.open(_:)` with an `AppRoute`, from any tab.
   `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
 - What the app keeps about its user stays on the device (ADR-040 §6): the followed deputy and how far they have read live in `UserDefaults` behind `FollowedDeputyStore`.
   The store is `Observable` and is the only copy: a screen reads `deputyID` from it rather than keeping its own, or a follow made on another screen never reaches it (#576).
-  Accueil reconciles in `onAppear`, not `onChange`: it stays alive behind the other tabs, and a load started there is cancelled, which `Loader` keeps as a failure that never retries.
+  Accueil reconciles in `onAppear`, not `onChange`: it stays alive behind the other tabs, where a load would only start to be cancelled (#579).
   The appearance chosen in Réglages is the one other preference there (`AppearancePreference`, `@AppStorage`), applied by `LaunchGate` as the windows' `overrideUserInterfaceStyle`.
   The postal code is never stored, and goes only to geo.api.gouv.fr through an ephemeral session (`LivePostalCodeService`), never the shared one whose cache writes URLs to disk.
 - `verify`, `shareAnswer`, `submitChatFeedback` and `shareResult` each store a row in production (a verdict, a public share snapshot, feedback).
