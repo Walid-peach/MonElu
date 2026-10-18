@@ -1755,6 +1755,52 @@ Computing it in the API keeps ADR-041's rule and lets the noise rule change with
 
 **Trigger to revisit:** amendment authorship or comptes rendus being ingested; accounts in the app (#434) wanting server-side follows; the #359 hold lifting; or the feed reaching the website.
 
+### Amendment (2026-10-18, #582): several followed deputies (amends §2 and §4)
+
+**Status:** Final. Epic #577.
+
+The app follows several deputies, not one.
+§2's "the app keeps one followed deputy" is superseded; the rest of ADR-042 stands, including the noise rule (§3), the week (§5) and what is out (§6).
+
+**1. The API shape is additive.**
+`GET /feed` and `GET /feed/week` gain a repeated `deputies` parameter (`?deputies=PA1&deputies=PA2`) beside `deputy_id`, which keeps its meaning (ADR-041 §5: never retype a parameter an installed app sends).
+The followed set is `deputy_id` first, then `deputies` in request order, with duplicates dropped; sending both is valid and the server merges them.
+New builds send only `deputies`; `deputy_id` stays for the builds already installed.
+The responses echo the merged set as `deputy_ids`, and keep `deputy_id` as its first entry, so a `deputy_id`-only request gets every field it got before with the same value.
+
+**2. A cap of 10, and the same errors as before.**
+More than 10 distinct deputies is a 422 (`detail` names the cap); the app enforces the same cap and says so on « Suivre » instead of sending a request it knows will fail.
+Ten keeps the position join and the URL small (ten ids is under 300 characters), and is more deputies than anyone follows to read a weekly feed.
+An unknown id anywhere in the set is a 404 for the whole request, as `deputy_id` already is: a follow that no longer resolves must be visible, never a silently shorter feed.
+
+**3. « Pour vous » with several deputies.**
+A scrutin is a candidate when *any* followed deputy has a position on it, and the noise rule decides its card exactly as before: it is a property of the scrutin, not of who voted.
+Each scrutin appears once (deduplicated by `vote_id`, as theme votes already are).
+`FeedScrutin` gains `positions`: one entry `{deputy_id, position}` per followed deputy with a recorded position on it, in the followed order; `deputy_position` stays and holds the first followed deputy's position, as before.
+The card shows one line per entry of `positions` (« Votre député » becomes the deputy's name when more than one is followed); the app renders the list it receives and never merges cards.
+
+**4. One roll-up per deputy.**
+Each followed deputy with votes that earned no card gets their own `rollup` item, in the followed order, and `FeedRollup` gains `deputy_id`.
+A shared roll-up would count one scrutin once per deputy who voted on it, and « 34 autres votes » with no owner reads as nobody's.
+
+**5. The recap is per deputy, never summed.**
+`FeedWeekResponse` gains `deputies`: one `{deputy_id, cast, pour, contre, abstention, non_votant}` entry per followed deputy, in the followed order; `deputy` stays and holds the first one.
+The app shows « Votre semaine à l'Assemblée » as a horizontal pager with one card per deputy, the week's chamber counts on each.
+Positions are never added up across deputies: « 31 pour » summed over two people describes no one's vote.
+
+**6. All follows are equal.**
+There is no separate « Mon député » role: the deputy found by postal code is followed like any other and added to the list, and the follows row shows each deputy under their own name.
+A distinct role would need a second store, a second API parameter and rules for when the two disagree, for a distinction the feed does not use.
+Tapping a deputy's circle filters the feed by requesting it with that deputy alone (`deputies=<id>`), so the filter stays a server query, as it is for themes.
+
+**7. Storage.**
+The list lives in `UserDefaults` on the phone; the previous single `monelu.followedDeputyID` migrates into it on first launch so no install loses its follow, and the per-deputy `monelu.lastSeenVoteAt.<id>` keys are unchanged.
+`app_private.followed_deputies` already holds several rows per profile, so the later account sync (#434) needs no schema change.
+
+**Rejected:** retyping `deputy_id` into a list (breaks installed builds); a summed recap (a number about no one); one shared roll-up (double counts); keeping « Mon député » as a distinct single role (two stores for one concept).
+
+**Impact:** #583 adds `deputies`, `deputy_ids`, `positions`, the per-deputy roll-up and the recap's `deputies`; #584 turns `FollowedDeputyStore` into a list; #585 shows them on Accueil.
+
 ---
 
 ## Rules for future development sessions
@@ -1786,4 +1832,4 @@ Computing it in the API keeps ADR-041's rule and lets the noise rule change with
 25. Accounts are Supabase Auth with email codes, a Next-held session and a restricted DB role (ADR-040, #411/#365) - never store a password or add a social sign-in without amending that ADR, never let the browser hold the access token (Next route handlers read the session server-side and forward it; FastAPI verifies the JWT itself rather than trusting an asserted user id), never use the owner connection or a session-scoped `SET` on an account route (PgBouncer transaction pooling leaks it to the next caller - `SET LOCAL` inside an explicit transaction is the only safe form), and never put a public read behind sign-in: reading deputies, votes and every other public surface stays anonymous permanently
 26. The iPhone app is SwiftUI in `ios/`, and the API is its source of truth (ADR-041, #429) - never put business logic in the app that the API already computes, never rename, retype or remove an API field, route or operationId the app reads without ADR-041 §5's add-first sequence and a raised minimum version in `GET /app/config`, never ship a public App Store build that talks to a Railway hostname, and keep `railway.json`'s `!/ios/**` watch pattern and `deploy.yml`'s `ios/**` ignore so iOS-only commits never redeploy the API or re-run dbt against production
 27. Native clients keep the Supabase session in the Keychain and call FastAPI with the bearer token directly (ADR-041 §6, amending ADR-040 §4) - the browser rule in rule 25 is unchanged; `/account/*` is rate-limited per verified account, never per IP, and CORS stays `allow_credentials=False`
-28. The app's Accueil feed and weekly recap are computed by the API (`GET /feed`, `GET /feed/week`) from scrutins, positions and agenda items only (ADR-042, #560) - follows stay on the phone and travel as `deputy_id`/`theme` query parameters, never in the account tables; the noise rule (full cards for `ensemble`/`motion`, others only within 20 votes, the rest rolled up) lives in the router, not the app; never add a card that needs data MonÉlu does not ingest (amendment authors, interventions), and never add likes, reactions, streaks or notifications to it
+28. The app's Accueil feed and weekly recap are computed by the API (`GET /feed`, `GET /feed/week`) from scrutins, positions and agenda items only (ADR-042, #560) - follows stay on the phone and travel as `deputies`/`theme` query parameters (`deputy_id` kept for installed builds; at most 10 deputies, all equal, recap never summed across them - ADR-042 amendment, #582), never in the account tables; the noise rule (full cards for `ensemble`/`motion`, others only within 20 votes, the rest rolled up) lives in the router, not the app; never add a card that needs data MonÉlu does not ingest (amendment authors, interventions), and never add likes, reactions, streaks or notifications to it
