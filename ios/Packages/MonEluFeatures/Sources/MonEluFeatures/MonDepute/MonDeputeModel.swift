@@ -14,57 +14,9 @@ public struct DepartmentDeputies: Hashable, Sendable, Identifiable {
     }
 }
 
-/// What the home says about the votes since the previous visit.
-public enum SinceLastVisit: Hashable, Sendable {
-    /// No previous visit on this device: nothing to compare with yet.
-    case firstVisit
-    /// The scrutins held after the newest vote shown last time.
-    case votes([DeputyVote], after: Date)
-    /// The request failed; the rest of the home still shows.
-    case unavailable
-}
-
-extension SinceLastVisit {
-    /// Whether `vote` was held after the previous visit's newest vote, so the
-    /// home marks it "Nouveau". Nothing is new on a first visit or when the
-    /// check failed.
-    public func isNew(_ vote: DeputyVote) -> Bool {
-        isNew(date: vote.date)
-    }
-
-    /// Whether a scrutin held on `date` came after the previous visit.
-    public func isNew(date: Date?) -> Bool {
-        guard case .votes(_, let after) = self, let date else { return false }
-        return date > after
-    }
-}
-
-/// Everything Accueil shows about the followed deputy (#477, #491): who they
-/// are, two of their figures and their latest decisions.
-public struct MonDeputeHome: Hashable, Sendable {
-    public let profile: DeputyProfile
-    /// Nil when the list failed; the identity card still shows.
-    public let recentVotes: [DeputyVote]?
-    public let sinceLastVisit: SinceLastVisit
-    /// The identity card's two figures; each is left out when its request failed.
-    public let scorecard: DeputyScorecard?
-    public let alignment: DeputyAlignment?
-
-    public init(
-        profile: DeputyProfile, recentVotes: [DeputyVote]?, sinceLastVisit: SinceLastVisit,
-        scorecard: DeputyScorecard? = nil, alignment: DeputyAlignment? = nil
-    ) {
-        self.profile = profile
-        self.recentVotes = recentVotes
-        self.sinceLastVisit = sinceLastVisit
-        self.scorecard = scorecard
-        self.alignment = alignment
-    }
-}
-
-/// Accueil's state (#463, #477): the deputy shown, one of those followed on
-/// the device, the postal-code search that adds one, and the home that loads
-/// them. Several deputies can be followed (#584); this model shows one.
+/// Accueil's postal-code picker (#463, #477, #585): the search that finds the
+/// deputies of a département and adds the chosen one to those followed on
+/// the device. `followedID` is the deputy it last chose or the first followed.
 @MainActor
 @Observable
 public final class MonDeputeModel {
@@ -88,8 +40,6 @@ public final class MonDeputeModel {
     public private(set) var selection: DeputyItem?
     /// Why the picker is showing when the user did not ask for it.
     public private(set) var notice: String?
-    /// The followed deputy's home; nil while no deputy is followed.
-    public private(set) var home: Loader<MonDeputeHome>?
 
     private let deputies: any DeputiesService
     private let postalCodes: any PostalCodeService
@@ -103,7 +53,6 @@ public final class MonDeputeModel {
         self.postalCodes = postalCodes
         self.store = store
         followedID = store.deputyID
-        if let followedID { home = makeHome(followedID) }
     }
 
     /// Looks the postal code up and lists the deputies of its départements.
@@ -143,7 +92,7 @@ public final class MonDeputeModel {
         if let selection { choose(selection) }
     }
 
-    /// Adds `deputy` to the followed deputies and opens their home; at the
+    /// Adds `deputy` to the followed deputies and closes the picker; at the
     /// cap the picker stays with a notice. All follows are equal (ADR-042
     /// amendment §6), so choosing never replaces another deputy (#585).
     public func choose(_ deputy: DeputyItem) {
@@ -155,7 +104,6 @@ public final class MonDeputeModel {
         isChanging = false
         notice = nil
         resetSearch()
-        home = makeHome(deputy.id)
     }
 
     /// Shows the picker to add a deputy; the followed ones stay.
@@ -174,13 +122,12 @@ public final class MonDeputeModel {
         if let followedID { store.unfollow(followedID) }
         followedID = store.deputyID
         isChanging = false
-        home = followedID.map(makeHome)
         resetSearch()
     }
 
     /// The store's deputies, as another screen may have changed them (a
     /// profile's "Suivre", #576). `followedID` is the model's own copy so the
-    /// picker and the home change together; this brings both up to date. The
+    /// picker and the feed change together; this brings both up to date. The
     /// shown deputy stays while still followed, so a change this model made
     /// itself, or a follow added elsewhere, does nothing.
     public func syncWithStore() {
@@ -191,7 +138,6 @@ public final class MonDeputeModel {
         isChanging = false
         notice = nil
         resetSearch()
-        home = stored.map(makeHome)
     }
 
     private func resetSearch() {
@@ -214,80 +160,5 @@ public final class MonDeputeModel {
             for try await entry in group { found.append(entry) }
             return found.sorted { $0.0 < $1.0 }.map(\.1)
         }
-    }
-
-    private func makeHome(_ id: String) -> Loader<MonDeputeHome> {
-        let deputies = deputies, store = store
-        return Loader { [weak self] in
-            do {
-                return try await Self.loadHome(id: id, deputies: deputies, store: store)
-            } catch let error as DeputyNotFound {
-                await self?.deputyDisappeared(error.id)
-                throw error
-            }
-        }
-    }
-
-    /// The stored deputy no longer exists: back to the picker, saying why,
-    /// rather than a home that can never load.
-    private func deputyDisappeared(_ id: String) {
-        guard followedID == id else { return }
-        unfollow()
-        notice = "Le député que vous suiviez n'est plus dans nos données. Choisissez-en un autre."
-    }
-
-    /// Loads the home, then advances the reading position to the newest vote
-    /// it showed.
-    ///
-    /// The position is a scrutin's `voted_at`, not the time of the visit: the
-    /// API compares `voted_at > since`, scrutins are dated at midnight and
-    /// arrive the next morning, so a wall-clock timestamp would hide every
-    /// scrutin held on the day of a visit.
-    nonisolated static func loadHome(
-        id: String, deputies: any DeputiesService, store: any FollowedDeputyStore, now: Date = Date()
-    ) async throws -> MonDeputeHome {
-        let lastSeen = store.lastSeenVote(for: id)
-        async let recent = try? deputies.recentVotes(id: id)
-        async let newVotes = votes(of: id, since: lastSeen, deputies: deputies)
-        async let scorecard = try? deputies.scorecard(id: id)
-        async let alignment = try? deputies.alignment(id: id)
-        let profile = try await deputies.profile(id: id)
-        let since: SinceLastVisit = switch (lastSeen, await newVotes) {
-        case (nil, _): .firstVisit
-        case let (lastSeen?, votes?): .votes(votes, after: lastSeen)
-        case (_?, nil): .unavailable
-        }
-        let home = MonDeputeHome(
-            profile: profile, recentVotes: await recent, sinceLastVisit: since,
-            scorecard: await scorecard, alignment: await alignment
-        )
-        if let position = readingPosition(after: home, lastSeen: lastSeen, now: now) {
-            store.setLastSeenVote(position, for: id)
-        }
-        return home
-    }
-
-    /// The votes after `since`; nil on a first visit or when the request fails.
-    nonisolated private static func votes(
-        of id: String, since: Date?, deputies: any DeputiesService
-    ) async -> [DeputyVote]? {
-        guard let since else { return nil }
-        return try? await deputies.votes(id: id, since: since)
-    }
-
-    /// Where the next visit's "since" starts, or nil to keep the current one
-    /// (when a list it depends on failed to load).
-    nonisolated static func readingPosition(after home: MonDeputeHome, lastSeen: Date?, now: Date) -> Date? {
-        guard let recent = home.recentVotes else { return nil }
-        if case .unavailable = home.sinceLastVisit { return nil }
-        var shown = recent.compactMap(\.date)
-        if case .votes(let votes, _) = home.sinceLastVisit { shown += votes.compactMap(\.date) }
-        if let newest = shown.max() { return max(newest, lastSeen ?? newest) }
-        if let lastSeen { return lastSeen }
-        // A deputy with no vote yet: from the start of today (scrutin dates
-        // are midnight UTC), so a scrutin held later today still counts.
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
-        return calendar.startOfDay(for: now).addingTimeInterval(-1)
     }
 }

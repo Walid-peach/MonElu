@@ -118,7 +118,6 @@ struct MonDeputeModelTests {
     @Test func firstLaunchShowsThePicker() {
         let model = model()
         #expect(model.showsPicker)
-        #expect(model.home == nil)
     }
 
     @Test func anInvalidCodeIsRefusedWithoutAnyRequest() async {
@@ -186,7 +185,6 @@ struct MonDeputeModelTests {
         let relaunched = model(defaults: defaults)
         #expect(relaunched.followedID == "PA1008")
         #expect(relaunched.showsPicker == false)
-        #expect(relaunched.home != nil)
         let stored = defaults.dictionaryRepresentation().values.map { "\($0)" }
         #expect(!stored.contains { $0.contains("33000") })
     }
@@ -262,7 +260,6 @@ struct MonDeputeModelTests {
         model.unfollow()
         #expect(store.deputyIDs == ["PA2"])
         #expect(model.followedID == "PA2")
-        #expect(model.home != nil)
     }
 
     @Test func unfollowingForgetsTheDeputyAndTheirPosition() {
@@ -277,18 +274,6 @@ struct MonDeputeModelTests {
         #expect(store.lastSeenVote(for: "PA1") == nil)
     }
 
-    @Test func aDeputyWhoDisappearedSendsBackToThePicker() async {
-        let defaults = freshDefaults()
-        UserDefaultsFollowedDeputyStore(defaults: defaults).follow("PA0")
-        let model = model(
-            deputies: MonDeputeDeputies(profile: .failure(DeputyNotFound(id: "PA0"))), defaults: defaults
-        )
-        await model.home?.load()
-        #expect(model.showsPicker)
-        #expect(model.notice != nil)
-        #expect(UserDefaultsFollowedDeputyStore(defaults: defaults).deputyID == nil)
-    }
-
     /// A deputy followed on their profile reaches Accueil without a relaunch
     /// (#576): the profile and Accueil share one store, as in `AppServices`.
     @Test func aFollowFromAnotherScreenReachesTheModel() {
@@ -299,7 +284,6 @@ struct MonDeputeModelTests {
         model.syncWithStore()
         #expect(model.followedID == "PA2")
         #expect(!model.showsPicker)
-        #expect(model.home != nil)
     }
 
     @Test func anUnfollowFromAnotherScreenReachesTheModel() {
@@ -310,19 +294,17 @@ struct MonDeputeModelTests {
         store.unfollow("PA1")
         model.syncWithStore()
         #expect(model.followedID == nil)
-        #expect(model.home == nil)
         #expect(!model.isChanging)
     }
 
-    /// The model's own follow already matches the store: syncing keeps the
-    /// loaded home rather than starting it again.
-    @Test func syncingAfterItsOwnChangeKeepsTheHome() throws {
+    /// A deputy followed elsewhere leaves the one this model chose in place.
+    @Test func aFollowElsewhereKeepsTheChosenDeputy() {
         let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
         let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
         model.choose(deputy("PA1"))
-        let home = try #require(model.home)
+        store.follow("PA2")
         model.syncWithStore()
-        #expect(model.home === home)
+        #expect(model.followedID == "PA1")
     }
 
     /// A view reading `deputyID` re-renders because the store reports each
@@ -385,119 +367,6 @@ struct FollowedDeputyStoreTests {
         #expect(store.deputyIDs.count == FollowedDeputies.cap)
         // Following one already followed still succeeds.
         #expect(store.follow("PA0"))
-    }
-}
-
-/// "Since your last visit" reads the stored position and then advances it
-/// to the newest vote shown (#463).
-struct SinceLastVisitTests {
-    /// The identity card's two figures come from the scorecard and the
-    /// alignment as the API returned them.
-    @Test func theHomeCarriesTheScorecardAndAlignment() async throws {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let home = try await MonDeputeModel.loadHome(
-            id: "PA1008", deputies: try LiveDeputiesServiceTests.service(), store: store
-        )
-        #expect(home.scorecard != nil)
-        #expect(home.alignment != nil)
-    }
-
-    /// Either figure missing leaves the rest of the home.
-    @Test func aFailedScorecardStillLoadsTheHome() async throws {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let home = try await MonDeputeModel.loadHome(id: "PA1008", deputies: MonDeputeDeputies(), store: store)
-        #expect(home.scorecard == nil)
-        #expect(home.alignment == nil)
-    }
-
-    @Test func aFirstVisitAsksForNothingAndStartsFromTheNewestVote() async throws {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let deputies = MonDeputeDeputies(recent: [vote("V2", day: "2026-07-21"), vote("V1", day: "2026-07-20")])
-        let home = try await MonDeputeModel.loadHome(id: "PA1008", deputies: deputies, store: store)
-        #expect(home.sinceLastVisit == .firstVisit)
-        #expect(deputies.sinceDates.isEmpty)
-        #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-07-21")))
-    }
-
-    @Test func aLaterVisitUsesTheStoredPositionThenAdvancesIt() async throws {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let seen = try APIDay.date("2026-07-21")
-        store.setLastSeenVote(seen, for: "PA1008")
-        let deputies = MonDeputeDeputies(recent: [vote("V4", day: "2026-07-23"), vote("V2", day: "2026-07-21")])
-        deputies.newVotes = [vote("V4", day: "2026-07-23"), vote("V3", day: "2026-07-22")]
-        let home = try await MonDeputeModel.loadHome(id: "PA1008", deputies: deputies, store: store)
-        #expect(deputies.sinceDates == [seen])
-        #expect(home.sinceLastVisit == .votes(deputies.newVotes, after: seen))
-        #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-07-23")))
-    }
-
-    /// Not the time of the visit: a scrutin held on the day of a visit is
-    /// dated that midnight, before the visit, and would never show.
-    @Test func thePositionIsAVoteDateNotTheClock() async throws {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let deputies = MonDeputeDeputies(recent: [vote("V1", day: "2026-07-20")])
-        let visit = try APIDay.date("2026-07-21").addingTimeInterval(15 * 3600)
-        _ = try await MonDeputeModel.loadHome(id: "PA1008", deputies: deputies, store: store, now: visit)
-        #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-07-20")))
-    }
-
-    @Test func aFailedListKeepsThePosition() async throws {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let seen = try APIDay.date("2026-07-21")
-        store.setLastSeenVote(seen, for: "PA1008")
-        let deputies = MonDeputeDeputies(recent: nil)
-        deputies.newVotes = [vote("V3", day: "2026-07-22")]
-        _ = try await MonDeputeModel.loadHome(id: "PA1008", deputies: deputies, store: store)
-        #expect(store.lastSeenVote(for: "PA1008") == seen)
-    }
-
-    @Test func aDeputyWithNoVoteStartsFromToday() async throws {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let visit = try APIDay.date("2026-07-21").addingTimeInterval(15 * 3600)
-        _ = try await MonDeputeModel.loadHome(id: "PA1", deputies: MonDeputeDeputies(recent: []), store: store, now: visit)
-        let position = try #require(store.lastSeenVote(for: "PA1"))
-        // A scrutin held that day (dated its midnight) is still after it.
-        #expect(position < (try APIDay.date("2026-07-21")))
-        #expect(position > (try APIDay.date("2026-07-20")))
-    }
-
-    @Test func countsAreWrittenInFrench() {
-        #expect(HomeRecentVotesSection.newCount(1) == "1 nouveau vote")
-        #expect(HomeRecentVotesSection.newCount(3) == "3 nouveaux votes")
-        #expect(HomeRecentVotesSection.newCount(50) == "Au moins 50 nouveaux votes")
-    }
-
-    /// Accueil marks the votes held after the stored position (#477).
-    @Test func onlyVotesAfterThePreviousVisitAreNew() throws {
-        let since = SinceLastVisit.votes([vote("V3", day: "2026-07-22")], after: try APIDay.date("2026-07-21"))
-        #expect(since.isNew(vote("V3", day: "2026-07-22")))
-        #expect(!since.isNew(vote("V2", day: "2026-07-21")))
-        #expect(!SinceLastVisit.firstVisit.isNew(vote("V3", day: "2026-07-22")))
-        #expect(!SinceLastVisit.unavailable.isNew(vote("V3", day: "2026-07-22")))
-    }
-
-    /// A first visit says nothing about "new"; the other states say what
-    /// changed, and the recent votes show in every case.
-    @Test func theStatusLineFollowsTheVisit() throws {
-        let after = try APIDay.date("2026-07-21")
-        #expect(HomeRecentVotesSection.status(.firstVisit) == nil)
-        #expect(HomeRecentVotesSection.status(.votes([], after: after)) == "Rien de nouveau depuis le scrutin du 21 juillet 2026.")
-        #expect(
-            HomeRecentVotesSection.status(.votes([vote("V3", day: "2026-07-22")], after: after))
-                == "1 nouveau vote depuis votre dernière visite"
-        )
-        #expect(HomeRecentVotesSection.status(.unavailable) == "Les nouveaux votes n'ont pas pu être vérifiés.")
-    }
-
-    /// The home loads the profile and recent votes, never the scorecard,
-    /// whose figures stay on the profile.
-    @Test func theHomeKeepsItsListsWhenOnlyTheRecentVotesFail() async throws {
-        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let home = try await MonDeputeModel.loadHome(
-            id: "PA1008", deputies: MonDeputeDeputies(recent: nil), store: store
-        )
-        #expect(home.profile == testProfile)
-        #expect(home.recentVotes == nil)
     }
 }
 

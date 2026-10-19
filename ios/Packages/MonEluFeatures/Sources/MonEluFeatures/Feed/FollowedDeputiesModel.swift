@@ -95,8 +95,7 @@ public final class FollowedDeputiesModel {
     }
 
     /// Where the next visit's "since" starts, or nil to keep the current one
-    /// when the votes failed to load. Same rule as
-    /// `MonDeputeModel.readingPosition`: the newest vote shown, never earlier
+    /// when the votes failed to load: the newest vote shown, never earlier
     /// than the current position.
     nonisolated static func readingPosition(shown: [DeputyVote]?, lastSeen: Date?, now: Date) -> Date? {
         guard let shown else { return nil }

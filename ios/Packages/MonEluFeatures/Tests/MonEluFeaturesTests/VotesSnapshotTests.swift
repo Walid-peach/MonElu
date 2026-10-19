@@ -62,12 +62,14 @@ struct VotesSnapshotTests {
         )
         // The theme and the bill are links, so the page sits in a stack
         // (outside one a link renders disabled), sized explicitly. The
-        // first deputy listed stands for the one the user follows.
+        // first deputy listed stands for the one the user follows; several
+        // are `followedPositions`, apart, to stay under the size limit.
         checkSnapshot(
             NavigationStack {
                 ScrollView {
                     VoteDetailContent(
-                        vote: vote, configuration: Self.configuration, followedDeputyID: vote.positions.first?.deputyID
+                        vote: vote, configuration: Self.configuration,
+                        followedDeputyIDs: vote.positions.prefix(1).map(\.deputyID)
                     )
                     .padding(16)
                 }
@@ -75,6 +77,21 @@ struct VotesSnapshotTests {
             },
             variant,
             height: variant.size.isAccessibilityCategory ? 4140 : 1450
+        )
+    }
+
+    /// Several followed deputies (#577): two with a position, named, and a
+    /// third with none, counted.
+    @Test(arguments: Variant.all)
+    func followedPositions(_ variant: Variant) async throws {
+        let vote = try await LiveVotesService(client: stubClient(try fixture("vote_detail"))).vote(id: "VTANR5L17V8434")
+        checkSnapshot(
+            FollowedPositionsCard(positions: Array(vote.positions.prefix(2)), followedCount: 3)
+                .padding(16)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .background(Palette.pageBackground),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 560 : 200
         )
     }
 }
