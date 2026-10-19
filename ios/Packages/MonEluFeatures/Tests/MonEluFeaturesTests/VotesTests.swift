@@ -163,3 +163,27 @@ struct GroupPositionsTests {
         #expect(vote.hasLoiPage)
     }
 }
+
+/// The vote page's followed deputies (#577): each recorded position named,
+/// the others counted, and the single-deputy wording kept.
+struct FollowedPositionsCardTests {
+    let pour = DeputyPosition(deputyID: "PA1", name: "Marie Dupont", group: "EPR", position: "pour")
+
+    @Test func oneDeputyWithoutAPositionSaysSo() {
+        let card = FollowedPositionsCard(positions: [], followedCount: 1)
+        #expect(card.missingLine == "Pas de position enregistrée sur ce scrutin")
+    }
+
+    @Test func everyFollowedDeputyWithAPositionNeedsNoNote() {
+        #expect(FollowedPositionsCard(positions: [pour], followedCount: 1).missingLine == nil)
+    }
+
+    @Test func theOthersAreCounted() {
+        #expect(FollowedPositionsCard(positions: [pour], followedCount: 2).missingLine
+            == "1 autre député suivi sans position enregistrée")
+        #expect(FollowedPositionsCard(positions: [pour], followedCount: 4).missingLine
+            == "3 autres députés suivis sans position enregistrée")
+        #expect(FollowedPositionsCard(positions: [], followedCount: 3).missingLine
+            == "Aucun de vos députés n'a de position enregistrée sur ce scrutin")
+    }
+}

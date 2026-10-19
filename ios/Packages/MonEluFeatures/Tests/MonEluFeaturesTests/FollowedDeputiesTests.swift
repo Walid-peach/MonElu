@@ -95,3 +95,25 @@ struct FollowedDeputiesModelTests {
         #expect(model.loaded.map(\.id) == ["PA1008"])
     }
 }
+
+/// Where the next visit's "since" starts (#463), now kept by the follows row.
+struct FollowedDeputyReadingPositionTests {
+    @Test func aFailedListKeepsThePosition() throws {
+        let seen = try APIDay.date("2026-07-20")
+        #expect(FollowedDeputiesModel.readingPosition(shown: nil, lastSeen: seen, now: Date()) == nil)
+    }
+
+    @Test func thePositionNeverGoesBack() throws {
+        let seen = try APIDay.date("2026-07-20")
+        let older = [vote("V1", day: "2026-07-10")]
+        #expect(FollowedDeputiesModel.readingPosition(shown: older, lastSeen: seen, now: Date()) == seen)
+    }
+
+    /// A deputy with no vote yet starts from the start of today, so a
+    /// scrutin held later today still counts as new.
+    @Test func aDeputyWithNoVoteStartsFromToday() throws {
+        let visit = try #require(ISO8601DateFormatter().date(from: "2026-07-21T15:00:00Z"))
+        let position = FollowedDeputiesModel.readingPosition(shown: [], lastSeen: nil, now: visit)
+        #expect(position == (try APIDay.date("2026-07-21")).addingTimeInterval(-1))
+    }
+}

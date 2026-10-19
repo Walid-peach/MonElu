@@ -13,7 +13,7 @@ struct RouteDestination: View {
         case .deputy(let id):
             DeputyProfileScreen(id: id, service: services.deputies, followedDeputy: services.followedDeputy)
         case .vote(let id):
-            VoteDetailScreen(id: id, service: services.votes, followedDeputyID: services.followedDeputy.deputyID)
+            VoteDetailScreen(id: id, service: services.votes, followedDeputies: services.followedDeputy)
         case .loi(let id):
             LoiScreen(id: id, service: services.lois)
         case .loiAmendements(let id, let acteID):

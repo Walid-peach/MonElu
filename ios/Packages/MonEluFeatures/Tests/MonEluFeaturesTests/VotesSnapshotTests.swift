@@ -62,19 +62,21 @@ struct VotesSnapshotTests {
         )
         // The theme and the bill are links, so the page sits in a stack
         // (outside one a link renders disabled), sized explicitly. The
-        // first deputy listed stands for the one the user follows.
+        // first two deputies listed stand for two the user follows, and a
+        // third with no position on this scrutin.
         checkSnapshot(
             NavigationStack {
                 ScrollView {
                     VoteDetailContent(
-                        vote: vote, configuration: Self.configuration, followedDeputyID: vote.positions.first?.deputyID
+                        vote: vote, configuration: Self.configuration,
+                        followedDeputyIDs: vote.positions.prefix(2).map(\.deputyID) + ["PA-NONE"]
                     )
                     .padding(16)
                 }
                 .background(Palette.pageBackground)
             },
             variant,
-            height: variant.size.isAccessibilityCategory ? 4140 : 1450
+            height: variant.size.isAccessibilityCategory ? 4500 : 1550
         )
     }
 }

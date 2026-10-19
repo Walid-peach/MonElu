@@ -4,17 +4,18 @@ import SwiftUI
 
 /// A scrutin's page (web: `/votes/[id]`; design A, Scrutin): what was voted,
 /// the result and its counts, the plain-language summary, the followed
-/// deputy's own position, the hemicycle, each group's split and the bill.
+/// deputies' own positions, the hemicycle, each group's split and the bill.
 public struct VoteDetailScreen: View {
     let id: String
-    /// The deputy the user follows on this device, if any (ADR-040 §6).
-    let followedDeputyID: String?
+    /// The deputies the user follows on this device (ADR-040 §6), read on
+    /// every render so a follow made on another tab shows here (#576).
+    let followedDeputies: (any FollowedDeputyStore)?
     @State private var loader: Loader<VoteDetail>
     @Environment(\.appConfiguration) private var configuration
 
-    public init(id: String, service: any VotesService, followedDeputyID: String? = nil) {
+    public init(id: String, service: any VotesService, followedDeputies: (any FollowedDeputyStore)? = nil) {
         self.id = id
-        self.followedDeputyID = followedDeputyID
+        self.followedDeputies = followedDeputies
         _loader = State(initialValue: Loader { try await service.vote(id: id) })
     }
 
@@ -24,7 +25,9 @@ public struct VoteDetailScreen: View {
             empty: EmptyStateView(title: "Scrutin introuvable", message: "Ce scrutin n'existe pas ou plus.")
         ) { vote in
             ScrollView {
-                VoteDetailContent(vote: vote, configuration: configuration, followedDeputyID: followedDeputyID)
+                VoteDetailContent(
+                    vote: vote, configuration: configuration, followedDeputyIDs: followedDeputies?.deputyIDs ?? []
+                )
                     .padding(16)
             }
         }
@@ -45,7 +48,8 @@ public struct VoteDetailScreen: View {
 struct VoteDetailContent: View {
     let vote: VoteDetail
     let configuration: AppConfiguration
-    var followedDeputyID: String?
+    /// Every followed deputy, in the order they were followed (#577).
+    var followedDeputyIDs: [String] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -65,8 +69,11 @@ struct VoteDetailContent: View {
                     }
                 }
             }
-            if followedDeputyID != nil {
-                FollowedPositionCard(position: vote.position(of: followedDeputyID))
+            if !followedDeputyIDs.isEmpty {
+                FollowedPositionsCard(
+                    positions: followedDeputyIDs.compactMap { vote.position(of: $0) },
+                    followedCount: followedDeputyIDs.count
+                )
             }
             if !vote.positions.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -213,30 +220,55 @@ struct ResultCard: View {
     }
 }
 
-/// The followed deputy's own position, or that they recorded none.
-struct FollowedPositionCard: View {
-    let position: DeputyPosition?
+/// The followed deputies' own positions on the scrutin (#577): one row per
+/// deputy with a recorded position, in the order they were followed, and how
+/// many recorded none. A deputy with no position is not in the scrutin's
+/// list, so the page counts them rather than naming them.
+struct FollowedPositionsCard: View {
+    /// The followed deputies' recorded positions, in the followed order.
+    let positions: [DeputyPosition]
+    /// How many deputies are followed, with or without a position.
+    let followedCount: Int
 
     var body: some View {
         Card {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Votre député")
-                        .font(.footnote)
-                        .foregroundStyle(Palette.textSecondary)
-                    Text(position?.name ?? "Pas de position enregistrée sur ce scrutin")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Palette.textPrimary)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(followedCount == 1 ? "Votre député" : "Vos députés")
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
+                ForEach(positions, id: \.deputyID) { position in
+                    HStack(spacing: 12) {
+                        Text(position.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Palette.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        VotePositionBadge(position: position.position)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                if let missing = missingLine {
+                    Text(missing)
+                        .font(positions.isEmpty ? .subheadline.weight(.semibold) : .footnote)
+                        .foregroundStyle(positions.isEmpty ? Palette.textPrimary : Palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if let position {
-                    VotePositionBadge(position: position.position)
-                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("vote.followed")
+    }
+
+    /// Said for the followed deputies with no recorded position.
+    var missingLine: String? {
+        let missing = followedCount - positions.count
+        guard missing > 0 else { return nil }
+        if followedCount == 1 { return "Pas de position enregistrée sur ce scrutin" }
+        if missing == followedCount { return "Aucun de vos députés n'a de position enregistrée sur ce scrutin" }
+        return missing == 1
+            ? "1 autre député suivi sans position enregistrée"
+            : "\(missing) autres députés suivis sans position enregistrée"
     }
 }
 
