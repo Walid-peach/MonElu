@@ -209,6 +209,23 @@ struct FeedSnapshotTests {
         )
     }
 
+    /// With `features.chat` off, only the quiz is offered under the feed.
+    @Test func feedWithoutChat() {
+        var configuration = AppConfiguration.defaults
+        configuration.features.chat = false
+        checkSnapshot(
+            NavigationStack {
+                FeedContent(page: FeedPage(weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, entries: []), tab: .pourVous)
+                    .padding(16)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .background(Palette.pageBackground)
+                    .environment(\.appConfiguration, configuration)
+            },
+            Variant.all[0],
+            height: 300
+        )
+    }
+
     @Test(arguments: Variant.all)
     func feedEmpty(_ variant: Variant) {
         checkSnapshot(

@@ -116,11 +116,12 @@ public struct HomeScreen: View {
         )
     }
 
-    /// A feed page's `latest_by_theme`: a theme seen for the first time
-    /// starts reading there, and the theme whose filter is open is seen.
+    /// A feed page's `latest_by_theme`, kept for the circles. The store is
+    /// not observable: the rings recompute because `themeLatest` changes.
     private func received(_ latest: [String: Date]) {
-        themesStore.startReading(latest: latest)
-        if case .theme(let slug) = activeFilter { themesStore.markSeen(slug, latest: latest) }
+        var openTheme: String?
+        if case .theme(let slug) = activeFilter { openTheme = slug }
+        themesStore.receive(latest: latest, openTheme: openTheme)
         themeLatest.merge(latest) { _, new in new }
     }
 

@@ -43,6 +43,14 @@ public extension FollowedThemesStore {
         }
     }
 
+    /// A feed page's `latestByTheme`: a theme reported for the first time
+    /// starts reading there, and the theme whose filter is open (`openTheme`)
+    /// has just shown its scrutins, so they are seen.
+    func receive(latest: [String: Date], openTheme: String?) {
+        startReading(latest: latest)
+        if let openTheme { markSeen(openTheme, latest: latest) }
+    }
+
     /// Opening a theme's filter shows its scrutins: what it held is now seen.
     func markSeen(_ slug: String, latest: [String: Date]) {
         guard let newest = latest[slug], newest > (lastSeen(theme: slug) ?? .distantPast) else { return }

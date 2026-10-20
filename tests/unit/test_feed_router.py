@@ -19,6 +19,7 @@ from api.routers.feed import (
     build_items,
     closest_scrutin,
     earns_card,
+    latest_by_theme,
     resolve_deputies,
     resolve_themes,
     week_bounds,
@@ -514,33 +515,31 @@ def test_recap_reports_each_deputy(client, mock_cursor, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_latest_by_theme_follows_the_requested_order_and_skips_empty_themes(
-    client, mock_cursor, monkeypatch
-):
-    monkeypatch.setattr(feed, "paris_today", lambda: date(2026, 10, 15))
-    justice = datetime(2026, 10, 14, tzinfo=timezone.utc)
-    budget = datetime(2026, 9, 30, tzinfo=timezone.utc)
-    mock_cursor.fetchall.side_effect = [
-        [_row("EN", "ensemble", theme=JUSTICE)],  # the week
-        [],  # agenda
-        [{"theme": BUDGET, "latest": budget}, {"theme": JUSTICE, "latest": justice}],
+def test_latest_by_theme_is_each_themes_newest_headline_vote_of_the_week():
+    rows = [
+        _row("EN1", "ensemble", day=12, theme=JUSTICE),
+        _row("MO", "motion", day=14, theme=JUSTICE),
+        _row("AM", "amendement", day=16, pour=200, contre=199, theme=JUSTICE),
+        _row("EN2", "ensemble", day=13, theme=BUDGET),
+        _row("EN3", "ensemble", day=15),
     ]
-    body = client.get(
-        "/feed?theme=justice-securite&theme=sante-social&theme=economie-budget"
-    ).json()
+    latest = latest_by_theme(rows, ["sante-social", "economie-budget", "justice-securite"])
+    # Request order, the amendment (even a close one) ignored, Santé absent.
+    assert [(t.theme_slug, t.voted_at.day) for t in latest] == [
+        ("economie-budget", 13),
+        ("justice-securite", 14),
+    ]
 
+
+def test_latest_by_theme_is_empty_without_a_followed_theme():
+    assert latest_by_theme([_row("EN", "ensemble", theme=JUSTICE)], []) == []
+
+
+def test_feed_returns_latest_by_theme_without_another_query(client, mock_cursor, monkeypatch):
+    monkeypatch.setattr(feed, "paris_today", lambda: date(2026, 10, 15))
+    mock_cursor.fetchall.side_effect = [[_row("EN", "ensemble", day=14, theme=JUSTICE)], []]
+    body = client.get("/feed?theme=justice-securite&theme=sante-social").json()
     assert [(t["theme_slug"], t["voted_at"][:10]) for t in body["latest_by_theme"]] == [
-        ("justice-securite", "2026-10-14"),
-        ("economie-budget", "2026-09-30"),
+        ("justice-securite", "2026-10-14")
     ]
-    params = mock_cursor.execute.call_args_list[-1].args[1]
-    assert params["kinds"] == ["ensemble", "motion"]
-    assert set(params["themes"]) == {JUSTICE, BUDGET, "Santé & Social"}
-
-
-def test_latest_by_theme_is_not_queried_without_a_followed_theme(client, mock_cursor, monkeypatch):
-    monkeypatch.setattr(feed, "paris_today", lambda: date(2026, 10, 15))
-    mock_cursor.fetchall.side_effect = [[_row("EN", "ensemble")], []]
-    body = client.get("/feed?tab=assemblee").json()
-    assert body["latest_by_theme"] == []
     assert mock_cursor.execute.call_count == 2

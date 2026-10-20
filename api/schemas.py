@@ -1566,7 +1566,7 @@ class FeedThemeLatest(_Base):
 
     theme_slug: str
     voted_at: datetime = Field(
-        description="The most recent whole-text vote or motion in this theme, any week"
+        description="The most recent whole-text vote or motion in this theme, in the week shown"
     )
 
 
@@ -1631,8 +1631,9 @@ class FeedResponse(_Base):
     items: list[FeedItem]
     latest_by_theme: list[FeedThemeLatest] = Field(
         default_factory=list,
-        description="For each requested theme with one, its most recent whole-text vote or "
-        "motion, in the order of `themes`; the app compares it with the last one the user saw",
+        description="For each requested `theme` slug with one, its most recent whole-text vote "
+        "or motion in the week shown, in request order; the app compares it with the last one "
+        "the user saw",
     )
 
 

@@ -85,18 +85,6 @@ SQL_WEEK_SCRUTINS = """
 # when the requested one has no sitting (ADR-042 §5).
 SQL_LATEST_BEFORE = "SELECT MAX(voted_at) AS latest FROM votes WHERE voted_at < %(end)s"
 
-# Each followed theme's most recent card-worthy scrutin, in any week: what the
-# app's theme circle compares with the last one the user saw (#573). Only the
-# kinds a theme brings into « Pour vous », so the ring never announces a vote
-# the theme's own feed would not show.
-SQL_LATEST_BY_THEME = """
-    SELECT theme, MAX(voted_at) AS latest
-    FROM votes
-    WHERE theme = ANY(%(themes)s::text[])
-      AND scrutin_kind = ANY(%(kinds)s::text[])
-    GROUP BY theme
-"""
-
 SQL_DEPUTIES_EXIST = "SELECT deputy_id FROM deputies WHERE deputy_id = ANY(%s::text[])"
 
 
@@ -285,6 +273,28 @@ def build_items(
     return items
 
 
+def latest_by_theme(rows: list[dict], theme_slugs: list[str]) -> list[FeedThemeLatest]:
+    """Each followed theme's newest whole-text vote or motion in the week shown (#573).
+
+    Only the kinds a theme brings into « Pour vous », and only from the week
+    the feed returned, so the app's ring never announces a vote the theme's
+    own filter would not show. In the order the `theme` slugs were sent; a
+    theme with no such scrutin that week is left out.
+    """
+    newest: dict[str, datetime] = {}
+    for row in rows:
+        theme, voted_at = row.get("theme"), row.get("voted_at")
+        if theme is None or voted_at is None or kind_of(row) not in HEADLINE_KINDS:
+            continue
+        if theme not in newest or voted_at > newest[theme]:
+            newest[theme] = voted_at
+    return [
+        FeedThemeLatest(theme_slug=slug, voted_at=newest[THEME_NAMES[slug]])
+        for slug in theme_slugs
+        if THEME_NAMES[slug] in newest
+    ]
+
+
 def deputy_week(rows: list[dict], deputy_id: str) -> FeedWeekDeputyEntry:
     """One deputy's positions over the week's scrutins.
 
@@ -375,25 +385,6 @@ def _agenda_rows(cur, today: date) -> list[AgendaItem]:
             result=row["result"],
         )
         for row in cur.fetchall()
-    ]
-
-
-def _latest_by_theme(cur, theme_slugs: list[str]) -> list[FeedThemeLatest]:
-    """Each followed theme's newest headline scrutin, in the order the themes were sent.
-
-    A theme with no such scrutin yet is left out rather than sent with a null date.
-    """
-    if not theme_slugs:
-        return []
-    cur.execute(
-        SQL_LATEST_BY_THEME,
-        {"themes": [THEME_NAMES[s] for s in theme_slugs], "kinds": list(HEADLINE_KINDS)},
-    )
-    latest = {row["theme"]: row["latest"] for row in cur.fetchall()}
-    return [
-        FeedThemeLatest(theme_slug=slug, voted_at=latest[THEME_NAMES[slug]])
-        for slug in theme_slugs
-        if latest.get(THEME_NAMES[slug]) is not None
     ]
 
 
@@ -524,11 +515,11 @@ def get_feed(
     `week_end`; `requested_week_start` keeps the week asked for. Production data
     starts on 2025-07-01.
 
-    `latest_by_theme` gives, for each requested theme, the date of its most
-    recent whole-text vote or motion in any week - the kinds a theme brings
-    into `pour_vous`. The app lights a theme's "something new" ring when that
-    date is after the last one the user saw; a theme with no such scrutin is
-    left out.
+    `latest_by_theme` gives, for each requested `theme` slug, the date of its
+    most recent whole-text vote or motion in the week shown - the scrutins a
+    theme brings into `pour_vous`. The app lights a theme's "something new"
+    ring when that date is after the last one the user saw; a theme with no
+    such scrutin that week is left out.
     """
     theme_slugs, theme_names = resolve_themes(theme)
     deputy_ids = resolve_deputies(deputy_id, deputies)
@@ -540,7 +531,6 @@ def get_feed(
             _require_deputies(cur, deputy_ids)
             monday, rows, no_sitting = _sitting_week(cur, requested_monday, deputy_ids)
             agenda = _agenda_rows(cur, today)
-            latest_by_theme = _latest_by_theme(cur, theme_slugs)
 
     items = build_items(tab, rows, agenda, deputy_ids=deputy_ids, theme_names=theme_names)
     _, sunday = week_bounds(monday)
@@ -554,7 +544,7 @@ def get_feed(
         week_end=sunday,
         no_sitting=no_sitting,
         items=items,
-        latest_by_theme=latest_by_theme,
+        latest_by_theme=latest_by_theme(rows, theme_slugs),
     )
 
 

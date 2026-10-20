@@ -80,6 +80,21 @@ struct FollowedThemesStoreTests {
         #expect(store.lastSeen(theme: "justice-securite") == later)
     }
 
+    /// A page loaded under a theme's filter marks that theme seen, and only
+    /// that one; every other theme only starts reading.
+    @Test func aPageUnderAThemesFilterMarksOnlyThatThemeSeen() {
+        let store = UserDefaultsFollowedThemesStore(defaults: freshDefaults(), known: known)
+        store.follow("justice-securite")
+        store.follow("sante-social")
+        let first = Date(timeIntervalSince1970: 1_000)
+        let later = Date(timeIntervalSince1970: 2_000)
+        store.receive(latest: ["justice-securite": first, "sante-social": first], openTheme: nil)
+
+        let newer = ["justice-securite": later, "sante-social": later]
+        store.receive(latest: newer, openTheme: "sante-social")
+        #expect(store.themesWithNews(latest: newer) == ["justice-securite"])
+    }
+
     @Test func aThemeNoLongerFollowedNeverLightsUp() {
         let store = UserDefaultsFollowedThemesStore(defaults: freshDefaults(), known: known)
         store.follow("sante-social")
