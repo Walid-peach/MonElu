@@ -1555,6 +1555,21 @@ class FeedRollup(_Base):
     )
 
 
+class FeedThemeLatest(_Base):
+    """When a followed theme last had a card-worthy scrutin, for the app's "something new" ring."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"theme_slug": "justice-securite", "voted_at": "2026-10-14T00:00:00+02:00"}
+        }
+    )
+
+    theme_slug: str
+    voted_at: datetime = Field(
+        description="The most recent whole-text vote or motion in this theme, any week"
+    )
+
+
 class FeedItem(_Base):
     """One entry of the feed; exactly one of the three payloads is set, named by `type`."""
 
@@ -1614,6 +1629,11 @@ class FeedResponse(_Base):
         description="True when the requested week had no scrutin and an earlier week is shown"
     )
     items: list[FeedItem]
+    latest_by_theme: list[FeedThemeLatest] = Field(
+        default_factory=list,
+        description="For each requested theme with one, its most recent whole-text vote or "
+        "motion, in the order of `themes`; the app compares it with the last one the user saw",
+    )
 
 
 class FeedWeekDeputy(_Base):

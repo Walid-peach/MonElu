@@ -1756,7 +1756,7 @@
           "Feed"
         ],
         "summary": "The app's Accueil feed for followed deputies and themes",
-        "description": "Ready-to-show cards for the iPhone app's Accueil, one ISO week at a time.\n\nFollows are not stored anywhere: pass each followed deputy as a repeated\n`deputies` id and each followed theme as a repeated `theme` slug. The older\nsingle `deputy_id` is still accepted and merged first; `deputy_ids` echoes\nthe merged set, deduplicated, in that order. More than 10 deputies is a 422.\nAn unknown deputy anywhere in the set is a 404 and an unknown theme slug a\n422, never a shorter or empty feed.\n\n`items` is already in screen order: `scrutin` cards newest first, then the\nnext seven days of séance publique `agenda`, then one `rollup` per followed\ndeputy who has one, in the followed order. Each item\ncarries exactly one of `scrutin`, `agenda` or `rollup`, named by `type`.\n\n**Which scrutins get a card** (ADR-042 §3): whole-text votes (`ensemble`)\nand motions always; an amendment, article or other vote only when pour and\ncontre were within 20 votes of each other. In `pour_vous` each followed\ndeputy's remaining votes of the week are counted in that deputy's `rollup`\ninstead, with `nonVotant` positions counted apart in `non_votant` and left\nout of `total`.\n\n- `pour_vous`: every carded scrutin at least one followed deputy voted on,\n  plus whole-text votes and motions in the followed themes, each scrutin\n  once; agenda items in the followed themes. Nothing followed means no items.\n- `assemblee`: the week's whole-text votes and motions, plus the closest\n  scrutin of the week (`closest: true`), and every agenda item.\n\n`positions` lists `{deputy_id, position}` for each followed deputy with a\nrecorded position on the scrutin, in the followed order; `deputy_position`\nis the first followed deputy's, null when that deputy has none. A position\nis `pour`, `contre`, `abstention` or `nonVotant`. `abstention` was cast deliberately and\n`nonVotant` was not cast at all - do not merge them. `result` is the\nscrutin's outcome, not the deputy's choice, and for a `motion` an `adopté`\nresult means the motion passed (a motion de rejet adopted rejects the text).\n\nWeeks run Monday to Sunday, Paris time. When the requested week has no\nscrutin (recess), `no_sitting` is true and the scrutins come from the most\nrecent earlier week that had one, whose bounds are in `week_start` and\n`week_end`; `requested_week_start` keeps the week asked for. Production data\nstarts on 2025-07-01.",
+        "description": "Ready-to-show cards for the iPhone app's Accueil, one ISO week at a time.\n\nFollows are not stored anywhere: pass each followed deputy as a repeated\n`deputies` id and each followed theme as a repeated `theme` slug. The older\nsingle `deputy_id` is still accepted and merged first; `deputy_ids` echoes\nthe merged set, deduplicated, in that order. More than 10 deputies is a 422.\nAn unknown deputy anywhere in the set is a 404 and an unknown theme slug a\n422, never a shorter or empty feed.\n\n`items` is already in screen order: `scrutin` cards newest first, then the\nnext seven days of séance publique `agenda`, then one `rollup` per followed\ndeputy who has one, in the followed order. Each item\ncarries exactly one of `scrutin`, `agenda` or `rollup`, named by `type`.\n\n**Which scrutins get a card** (ADR-042 §3): whole-text votes (`ensemble`)\nand motions always; an amendment, article or other vote only when pour and\ncontre were within 20 votes of each other. In `pour_vous` each followed\ndeputy's remaining votes of the week are counted in that deputy's `rollup`\ninstead, with `nonVotant` positions counted apart in `non_votant` and left\nout of `total`.\n\n- `pour_vous`: every carded scrutin at least one followed deputy voted on,\n  plus whole-text votes and motions in the followed themes, each scrutin\n  once; agenda items in the followed themes. Nothing followed means no items.\n- `assemblee`: the week's whole-text votes and motions, plus the closest\n  scrutin of the week (`closest: true`), and every agenda item.\n\n`positions` lists `{deputy_id, position}` for each followed deputy with a\nrecorded position on the scrutin, in the followed order; `deputy_position`\nis the first followed deputy's, null when that deputy has none. A position\nis `pour`, `contre`, `abstention` or `nonVotant`. `abstention` was cast deliberately and\n`nonVotant` was not cast at all - do not merge them. `result` is the\nscrutin's outcome, not the deputy's choice, and for a `motion` an `adopté`\nresult means the motion passed (a motion de rejet adopted rejects the text).\n\nWeeks run Monday to Sunday, Paris time. When the requested week has no\nscrutin (recess), `no_sitting` is true and the scrutins come from the most\nrecent earlier week that had one, whose bounds are in `week_start` and\n`week_end`; `requested_week_start` keeps the week asked for. Production data\nstarts on 2025-07-01.\n\n`latest_by_theme` gives, for each requested theme, the date of its most\nrecent whole-text vote or motion in any week - the kinds a theme brings\ninto `pour_vous`. The app lights a theme's \"something new\" ring when that\ndate is after the last one the user saw; a theme with no such scrutin is\nleft out.",
         "operationId": "getFeed",
         "parameters": [
           {
@@ -4443,6 +4443,14 @@
             },
             "type": "array",
             "title": "Items"
+          },
+          "latest_by_theme": {
+            "items": {
+              "$ref": "#/components/schemas/FeedThemeLatest"
+            },
+            "type": "array",
+            "title": "Latest By Theme",
+            "description": "For each requested theme with one, its most recent whole-text vote or motion, in the order of `themes`; the app compares it with the last one the user saw"
           }
         },
         "type": "object",
@@ -4692,6 +4700,31 @@
           "voted_at": "2026-07-21T00:00:00Z",
           "votes_against": 179,
           "votes_for": 351
+        }
+      },
+      "FeedThemeLatest": {
+        "properties": {
+          "theme_slug": {
+            "type": "string",
+            "title": "Theme Slug"
+          },
+          "voted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Voted At",
+            "description": "The most recent whole-text vote or motion in this theme, any week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "theme_slug",
+          "voted_at"
+        ],
+        "title": "FeedThemeLatest",
+        "description": "When a followed theme last had a card-worthy scrutin, for the app's \"something new\" ring.",
+        "example": {
+          "theme_slug": "justice-securite",
+          "voted_at": "2026-10-14T00:00:00+02:00"
         }
       },
       "FeedWeekDeputy": {

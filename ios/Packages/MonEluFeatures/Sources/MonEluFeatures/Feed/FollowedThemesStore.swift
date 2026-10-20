@@ -23,6 +23,31 @@ public extension FollowedThemesStore {
     func toggle(_ slug: String) {
         if isFollowing(slug) { unfollow(slug) } else { follow(slug) }
     }
+
+    /// The followed themes whose newest headline scrutin, as `GET /feed`
+    /// reported it in `latest`, is after the one the user last saw. A theme
+    /// never seen has no ring: there is nothing to compare with yet.
+    func themesWithNews(latest: [String: Date]) -> Set<String> {
+        Set(themeSlugs.filter { slug in
+            guard let newest = latest[slug], let seen = lastSeen(theme: slug) else { return false }
+            return newest > seen
+        })
+    }
+
+    /// Starts each followed theme's reading position at its newest scrutin
+    /// the first time the feed reports one, so a theme does not light up the
+    /// moment it is followed, only when something arrives after.
+    func startReading(latest: [String: Date]) {
+        for slug in themeSlugs where lastSeen(theme: slug) == nil {
+            if let newest = latest[slug] { setLastSeen(newest, theme: slug) }
+        }
+    }
+
+    /// Opening a theme's filter shows its scrutins: what it held is now seen.
+    func markSeen(_ slug: String, latest: [String: Date]) {
+        guard let newest = latest[slug], newest > (lastSeen(theme: slug) ?? .distantPast) else { return }
+        setLastSeen(newest, theme: slug)
+    }
 }
 
 /// `FollowedThemesStore` in `UserDefaults`, which survives relaunches.

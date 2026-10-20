@@ -44,6 +44,12 @@ struct FeedServiceTests {
         #expect(law.loiID == "DLR5L17N53980")
     }
 
+    /// `latest_by_theme` becomes a lookup by slug for the theme rings (#573).
+    @Test func mapsEachThemesLatestScrutin() async throws {
+        let latest = try #require(ISO8601DateFormatter().date(from: "2026-10-13T22:00:00Z"))
+        #expect(try await page().latestByTheme == ["justice-securite": latest])
+    }
+
     @Test func theRollupKeepsNonVotantApart() async throws {
         guard case .rollup(let rollup) = try await page().entries.last else {
             Issue.record("the last entry is not the rollup")

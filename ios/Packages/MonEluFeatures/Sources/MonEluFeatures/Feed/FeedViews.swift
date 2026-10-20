@@ -25,6 +25,7 @@ struct FeedContent: View {
     var followsNothing = false
     var onOpenRecap: () -> Void = {}
     var onFindDeputy: () -> Void = {}
+    @Environment(\.appConfiguration) private var configuration
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -56,8 +57,11 @@ struct FeedContent: View {
                     FeedRollupView(rollup: rollup, name: rollup.deputyID.flatMap { names.name(of: $0) })
                 }
             }
-            HomeQuizInvitation()
-                .padding(.top, 8)
+            VStack(spacing: 12) {
+                if configuration.features.chat { HomeInvitation.ask }
+                HomeInvitation.quiz
+            }
+            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("feed.\(tab.rawValue)")
@@ -234,11 +238,57 @@ struct FeedScrutinCardView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var links: some View {
+    /// The scrutin and its source; on a card whose bill has a page, the
+    /// bill's link between them when all three fit, under them otherwise.
+    @ViewBuilder private var links: some View {
+        if card.loiID == nil {
+            scrutinAndSource
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    scrutinLink
+                    Spacer(minLength: 8)
+                    loiLink
+                    Spacer(minLength: 8)
+                    sourceLink
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    scrutinAndSource
+                    loiLink
+                }
+            }
+        }
+    }
+
+    private var scrutinAndSource: some View {
         HStack {
-            NavigationLink(value: AppRoute.vote(id: card.id)) {
+            scrutinLink
+            Spacer(minLength: 8)
+            sourceLink
+        }
+    }
+
+    private var scrutinLink: some View {
+        NavigationLink(value: AppRoute.vote(id: card.id)) {
+            HStack(spacing: 4) {
+                Text("Voir le scrutin")
+                Image(systemName: "arrow.right").accessibilityHidden(true)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Palette.textPrimary)
+            .frame(minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        // The headline above is the same link; VoiceOver reads it once.
+        .accessibilityHidden(true)
+    }
+
+    /// The bill's page in the app, when MonÉlu has one (#573).
+    @ViewBuilder private var loiLink: some View {
+        if let loiID = card.loiID {
+            NavigationLink(value: AppRoute.loi(id: loiID)) {
                 HStack(spacing: 4) {
-                    Text("Voir le scrutin")
+                    Text("Voir la loi")
                     Image(systemName: "arrow.right").accessibilityHidden(true)
                 }
                 .font(.subheadline.weight(.semibold))
@@ -246,21 +296,23 @@ struct FeedScrutinCardView: View {
                 .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
-            // The headline above is the same link; VoiceOver reads it once.
-            .accessibilityHidden(true)
-            Spacer(minLength: 8)
-            if let url = card.officialURL {
-                Link(destination: url) {
-                    HStack(spacing: 4) {
-                        Text("Source officielle")
-                        Image(systemName: "arrow.up.right").accessibilityHidden(true)
-                    }
-                    .font(.footnote)
-                    .foregroundStyle(Palette.textSecondary)
-                    .frame(minHeight: 44)
+            .accessibilityHint("Ouvre la page du texte et son parcours")
+            .accessibilityIdentifier("feed.loi")
+        }
+    }
+
+    @ViewBuilder private var sourceLink: some View {
+        if let url = card.officialURL {
+            Link(destination: url) {
+                HStack(spacing: 4) {
+                    Text("Source officielle")
+                    Image(systemName: "arrow.up.right").accessibilityHidden(true)
                 }
-                .accessibilityHint("Ouvre la page du scrutin sur le site de l'Assemblée nationale")
+                .font(.footnote)
+                .foregroundStyle(Palette.textSecondary)
+                .frame(minHeight: 44)
             }
+            .accessibilityHint("Ouvre la page du scrutin sur le site de l'Assemblée nationale")
         }
     }
 }
