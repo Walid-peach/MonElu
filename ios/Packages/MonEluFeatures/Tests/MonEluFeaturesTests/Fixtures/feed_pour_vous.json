@@ -88,5 +88,6 @@
       "type": "rollup",
       "rollup": {"deputy_id": "PA1008", "total": 20, "amendement": 17, "article": 2, "autre": 1, "non_votant": 3}
     }
-  ]
+  ],
+  "latest_by_theme": [{"theme_slug": "justice-securite", "voted_at": "2026-10-14T00:00:00+02:00"}]
 }

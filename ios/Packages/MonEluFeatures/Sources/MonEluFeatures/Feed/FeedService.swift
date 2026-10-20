@@ -142,12 +142,18 @@ public struct FeedPage: Hashable, Sendable {
     /// True when the current week had no scrutin and an earlier one is shown.
     public let noSitting: Bool
     public let entries: [FeedEntry]
+    /// Each requested theme's most recent whole-text vote or motion in the
+    /// week shown, by slug: what lights a theme's "something new" ring (#573).
+    public let latestByTheme: [String: Date]
 
-    public init(weekStart: String, weekEnd: String, noSitting: Bool, entries: [FeedEntry]) {
+    public init(
+        weekStart: String, weekEnd: String, noSitting: Bool, entries: [FeedEntry], latestByTheme: [String: Date] = [:]
+    ) {
         self.weekStart = weekStart
         self.weekEnd = weekEnd
         self.noSitting = noSitting
         self.entries = entries
+        self.latestByTheme = latestByTheme
     }
 }
 
@@ -263,7 +269,11 @@ extension FeedPage {
                 if let agenda = item.agenda { return .agenda(AgendaEntry(agenda)) }
                 if let rollup = item.rollup { return .rollup(FeedRollup(rollup)) }
                 return nil
-            }
+            },
+            latestByTheme: Dictionary(
+                (page.latestByTheme ?? []).map { ($0.themeSlug, $0.votedAt) },
+                uniquingKeysWith: { first, _ in first }
+            )
         )
     }
 }

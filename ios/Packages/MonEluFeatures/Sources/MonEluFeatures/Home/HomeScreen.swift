@@ -14,6 +14,10 @@ public struct HomeScreen: View {
     @State private var tab: FeedTab
     @State private var filter: FeedFilter = .all
     @State private var showsFollows = false
+    /// Each followed theme's newest headline scrutin, as the feed last
+    /// reported it (#573). Merged across queries: a theme's own filter asks
+    /// for that theme alone, and the other circles keep what they had.
+    @State private var themeLatest: [String: Date] = [:]
     private let feed: any FeedService
     private let store: any FollowedDeputyStore
     private let themesStore: any FollowedThemesStore
@@ -43,7 +47,8 @@ public struct HomeScreen: View {
                     query: query, service: feed, tab: tab, deputyIDs: store.deputyIDs,
                     deputyNames: followed.deputies.mapValues(\.name), followsNothing: followsNothing,
                     onOpenRecap: { tab = .assemblee },
-                    onFindDeputy: { model.startChange() }
+                    onFindDeputy: { model.startChange() },
+                    onLoaded: { received($0) }
                 ) {
                     feedHeader
                 }
@@ -102,11 +107,28 @@ public struct HomeScreen: View {
 
     private var circles: [FollowCircle] {
         // A deputy's ring uses their reading position: votes held after the
-        // newest one shown on the previous visit.
+        // newest one shown on the previous visit. A theme's lights when its
+        // newest headline scrutin is after the last one its filter showed.
         FollowCircle.circles(
             deputies: followed.loaded, themeSlugs: themeSlugs, themes: themes,
             news: Set(followed.news.map { "deputy:\($0)" })
+                .union(themesStore.themesWithNews(latest: themeLatest).map { "theme:\($0)" })
         )
+    }
+
+    /// A feed page's `latest_by_theme`, kept for the circles. The store is
+    /// not observable: the rings recompute because `themeLatest` changes.
+    private func received(_ latest: [String: Date]) {
+        var openTheme: String?
+        if case .theme(let slug) = activeFilter { openTheme = slug }
+        themesStore.receive(latest: latest, openTheme: openTheme)
+        themeLatest.merge(latest) { _, new in new }
+    }
+
+    /// Selecting a theme's circle shows its scrutins, which turns its ring off.
+    private func select(_ newFilter: FeedFilter) {
+        filter = newFilter
+        if case .theme(let slug) = newFilter { themesStore.markSeen(slug, latest: themeLatest) }
     }
 
     private func unfollow(_ id: String) {
@@ -119,7 +141,7 @@ public struct HomeScreen: View {
             .padding(.horizontal, 16)
         FollowsRow(
             circles: circles,
-            filter: Binding(get: { activeFilter }, set: { filter = $0 }),
+            filter: Binding(get: { activeFilter }, set: { select($0) }),
             onAdd: { showsFollows = true }
         )
         Picker("Fil", selection: $tab) {
@@ -233,12 +255,15 @@ private struct FeedLoaderView<Header: View>: View {
     let followsNothing: Bool
     let onOpenRecap: () -> Void
     let onFindDeputy: () -> Void
+    /// The loaded page's `latestByTheme`, each time a load or refresh lands.
+    let onLoaded: ([String: Date]) -> Void
     let header: Header
 
     init(
         query: FeedQuery, service: any FeedService, tab: FeedTab, deputyIDs: [String],
         deputyNames: [String: String], followsNothing: Bool,
         onOpenRecap: @escaping () -> Void, onFindDeputy: @escaping () -> Void,
+        onLoaded: @escaping ([String: Date]) -> Void,
         @ViewBuilder header: () -> Header
     ) {
         _loader = State(initialValue: Loader {
@@ -252,7 +277,12 @@ private struct FeedLoaderView<Header: View>: View {
         self.followsNothing = followsNothing
         self.onOpenRecap = onOpenRecap
         self.onFindDeputy = onFindDeputy
+        self.onLoaded = onLoaded
         self.header = header()
+    }
+
+    private var latestByTheme: [String: Date]? {
+        if case .loaded(let screen) = loader.state { screen.page.latestByTheme } else { nil }
     }
 
     var body: some View {
@@ -266,6 +296,9 @@ private struct FeedLoaderView<Header: View>: View {
         }
         .refreshable { await loader.refresh() }
         .task { await loader.loadIfNeeded() }
+        .onChange(of: latestByTheme, initial: true) { _, latest in
+            if let latest { onLoaded(latest) }
+        }
     }
 }
 

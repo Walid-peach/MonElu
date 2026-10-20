@@ -55,6 +55,54 @@ struct FollowedThemesStoreTests {
         #expect(UserDefaultsFollowedThemesStore(defaults: defaults, known: ["justice-securite"]).themeSlugs.isEmpty)
     }
 
+    /// A theme lights up only for a scrutin after the last one its filter
+    /// showed, and never on the visit it is first seen (#573).
+    @Test func aThemeLightsUpOnlyForAScrutinAfterTheLastSeen() {
+        let store = UserDefaultsFollowedThemesStore(defaults: freshDefaults(), known: known)
+        store.follow("justice-securite")
+        store.follow("sante-social")
+        let first = Date(timeIntervalSince1970: 1_000)
+        let later = Date(timeIntervalSince1970: 2_000)
+
+        store.startReading(latest: ["justice-securite": first])
+        #expect(store.themesWithNews(latest: ["justice-securite": first]).isEmpty)
+        #expect(store.lastSeen(theme: "sante-social") == nil)
+
+        #expect(store.themesWithNews(latest: ["justice-securite": later]) == ["justice-securite"])
+        // A later load does not move a position already started.
+        store.startReading(latest: ["justice-securite": later])
+        #expect(store.lastSeen(theme: "justice-securite") == first)
+
+        store.markSeen("justice-securite", latest: ["justice-securite": later])
+        #expect(store.themesWithNews(latest: ["justice-securite": later]).isEmpty)
+        // Seeing an older report never moves the position back.
+        store.markSeen("justice-securite", latest: ["justice-securite": first])
+        #expect(store.lastSeen(theme: "justice-securite") == later)
+    }
+
+    /// A page loaded under a theme's filter marks that theme seen, and only
+    /// that one; every other theme only starts reading.
+    @Test func aPageUnderAThemesFilterMarksOnlyThatThemeSeen() {
+        let store = UserDefaultsFollowedThemesStore(defaults: freshDefaults(), known: known)
+        store.follow("justice-securite")
+        store.follow("sante-social")
+        let first = Date(timeIntervalSince1970: 1_000)
+        let later = Date(timeIntervalSince1970: 2_000)
+        store.receive(latest: ["justice-securite": first, "sante-social": first], openTheme: nil)
+
+        let newer = ["justice-securite": later, "sante-social": later]
+        store.receive(latest: newer, openTheme: "sante-social")
+        #expect(store.themesWithNews(latest: newer) == ["justice-securite"])
+    }
+
+    @Test func aThemeNoLongerFollowedNeverLightsUp() {
+        let store = UserDefaultsFollowedThemesStore(defaults: freshDefaults(), known: known)
+        store.follow("sante-social")
+        store.setLastSeen(Date(timeIntervalSince1970: 1_000), theme: "sante-social")
+        store.unfollow("sante-social")
+        #expect(store.themesWithNews(latest: ["sante-social": Date(timeIntervalSince1970: 2_000)]).isEmpty)
+    }
+
     /// By default the store knows exactly the bundled themes.
     @Test func theDefaultKnowsTheBundledThemes() throws {
         let store = UserDefaultsFollowedThemesStore(defaults: freshDefaults())

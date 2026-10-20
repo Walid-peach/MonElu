@@ -44,6 +44,12 @@ struct FeedServiceTests {
         #expect(law.loiID == "DLR5L17N53980")
     }
 
+    /// `latest_by_theme` becomes a lookup by slug for the theme rings (#573).
+    @Test func mapsEachThemesLatestScrutin() async throws {
+        let latest = try #require(ISO8601DateFormatter().date(from: "2026-10-13T22:00:00Z"))
+        #expect(try await page().latestByTheme == ["justice-securite": latest])
+    }
+
     @Test func theRollupKeepsNonVotantApart() async throws {
         guard case .rollup(let rollup) = try await page().entries.last else {
             Issue.record("the last entry is not the rollup")
@@ -200,6 +206,23 @@ struct FeedSnapshotTests {
             },
             variant,
             height: variant.size.isAccessibilityCategory ? 2000 : 640
+        )
+    }
+
+    /// With `features.chat` off, only the quiz is offered under the feed.
+    @Test func feedWithoutChat() {
+        var configuration = AppConfiguration.defaults
+        configuration.features.chat = false
+        checkSnapshot(
+            NavigationStack {
+                FeedContent(page: FeedPage(weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, entries: []), tab: .pourVous)
+                    .padding(16)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .background(Palette.pageBackground)
+                    .environment(\.appConfiguration, configuration)
+            },
+            Variant.all[0],
+            height: 300
         )
     }
 

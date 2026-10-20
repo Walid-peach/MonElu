@@ -257,7 +257,7 @@ struct DeputyRecentVotesSection: View {
             } else {
                 HomeVoteList(votes) { vote in
                     NavigationLink(value: AppRoute.vote(id: vote.id)) {
-                        HomeVoteRow(vote: vote, isNew: false)
+                        HomeVoteRow(vote: vote)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("deputy.vote")

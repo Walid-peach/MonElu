@@ -35,6 +35,7 @@ from api.schemas import (
     FeedResponse,
     FeedRollup,
     FeedScrutin,
+    FeedThemeLatest,
     FeedWeekDeputy,
     FeedWeekDeputyEntry,
     FeedWeekResponse,
@@ -272,6 +273,28 @@ def build_items(
     return items
 
 
+def latest_by_theme(rows: list[dict], theme_slugs: list[str]) -> list[FeedThemeLatest]:
+    """Each followed theme's newest whole-text vote or motion in the week shown (#573).
+
+    Only the kinds a theme brings into « Pour vous », and only from the week
+    the feed returned, so the app's ring never announces a vote the theme's
+    own filter would not show. In the order the `theme` slugs were sent; a
+    theme with no such scrutin that week is left out.
+    """
+    newest: dict[str, datetime] = {}
+    for row in rows:
+        theme, voted_at = row.get("theme"), row.get("voted_at")
+        if theme is None or voted_at is None or kind_of(row) not in HEADLINE_KINDS:
+            continue
+        if theme not in newest or voted_at > newest[theme]:
+            newest[theme] = voted_at
+    return [
+        FeedThemeLatest(theme_slug=slug, voted_at=newest[THEME_NAMES[slug]])
+        for slug in theme_slugs
+        if THEME_NAMES[slug] in newest
+    ]
+
+
 def deputy_week(rows: list[dict], deputy_id: str) -> FeedWeekDeputyEntry:
     """One deputy's positions over the week's scrutins.
 
@@ -491,6 +514,12 @@ def get_feed(
     recent earlier week that had one, whose bounds are in `week_start` and
     `week_end`; `requested_week_start` keeps the week asked for. Production data
     starts on 2025-07-01.
+
+    `latest_by_theme` gives, for each requested `theme` slug, the date of its
+    most recent whole-text vote or motion in the week shown - the scrutins a
+    theme brings into `pour_vous`. The app lights a theme's "something new"
+    ring when that date is after the last one the user saw; a theme with no
+    such scrutin that week is left out.
     """
     theme_slugs, theme_names = resolve_themes(theme)
     deputy_ids = resolve_deputies(deputy_id, deputies)
@@ -515,6 +544,7 @@ def get_feed(
         week_end=sunday,
         no_sitting=no_sitting,
         items=items,
+        latest_by_theme=latest_by_theme(rows, theme_slugs),
     )
 
 

@@ -2,10 +2,8 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-// Accueil's pieces (#477), each taking plain models so the home is
-// snapshot-tested without a network. The order follows the design review's
-// option 2: the deputy as a personal anchor, then their actual decisions,
-// then one route into a question and one into the quiz.
+// Accueil's pieces shared with the feed and the profile (#477, #565), each
+// taking plain models so they are snapshot-tested without a network.
 
 /// The line under the title, on every state of the home.
 struct HomeTagline: View {
@@ -23,7 +21,6 @@ struct HomeTagline: View {
 struct HomeVoteRow: View {
     @Environment(\.today) private var today
     let vote: DeputyVote
-    let isNew: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
@@ -33,7 +30,6 @@ struct HomeVoteRow: View {
                     ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
                     : AnyLayout(HStackLayout(spacing: 8))
                 layout {
-                    if isNew { NewDot() }
                     if let result = vote.result { VoteResultBadge(result: result) }
                     if let date = vote.date {
                         Text(MonEluFormat.listDay(date, today: today))
@@ -73,17 +69,6 @@ struct HomeVoteRow: View {
     }
 }
 
-/// Marks one row held since the previous visit; read as "Nouveau".
-struct NewDot: View {
-    var body: some View {
-        Circle()
-            .fill(Palette.accent)
-            .frame(width: 8, height: 8)
-            .accessibilityElement()
-            .accessibilityLabel("Nouveau")
-    }
-}
-
 /// Vote rows in one card, divided by inset lines, as on Explorer and the profile.
 struct HomeVoteList<Item: Identifiable, Row: View>: View {
     let items: [Item]
@@ -102,81 +87,6 @@ struct HomeVoteList<Item: Identifiable, Row: View>: View {
                     row(item)
                 }
             }
-        }
-    }
-}
-
-/// The week's next séance items, side by side; each opens the agenda, which
-/// holds the full week.
-struct HomeAgendaSection: View {
-    // `nonisolated`: a `View`'s statics are main-actor isolated, and
-    // `upcoming` below reads this one from outside the main actor (#579).
-    nonisolated static let count = 5
-
-    let entries: [AgendaEntry]
-    @Environment(\.dynamicTypeSize) private var typeSize
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline) { title; Spacer(minLength: 12); agendaLink }
-                VStack(alignment: .leading, spacing: 6) { title; agendaLink }
-            }
-            if entries.isEmpty {
-                Text("Pas de séance publique prévue cette semaine.")
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if typeSize.isAccessibilitySize {
-                // Cards a third of the screen wide would leave the words a sliver.
-                VStack(spacing: 10) { cards }
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 10) { cards }
-                }
-                .scrollClipDisabled()
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// The items from today on, in order, at most `count`: a sitting already
-    /// held this week is in the agenda, not on Accueil.
-    nonisolated static func upcoming(_ items: [AgendaEntry], now: Date) -> [AgendaEntry] {
-        let today = MonEluFormat.parisCalendar.startOfDay(for: now)
-        return Array(items.filter { $0.start >= today }.sorted { $0.start < $1.start }.prefix(count))
-    }
-
-    private var title: some View {
-        Text("Cette semaine à l'Assemblée")
-            .font(Typography.heading(.title2))
-            .foregroundStyle(Palette.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityAddTraits(.isHeader)
-    }
-
-    private var agendaLink: some View {
-        NavigationLink(value: AppRoute.agenda()) {
-            HStack(spacing: 4) {
-                Text("Agenda")
-                Image(systemName: "arrow.right").accessibilityHidden(true)
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Palette.textPrimary)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Ouvrir l'agenda")
-        .accessibilityIdentifier("home.agenda")
-    }
-
-    private var cards: some View {
-        ForEach(entries) { entry in
-            NavigationLink(value: AppRoute.agenda()) {
-                HomeAgendaCard(entry: entry)
-                    .frame(width: typeSize.isAccessibilitySize ? nil : 220)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("home.agenda-item")
         }
     }
 }
@@ -212,25 +122,46 @@ struct HomeAgendaCard: View {
     }
 }
 
-/// Opens the Quiz: the user's own answers on real scrutins.
-struct HomeQuizInvitation: View {
+/// Under the feed, a way into another tab: a question to the assistant, or
+/// the quiz.
+struct HomeInvitation: View {
+    let tab: AppTab
+    let title: String
+    let message: String
+    let hint: String
+    let identifier: String
     @Environment(\.openTab) private var openTab
     @Environment(\.dynamicTypeSize) private var typeSize
 
+    /// Opens the Quiz: the user's own answers on real scrutins.
+    static let quiz = HomeInvitation(
+        tab: .quiz, title: "Et si vous votiez ?",
+        message: "Répondez à de vrais scrutins et découvrez quels députés votent comme vous.",
+        hint: "Ouvre le quiz", identifier: "home.quiz"
+    )
+
+    /// Opens Questions, the assistant over the votes; shown only while
+    /// `features.chat` is on (#573).
+    static let ask = HomeInvitation(
+        tab: .ask, title: "Une question sur leurs votes ?",
+        message: "Posez-la en français : les réponses citent les scrutins.",
+        hint: "Ouvre l'onglet Demander", identifier: "home.ask"
+    )
+
     var body: some View {
-        Button { openTab(.quiz) } label: {
+        Button { openTab(tab) } label: {
             HStack(spacing: 14) {
                 // Decorative; at large text it would leave the words a sliver.
                 if !typeSize.isAccessibilitySize {
-                    Image(systemName: AppTab.quiz.systemImage)
+                    Image(systemName: tab.systemImage)
                         .font(.title2)
                         .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Et si vous votiez ?")
+                    Text(title)
                         .font(Typography.heading(.headline))
                         .foregroundStyle(Palette.textPrimary)
-                    Text("Répondez à de vrais scrutins et découvrez quels députés votent comme vous.")
+                    Text(message)
                         .font(.subheadline)
                         .foregroundStyle(Palette.textSecondary)
                 }
@@ -247,7 +178,7 @@ struct HomeQuizInvitation: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityHint("Ouvre le quiz")
-        .accessibilityIdentifier("home.quiz")
+        .accessibilityHint(hint)
+        .accessibilityIdentifier(identifier)
     }
 }
