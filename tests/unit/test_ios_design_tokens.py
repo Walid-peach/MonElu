@@ -137,7 +137,11 @@ TEXT_ON_BACKGROUNDS = {
 
 
 def _css_block(css: str, selector: str) -> str:
-    match = re.search(re.escape(selector) + r"\s*\{(.*?)\n\}", css, re.S)
+    # A selector list (`:root, .dp-light`, #559) matches across any whitespace,
+    # and only at the start of a line, so the print block's nested `:root`
+    # is never taken for the top-level one.
+    pattern = r",\s*".join(re.escape(part.strip()) for part in selector.split(","))
+    match = re.search(r"^" + pattern + r"\s*\{(.*?)\n\}", css, re.S | re.M)
     assert match, f"{selector} block not found in globals.css"
     return match.group(1)
 
@@ -189,8 +193,8 @@ def test_every_token_has_a_light_and_a_dark_value():
 
 def test_tokens_match_the_website_palette():
     css = GLOBALS_CSS.read_text(encoding="utf-8")
-    light_vars = _css_vars(_css_block(css, ":root"))
-    dark_vars = light_vars | _css_vars(_css_block(css, ".dark"))
+    light_vars = _css_vars(_css_block(css, ":root, .dp-light"))
+    dark_vars = light_vars | _css_vars(_css_block(css, ".dark, .dp-dark"))
 
     for name, contents in _colorsets().items():
         if name in PARTY_CHIP_TOKENS:
@@ -206,8 +210,8 @@ def test_tokens_match_the_website_palette():
 
 def test_party_chips_derive_from_the_brand_colors():
     css = GLOBALS_CSS.read_text(encoding="utf-8")
-    palettes = {"light": _css_vars(_css_block(css, ":root"))}
-    palettes["dark"] = palettes["light"] | _css_vars(_css_block(css, ".dark"))
+    palettes = {"light": _css_vars(_css_block(css, ":root, .dp-light"))}
+    palettes["dark"] = palettes["light"] | _css_vars(_css_block(css, ".dark, .dp-dark"))
     colorsets = _colorsets()
     for code in PARTY_CHIP_GROUPS:
         for appearance, css_vars in palettes.items():
