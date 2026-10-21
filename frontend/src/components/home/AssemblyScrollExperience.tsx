@@ -147,7 +147,7 @@ function MobileExperience({ stats, leadVote }: Props) {
           <h2 className="mt-3 font-serif text-2xl leading-tight text-navy">
             Quel député vote comme vous&nbsp;?
           </h2>
-          <p className="mt-3 text-sm leading-6 text-gray-mid">
+          <p className="mt-3 text-sm leading-6 text-[color:var(--dp-text-muted)]">
             Une dizaine de vrais scrutins, comparés aux votes réels des députés.
           </p>
           <Link

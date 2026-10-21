@@ -68,10 +68,11 @@ export function ShareButton({ url, title, text, ariaLabel }: ShareButtonProps) {
   ]
 
   return (
-    <div ref={rootRef} style={{ position: 'relative' }}>
+    // dp-light: a white chip and menu in both themes, so the text tokens stay light (#559).
+    <div ref={rootRef} className="dp-light" style={{ position: 'relative' }}>
       <button
         onClick={e => { e.preventDefault(); e.stopPropagation(); handleShare() }}
-        className="flex items-center gap-1.5 text-xs text-gray-mid hover:text-navy transition-colors px-2.5 py-1.5 rounded border border-gray-border bg-white shrink-0"
+        className="flex items-center gap-1.5 text-xs text-[color:var(--dp-text-muted)] hover:text-navy transition-colors px-2.5 py-1.5 rounded border border-gray-border bg-white shrink-0"
         aria-label={ariaLabel ?? 'Partager'}
         aria-expanded={menuOpen}
       >

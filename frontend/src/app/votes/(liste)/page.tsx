@@ -39,7 +39,7 @@ export default async function VotesPage() {
   ]
 
   return (
-    <Suspense fallback={<div className="text-gray-mid text-sm p-8">Chargement...</div>}>
+    <Suspense fallback={<div className="text-[color:var(--dp-text-muted)] text-sm p-8">Chargement...</div>}>
       <VotesClient initial={initial} heroStats={heroStats} />
     </Suspense>
   )

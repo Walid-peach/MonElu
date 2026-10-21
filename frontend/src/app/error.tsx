@@ -21,7 +21,7 @@ export default function Error({
       <h2 className="font-serif text-2xl text-navy dark:text-[color:var(--dp-text)] mb-3">
         Une erreur est survenue
       </h2>
-      <p className="text-gray-mid dark:text-[color:var(--dp-text-muted)] text-sm mb-6">
+      <p className="text-[color:var(--dp-text-muted)] text-sm mb-6">
         L&apos;API est temporairement indisponible. Les données seront de nouveau accessibles dans quelques instants.
       </p>
       <div className="flex items-center justify-center gap-3">

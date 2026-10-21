@@ -128,14 +128,16 @@ export function GlobalSearch({ hideTrigger = false }: { hideTrigger?: boolean })
   return (
     <>
       {!hideTrigger && (
+      // dp-light: the trigger and the dialog are white in both themes, so their text tokens stay light (#559).
       <button
         onClick={() => setOpen(true)}
         aria-label="Rechercher (Cmd+K)"
-        style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #E4E6EA', borderRadius: 8, padding: '6px 12px', background: '#fff', color: '#6B7280', fontSize: 13, cursor: 'pointer' }}
+        className="dp-light"
+        style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #E4E6EA', borderRadius: 8, padding: '6px 12px', background: '#fff', color: 'var(--dp-text-secondary)', fontSize: 13, cursor: 'pointer' }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></svg>
         <span className="hidden lg:inline">Rechercher</span>
-        <span className="hidden lg:inline font-mono" style={{ fontSize: 11, color: '#9CA3AF', border: '1px solid #E4E6EA', borderRadius: 4, padding: '1px 5px' }}>⌘K</span>
+        <span className="hidden lg:inline font-mono" style={{ fontSize: 11, color: 'var(--dp-text-muted)', border: '1px solid #E4E6EA', borderRadius: 4, padding: '1px 5px' }}>⌘K</span>
       </button>
       )}
 
@@ -147,7 +149,7 @@ export function GlobalSearch({ hideTrigger = false }: { hideTrigger?: boolean })
           onClick={closeSearch}
           style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.5)', zIndex: 100, display: 'flex', justifyContent: 'center', paddingTop: '12vh' }}
         >
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, maxHeight: '70vh', background: '#fff', borderRadius: 14, boxShadow: '0 24px 64px rgba(0,0,0,0.25)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div onClick={e => e.stopPropagation()} className="dp-light" style={{ width: '100%', maxWidth: 560, maxHeight: '70vh', background: '#fff', borderRadius: 14, boxShadow: '0 24px 64px rgba(0,0,0,0.25)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid #E4E6EA', flexShrink: 0 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></svg>
               <input
@@ -159,12 +161,12 @@ export function GlobalSearch({ hideTrigger = false }: { hideTrigger?: boolean })
                 aria-label="Rechercher un député, un vote, ou poser une question"
                 style={{ flex: 1, border: 'none', fontSize: 16, color: '#1B2B50' }}
               />
-              <button onClick={closeSearch} aria-label="Fermer la recherche" style={{ border: 'none', background: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 12.5 }}>Échap</button>
+              <button onClick={closeSearch} aria-label="Fermer la recherche" style={{ border: 'none', background: 'none', color: 'var(--dp-text-muted)', cursor: 'pointer', fontSize: 12.5 }}>Échap</button>
             </div>
 
             <div role="listbox" style={{ overflowY: 'auto', padding: '8px 0' }}>
               {rows.length === 0 && (
-                <div style={{ padding: '24px 20px', textAlign: 'center', color: '#9CA3AF', fontSize: 13.5 }}>
+                <div style={{ padding: '24px 20px', textAlign: 'center', color: 'var(--dp-text-muted)', fontSize: 13.5 }}>
                   {query.trim().length < 2 ? 'Tapez au moins 2 caractères…' : `Aucun résultat pour « ${query.trim()} ».`}
                 </div>
               )}
@@ -176,7 +178,7 @@ export function GlobalSearch({ hideTrigger = false }: { hideTrigger?: boolean })
                 return (
                   <div key={row.key}>
                     {showGroup && (
-                      <div style={{ padding: '8px 20px 4px', font: '700 11px/1 var(--font-sans)', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+                      <div style={{ padding: '8px 20px 4px', font: '700 11px/1 var(--font-sans)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--dp-text-muted)' }}>
                         {groupLabel}
                       </div>
                     )}

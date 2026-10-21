@@ -30,7 +30,8 @@ export default async function EmbedVotePage({ params }: { params: Promise<{ id: 
   const voteUrl = `${SITE_URL}/votes/${id}`
 
   return (
-    <div style={{ background: '#fff', fontFamily: 'sans-serif', padding: 20, maxWidth: 560 }}>
+    // dp-light: the widget is white wherever it is embedded, so its text tokens stay light (#559).
+    <div className="dp-light" style={{ background: '#fff', fontFamily: 'sans-serif', padding: 20, maxWidth: 560 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <span
           style={{
@@ -42,7 +43,7 @@ export default async function EmbedVotePage({ params }: { params: Promise<{ id: 
         >
           {adopted ? 'Adopté' : 'Rejeté'}
         </span>
-        <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+        <span style={{ fontSize: 12, color: 'var(--dp-text-muted)' }}>
           {new Date(vote.voted_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
         </span>
       </div>
@@ -68,7 +69,7 @@ export default async function EmbedVotePage({ params }: { params: Promise<{ id: 
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTop: `1px solid ${LINE}` }}>
-        <span style={{ fontSize: 11.5, color: '#9CA3AF' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--dp-text-muted)' }}>
           Données Assemblée nationale · <strong style={{ color: NAVY }}>MonÉlu</strong>
         </span>
         <a href={voteUrl} target="_top" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: RED, textDecoration: 'none' }}>

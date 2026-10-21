@@ -10,7 +10,7 @@ export default function OfflinePage() {
         ⌁
       </div>
       <h2 className="font-serif text-2xl text-navy mb-3">Vous êtes hors ligne</h2>
-      <p className="text-gray-mid text-sm mb-6">
+      <p className="text-[color:var(--dp-text-muted)] text-sm mb-6">
         Cette page n&apos;est pas disponible sans connexion. Les pages déjà consultées
         (députés, votes) restent lisibles hors ligne.
       </p>

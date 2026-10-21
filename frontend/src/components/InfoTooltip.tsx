@@ -28,7 +28,10 @@ export function InfoTooltip({
 
   return (
     <span style={{ position: 'relative', display: 'inline-flex' }}>
+      {/* dp-light: the "i" is white in both themes, so its text token stays
+          light (#559). Only the button: the navy bubble keeps the dark focus ring. */}
       <button
+        className="dp-light"
         type="button"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
@@ -41,7 +44,7 @@ export function InfoTooltip({
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: 16, height: 16, borderRadius: 999, border: `1px solid #C7CDD8`,
-          background: '#fff', color: '#6B7280', fontSize: 11, fontWeight: 700,
+          background: '#fff', color: 'var(--dp-text-secondary)', fontSize: 11, fontWeight: 700,
           cursor: 'pointer', padding: 0, lineHeight: 1,
         }}
       >

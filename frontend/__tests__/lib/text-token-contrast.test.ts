@@ -9,14 +9,30 @@ import tailwindConfig from '../../tailwind.config'
 // test_text_tokens_reach_aa_contrast in tests/unit/test_ios_design_tokens.py.
 //
 // --dp-green is a fill (bars, dots, seats): in light mode it is 3.95:1 on the
-// page, so green text uses --dp-badge-pos-text, the app's positiveText. The
-// last check below keeps --dp-green out of text colors in src/.
+// page, so green text uses --dp-badge-pos-text, the app's positiveText. A
+// check below keeps --dp-green out of text colors in src/.
+//
+// Grey text goes through the tokens too (#559): Tailwind's gray-mid (#8A8885)
+// and the literals #9CA3AF and #6B7280 missed AA on the site's surfaces, and
+// so did translucent white on the dark ones. The last checks keep them out of
+// text colors in src/.
 
 const AA_BODY_TEXT = 4.5
 const SRC = join(__dirname, '..', '..', 'src')
 const CSS = readFileSync(join(SRC, 'app', 'globals.css'), 'utf8')
 
 const SURFACES = ['--dp-page-bg', '--dp-card-bg', '--dp-header-bg', '--dp-track-bg']
+
+// Backgrounds outside the tokens that the text tokens are also drawn on:
+// gray-off (the freshness bar), the hemicycle's view toggle, and the chat
+// page's own surfaces, which it keeps as inline literals (MON-168): its
+// panels, its mode switch and source cards, and the navy of its sidebar, the
+// footer and the /a-propos sections, which dp-dark pins to the dark palette.
+const OTHER_SURFACES: Record<string, string[]> = {
+  light: ["theme('colors.gray.off')", '#F2F3F5', '#F7F8FA', '#F0F1F4'],
+  dark: ['#0B1525', '#111C35', '#162035', '#1B2B50'],
+  print: [],
+}
 
 // Text token -> the backgrounds it is drawn on. A translucent badge tint is
 // checked composited over the page and card backgrounds it can sit on.
@@ -94,22 +110,23 @@ function contrast(a: Rgba, b: Rgba): number {
   return (high + 0.05) / (low + 0.05)
 }
 
-const light = vars(block(/^:root\s*\{/m))
+const light = vars(block(/^:root,\s*\.dp-light\s*\{/m))
 const PALETTES: Record<string, Record<string, string>> = {
   light,
-  dark: { ...light, ...vars(block(/^\.dark\s*\{/m)) },
+  dark: { ...light, ...vars(block(/^\.dark,\s*\.dp-dark\s*\{/m)) },
   print: { ...light, ...vars(block(/@media print\s*\{[\s\S]*?^ {2}:root\s*\{/m, '  ')) },
 }
 
-function failures(palette: Record<string, string>): string[] {
+function failures(palette: Record<string, string>, otherSurfaces: string[] = []): string[] {
   const color = (name: string) => {
-    if (!(name in palette)) throw new Error(`${name} is not declared`)
-    return parse(palette[name])
+    if (name.startsWith('--') && !(name in palette)) throw new Error(`${name} is not declared`)
+    return parse(palette[name] ?? name)
   }
   return Object.entries(TEXT_ON_BACKGROUNDS).flatMap(([text, backgrounds]) => {
     const fg = color(text)
     if (fg.alpha !== 1) return [`${text} is translucent text`]
-    return backgrounds.flatMap((background) => {
+    const drawnOn = backgrounds === SURFACES ? [...SURFACES, ...otherSurfaces] : backgrounds
+    return drawnOn.flatMap((background) => {
       const bg = color(background)
       const surfaces = bg.alpha === 1 ? [bg] : ['--dp-page-bg', '--dp-card-bg'].map((s) => over(bg, color(s)))
       return surfaces
@@ -138,9 +155,92 @@ function greenText(source: string, file = 'source'): string[] {
     .flatMap((line, index) => (GREEN_TEXT.test(line) ? [`${file}:${index + 1}: ${line.trim()}`] : []))
 }
 
+// Grey text outside the tokens (#559): a Tailwind text class, or a `color`
+// style property (`color: ...` or `.style.color = ...`) whose value holds one
+// of the grey literals or a translucent white too faint for AA, either inline
+// or through a `const` of the same file it names (`color: txt3`,
+// `color: POSITION_COLORS.nonVotant`, `color: MAJORITY_COLOR[key]`). Fills,
+// strokes, backgrounds and `*Color` keys other than `color` are left alone.
+// The scan reads one line at a time and follows one level of indirection: a
+// value split over lines, or a colour returned by a function, escapes it.
+const GREY_LITERAL = /#(?:9CA3AF|6B7280|8A8885)\b/i
+const GREY_CLASS = /(?<![\w-])text-(?:gray-(?:mid|400|500)|\[(?:color:)?#(?:9CA3AF|6B7280|8A8885)\])(?![\w-])/i
+const COLOR_PROPERTY = /(?<![\w[-])color\s*[:=](?!=)/g
+const WHITE = /rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([\d.]+)\s*\)/g
+
+// The surfaces translucent white text is written on: the dark palette's, and
+// the chat page's.
+const DARK_SURFACES = [...SURFACES.map((name) => PALETTES.dark[name]), ...OTHER_SURFACES.dark]
+
+/** The faintest white that still reaches AA on every dark surface. */
+const MIN_WHITE_ALPHA = (() => {
+  for (let alpha = 0; alpha <= 1; alpha += 0.01) {
+    const white = { rgb: [255, 255, 255] as [number, number, number], alpha: Number(alpha.toFixed(2)) }
+    if (DARK_SURFACES.every((s) => contrast(over(white, parse(s)), parse(s)) >= AA_BODY_TEXT)) return white.alpha
+  }
+  return 1
+})()
+
+/** The value of each `color` property on a line, up to the next top-level `,` `;` or `}`. */
+function colorValues(line: string): string[] {
+  return [...line.matchAll(COLOR_PROPERTY)].map((m) => {
+    let depth = 0
+    let end = m.index + m[0].length
+    for (; end < line.length; end++) {
+      const c = line[end]
+      if (c === '(' || c === '[') depth++
+      else if (c === ')' || c === ']') depth--
+      if (depth < 0 || (depth === 0 && /[,;}]/.test(c))) break
+    }
+    return line.slice(m.index + m[0].length, end)
+  })
+}
+
+function isGrey(value: string): boolean {
+  return GREY_LITERAL.test(value) || [...value.matchAll(WHITE)].some((white) => Number(white[1]) < MIN_WHITE_ALPHA)
+}
+
+/** The text of `const name = ...` in `source`: its object literal, or the rest of its line. */
+function declaration(source: string, name: string): string | null {
+  const found = source.match(new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?const\\s+${name}\\b[^=\\n]*=\\s*`))
+  if (!found || found.index === undefined) return null
+  const start = found.index + found[0].length
+  if (source[start] !== '{') return source.slice(start, source.indexOf('\n', start))
+  let depth = 0
+  for (let end = start; end < source.length; end++) {
+    if (source[end] === '{') depth++
+    else if (source[end] === '}' && --depth === 0) return source.slice(start, end + 1)
+  }
+  return null
+}
+
+/** The values the constants named in a `color` value stand for (`txt3`, `MAP.key`, `MAP[...]`). */
+function referencedValues(value: string, source: string): string[] {
+  const code = value.replace(/'[^']*'|"[^"]*"|`[^`]*`/g, "''")
+  return [...code.matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)(?:\.([A-Za-z_$][\w$]*))?/g)].flatMap(([, name, key]) => {
+    const body = declaration(source, name)
+    if (!body) return []
+    if (!key || !body.startsWith('{')) return [body]
+    const entry = body.match(new RegExp(`(?:^|[\\s{,])['"]?${key}['"]?\\s*:([^,\\n}]*)`))
+    return entry ? [entry[1]] : []
+  })
+}
+
+function greyText(source: string, file = 'source'): string[] {
+  return source.split('\n').flatMap((line, index) => {
+    const grey =
+      GREY_CLASS.test(line) ||
+      colorValues(line).some((value) => isGrey(value) || referencedValues(value, source).some(isGrey))
+    return grey ? [`${file}:${index + 1}: ${line.trim()}`] : []
+  })
+}
+
+// Open Graph cards are images drawn on a fixed navy, not page text (#559).
+const PAGE_SOURCES = sourceFiles(SRC).filter((path) => !path.endsWith('opengraph-image.tsx'))
+
 describe('text token contrast', () => {
   it.each(Object.keys(PALETTES))('every text token reaches 4.5:1 in the %s palette', (name) => {
-    expect(failures(PALETTES[name])).toEqual([])
+    expect(failures(PALETTES[name], OTHER_SURFACES[name])).toEqual([])
   })
 
   it('never writes text in --dp-green', () => {
@@ -164,6 +264,71 @@ describe('text token contrast', () => {
     for (const line of fills) expect(greenText(line)).toEqual([])
   })
 
+  it('never writes text in gray-mid, a grey literal or a faint white', () => {
+    expect(PAGE_SOURCES.flatMap((path) => greyText(readFileSync(path, 'utf8'), relative(SRC, path)))).toEqual([])
+  })
+
+  it('tells grey text from grey fills', () => {
+    const text = [
+      '<p className="text-gray-mid text-sm mb-6">',
+      '<span className="hover:text-gray-mid">',
+      '<span className="text-[#9CA3AF]">',
+      "<span style={{ fontSize: 12, color: '#9CA3AF' }}>",
+      "<div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500 }}>",
+      "<span style={{ color: MAJORITY_COLOR[v.majority_position] ?? '#9CA3AF' }}>",
+      "<div style={{ fontSize: 11, color: dk ? 'rgba(255,255,255,0.27)' : 'var(--dp-text-muted)' }}>",
+      "color: hover ? (dark ? 'rgba(255,255,255,0.70)' : '#1B2B50') : (dark ? 'rgba(255,255,255,0.26)' : '#1B2B50'),",
+      "onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}",
+    ]
+    for (const line of text) expect(greyText(line)).toHaveLength(1)
+    // Through a constant: the chat's txt3 and the hemicycle's position map
+    // were both written this way.
+    const indirect = [
+      "const txt3 = dk ? 'rgba(255,255,255,0.26)' : '#9CA3AF'",
+      "const POSITION_COLORS = {\n  pour: '#1F8A5B',\n  nonVotant: '#9CA3AF',\n}",
+      "const MAJORITY_COLOR = {\n  pour: '#15803D',\n  abstention: '#9CA3AF',\n}",
+      '<span style={{ fontSize: 12, color: txt3 }}>Envoi…</span>',
+      '<span style={{ color: POSITION_COLORS.nonVotant }}>12 NV</span>',
+      '<span style={{ color: POSITION_COLORS.pour }}>12 pour</span>',
+      '<span style={{ color: MAJORITY_COLOR[v.majority_position] }}>',
+      '<circle fill={POSITION_COLORS.nonVotant} />',
+    ].join('\n')
+    expect(greyText(indirect).map((hit) => hit.replace(/^source:\d+: /, ''))).toEqual([
+      '<span style={{ fontSize: 12, color: txt3 }}>Envoi…</span>',
+      '<span style={{ color: POSITION_COLORS.nonVotant }}>12 NV</span>',
+      '<span style={{ color: MAJORITY_COLOR[v.majority_position] }}>',
+    ])
+    const fills = [
+      "nonVotant: '#9CA3AF',",
+      "<div className=\"bg-[color:#9CA3AF]\" />",
+      '<path d="M6 19 A9 9 0 0 1 24 19" stroke="#9CA3AF" strokeWidth="2.2" />',
+      "<div style={{ background: 'rgba(255,255,255,0.07)', color: 'var(--dp-text-muted)' }}>",
+      "<div style={{ scrollbarColor: 'rgba(255,255,255,0.14) transparent' }}>",
+      "<div style={{ borderColor: '#9CA3AF', color: 'var(--dp-text)' }}>",
+      "<span style={{ fontSize: 17, color: 'rgba(255,255,255,0.86)' }}>Pour</span>",
+      '<div className="text-gray-mid-like border-gray-mid">',
+    ]
+    for (const line of fills) expect(greyText(line)).toEqual([])
+  })
+
+  // Surfaces that keep one palette in both themes. Without their scope class
+  // the tokens follow <html>'s theme, and dark muted grey on white is 3:1.
+  it.each([
+    ['app/embed/votes/[id]/page.tsx', 'dp-light'],
+    ['app/groupes/[slug]/page.tsx', 'dp-light'],
+    ['components/ShareButton.tsx', 'dp-light'],
+    ['components/EmbedButton.tsx', 'dp-light'],
+    ['components/ReportErrorButton.tsx', 'dp-light'],
+    ['components/GlobalSearch.tsx', 'dp-light'],
+    ['components/InfoTooltip.tsx', 'dp-light'],
+    ['components/HemicycleChart.tsx', 'dp-light'],
+    ['components/Footer.tsx', 'dp-dark'],
+    ['app/chat/ChatClient.tsx', 'dp-dark'],
+    ['app/a-propos/page.tsx', 'dp-dark'],
+  ])('%s keeps its fixed surface on the %s palette', (file, scope) => {
+    expect(readFileSync(join(SRC, file), 'utf8')).toMatch(new RegExp(`className=\\{?["'\`][^"'\`]*\\b${scope}\\b`))
+  })
+
   it('computes the WCAG ratios', () => {
     expect(contrast(parse('#000000'), parse('#FFFFFF'))).toBeCloseTo(21, 1)
     expect(contrast(parse('#767676'), parse('#FFFFFF'))).toBeCloseTo(4.54, 2)
@@ -185,6 +350,17 @@ describe('text token contrast', () => {
       '--dp-badge-pos-text on --dp-card-bg is 4.33:1',
       '--dp-badge-pos-text on --dp-header-bg is 4.15:1',
       '--dp-badge-pos-text on --dp-track-bg is 3.79:1',
+    ])
+    // Tailwind's gray-mid, which the nav and the tab bar used until #559.
+    expect(failures({ ...light, '--dp-text-muted': '#8A8885' }, OTHER_SURFACES.light)).toEqual([
+      '--dp-text-muted on --dp-page-bg is 3.22:1',
+      '--dp-text-muted on --dp-card-bg is 3.53:1',
+      '--dp-text-muted on --dp-header-bg is 3.38:1',
+      '--dp-text-muted on --dp-track-bg is 3.09:1',
+      "--dp-text-muted on theme('colors.gray.off') is 3.30:1",
+      '--dp-text-muted on #F2F3F5 is 3.18:1',
+      '--dp-text-muted on #F7F8FA is 3.33:1',
+      '--dp-text-muted on #F0F1F4 is 3.13:1',
     ])
     expect(failures({ ...PALETTES.dark, '--dp-text-muted': '#7C879C' })).toEqual([
       '--dp-text-muted on --dp-header-bg is 4.34:1',

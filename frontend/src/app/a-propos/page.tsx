@@ -232,7 +232,8 @@ export default function AProposPage() {
       </div>
 
       {/* ====== STACK TECHNIQUE ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#111C35' }}>
+      {/* dp-dark: the navy sections stay navy in both themes, so their text tokens stay dark (#559). */}
+      <div className="dp-dark" style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#111C35' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
           <div style={{ marginBottom: '52px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
@@ -241,7 +242,7 @@ export default function AProposPage() {
                 Une infrastructure de production,<br />pas un prototype.
               </h2>
             </div>
-            <div style={{ fontSize: '13.5px', color: '#6B7280', maxWidth: '320px', lineHeight: 1.6, textAlign: 'right' }}>
+            <div style={{ fontSize: '13.5px', color: 'var(--dp-text-secondary)', maxWidth: '320px', lineHeight: 1.6, textAlign: 'right' }}>
               Code source ouvert · audit indépendant possible · aucune donnée personnelle collectée
             </div>
           </div>
@@ -252,10 +253,10 @@ export default function AProposPage() {
               <div key={pl.step} style={{ flex: 1, padding: '28px 22px', borderRight: i < pipeline.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '14px' }}>{pl.step}</div>
                 <div style={{ fontWeight: 700, fontSize: '16px', color: '#fff', marginBottom: '8px' }}>{pl.title}</div>
-                <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#9CA3AF' }}>{pl.desc}</div>
+                <div style={{ fontSize: '13px', lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>{pl.desc}</div>
                 <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {pl.tags.map((tag) => (
-                    <span key={tag} className="font-mono" style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', background: 'rgba(255,255,255,0.07)', color: '#9CA3AF', border: '1px solid rgba(255,255,255,0.08)' }}>{tag}</span>
+                    <span key={tag} className="font-mono" style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', background: 'rgba(255,255,255,0.07)', color: 'var(--dp-text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}>{tag}</span>
                   ))}
                 </div>
               </div>
@@ -268,7 +269,7 @@ export default function AProposPage() {
               <div key={tc.name} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '20px 18px' }}>
                 <div className="font-mono" style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '10px' }}>{tc.cat}</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff', marginBottom: '6px' }}>{tc.name}</div>
-                <div style={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.5 }}>{tc.desc}</div>
+                <div style={{ fontSize: '13px', color: 'var(--dp-text-secondary)', lineHeight: 1.5 }}>{tc.desc}</div>
               </div>
             ))}
           </div>
@@ -358,44 +359,44 @@ export default function AProposPage() {
           </div>
 
           {/* Code block */}
-          <div style={{ background: '#111C35', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.14)' }}>
+          <div className="dp-dark" style={{ background: '#111C35', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.14)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <span style={{ width: '11px', height: '11px', borderRadius: '999px', background: '#FF5F57', display: 'inline-block' }} />
               <span style={{ width: '11px', height: '11px', borderRadius: '999px', background: '#FEBC2E', display: 'inline-block' }} />
               <span style={{ width: '11px', height: '11px', borderRadius: '999px', background: '#28C840', display: 'inline-block' }} />
-              <span className="font-mono" style={{ fontSize: '12px', color: '#4B5563', marginLeft: '8px' }}>Terminal</span>
+              <span className="font-mono" style={{ fontSize: '12px', color: 'var(--dp-text-muted)', marginLeft: '8px' }}>Terminal</span>
             </div>
             <div className="font-mono" style={{ padding: '24px 24px 28px', fontSize: '13.5px', lineHeight: 2, color: '#E4E6EA', overflowX: 'auto' }}>
-              <div><span style={{ color: '#9CA3AF' }}># Votes d&apos;un député</span></div>
+              <div><span style={{ color: 'var(--dp-text-muted)' }}># Votes d&apos;un député</span></div>
               <div style={{ marginTop: '8px' }}>
                 <span style={{ color: '#E0786E' }}>GET</span>
                 <span style={{ color: '#fff' }}> /deputies/PA722990/votes</span>
               </div>
-              <div style={{ marginTop: '16px', color: '#9CA3AF' }}>{'{'}</div>
+              <div style={{ marginTop: '16px', color: 'var(--dp-text-muted)' }}>{'{'}</div>
               <div style={{ paddingLeft: '20px' }}>
                 <span style={{ color: '#E0786E' }}>&quot;total&quot;</span>
-                <span style={{ color: '#9CA3AF' }}>: </span>
+                <span style={{ color: 'var(--dp-text-muted)' }}>: </span>
                 <span style={{ color: '#1F8A5B' }}>1248</span>
-                <span style={{ color: '#9CA3AF' }}>,</span>
+                <span style={{ color: 'var(--dp-text-muted)' }}>,</span>
               </div>
               <div style={{ paddingLeft: '20px' }}>
                 <span style={{ color: '#E0786E' }}>&quot;pour&quot;</span>
-                <span style={{ color: '#9CA3AF' }}>: </span>
+                <span style={{ color: 'var(--dp-text-muted)' }}>: </span>
                 <span style={{ color: '#1F8A5B' }}>892</span>
-                <span style={{ color: '#9CA3AF' }}>,</span>
+                <span style={{ color: 'var(--dp-text-muted)' }}>,</span>
               </div>
               <div style={{ paddingLeft: '20px' }}>
                 <span style={{ color: '#E0786E' }}>&quot;contre&quot;</span>
-                <span style={{ color: '#9CA3AF' }}>: </span>
+                <span style={{ color: 'var(--dp-text-muted)' }}>: </span>
                 <span style={{ color: '#1F8A5B' }}>198</span>
-                <span style={{ color: '#9CA3AF' }}>,</span>
+                <span style={{ color: 'var(--dp-text-muted)' }}>,</span>
               </div>
               <div style={{ paddingLeft: '20px' }}>
                 <span style={{ color: '#E0786E' }}>&quot;derniere_sync&quot;</span>
-                <span style={{ color: '#9CA3AF' }}>: </span>
+                <span style={{ color: 'var(--dp-text-muted)' }}>: </span>
                 <span style={{ color: '#E0786E' }}>&quot;2025-06-25T06:14:00Z&quot;</span>
               </div>
-              <div style={{ color: '#9CA3AF' }}>{'}'}</div>
+              <div style={{ color: 'var(--dp-text-muted)' }}>{'}'}</div>
             </div>
           </div>
         </div>
@@ -493,13 +494,13 @@ export default function AProposPage() {
       </div>
 
       {/* ====== CTA FINAL ====== */}
-      <div style={{ padding: '80px 56px', background: '#1B2B50' }}>
+      <div className="dp-dark" style={{ padding: '80px 56px', background: '#1B2B50' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '48px', flexWrap: 'wrap' }}>
           <div>
             <h2 className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: '#fff', margin: '0 0 14px', letterSpacing: '-0.015em' }}>
               Prêt à explorer les données&nbsp;?
             </h2>
-            <p style={{ fontSize: '16px', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: '16px', color: 'var(--dp-text-secondary)', margin: 0, lineHeight: 1.6 }}>
               Données ouvertes · API documentée · Code source public
             </p>
           </div>

@@ -49,11 +49,12 @@ export function ReportErrorButton({ entityType, entityId, entityLabel, pageUrl }
   }
 
   return (
-    <div style={{ position: 'relative', display: 'inline-flex' }}>
+    // dp-light: a white button and popover in both themes, so the text tokens stay light (#559).
+    <div className="dp-light" style={{ position: 'relative', display: 'inline-flex' }}>
       <button
         onClick={() => setStatus(s => (s === 'idle' ? 'open' : 'idle'))}
         aria-expanded={status !== 'idle'}
-        className="inline-flex items-center gap-1.5 text-sm text-gray-mid hover:text-navy transition-colors px-4 py-3 rounded-lg border border-gray-border bg-white font-semibold"
+        className="inline-flex items-center gap-1.5 text-sm text-[color:var(--dp-text-muted)] hover:text-navy transition-colors px-4 py-3 rounded-lg border border-gray-border bg-white font-semibold"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
@@ -71,7 +72,7 @@ export function ReportErrorButton({ entityType, entityId, entityLabel, pageUrl }
             textAlign: 'left',
           }}
         >
-          <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 10, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 12, color: 'var(--dp-text-muted)', marginBottom: 10, lineHeight: 1.4 }}>
             Concerne : <span style={{ color: '#1B2B50', fontWeight: 600 }}>{entityLabel}</span>
           </div>
           <textarea
@@ -121,7 +122,7 @@ export function ReportErrorButton({ entityType, entityId, entityLabel, pageUrl }
             <button
               onClick={() => setStatus('idle')}
               style={{
-                background: '#fff', color: '#6B7280', border: '1px solid #E4E6EA',
+                background: '#fff', color: 'var(--dp-text-secondary)', border: '1px solid #E4E6EA',
                 padding: '9px 14px', borderRadius: 8, fontWeight: 600, fontSize: 13.5, cursor: 'pointer',
               }}
             >

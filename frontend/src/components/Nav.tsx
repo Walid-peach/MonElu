@@ -24,7 +24,7 @@ export const NAV_HEIGHT_PX = 72
 type MenuId = 'explorer' | 'apropos'
 
 const linkBase =
-  'relative text-[14.5px] font-semibold transition-colors text-gray-mid hover:text-navy dark:text-[color:var(--dp-text-muted)] dark:hover:text-[color:var(--dp-text)]'
+  'relative text-[14.5px] font-semibold transition-colors hover:text-navy text-[color:var(--dp-text-muted)] dark:hover:text-[color:var(--dp-text)]'
 const linkActive = 'text-navy dark:text-[color:var(--dp-text)]'
 
 export function Nav() {
@@ -168,7 +168,7 @@ function Dropdown({
               className={`flex flex-col gap-[18px] ${i > 0 ? 'border-l border-gray-border dark:border-[color:var(--dp-border)] pl-8' : ''}`}
             >
               {section.title && (
-                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
+                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[color:var(--dp-text-muted)]">
                   {section.title}
                 </span>
               )}

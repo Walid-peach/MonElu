@@ -161,8 +161,8 @@ describe('party colors contrast', () => {
     const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
     return (hi + 0.05) / (lo + 0.05)
   }
-  const light = vars(block(/:root\s*\{/))
-  const dark = { ...light, ...vars(block(/\.dark\s*\{/)) }
+  const light = vars(block(/^:root,\s*\.dp-light\s*\{/m))
+  const dark = { ...light, ...vars(block(/^\.dark,\s*\.dp-dark\s*\{/m)) }
 
   it.each(Object.keys(SHORT_TO_FULL_PARTY))('%s reaches 3:1 on white and 4.5:1 on the dark card', short => {
     const name = `--party-${short.toLowerCase()}`

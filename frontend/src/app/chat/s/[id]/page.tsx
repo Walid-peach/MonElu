@@ -40,7 +40,7 @@ export default async function ChatSharePage({ params }: { params: Promise<{ id: 
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-10 md:py-14">
-      <p className="text-xs uppercase tracking-wide text-gray-mid dark:text-[color:var(--dp-text-muted)] mb-4">
+      <p className="text-xs uppercase tracking-wide text-[color:var(--dp-text-muted)] mb-4">
         MonÉlu — réponse partagée
       </p>
       <ChatAnswerCard result={result} />
@@ -51,7 +51,7 @@ export default async function ChatSharePage({ params }: { params: Promise<{ id: 
         >
           Reposer cette question avec les données du jour
         </Link>
-        <Link href="/chat" className="text-gray-mid dark:text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)]">
+        <Link href="/chat" className="text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)]">
           Poser une autre question
         </Link>
       </div>
