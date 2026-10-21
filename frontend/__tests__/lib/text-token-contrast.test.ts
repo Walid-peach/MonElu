@@ -157,11 +157,15 @@ function greenText(source: string, file = 'source'): string[] {
 
 // Grey text outside the tokens (#559): a Tailwind text class, or a `color`
 // style property (`color: ...` or `.style.color = ...`) whose value holds one
-// of the grey literals or a translucent white too faint for AA. Fills,
+// of the grey literals or a translucent white too faint for AA, either inline
+// or through a `const` of the same file it names (`color: txt3`,
+// `color: POSITION_COLORS.nonVotant`, `color: MAJORITY_COLOR[key]`). Fills,
 // strokes, backgrounds and `*Color` keys other than `color` are left alone.
+// The scan reads one line at a time and follows one level of indirection: a
+// value split over lines, or a colour returned by a function, escapes it.
 const GREY_LITERAL = /#(?:9CA3AF|6B7280|8A8885)\b/i
 const GREY_CLASS = /(?<![\w-])text-(?:gray-(?:mid|400|500)|\[(?:color:)?#(?:9CA3AF|6B7280|8A8885)\])(?![\w-])/i
-const COLOR_PROPERTY = /(?<![\w-])color\s*[:=](?!=)/g
+const COLOR_PROPERTY = /(?<![\w[-])color\s*[:=](?!=)/g
 const WHITE = /rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([\d.]+)\s*\)/g
 
 // The surfaces translucent white text is written on: the dark palette's, and
@@ -192,14 +196,41 @@ function colorValues(line: string): string[] {
   })
 }
 
+function isGrey(value: string): boolean {
+  return GREY_LITERAL.test(value) || [...value.matchAll(WHITE)].some((white) => Number(white[1]) < MIN_WHITE_ALPHA)
+}
+
+/** The text of `const name = ...` in `source`: its object literal, or the rest of its line. */
+function declaration(source: string, name: string): string | null {
+  const found = source.match(new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?const\\s+${name}\\b[^=\\n]*=\\s*`))
+  if (!found || found.index === undefined) return null
+  const start = found.index + found[0].length
+  if (source[start] !== '{') return source.slice(start, source.indexOf('\n', start))
+  let depth = 0
+  for (let end = start; end < source.length; end++) {
+    if (source[end] === '{') depth++
+    else if (source[end] === '}' && --depth === 0) return source.slice(start, end + 1)
+  }
+  return null
+}
+
+/** The values the constants named in a `color` value stand for (`txt3`, `MAP.key`, `MAP[...]`). */
+function referencedValues(value: string, source: string): string[] {
+  const code = value.replace(/'[^']*'|"[^"]*"|`[^`]*`/g, "''")
+  return [...code.matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)(?:\.([A-Za-z_$][\w$]*))?/g)].flatMap(([, name, key]) => {
+    const body = declaration(source, name)
+    if (!body) return []
+    if (!key || !body.startsWith('{')) return [body]
+    const entry = body.match(new RegExp(`(?:^|[\\s{,])['"]?${key}['"]?\\s*:([^,\\n}]*)`))
+    return entry ? [entry[1]] : []
+  })
+}
+
 function greyText(source: string, file = 'source'): string[] {
   return source.split('\n').flatMap((line, index) => {
     const grey =
       GREY_CLASS.test(line) ||
-      colorValues(line).some(
-        (value) =>
-          GREY_LITERAL.test(value) || [...value.matchAll(WHITE)].some((white) => Number(white[1]) < MIN_WHITE_ALPHA),
-      )
+      colorValues(line).some((value) => isGrey(value) || referencedValues(value, source).some(isGrey))
     return grey ? [`${file}:${index + 1}: ${line.trim()}`] : []
   })
 }
@@ -250,8 +281,26 @@ describe('text token contrast', () => {
       "onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}",
     ]
     for (const line of text) expect(greyText(line)).toHaveLength(1)
+    // Through a constant: the chat's txt3 and the hemicycle's position map
+    // were both written this way.
+    const indirect = [
+      "const txt3 = dk ? 'rgba(255,255,255,0.26)' : '#9CA3AF'",
+      "const POSITION_COLORS = {\n  pour: '#1F8A5B',\n  nonVotant: '#9CA3AF',\n}",
+      "const MAJORITY_COLOR = {\n  pour: '#15803D',\n  abstention: '#9CA3AF',\n}",
+      '<span style={{ fontSize: 12, color: txt3 }}>Envoi…</span>',
+      '<span style={{ color: POSITION_COLORS.nonVotant }}>12 NV</span>',
+      '<span style={{ color: POSITION_COLORS.pour }}>12 pour</span>',
+      '<span style={{ color: MAJORITY_COLOR[v.majority_position] }}>',
+      '<circle fill={POSITION_COLORS.nonVotant} />',
+    ].join('\n')
+    expect(greyText(indirect).map((hit) => hit.replace(/^source:\d+: /, ''))).toEqual([
+      '<span style={{ fontSize: 12, color: txt3 }}>Envoi…</span>',
+      '<span style={{ color: POSITION_COLORS.nonVotant }}>12 NV</span>',
+      '<span style={{ color: MAJORITY_COLOR[v.majority_position] }}>',
+    ])
     const fills = [
       "nonVotant: '#9CA3AF',",
+      "<div className=\"bg-[color:#9CA3AF]\" />",
       '<path d="M6 19 A9 9 0 0 1 24 19" stroke="#9CA3AF" strokeWidth="2.2" />',
       "<div style={{ background: 'rgba(255,255,255,0.07)', color: 'var(--dp-text-muted)' }}>",
       "<div style={{ scrollbarColor: 'rgba(255,255,255,0.14) transparent' }}>",
@@ -260,6 +309,24 @@ describe('text token contrast', () => {
       '<div className="text-gray-mid-like border-gray-mid">',
     ]
     for (const line of fills) expect(greyText(line)).toEqual([])
+  })
+
+  // Surfaces that keep one palette in both themes. Without their scope class
+  // the tokens follow <html>'s theme, and dark muted grey on white is 3:1.
+  it.each([
+    ['app/embed/votes/[id]/page.tsx', 'dp-light'],
+    ['app/groupes/[slug]/page.tsx', 'dp-light'],
+    ['components/ShareButton.tsx', 'dp-light'],
+    ['components/EmbedButton.tsx', 'dp-light'],
+    ['components/ReportErrorButton.tsx', 'dp-light'],
+    ['components/GlobalSearch.tsx', 'dp-light'],
+    ['components/InfoTooltip.tsx', 'dp-light'],
+    ['components/HemicycleChart.tsx', 'dp-light'],
+    ['components/Footer.tsx', 'dp-dark'],
+    ['app/chat/ChatClient.tsx', 'dp-dark'],
+    ['app/a-propos/page.tsx', 'dp-dark'],
+  ])('%s keeps its fixed surface on the %s palette', (file, scope) => {
+    expect(readFileSync(join(SRC, file), 'utf8')).toMatch(new RegExp(`className=\\{?["'\`][^"'\`]*\\b${scope}\\b`))
   })
 
   it('computes the WCAG ratios', () => {

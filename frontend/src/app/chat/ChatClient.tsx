@@ -468,8 +468,10 @@ function ChatInner() {
   const bg1  = dk ? '#111C35' : '#F7F8FA'
   const bdr  = dk ? 'rgba(255,255,255,0.07)' : '#F0F0F2'
   const txt1 = dk ? 'rgba(255,255,255,0.90)' : '#1B2B50'
-  // The site's text tokens, which follow the theme on their own: the old
-  // translucent whites and #6B7280/#9CA3AF missed AA on these surfaces (#559).
+  // The site's text tokens: the old translucent whites and #6B7280/#9CA3AF
+  // missed AA on these surfaces (#559). The root below pins them to `dk`, so
+  // they always match bg0/bg1, even in the first frame before ThemeProvider
+  // has caught up with the class on <html>.
   const txt2 = 'var(--dp-text-secondary)'
   const txt3 = 'var(--dp-text-muted)'
   // Mirrors --dp-red from globals.css: #DC2626 scores 3.8:1 on the dark chat
@@ -497,7 +499,7 @@ function ChatInner() {
   }
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100dvh - 4rem)', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: bg0 }}>
+    <div className={dk ? 'dp-dark' : 'dp-light'} style={{ display: 'flex', height: 'calc(100dvh - 4rem)', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: bg0 }}>
 
       {/* Screen-reader announcement of new assistant/verdict/error messages only —
           never the full conversation (RGAA 9.3 / WCAG 4.1.3). */}

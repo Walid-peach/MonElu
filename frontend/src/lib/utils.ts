@@ -136,7 +136,8 @@ export function themeColors(theme: string | null): { c: string; bg: string } {
     'Institutions':            { c: '#374151', bg: '#F2F3F5' },
     'International':           { c: '#374151', bg: '#F2F3F5' },
     'Éducation & Culture':     { c: '#7C3AED', bg: '#EDE9FE' },
-    'Autre':                   { c: '#6B7280', bg: '#F3F4F6' },
+    // #559: #6B7280 was 4.39:1 on this tint; this is the light --dp-text-secondary.
+    'Autre':                   { c: '#5F6673', bg: '#F3F4F6' },
   }
-  return map[theme ?? ''] ?? { c: '#6B7280', bg: '#F3F4F6' }
+  return map[theme ?? ''] ?? map['Autre']
 }

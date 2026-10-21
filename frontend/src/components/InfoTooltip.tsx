@@ -27,9 +27,11 @@ export function InfoTooltip({
   const tooltipId = useId()
 
   return (
-    // dp-light: the white "i" button is white in both themes, so its text token stays light (#559).
-    <span className="dp-light" style={{ position: 'relative', display: 'inline-flex' }}>
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      {/* dp-light: the "i" is white in both themes, so its text token stays
+          light (#559). Only the button: the navy bubble keeps the dark focus ring. */}
       <button
+        className="dp-light"
         type="button"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}

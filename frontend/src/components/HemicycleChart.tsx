@@ -272,10 +272,11 @@ export function HemicycleChart({ deputies }: Props) {
             <span style={{ fontWeight: 400, color: 'var(--dp-text-muted)' }}>· {arcs[activeArc].seatCount} député{arcs[activeArc].seatCount > 1 ? 's' : ''}</span>
           </span>
           <span className="font-mono" style={{ fontSize: 13, display: 'flex', gap: 14 }}>
-            <span style={{ color: POSITION_COLORS.pour, fontWeight: 600 }}>{arcs[activeArc].counts.pour} pour</span>
+            {/* The position colours are seat fills; as text they use the AA text tokens (#559). */}
+            <span style={{ color: 'var(--dp-badge-pos-text)', fontWeight: 600 }}>{arcs[activeArc].counts.pour} pour</span>
             <span style={{ color: POSITION_COLORS.contre, fontWeight: 600 }}>{arcs[activeArc].counts.contre} contre</span>
-            <span style={{ color: POSITION_COLORS.abstention }}>{arcs[activeArc].counts.abstention} abst.</span>
-            <span style={{ color: POSITION_COLORS.nonVotant }}>{arcs[activeArc].counts.nonVotant} NV</span>
+            <span style={{ color: 'var(--dp-badge-abst-text)' }}>{arcs[activeArc].counts.abstention} abst.</span>
+            <span style={{ color: 'var(--dp-text-muted)' }}>{arcs[activeArc].counts.nonVotant} NV</span>
           </span>
         </div>
       )}

@@ -59,7 +59,7 @@ export default async function VerificationPage({ params }: { params: Promise<{ i
         >
           Re-vérifier avec les données du jour
         </Link>
-        <Link href="/chat?mode=verify"className="text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)]">
+        <Link href="/chat?mode=verify" className="text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)]">
           Vérifier une autre affirmation
         </Link>
       </div>

@@ -51,7 +51,7 @@ export default async function ChatSharePage({ params }: { params: Promise<{ id: 
         >
           Reposer cette question avec les données du jour
         </Link>
-        <Link href="/chat"className="text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)]">
+        <Link href="/chat" className="text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)]">
           Poser une autre question
         </Link>
       </div>
