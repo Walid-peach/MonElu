@@ -130,8 +130,9 @@ export function HemicycleChart({ deputies }: Props) {
       }}
     >
 
-      {/* View toggle */}
-      <div role="group" aria-label="Mode d'affichage de l'hémicycle" style={{ display: 'inline-flex', background: '#F2F3F5', borderRadius: 999, padding: 3, marginBottom: 18 }}>
+      {/* View toggle. It, the seat tooltip and the group detail are light in
+          both themes, so dp-light keeps their text tokens light (#559). */}
+      <div role="group" aria-label="Mode d'affichage de l'hémicycle" className="dp-light" style={{ display: 'inline-flex', background: '#F2F3F5', borderRadius: 999, padding: 3, marginBottom: 18 }}>
         {([['seats', 'Par député'], ['groups', 'Par groupe']] as const).map(([v, label]) => (
           <button
             key={v}
@@ -141,7 +142,7 @@ export function HemicycleChart({ deputies }: Props) {
               border: 'none', cursor: 'pointer', borderRadius: 999, padding: '7px 16px',
               fontSize: 13, fontWeight: 600,
               background: view === v ? '#fff' : 'transparent',
-              color: view === v ? '#1B2B50' : '#6B7280',
+              color: view === v ? '#1B2B50' : 'var(--dp-text-secondary)',
               boxShadow: view === v ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
               transition: 'all 0.15s ease',
             }}
@@ -228,6 +229,7 @@ export function HemicycleChart({ deputies }: Props) {
       {/* Seat tooltip */}
       {view === 'seats' && activeSeat && (
         <div
+          className="dp-light"
           style={{
             position: 'absolute',
             left: `${(activeSeat.x / vb.width) * 100}%`,
@@ -241,7 +243,7 @@ export function HemicycleChart({ deputies }: Props) {
           <div style={{ fontWeight: 600, fontSize: 14, color: '#1B2B50' }}>{activeSeat.deputy.full_name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
             <span style={{ width: 8, height: 8, borderRadius: 999, background: partyHex(activeSeat.deputy.party), display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, color: '#6B7280' }}>{activeSeat.deputy.party ?? 'Non inscrit'}</span>
+            <span style={{ fontSize: 12.5, color: 'var(--dp-text-secondary)' }}>{activeSeat.deputy.party ?? 'Non inscrit'}</span>
             <span
               style={{
                 fontSize: 11.5, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
@@ -263,11 +265,11 @@ export function HemicycleChart({ deputies }: Props) {
 
       {/* Group arc detail */}
       {view === 'groups' && activeArc !== null && arcs[activeArc] && (
-        <div style={{ marginTop: 14, background: '#fff', border: '1px solid #E4E6EA', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <div className="dp-light" style={{ marginTop: 14, background: '#fff', border: '1px solid #E4E6EA', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14, color: '#1B2B50' }}>
             <span style={{ width: 10, height: 10, borderRadius: 999, background: partyHex(arcs[activeArc].group === 'Non inscrit' ? null : arcs[activeArc].group), display: 'inline-block' }} />
             {arcs[activeArc].group}
-            <span style={{ fontWeight: 400, color: '#9CA3AF' }}>· {arcs[activeArc].seatCount} député{arcs[activeArc].seatCount > 1 ? 's' : ''}</span>
+            <span style={{ fontWeight: 400, color: 'var(--dp-text-muted)' }}>· {arcs[activeArc].seatCount} député{arcs[activeArc].seatCount > 1 ? 's' : ''}</span>
           </span>
           <span className="font-mono" style={{ fontSize: 13, display: 'flex', gap: 14 }}>
             <span style={{ color: POSITION_COLORS.pour, fontWeight: 600 }}>{arcs[activeArc].counts.pour} pour</span>
@@ -282,9 +284,9 @@ export function HemicycleChart({ deputies }: Props) {
       {view === 'seats' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', marginTop: 16 }}>
           {legendEntries.map(p => (
-            <span key={p} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: '#4B5563' }}>
+            <span key={p} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--dp-text-secondary)' }}>
               <span style={{ width: 10, height: 10, borderRadius: 999, background: POSITION_COLORS[p], display: 'inline-block' }} />
-              {POSITION_LABELS[p]} <span className="font-mono" style={{ color: '#9CA3AF', fontSize: 12 }}>({counts[p]})</span>
+              {POSITION_LABELS[p]} <span className="font-mono" style={{ color: 'var(--dp-text-muted)', fontSize: 12 }}>({counts[p]})</span>
               {p === 'nonVotant' && (
                 <InfoTooltip
                   text="Non-votant : présent en séance mais n'a pas pris position. Différent de l'abstention, qui est une position exprimée. Les députés absents n'apparaissent pas sur ce schéma."

@@ -40,10 +40,11 @@ export function EmbedButton({ path, width = OEMBED_WIDTH, height = OEMBED_HEIGHT
   }
 
   return (
-    <div ref={rootRef} style={{ position: 'relative' }}>
+    // dp-light: a white chip and popover in both themes, so the text tokens stay light (#559).
+    <div ref={rootRef} className="dp-light" style={{ position: 'relative' }}>
       <button
         onClick={e => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o) }}
-        className="flex items-center gap-1.5 text-xs text-gray-mid hover:text-navy transition-colors px-2.5 py-1.5 rounded border border-gray-border bg-white shrink-0"
+        className="flex items-center gap-1.5 text-xs text-[color:var(--dp-text-muted)] hover:text-navy transition-colors px-2.5 py-1.5 rounded border border-gray-border bg-white shrink-0"
         aria-label="Intégrer ce vote sur un autre site"
         aria-expanded={open}
       >
@@ -67,7 +68,7 @@ export function EmbedButton({ path, width = OEMBED_WIDTH, height = OEMBED_HEIGHT
           {/* oEmbed (MON-266) means the plain link already unfurls into this
               same widget on Notion, Slack, Substack, Ghost, WordPress and
               Discourse. The iframe stays here for everything else. */}
-          <p style={{ fontSize: 11.5, color: '#6B7280', marginBottom: 8 }}>
+          <p style={{ fontSize: 11.5, color: 'var(--dp-text-secondary)', marginBottom: 8 }}>
             Sur Notion, Slack, Substack, Ghost ou WordPress, il suffit de coller le lien de la page :
             l&apos;encart s&apos;affiche automatiquement (oEmbed).
           </p>

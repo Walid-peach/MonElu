@@ -53,7 +53,7 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
       </blockquote>
 
       {result.deputy && (
-        <p className="text-sm text-gray-mid dark:text-[color:var(--dp-text-muted)] mb-3">
+        <p className="text-sm text-[color:var(--dp-text-muted)] mb-3">
           Député concerné :{' '}
           <Link
             href={`/deputes/${result.deputy.deputy_id}`}
@@ -69,7 +69,7 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
 
       {result.citations.length > 0 && (
         <div className="mb-5">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-mid dark:text-[color:var(--dp-text-muted)] mb-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--dp-text-muted)] mb-2">
             Scrutins cités
           </h3>
           <ul className="space-y-2">
@@ -80,7 +80,7 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
                   className="block border border-gray-border dark:border-[color:var(--dp-border)] rounded-lg p-3 hover:border-navy transition-colors"
                 >
                   <span className="block text-sm font-medium text-navy dark:text-[color:var(--dp-text)]">{c.title}</span>
-                  <span className="block text-xs text-gray-mid dark:text-[color:var(--dp-text-muted)] mt-1">
+                  <span className="block text-xs text-[color:var(--dp-text-muted)] mt-1">
                     {formatDate(c.voted_at)}
                     {c.result ? ` · ${c.result}` : ''}
                     {c.deputy_position && result.deputy
@@ -94,7 +94,7 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
         </div>
       )}
 
-      <p className="text-xs text-gray-mid dark:text-[color:var(--dp-text-muted)] border-t border-gray-border dark:border-[color:var(--dp-border)] pt-3">
+      <p className="text-xs text-[color:var(--dp-text-muted)] border-t border-gray-border dark:border-[color:var(--dp-border)] pt-3">
         {CONFIDENCE_LABELS[result.confidence]}
         {verifiedAt ? ` · Vérifié le ${verifiedAt}` : ''}
         {horizon ? ` · Sur la base des scrutins de l'Assemblée Nationale depuis le ${horizon}` : ''}

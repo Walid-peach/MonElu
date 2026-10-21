@@ -23,7 +23,7 @@ export default function GlobalError({
           <h2 className="font-serif text-2xl text-navy mb-3">
             Une erreur est survenue
           </h2>
-          <p className="text-gray-mid text-sm mb-6">
+          <p className="text-[color:var(--dp-text-muted)] text-sm mb-6">
             L&apos;application a rencontré un problème inattendu.
           </p>
           <button

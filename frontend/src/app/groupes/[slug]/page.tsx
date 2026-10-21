@@ -53,7 +53,7 @@ const MAJORITY_LABEL: Record<string, string> = {
 const MAJORITY_COLOR: Record<string, string> = {
   pour: '#15803D',
   contre: RED,
-  abstention: '#9CA3AF',
+  abstention: 'var(--dp-text-muted)',
 }
 
 export default async function GroupPage(
@@ -83,7 +83,9 @@ export default async function GroupPage(
   ])
 
   return (
-    <div style={{ background: CREAM, minHeight: '100vh' }}>
+    // dp-light: this page keeps its cream and white surfaces in both themes,
+    // so its text tokens stay light (#559).
+    <div className="dp-light" style={{ background: CREAM, minHeight: '100vh' }}>
       <JsonLd data={breadcrumb} />
 
       {/* Hero */}
@@ -118,14 +120,14 @@ export default async function GroupPage(
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" style={{ marginTop: 30, maxWidth: 900 }}>
             {avgPresencePct !== null && (
               <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Présence moyenne
                 </div>
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: 26, color: NAVY }}>
                   {avgPresencePct}%
                 </div>
                 {nationalPresencePct !== null && (
-                  <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 6 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 6 }}>
                     Moyenne nationale : {nationalPresencePct}%
                   </div>
                 )}
@@ -133,26 +135,26 @@ export default async function GroupPage(
             )}
             {cohesionPct !== null && (
               <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Cohésion du groupe
                 </div>
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: 26, color: NAVY }}>
                   {cohesionPct}%
                 </div>
-                <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 6 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 6 }}>
                   Vote avec la majorité du groupe en moyenne
                 </div>
               </div>
             )}
             {topDissident && (
               <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
-                <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>
+                <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Le plus dissident
                 </div>
                 <Link href={`/deputes/${topDissident.deputy_id}`} style={{ fontWeight: 600, fontSize: 16, color: NAVY, textDecoration: 'none' }}>
                   {topDissident.full_name}
                 </Link>
-                <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 6 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 6 }}>
                   Vote contre le groupe dans {pct(topDissident.dissident_rate)}% des scrutins
                 </div>
               </div>
@@ -192,19 +194,19 @@ export default async function GroupPage(
                         <div style={{ fontWeight: 600, fontSize: 15.5, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {m.full_name}
                         </div>
-                        <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 3 }}>
+                        <div style={{ fontSize: 13, color: 'var(--dp-text-muted)', marginTop: 3 }}>
                           {m.department ?? '—'}
                         </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
                       {presence !== null && (
-                        <span className="font-mono" style={{ fontSize: 12, color: '#6B7280' }}>
+                        <span className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-secondary)' }}>
                           Présence {presence}%
                         </span>
                       )}
                       {dissident !== null && (
-                        <span className="font-mono" style={{ fontSize: 12, color: '#6B7280' }}>
+                        <span className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-secondary)' }}>
                           Dissidence {dissident}%
                         </span>
                       )}
@@ -255,7 +257,7 @@ export default async function GroupPage(
               <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: NAVY, margin: '12px 0 8px', letterSpacing: '-0.01em' }}>
                 Les votes les plus disputés au sein du groupe
               </h2>
-              <p style={{ margin: '0 0 22px', fontSize: 14.5, color: '#6B7280', maxWidth: 640 }}>
+              <p style={{ margin: '0 0 22px', fontSize: 14.5, color: 'var(--dp-text-secondary)', maxWidth: 640 }}>
                 Scrutins où le groupe s&apos;est le plus partagé entre pour et contre.
               </p>
               <VoteBreakdownList votes={data.divided_votes} />
@@ -310,15 +312,15 @@ function VoteBreakdownList({ votes }: { votes: GroupVoteBreakdown[] }) {
               <span className="font-mono" style={{ fontSize: 12.5, color: '#15803D' }}>{v.pour} pour</span>
               <span className="font-mono" style={{ fontSize: 12.5, color: RED }}>{v.contre} contre</span>
               {v.abstention > 0 && (
-                <span className="font-mono" style={{ fontSize: 12.5, color: '#9CA3AF' }}>{v.abstention} abst.</span>
+                <span className="font-mono" style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{v.abstention} abst.</span>
               )}
             </span>
           </div>
-          <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 5 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 5 }}>
             {v.voted_at ? formatDate(v.voted_at) : ''}
             {v.result ? ` · ${v.result === 'adopté' ? 'Adopté' : 'Rejeté'}` : ''}
             {' · '}
-            <span style={{ color: MAJORITY_COLOR[v.majority_position] ?? '#9CA3AF' }}>
+            <span style={{ color: MAJORITY_COLOR[v.majority_position] ?? 'var(--dp-text-muted)' }}>
               Groupe majoritairement {MAJORITY_LABEL[v.majority_position] ?? v.majority_position}
             </span>
           </div>

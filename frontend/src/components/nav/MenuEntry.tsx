@@ -33,7 +33,7 @@ export function MenuEntry({
           {entry.label}
           {entry.kind === 'external' && <span aria-hidden="true"> ↗</span>}
         </span>
-        <span className="block text-[12.5px] mt-0.5 text-gray-mid dark:text-[color:var(--dp-text-muted)]">
+        <span className="block text-[12.5px] mt-0.5 text-[color:var(--dp-text-muted)]">
           {entry.description}
         </span>
       </span>

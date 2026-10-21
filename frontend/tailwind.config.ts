@@ -25,7 +25,6 @@ const config: Config = {
         gray: {
           off: '#F8F7F4',
           light: '#EDECEA',
-          mid: '#8A8885',
           border: '#E0DED9',
         },
       },

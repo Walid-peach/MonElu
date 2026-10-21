@@ -19,9 +19,10 @@ export function Footer() {
   if (pathname.startsWith('/chat') || pathname.startsWith('/embed')) return null
 
   return (
+    // dp-dark: the footer is navy in both themes, so its text tokens stay dark (#559).
     <footer
       data-print-hide
-      className="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8"
+      className="dp-dark pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8"
       style={{
         paddingTop: '32px',
         paddingLeft: '56px',
@@ -44,19 +45,19 @@ export function Footer() {
         <span style={{ fontWeight: 800, fontSize: '18px', color: '#fff', letterSpacing: '-0.01em' }}>
           Mon<span style={{ color: '#D93025' }}>É</span>lu
         </span>
-        <span style={{ fontSize: '13px', color: '#4B5563', marginLeft: '8px' }}>
+        <span style={{ fontSize: '13px', color: 'var(--dp-text-muted)', marginLeft: '8px' }}>
           © {new Date().getFullYear()} - Données publiques Assemblée nationale
         </span>
       </div>
       <div style={{ display: 'flex', gap: '28px', fontSize: '13.5px', flexWrap: 'wrap' }}>
-        <Link href="/deputes" style={{ color: '#6B7280', textDecoration: 'none' }}>Députés</Link>
-        <Link href="/votes" style={{ color: '#6B7280', textDecoration: 'none' }}>Votes</Link>
-        <Link href="/quiz" style={{ color: '#6B7280', textDecoration: 'none' }}>Quiz</Link>
-        <Link href="/donnees" style={{ color: '#6B7280', textDecoration: 'none' }}>Données</Link>
-        <Link href="/developpeurs" style={{ color: '#6B7280', textDecoration: 'none' }}>Développeurs</Link>
-        <Link href="/methodologie" style={{ color: '#6B7280', textDecoration: 'none' }}>Méthodologie</Link>
-        <Link href="/contact" style={{ color: '#6B7280', textDecoration: 'none' }}>Contact</Link>
-        <a href="https://github.com/Walid-peach" target="_blank" rel="noopener noreferrer" style={{ color: '#6B7280', textDecoration: 'none' }}>GitHub</a>
+        <Link href="/deputes" style={{ color: 'var(--dp-text-muted)', textDecoration: 'none' }}>Députés</Link>
+        <Link href="/votes" style={{ color: 'var(--dp-text-muted)', textDecoration: 'none' }}>Votes</Link>
+        <Link href="/quiz" style={{ color: 'var(--dp-text-muted)', textDecoration: 'none' }}>Quiz</Link>
+        <Link href="/donnees" style={{ color: 'var(--dp-text-muted)', textDecoration: 'none' }}>Données</Link>
+        <Link href="/developpeurs" style={{ color: 'var(--dp-text-muted)', textDecoration: 'none' }}>Développeurs</Link>
+        <Link href="/methodologie" style={{ color: 'var(--dp-text-muted)', textDecoration: 'none' }}>Méthodologie</Link>
+        <Link href="/contact" style={{ color: 'var(--dp-text-muted)', textDecoration: 'none' }}>Contact</Link>
+        <a href="https://github.com/Walid-peach" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dp-text-muted)', textDecoration: 'none' }}>GitHub</a>
         {legalLinks.map((l) => (
           <Link key={l.href} href={l.href} style={{ color: '#94A3B8', textDecoration: 'none' }}>{l.label}</Link>
         ))}

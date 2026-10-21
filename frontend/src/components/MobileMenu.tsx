@@ -99,7 +99,7 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
               type="button"
               onClick={onClose}
               aria-label="Fermer le menu"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-gray-mid hover:bg-gray-light dark:text-[color:var(--dp-text-muted)]"
+              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-light text-[color:var(--dp-text-muted)]"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -115,7 +115,7 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
         {sections.map((section, i) => (
           <div key={section.title ?? i} className="px-5 pt-5">
             {section.title && (
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-mid dark:text-[color:var(--dp-text-muted)]">
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[color:var(--dp-text-muted)]">
                 {section.title}
               </span>
             )}

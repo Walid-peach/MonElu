@@ -468,8 +468,10 @@ function ChatInner() {
   const bg1  = dk ? '#111C35' : '#F7F8FA'
   const bdr  = dk ? 'rgba(255,255,255,0.07)' : '#F0F0F2'
   const txt1 = dk ? 'rgba(255,255,255,0.90)' : '#1B2B50'
-  const txt2 = dk ? 'rgba(255,255,255,0.45)' : '#6B7280'
-  const txt3 = dk ? 'rgba(255,255,255,0.26)' : '#9CA3AF'
+  // The site's text tokens, which follow the theme on their own: the old
+  // translucent whites and #6B7280/#9CA3AF missed AA on these surfaces (#559).
+  const txt2 = 'var(--dp-text-secondary)'
+  const txt3 = 'var(--dp-text-muted)'
   // Mirrors --dp-red from globals.css: #DC2626 scores 3.8:1 on the dark chat
   // surface, below the 4.5:1 AA floor MON-159 set for body text.
   const red1 = dk ? '#FF6B60' : '#DC2626'
@@ -504,7 +506,8 @@ function ChatInner() {
       </div>
 
       {/* ══════════ SIDEBAR ══════════ */}
-      <div style={{ width: 260, flexShrink: 0, background: '#111C35', flexDirection: 'column', overflow: 'hidden' }} className="hidden md:flex">
+      {/* dp-dark: the sidebar is navy in both themes, so its text tokens stay dark (#559). */}
+      <div style={{ width: 260, flexShrink: 0, background: '#111C35', flexDirection: 'column', overflow: 'hidden' }} className="dp-dark hidden md:flex">
 
         {/* New chat button */}
         <div style={{ padding: '16px 16px 12px', flexShrink: 0 }}>
@@ -524,13 +527,13 @@ function ChatInner() {
         {/* Conversation list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 8px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.14) transparent' }}>
           {conversations.length === 0 ? (
-            <div style={{ padding: '20px 10px', fontSize: 12, color: 'rgba(255,255,255,0.24)', lineHeight: 1.5 }}>
+            <div style={{ padding: '20px 10px', fontSize: 12, color: 'var(--dp-text-muted)', lineHeight: 1.5 }}>
               Vos conversations apparaîtront ici.
             </div>
           ) : (
             groupedConvs.map(({ group, convs: gConvs }) => (
               <div key={group}>
-                <div style={{ padding: '14px 8px 5px', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>
+                <div style={{ padding: '14px 8px 5px', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--dp-text-muted)' }}>
                   {group}
                 </div>
                 {gConvs.map(conv => {
@@ -543,10 +546,10 @@ function ChatInner() {
                       onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
                       onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
                     >
-                      <div style={{ fontSize: 13, color: active ? '#fff' : 'rgba(255,255,255,0.66)', fontWeight: active ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.35 }}>
+                      <div style={{ fontSize: 13, color: active ? '#fff' : 'var(--dp-text-secondary)', fontWeight: active ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.35 }}>
                         {conv.title}
                       </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.27)', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: active ? 'var(--dp-text-secondary)' : 'var(--dp-text-muted)', marginTop: 2 }}>
                         {relativeTime(conv.createdAt)}
                       </div>
                     </button>
@@ -563,14 +566,14 @@ function ChatInner() {
             <div style={{ width: 30, height: 30, borderRadius: 999, background: '#E0786E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>U</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.88)' }}>Utilisateur</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.36)' }}>Plan gratuit</div>
+              <div style={{ fontSize: 11, color: 'var(--dp-text-muted)' }}>Plan gratuit</div>
             </div>
             <button
               onClick={toggleTheme}
               title={dk ? 'Mode clair' : 'Mode sombre'}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.35)', transition: 'color 140ms' }}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center', color: 'var(--dp-text-muted)', transition: 'color 140ms' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.70)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--dp-text-muted)')}
             >
               {dk ? (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -605,7 +608,7 @@ function ChatInner() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.2" strokeLinecap="round">
               <path d="m9 12 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
             </svg>
-            <span style={{ color: dk ? 'rgba(255,255,255,0.38)' : '#4B5563' }}>Données officielles · Assemblée nationale</span>
+            <span style={{ color: txt2 }}>Données officielles · Assemblée nationale</span>
           </div>
         </div>
 
@@ -962,7 +965,7 @@ function ChatInner() {
                 </button>
               </div>
             </div>
-            <div style={{ textAlign: 'center', marginTop: 9, fontSize: 11.5, color: dk ? 'rgba(255,255,255,0.18)' : '#9CA3AF' }}>
+            <div style={{ textAlign: 'center', marginTop: 9, fontSize: 11.5, color: txt3 }}>
               MonÉlu peut faire des erreurs. Vérifiez les informations importantes sur{' '}
               <a href="https://assemblee-nationale.fr" target="_blank" rel="noopener noreferrer" style={{ color: dk ? '#F87167' : '#C9302A', textDecoration: 'none' }}>
                 assemblee-nationale.fr
@@ -997,7 +1000,7 @@ function ActionBtn({ children, onClick, dark }: { children: React.ReactNode; onC
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: hover ? (dark ? 'rgba(255,255,255,0.70)' : '#1B2B50') : (dark ? 'rgba(255,255,255,0.26)' : '#9CA3AF'), cursor: 'pointer', padding: '5px 9px', borderRadius: 6, transition: 'background 120ms, color 120ms', background: hover ? (dark ? 'rgba(255,255,255,0.06)' : '#F9FAFB') : 'transparent', border: 'none' }}
+      style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: hover ? (dark ? 'rgba(255,255,255,0.70)' : '#1B2B50') : 'var(--dp-text-muted)', cursor: 'pointer', padding: '5px 9px', borderRadius: 6, transition: 'background 120ms, color 120ms', background: hover ? (dark ? 'rgba(255,255,255,0.06)' : '#F9FAFB') : 'transparent', border: 'none' }}
     >
       {children}
     </button>
@@ -1006,7 +1009,7 @@ function ActionBtn({ children, onClick, dark }: { children: React.ReactNode; onC
 
 export function ChatClient() {
   return (
-    <Suspense fallback={<div style={{ padding: 32, color: '#9CA3AF', fontSize: 14 }}>Chargement…</div>}>
+    <Suspense fallback={<div style={{ padding: 32, color: 'var(--dp-text-muted)', fontSize: 14 }}>Chargement…</div>}>
       <ChatInner />
     </Suspense>
   )

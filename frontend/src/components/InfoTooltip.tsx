@@ -27,7 +27,8 @@ export function InfoTooltip({
   const tooltipId = useId()
 
   return (
-    <span style={{ position: 'relative', display: 'inline-flex' }}>
+    // dp-light: the white "i" button is white in both themes, so its text token stays light (#559).
+    <span className="dp-light" style={{ position: 'relative', display: 'inline-flex' }}>
       <button
         type="button"
         onMouseEnter={() => setOpen(true)}
@@ -41,7 +42,7 @@ export function InfoTooltip({
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: 16, height: 16, borderRadius: 999, border: `1px solid #C7CDD8`,
-          background: '#fff', color: '#6B7280', fontSize: 11, fontWeight: 700,
+          background: '#fff', color: 'var(--dp-text-secondary)', fontSize: 11, fontWeight: 700,
           cursor: 'pointer', padding: 0, lineHeight: 1,
         }}
       >

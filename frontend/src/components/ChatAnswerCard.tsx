@@ -64,7 +64,7 @@ export function ChatAnswerCard({ result }: { result: ChatShareResult }) {
 
       {sources.length > 0 && (
         <div className="mt-5 mb-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-mid dark:text-[color:var(--dp-text-muted)] mb-2">Sources</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--dp-text-muted)] mb-2">Sources</h3>
           <div className="flex flex-wrap gap-2">
             {sources.map((src, si) => {
               const kindStyle = SOURCE_KIND_STYLE[src.kind]
@@ -73,7 +73,7 @@ export function ChatAnswerCard({ result }: { result: ChatShareResult }) {
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: kindStyle.dot ?? src.dot }} />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-semibold text-navy dark:text-[color:var(--dp-text)] truncate">{src.label}</div>
-                    {src.sub && <div className="text-[11px] text-gray-mid dark:text-[color:var(--dp-text-muted)] truncate">{src.sub}</div>}
+                    {src.sub && <div className="text-[11px] text-[color:var(--dp-text-muted)] truncate">{src.sub}</div>}
                   </div>
                   {src.badge && (
                     <div
@@ -96,7 +96,7 @@ export function ChatAnswerCard({ result }: { result: ChatShareResult }) {
         </div>
       )}
 
-      <p className="text-xs text-gray-mid dark:text-[color:var(--dp-text-muted)] border-t border-gray-border dark:border-[color:var(--dp-border)] pt-3 mt-4">
+      <p className="text-xs text-[color:var(--dp-text-muted)] border-t border-gray-border dark:border-[color:var(--dp-border)] pt-3 mt-4">
         Réponse générée le{' '}
         {new Date(result.shared_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
         {' · '}Source : données ouvertes de l&apos;Assemblée Nationale.

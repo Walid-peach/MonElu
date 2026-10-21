@@ -45,7 +45,13 @@
   }
 }
 
-:root {
+/* #559: .dp-light and .dp-dark pin a subtree to one palette whatever the
+   site theme, for surfaces that keep their colours in both themes: the white
+   popovers, the embed and the /groupes page stay light, the footer and the
+   chat sidebar stay navy. Text on them still goes through the tokens, so it
+   is held to the same contrast check as the rest of the site. */
+:root,
+.dp-light {
   --color-bg: theme('colors.gray.off');
   --color-fg: theme('colors.navy.DEFAULT');
 
@@ -145,7 +151,8 @@
    ThemeProvider and never applied on the landing page (ADR-027). Page- and
    component-level dark: variants land in follow-up MON-103 sub-issues — this
    only wires the mechanism through the shared body background/foreground. */
-.dark {
+.dark,
+.dp-dark {
   --color-bg: #0B1424;
   --color-fg: #F1F0EC;
 

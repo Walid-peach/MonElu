@@ -32,7 +32,7 @@ export function BottomNav() {
                 <Link key={item.href} href={item.href}
                   className={`flex flex-col items-center justify-center py-3 gap-0.5 text-xs font-medium transition-colors
                     ${active
-                      ? 'text-navy dark:text-[color:var(--dp-text)]' : 'text-gray-mid dark:text-[color:var(--dp-text-muted)]'}`}>
+                      ? 'text-navy dark:text-[color:var(--dp-text)]': 'text-[color:var(--dp-text-muted)]'}`}>
                   <span className="text-lg leading-none">{item.icon}</span>
                   <span>{item.label}</span>
                 </Link>
@@ -45,7 +45,7 @@ export function BottomNav() {
             aria-label="Ouvrir le menu"
             aria-expanded={menuOpen}
             className={`flex shrink-0 flex-col items-center justify-center gap-0.5 px-3 py-3 text-xs font-medium transition-colors
-              ${menuOpen ? 'text-navy dark:text-[color:var(--dp-text)]' : 'text-gray-mid dark:text-[color:var(--dp-text-muted)]'}`}
+              ${menuOpen ? 'text-navy dark:text-[color:var(--dp-text)]': 'text-[color:var(--dp-text-muted)]'}`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h16" />

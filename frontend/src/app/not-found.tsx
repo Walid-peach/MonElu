@@ -7,7 +7,7 @@ export default function NotFound() {
       <h2 className="font-serif text-2xl text-navy dark:text-[color:var(--dp-text)] mb-3">
         Page introuvable
       </h2>
-      <p className="text-gray-mid dark:text-[color:var(--dp-text-muted)] text-sm mb-6">
+      <p className="text-[color:var(--dp-text-muted)] text-sm mb-6">
         Ce député, ce vote ou cette page n&apos;existe pas ou plus.
       </p>
       <div className="flex items-center justify-center gap-3 flex-wrap">
