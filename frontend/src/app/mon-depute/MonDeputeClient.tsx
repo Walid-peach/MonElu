@@ -12,6 +12,7 @@ import {
   setLastSeenAt,
 } from '@/lib/mon-depute'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
+import { HeroSearch } from '@/components/HeroSearch'
 import { departmentLabel } from '@/lib/departments'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
@@ -111,17 +112,19 @@ export function MonDeputeClient() {
             Suivez un député depuis sa fiche profil pour retrouver ici son bilan de vote,
             son alignement avec son groupe, et ce qui a changé depuis votre dernière visite.
           </p>
-          <Link
-            href="/deputes"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: 'var(--dp-cta-bg)', color: '#fff', padding: '12px 26px',
-              borderRadius: 9, fontWeight: 600, fontSize: 15, textDecoration: 'none',
-              boxShadow: '0 2px 8px var(--dp-cta-shadow)',
-            }}
-          >
-            Trouver mon député
-          </Link>
+          {/* The installed web app opens here (manifest start_url, #594), so a
+              first visit gets the search itself rather than a link to it. */}
+          <div style={{ textAlign: 'left' }}>
+            <HeroSearch
+              id="mon-depute-search"
+              placeholder="Votre code postal, département ou député..."
+            />
+          </div>
+          <p style={{ margin: '14px 0 0', fontSize: 14, color: 'var(--dp-text-secondary)' }}>
+            <Link href="/deputes" style={{ color: NAVY, fontWeight: 600 }}>
+              Parcourir la liste des députés
+            </Link>
+          </p>
           <p style={{ margin: '20px 0 0', fontSize: 14, color: 'var(--dp-text-secondary)' }}>
             Vous ne savez pas qui suivre ?{' '}
             <Link href="/quiz" style={{ color: NAVY, fontWeight: 600 }}>

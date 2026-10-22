@@ -4,7 +4,7 @@
   "name": "MonÉlu — Suivez vos députés",
   "short_name": "MonÉlu",
   "description": "Suivez chaque vote de chaque député français",
-  "start_url": "/",
+  "start_url": "/mon-depute",
   "scope": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
@@ -13,6 +13,11 @@
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/screenshots/mon-depute.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "Le tableau de bord de votre député" },
+    { "src": "/screenshots/depute.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "La fiche d'un député" },
+    { "src": "/screenshots/votes.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "Les votes de l'Assemblée nationale" }
   ],
   "share_target": {
     "action": "/partager",
