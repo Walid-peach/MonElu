@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/nextjs'
 import { api, Vote, Deputy, Scorecard } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
 import { HomeSummary } from '@/components/home/HomeSummary'
+import { PhoneAppSection } from '@/components/home/PhoneAppSection'
 import { UpcomingAgenda } from '@/components/home/UpcomingAgenda'
 import { addDays, parisToday } from '@/lib/agenda'
 import { canonicalUrl } from '@/lib/site'
@@ -182,6 +183,7 @@ export default async function Home() {
       <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} deputyInfo={deputyInfo} />
       <UpcomingAgenda agenda={agenda} />
       <HomeSummary stats={homeStats} />
+      <PhoneAppSection />
     </div>
   )
 }

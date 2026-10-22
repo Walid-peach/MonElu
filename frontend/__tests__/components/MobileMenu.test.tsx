@@ -105,4 +105,24 @@ describe('MobileMenu', () => {
     fireEvent.keyDown(window, { key: 'Tab', shiftKey: true })
     expect(document.activeElement).toBe(last)
   })
+
+  // #596: the way to /application, hidden inside the installed web app.
+  it('offers the phone app entry, except inside the installed web app', () => {
+    const { unmount } = renderMenu(true)
+    expect(screen.getByRole('link', { name: /MonÉlu sur votre téléphone/ })).toHaveAttribute('href', '/application')
+    unmount()
+
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: jest.fn().mockImplementation((query: string) => ({
+        matches: query === '(display-mode: standalone)',
+        media: query,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      })),
+    })
+    renderMenu(true)
+    expect(screen.queryByRole('link', { name: /MonÉlu sur votre téléphone/ })).not.toBeInTheDocument()
+  })
 })

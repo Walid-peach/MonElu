@@ -79,6 +79,22 @@ const InfoIcon = (
   <svg {...iconProps}><circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="17" /><circle cx="12" cy="7.5" r="0.8" fill="currentColor" stroke="none" /></svg>
 )
 
+const PhoneIcon = (
+  <svg {...iconProps}><rect x="6" y="2" width="12" height="20" rx="2.5" /><line x1="11" y1="18" x2="13" y2="18" /></svg>
+)
+
+/**
+ * Mobile menu only (#596): the way to the installation help page. The mobile
+ * sheet hides it when the site already runs as the installed web app.
+ */
+export const phoneAppEntry: NavLinkEntry = {
+  kind: 'link',
+  href: '/application',
+  label: 'MonÉlu sur votre téléphone',
+  description: "L'application sur votre écran d'accueil",
+  icon: PhoneIcon,
+}
+
 /** The "Explorer" mega-menu — the parliament itself, plus the ways into it. */
 export const exploreSections: NavSection[] = [
   {
