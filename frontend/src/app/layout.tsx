@@ -76,14 +76,19 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`}>
+      <head>
+        {/* A plain inline script, not next/script: in the App Router even
+            beforeInteractive scripts wait for the bootstrap chunks, and Chrome
+            can fire beforeinstallprompt as soon as the manifest loads. The
+            event fires once per page load and /application needs it (#595). */}
+        <script
+          id="install-prompt-capture"
+          dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_CAPTURE_SCRIPT }}
+        />
+      </head>
       <body className="min-h-screen">
         <Script id="theme-no-flash" strategy="beforeInteractive">
           {`(function(){try{if(window.location.pathname==='/')return;var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`}
-        </Script>
-        {/* Before hydration: Chrome can fire beforeinstallprompt before React
-            mounts, and /application needs that event to offer installation (#595). */}
-        <Script id="install-prompt-capture" strategy="beforeInteractive">
-          {INSTALL_PROMPT_CAPTURE_SCRIPT}
         </Script>
         <ThemeProvider>
           {/* Organization first: WebSite.publisher references it by @id (MON-273). */}

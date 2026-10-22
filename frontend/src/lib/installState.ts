@@ -56,10 +56,10 @@ export function isIOS(): boolean {
 // The browser's install prompt.
 //
 // Chrome fires `beforeinstallprompt` once per page load, as soon as the site
-// is installable, which on a repeat visit can be before React hydrates. The
-// root layout therefore runs INSTALL_PROMPT_CAPTURE_SCRIPT before hydration:
-// it keeps the event on `window` and announces it, and the store below reads
-// it from there. The event is not prevented, so the browser's own install
+// is installable, which can be while the JavaScript chunks are still
+// downloading. The root layout therefore inlines INSTALL_PROMPT_CAPTURE_SCRIPT
+// in <head>: it keeps the event on `window` and announces it, and the store
+// below reads it from there. The event is not prevented, so the browser's own install
 // hints behave exactly as before.
 
 type InstallPromptEvent = Event & {

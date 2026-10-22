@@ -70,8 +70,30 @@ describe('/application page (#595)', () => {
     render(<InstallActions />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Installer MonÉlu' }))
-    expect(await screen.findByText(/MonÉlu est installé/)).toBeInTheDocument()
+    expect(await screen.findByText(/Ouvrez-le depuis votre écran/)).toBeInTheDocument()
     expect(event.prompt).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the button, disabled, while the install window is open, then focuses the result', async () => {
+    let choose: (v: { outcome: 'accepted' | 'dismissed' }) => void = () => {}
+    const event = Object.assign(new Event('beforeinstallprompt'), {
+      prompt: jest.fn().mockResolvedValue(undefined),
+      userChoice: new Promise<{ outcome: 'accepted' | 'dismissed' }>((resolve) => { choose = resolve }),
+    })
+    act(() => {
+      window.dispatchEvent(event)
+    })
+    render(<InstallActions />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Installer MonÉlu' }))
+    expect(screen.getByRole('button', { name: 'Installer MonÉlu' })).toBeDisabled()
+    expect(screen.getByRole('status')).toHaveTextContent('')
+
+    await act(async () => {
+      choose({ outcome: 'dismissed' })
+    })
+    expect(screen.getByRole('status')).toHaveTextContent('Installation annulée.')
+    expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Installer MonÉlu' }))
   })
 
   it('keeps "Continuer sur le site" after the visitor cancels', async () => {
@@ -80,7 +102,7 @@ describe('/application page (#595)', () => {
     expect(screen.getByRole('link', { name: /Continuer sur le site/ })).toHaveAttribute('href', '/')
 
     fireEvent.click(screen.getByRole('button', { name: 'Installer MonÉlu' }))
-    expect(await screen.findByText(/Installation annulée/)).toBeInTheDocument()
+    expect(await screen.findByText(/Vous pourrez installer MonÉlu plus tard/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Continuer sur le site/ })).toHaveAttribute('href', '/')
     expect(screen.queryByRole('button', { name: 'Installer MonÉlu' })).not.toBeInTheDocument()
   })
@@ -109,5 +131,26 @@ describe('/application page (#595)', () => {
     render(<InstallActions />)
     expect(screen.getByText(/L'application iPhone arrive bientôt/)).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+})
+
+describe('install prompt capture wiring', () => {
+  const { readFileSync } = jest.requireActual<typeof import('node:fs')>('node:fs')
+  const { join } = jest.requireActual<typeof import('node:path')>('node:path')
+  const SRC = join(__dirname, '..', '..', 'src', 'app')
+
+  // next/script defers even beforeInteractive scripts until the bootstrap
+  // chunks load, which can be after Chrome fires beforeinstallprompt.
+  it('inlines the capture script in <head>, not through next/script', () => {
+    const layout = readFileSync(join(SRC, 'layout.tsx'), 'utf8')
+    const head = layout.slice(layout.indexOf('<head>'), layout.indexOf('</head>'))
+    expect(head).toContain('dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_CAPTURE_SCRIPT }}')
+    expect(layout).not.toMatch(/<Script[^>]*install-prompt-capture/)
+  })
+
+  // A page-level openGraph replaces the root one, image included.
+  it('keeps the root social card on /application', () => {
+    const page = readFileSync(join(SRC, 'application', 'page.tsx'), 'utf8')
+    expect(page).not.toMatch(/^\s*(openGraph|twitter):/m)
   })
 })

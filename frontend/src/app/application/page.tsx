@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: canonicalUrl('/application') },
-  openGraph: { title: TITLE, description: DESCRIPTION, url: `${SITE_URL}/application`, type: 'website' },
-  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION },
+  // No page-level openGraph/twitter: a segment's openGraph replaces the root
+  // one wholesale, image included, and this page is meant to be shared.
 }
 
 const NAVY = 'var(--dp-text)'

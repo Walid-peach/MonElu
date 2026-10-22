@@ -1,5 +1,5 @@
 'use client'
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import {
   decideInstallSituation,
@@ -27,32 +27,60 @@ export function InstallActions() {
   const ios = useSyncExternalStore(noopSubscribe, isIOS, () => false)
   const promptAvailable = useSyncExternalStore(subscribeInstallPrompt, hasInstallPrompt, () => false)
   const [outcome, setOutcome] = useState<'accepted' | 'dismissed' | null>(null)
+  // While the browser's install window is open the prompt is already used up;
+  // keep showing the (disabled) button rather than flashing the 'manual' state.
+  const [pending, setPending] = useState(false)
+  const blockRef = useRef<HTMLElement>(null)
 
-  const situation = decideInstallSituation({ standalone, ios, promptAvailable, outcome })
+  const situation = pending ? 'prompt' : decideInstallSituation({ standalone, ios, promptAvailable, outcome })
+
+  // The button the visitor activated is gone once the result is shown, so
+  // focus moves to the block instead of falling back to <body>.
+  useEffect(() => {
+    if (outcome) blockRef.current?.focus()
+  }, [outcome])
 
   async function install() {
+    setPending(true)
     const result = await promptInstall()
     // 'unavailable' falls back to the menu instructions of the 'manual' state.
     setOutcome(result === 'unavailable' ? null : result)
+    setPending(false)
   }
 
   return (
     <section
-      aria-live="polite"
+      ref={blockRef}
+      tabIndex={-1}
+      aria-label="Installer MonÉlu"
       data-install-situation={situation}
       style={{
         background: 'var(--dp-card-bg)',
         border: `1px solid ${LINE}`,
         borderRadius: 14,
         padding: '24px 22px',
+        outline: 'none',
       }}
     >
-      <ActionBody situation={situation} onInstall={install} />
+      {/* Only the result of the visitor's own action is announced, never the
+          state swap that hydration makes on load. */}
+      <p role="status" className="sr-only">
+        {outcome === 'accepted' ? 'MonÉlu est installé.' : outcome === 'dismissed' ? 'Installation annulée.' : ''}
+      </p>
+      <ActionBody situation={situation} onInstall={install} pending={pending} />
     </section>
   )
 }
 
-function ActionBody({ situation, onInstall }: { situation: InstallSituation; onInstall: () => void }) {
+function ActionBody({
+  situation,
+  onInstall,
+  pending,
+}: {
+  situation: InstallSituation
+  onInstall: () => void
+  pending: boolean
+}) {
   switch (situation) {
     case 'installed':
       return (
@@ -82,7 +110,12 @@ function ActionBody({ situation, onInstall }: { situation: InstallSituation; onI
       return (
         <>
           <Lead>Installez MonÉlu en un geste, sans passer par une boutique d&apos;applications.</Lead>
-          <button type="button" onClick={onInstall} style={primaryStyle}>
+          <button
+            type="button"
+            onClick={onInstall}
+            disabled={pending}
+            style={{ ...primaryStyle, opacity: pending ? 0.7 : 1, cursor: pending ? 'default' : 'pointer' }}
+          >
             Installer MonÉlu
           </button>
           <ContinueLink />
@@ -130,8 +163,10 @@ function MenuInstructions() {
         « Ajouter à l&apos;écran d&apos;accueil » ou « Installer ».
       </li>
       <li>
-        <strong style={{ color: NAVY }}>Sur ordinateur</strong> (Chrome, Edge) : l&apos;icône
-        d&apos;installation à droite de la barre d&apos;adresse.
+        <strong style={{ color: NAVY }}>Sur ordinateur</strong> : dans Chrome ou Edge,
+        l&apos;icône d&apos;installation à droite de la barre d&apos;adresse ; dans Safari sur Mac,
+        menu Fichier, puis « Ajouter au Dock ». Firefox ne permet pas d&apos;installer un site
+        sur ordinateur : ouvrez plutôt MonÉlu sur votre téléphone.
       </li>
     </ul>
   )
