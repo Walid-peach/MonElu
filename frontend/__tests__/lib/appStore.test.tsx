@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { render, screen } from '@testing-library/react'
@@ -150,5 +150,26 @@ describe('Smart App Banner', () => {
   it('is spread into the root layout metadata', () => {
     const layout = require('node:fs').readFileSync(join(__dirname, '..', '..', 'src', 'app', 'layout.tsx'), 'utf8')
     expect(layout).toMatch(/export const metadata: Metadata = \{[\s\S]*\.\.\.smartAppBannerMetadata\(\),[\s\S]*\n\}/)
+  })
+})
+
+describe("Apple's badge artwork", () => {
+  const FRONTEND = join(__dirname, '..', '..')
+  const svg = readFileSync(join(FRONTEND, 'public', APP_STORE_BADGE_SRC), 'utf8')
+
+  // Apple's own French black badge, unmodified (App Store marketing guidelines).
+  it('is the French black "Télécharger dans l\'App Store" badge from Apple', () => {
+    expect(svg).toContain('<title>Download_on_the_App_Store_Badge_FR_RGB_blk_')
+    expect(svg).toMatch(/viewBox="0 0 [\d.]+ 40"/)
+  })
+
+  it('is a plain vector with nothing executable or external', () => {
+    expect(svg).not.toMatch(/<script|<style|url\(|javascript:|href=|<image|<foreignObject|\son[a-z]+=/i)
+  })
+
+  // Only iPhone visitors see it, and only after the release.
+  it('stays out of the service worker precache', () => {
+    const config = readFileSync(join(FRONTEND, 'next.config.mjs'), 'utf8')
+    expect(config).toMatch(/publicExcludes:\s*\[[^\]]*'!badges\/\*\*\/\*'/)
   })
 })

@@ -21,7 +21,9 @@ const withPWA = withPWAInit({
   // on demand instead of eagerly precaching on every install (MON-146).
   // The manifest screenshots are only read by the browser's install sheet,
   // never by a page, so precaching them would be pure download cost (#594).
-  publicExcludes: ['!*.jpg', '!screenshots/**/*'],
+  // The App Store badge is shown only to iPhone visitors once the app ships
+  // (#597): every other install would precache it for nothing.
+  publicExcludes: ['!*.jpg', '!screenshots/**/*', '!badges/**/*'],
   fallbacks: {
     // Served on navigation cache-miss while offline.
     document: '/~offline',
