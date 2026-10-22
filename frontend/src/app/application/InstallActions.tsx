@@ -10,6 +10,8 @@ import {
   subscribeInstallPrompt,
   type InstallSituation,
 } from '@/lib/installState'
+import { iosAppStoreId } from '@/lib/appStore'
+import { AppStoreBadge } from '@/components/AppStoreBadge'
 
 const NAVY = 'var(--dp-text)'
 const LINE = 'var(--dp-border)'
@@ -89,7 +91,16 @@ function ActionBody({
           <PrimaryLink href="/mon-depute">Accéder à mon député</PrimaryLink>
         </>
       )
-    case 'ios':
+    case 'ios': {
+      const appStoreId = iosAppStoreId()
+      if (appStoreId) {
+        return (
+          <>
+            <Lead>L&apos;application MonÉlu est disponible sur iPhone et iPad.</Lead>
+            <AppStoreBadge id={appStoreId} />
+          </>
+        )
+      }
       return (
         <>
           <Lead>
@@ -99,6 +110,7 @@ function ActionBody({
           <PrimaryLink href="/">Continuer sur le site</PrimaryLink>
         </>
       )
+    }
     case 'accepted':
       return (
         <>

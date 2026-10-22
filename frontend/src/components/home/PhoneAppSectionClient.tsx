@@ -3,6 +3,8 @@ import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { isIOS, isStandalone } from '@/lib/installState'
 import { SITE_HOST } from '@/lib/site'
+import { iosAppStoreId } from '@/lib/appStore'
+import { AppStoreBadge } from '@/components/AppStoreBadge'
 
 const noopSubscribe = () => () => {}
 
@@ -38,6 +40,7 @@ export function PhoneAppSectionClient({ qrSvg }: { qrSvg: string }) {
   const ios = useSyncExternalStore(noopSubscribe, isIOS, () => false)
 
   if (standalone) return null
+  const appStoreId = iosAppStoreId()
 
   return (
     <section
@@ -66,7 +69,11 @@ export function PhoneAppSectionClient({ qrSvg }: { qrSvg: string }) {
           Retrouvez votre député et ses votes, directement depuis votre écran d&apos;accueil.
         </p>
 
-        {ios ? (
+        {ios && appStoreId ? (
+          <div data-phone-app="ios" style={{ marginTop: 20 }}>
+            <AppStoreBadge id={appStoreId} />
+          </div>
+        ) : ios ? (
           <div data-phone-app="ios" style={{ marginTop: 20 }}>
             <p style={{ ...textStyle, color: 'var(--dp-text)', fontWeight: 600 }}>
               L&apos;application iPhone arrive bientôt. En attendant, retrouvez tous les votes sur

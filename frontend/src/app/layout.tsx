@@ -19,6 +19,7 @@ import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@
 import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
 import { INSTALL_PROMPT_CAPTURE_SCRIPT } from '@/lib/installState'
+import { smartAppBannerMetadata } from '@/lib/appStore'
 
 const serif = DM_Serif_Display({
   subsets: ['latin'],
@@ -51,6 +52,8 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'MonÉlu' },
+  // Safari's Smart App Banner (#597), off until the App Store ID is set.
+  ...smartAppBannerMetadata(),
   openGraph: {
     title: 'MonÉlu — Suivez vos députés',
     description: "Données officielles de l'Assemblée Nationale",

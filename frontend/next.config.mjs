@@ -1,5 +1,10 @@
 import withPWAInit from '@ducanh2912/next-pwa'
+import { fileURLToPath } from 'node:url'
 import { withSentryConfig } from '@sentry/nextjs'
+import { assertAppStoreBadge } from './scripts/app-store-badge-guard.mjs'
+
+// The App Store badge only renders once its ID is set; never without the file (#597).
+assertAppStoreBadge(process.env, fileURLToPath(new URL('./public', import.meta.url)))
 
 const withPWA = withPWAInit({
   dest: 'public',
