@@ -15,8 +15,8 @@
     { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
-    { "src": "/screenshots/mon-depute.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "Le tableau de bord de votre député" },
-    { "src": "/screenshots/depute.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "La fiche d'un député" },
+    { "src": "/screenshots/mon-depute.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "Trouvez votre député" },
+    { "src": "/screenshots/deputes.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "Tous les députés de l'Assemblée nationale" },
     { "src": "/screenshots/votes.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "Les votes de l'Assemblée nationale" }
   ],
   "share_target": {

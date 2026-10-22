@@ -109,8 +109,8 @@ export function MonDeputeClient() {
             Choisissez votre député
           </h1>
           <p style={{ margin: '16px 0 28px', fontSize: 16, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
-            Suivez un député depuis sa fiche profil pour retrouver ici son bilan de vote,
-            son alignement avec son groupe, et ce qui a changé depuis votre dernière visite.
+            Cherchez votre député, puis suivez-le depuis sa fiche pour retrouver ici son bilan
+            de vote, son alignement avec son groupe, et ce qui a changé depuis votre dernière visite.
           </p>
           {/* The installed web app opens here (manifest start_url, #594), so a
               first visit gets the search itself rather than a link to it. */}
