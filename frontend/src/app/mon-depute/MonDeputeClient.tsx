@@ -117,7 +117,7 @@ export function MonDeputeClient() {
           <div style={{ textAlign: 'left' }}>
             <HeroSearch
               id="mon-depute-search"
-              placeholder="Votre code postal, département ou député..."
+              placeholder="Code postal ou nom du député"
             />
           </div>
           <p style={{ margin: '14px 0 0', fontSize: 14, color: 'var(--dp-text-secondary)' }}>
