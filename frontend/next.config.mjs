@@ -14,7 +14,9 @@ const withPWA = withPWAInit({
   // Hero JPEGs (~1.2 MB) are only loaded raw by the desktop cinematic and are
   // otherwise served as optimized /_next/image variants - runtime-cache them
   // on demand instead of eagerly precaching on every install (MON-146).
-  publicExcludes: ['!*.jpg'],
+  // The manifest screenshots are only read by the browser's install sheet,
+  // never by a page, so precaching them would be pure download cost (#594).
+  publicExcludes: ['!*.jpg', '!screenshots/**/*'],
   fallbacks: {
     // Served on navigation cache-miss while offline.
     document: '/~offline',
