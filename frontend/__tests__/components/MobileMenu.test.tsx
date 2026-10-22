@@ -106,6 +106,17 @@ describe('MobileMenu', () => {
     expect(document.activeElement).toBe(last)
   })
 
+  // #598: tapping it is counted, then the sheet closes as for any entry.
+  it('counts a tap on the phone app entry', () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true })
+    global.fetch = fetchMock
+    const onClose = jest.fn()
+    renderMenu(true, onClose)
+    fireEvent.click(screen.getByRole('link', { name: /MonÉlu sur votre téléphone/ }))
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ event: 'menu_entry_tap' })
+    expect(onClose).toHaveBeenCalled()
+  })
+
   // #596: the way to /application, hidden inside the installed web app.
   it('offers the phone app entry, except inside the installed web app', () => {
     const { unmount } = renderMenu(true)

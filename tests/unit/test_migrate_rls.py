@@ -57,6 +57,7 @@ def test_the_full_table_set_is_covered():
         "public.agenda_items",
         "public.dossiers",
         "public.dossier_actes",
+        "public.install_event_counts",
         "app_private.profiles",
         "app_private.followed_deputies",
         "app_private.followed_themes",

@@ -126,6 +126,7 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 |--------|----------|-----|-------------|
 | POST | `/feedback/chat` | 10 | Thumbs up/down on a chat answer (MON-70) |
 | POST | `/feedback/report` | 10 | Report an error on a data page (MON-101) |
+| POST | `/install-events` | 20 | Add one to today's total for a web app install-flow event (#598) |
 | GET | `/keys/usage` | 10 | Per-endpoint, per-day usage for the calling API key |
 
 ### Mobile app (ADR-041)
@@ -417,6 +418,7 @@ design.
 | `chat_shares` | Immutable chat answer snapshots behind `/chat/s/<id>` (ADR-024) |
 | `quiz_shares` | Server-recomputed quiz result snapshots behind `/quiz/s/<id>` (ADR-025); `result` JSONB optionally carries the sharer's answers, and the themes derived from them, when they opt in (ADR-028) |
 | `feedback` | `type`-discriminated feedback sink (chat thumbs / data-page reports) with a JSONB payload |
+| `install_event_counts` | Daily `(day, event, platform) -> count` totals for the web app install flow, no visitor data (#598) |
 | `agenda_items` | Séance publique ODJ points, one denormalized row per point (ADR-030) |
 | `dossiers` | One row per L17 dossier législatif - title, procédure, derived `status` + raw `status_label`, and `has_scrutins`, which decides whether a bill gets a page (ADR-035) |
 | `dossier_actes` | The flattened acte parcours, `PRIMARY KEY (dossier_uid, acte_uid)` - 43 acte uids belong to two dossiers each (ADR-035 §3) |
@@ -438,6 +440,7 @@ design.
 | `010_rls_backfill.sql` | `ENABLE ROW LEVEL SECURITY` on the seven tables 004-009 missed (MON-248) |
 | `011_changed_at.sql` | `changed_at` on the four ingested tables - the cache-invalidation signal, distinct from `ingested_at` (GH #353) |
 | `012_dossiers.sql` | `dossiers`, `dossier_actes`, `votes.scrutin_kind` (MON-243, ADR-035) |
+| `014_install_events.sql` | `install_event_counts`, daily install-flow totals (#598) |
 
 ---
 
@@ -462,6 +465,7 @@ design.
 | `routers/verify.py` | `POST /verify/` + `GET /verify/{id}` - fact-check verdicts (ADR-022) |
 | `routers/quiz.py` | `/quiz/*` - questions, weekly scrutin, stateless matching, share snapshots (ADR-025) |
 | `routers/feedback.py` | Chat thumbs and data-page error reports (MON-70, MON-101) |
+| `routers/install_events.py` | `POST /install-events` - daily install-flow totals for the ADR-041 Android trigger (#598) |
 | `routers/lois.py` | `/lois/*` - bill parcours, headline scrutins bound to AN séance actes, amendment counts (ADR-035) |
 | `routers/keys.py` | `GET /keys/usage` - usage accounting for the calling key |
 | `routers/account.py` | `/account/*` - the signed-in caller's profile, follows, bookmarks, stored notification preferences, RGPD export and deletion, all under RLS (ADR-040) |

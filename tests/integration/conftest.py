@@ -51,6 +51,8 @@ MIGRATIONS = [
     # The app_private account schema, the restricted role and its RLS policies
     # (#412). test_account_rls.py is the suite that reads them.
     Path(__file__).parents[2] / "data" / "migrations" / "013_account_schema.sql",
+    # install_event_counts (#598). test_install_events.py runs the real upsert.
+    Path(__file__).parents[2] / "data" / "migrations" / "014_install_events.sql",
 ]
 
 # Minimal mart stub DDL — mirrors the columns read by api/routers/deputies.py

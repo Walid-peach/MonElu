@@ -1696,6 +1696,48 @@
         }
       }
     },
+    "/install-events": {
+      "post": {
+        "tags": [
+          "Install events"
+        ],
+        "summary": "Compter une étape du parcours d'installation de l'application web",
+        "description": "Add one to today's count for an install-flow event. Write-only.\n\n`event` is one of: `install_section_tap` (the homepage \"MonÉlu sur votre\ntéléphone\" link), `menu_entry_tap` (the mobile Menu entry),\n`install_prompt_available` (the browser offered installation, once per\nsession), `install_prompt_shown` (its install window opened from the\n`/application` button), `install_prompt_accepted` /\n`install_prompt_dismissed` (the answer),\n`app_installed` (the browser's `appinstalled` event), `app_store_badge_tap`\nand `standalone_visit` (a session opened as the installed web app, sent once\nper session by the site).\n\n`platform` is `android`, `ios` or `other` (default `other`), so the\nAndroid figures can be read apart from iPhone and desktop. Only a per-day\ntotal per event and platform is kept, by Paris date; nothing about the\ncaller is stored, and there is no read endpoint. Meant for the site's own UI.",
+        "operationId": "recordInstallEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallEventResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/agenda": {
       "get": {
         "tags": [
@@ -5213,6 +5255,51 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "InstallEventRequest": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "install_section_tap",
+              "menu_entry_tap",
+              "install_prompt_available",
+              "install_prompt_shown",
+              "install_prompt_accepted",
+              "install_prompt_dismissed",
+              "app_installed",
+              "app_store_badge_tap",
+              "standalone_visit"
+            ],
+            "title": "Event"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "ios",
+              "other"
+            ],
+            "title": "Platform",
+            "default": "other"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event"
+        ],
+        "title": "InstallEventRequest"
+      },
+      "InstallEventResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ok"
+          }
+        },
+        "type": "object",
+        "title": "InstallEventResponse"
+      },
       "LoiActe": {
         "properties": {
           "acte_uid": {
@@ -7156,6 +7243,10 @@
     {
       "name": "Feedback",
       "description": "User-submitted feedback sinks. Write-only."
+    },
+    {
+      "name": "Install events",
+      "description": "Daily totals for the web app install flow (#598, ADR-041 §2 trigger). Write-only; nothing about the caller is stored."
     },
     {
       "name": "Account",

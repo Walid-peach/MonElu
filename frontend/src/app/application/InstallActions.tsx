@@ -11,6 +11,7 @@ import {
   type InstallSituation,
 } from '@/lib/installState'
 import { iosAppStoreId } from '@/lib/appStore'
+import { recordInstallEvent } from '@/lib/installEvents'
 import { AppStoreBadge } from '@/components/AppStoreBadge'
 
 const NAVY = 'var(--dp-text)'
@@ -44,7 +45,13 @@ export function InstallActions() {
 
   async function install() {
     setPending(true)
+    // Counted when the window opens, so a window left unanswered still counts
+    // as shown (the button only exists while a prompt is available).
+    recordInstallEvent('install_prompt_shown')
     const result = await promptInstall()
+    if (result !== 'unavailable') {
+      recordInstallEvent(result === 'accepted' ? 'install_prompt_accepted' : 'install_prompt_dismissed')
+    }
     // 'unavailable' falls back to the menu instructions of the 'manual' state.
     setOutcome(result === 'unavailable' ? null : result)
     setPending(false)

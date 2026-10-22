@@ -234,6 +234,13 @@ OPENAPI_TAGS = [
         "description": "User-submitted feedback sinks. Write-only.",
     },
     {
+        "name": "Install events",
+        "description": (
+            "Daily totals for the web app install flow (#598, ADR-041 §2 trigger). "
+            "Write-only; nothing about the caller is stored."
+        ),
+    },
+    {
         "name": "Account",
         "description": (
             "The signed-in caller's own account (ADR-040): profile, followed deputies "
@@ -390,6 +397,7 @@ from api.routers import (  # noqa: E402
     feed,
     feedback,
     groups,
+    install_events,
     keys,
     lois,
     quiz,
@@ -410,6 +418,7 @@ app.include_router(search_router, prefix="/search", tags=["Search"])
 app.include_router(verify_router, prefix="/verify", tags=["Verify"])
 app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
 app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
+app.include_router(install_events.router, prefix="/install-events", tags=["Install events"])
 app.include_router(agenda.router, prefix="/agenda", tags=["Agenda"])
 app.include_router(feed.router, prefix="/feed", tags=["Feed"])
 app.include_router(account.router, prefix="/account", tags=["Account"])
