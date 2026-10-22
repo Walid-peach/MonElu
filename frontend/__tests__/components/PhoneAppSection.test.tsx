@@ -2,7 +2,13 @@ import { TextDecoder, TextEncoder } from 'node:util'
 import { render, screen } from '@testing-library/react'
 import QRCode from 'qrcode'
 
-import { APPLICATION_URL, PhoneAppSection } from '@/components/home/PhoneAppSection'
+import {
+  APPLICATION_URL,
+  PhoneAppSection,
+  QR_MARGIN,
+  QR_PIXELS_PER_MODULE,
+  qrOptions,
+} from '@/components/home/PhoneAppSection'
 import { PhoneAppSectionClient } from '@/components/home/PhoneAppSectionClient'
 import { SITE_URL } from '@/lib/site'
 
@@ -32,15 +38,31 @@ describe('PhoneAppSection (#596)', () => {
     // qrcode needs TextEncoder, which jsdom does not provide (the server has it).
     Object.assign(globalThis, { TextEncoder, TextDecoder })
     expect(APPLICATION_URL).toBe(`${SITE_URL}/application`)
-    const expected = await QRCode.toString(APPLICATION_URL, {
-      type: 'svg',
-      margin: 2,
-      width: 128,
-      color: { dark: '#0D1F3C', light: '#FFFFFF' },
-    })
+    const expected = await QRCode.toString(APPLICATION_URL, qrOptions(APPLICATION_URL))
     const element = await PhoneAppSection()
     expect(element.props.qrSvg).toBe(expected)
     expect(element.props.qrSvg).toMatch(/^<svg/)
+  })
+
+  // A QR code needs a quiet zone of 4 modules to scan reliably, and modules of
+  // a whole number of pixels to render evenly.
+  it('keeps a 4-module quiet zone and whole-pixel modules', async () => {
+    Object.assign(globalThis, { TextEncoder, TextDecoder })
+    const { qrSvg } = (await PhoneAppSection()).props as { qrSvg: string }
+    const viewBox = Number(qrSvg.match(/viewBox="0 0 (\d+) \1"/)?.[1])
+    const width = Number(qrSvg.match(/width="(\d+)"/)?.[1])
+    const modules = viewBox - 2 * QR_MARGIN
+    expect(QR_MARGIN).toBeGreaterThanOrEqual(4)
+    expect((modules - 21) % 4).toBe(0) // a real QR version: 21, 25, 29... modules
+    expect(width).toBe(viewBox * QR_PIXELS_PER_MODULE)
+  })
+
+  it('never clips the QR code', () => {
+    render(<PhoneAppSectionClient qrSvg="<svg></svg>" />)
+    const box = screen.getByRole('img', { name: /QR code/ })
+    expect(box.style.overflow).toBe('')
+    expect(box.style.width).toBe('')
+    expect(box.style.height).toBe('')
   })
 
   it('offers the install link on phones and the QR code on computers, chosen by CSS', () => {

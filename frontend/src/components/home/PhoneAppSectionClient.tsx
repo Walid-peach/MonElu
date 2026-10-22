@@ -89,14 +89,9 @@ export function PhoneAppSectionClient({ qrSvg }: { qrSvg: string }) {
               <div
                 role="img"
                 aria-label="QR code vers la page d'installation de MonÉlu"
-                style={{
-                  width: 128,
-                  height: 128,
-                  flexShrink: 0,
-                  borderRadius: 10,
-                  overflow: 'hidden',
-                  border: '1px solid var(--dp-border)',
-                }}
+                // Sized by the SVG itself and never clipped: cropping the white
+                // border around the code is what makes a QR code hard to scan.
+                style={{ flexShrink: 0, lineHeight: 0, border: '1px solid var(--dp-border)' }}
                 dangerouslySetInnerHTML={{ __html: qrSvg }}
               />
               <div>
