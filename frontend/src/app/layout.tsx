@@ -18,6 +18,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
+import { INSTALL_PROMPT_CAPTURE_SCRIPT } from '@/lib/installState'
 
 const serif = DM_Serif_Display({
   subsets: ['latin'],
@@ -78,6 +79,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen">
         <Script id="theme-no-flash" strategy="beforeInteractive">
           {`(function(){try{if(window.location.pathname==='/')return;var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`}
+        </Script>
+        {/* Before hydration: Chrome can fire beforeinstallprompt before React
+            mounts, and /application needs that event to offer installation (#595). */}
+        <Script id="install-prompt-capture" strategy="beforeInteractive">
+          {INSTALL_PROMPT_CAPTURE_SCRIPT}
         </Script>
         <ThemeProvider>
           {/* Organization first: WebSite.publisher references it by @id (MON-273). */}
