@@ -418,7 +418,7 @@ design.
 | `chat_shares` | Immutable chat answer snapshots behind `/chat/s/<id>` (ADR-024) |
 | `quiz_shares` | Server-recomputed quiz result snapshots behind `/quiz/s/<id>` (ADR-025); `result` JSONB optionally carries the sharer's answers, and the themes derived from them, when they opt in (ADR-028) |
 | `feedback` | `type`-discriminated feedback sink (chat thumbs / data-page reports) with a JSONB payload |
-| `install_event_counts` | Daily `(day, event) -> count` totals for the web app install flow, no visitor data (#598) |
+| `install_event_counts` | Daily `(day, event, platform) -> count` totals for the web app install flow, no visitor data (#598) |
 | `agenda_items` | Séance publique ODJ points, one denormalized row per point (ADR-030) |
 | `dossiers` | One row per L17 dossier législatif - title, procédure, derived `status` + raw `status_label`, and `has_scrutins`, which decides whether a bill gets a page (ADR-035) |
 | `dossier_actes` | The flattened acte parcours, `PRIMARY KEY (dossier_uid, acte_uid)` - 43 acte uids belong to two dossiers each (ADR-035 §3) |

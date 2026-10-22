@@ -350,14 +350,15 @@ Unset `ACCOUNT_DATABASE_URL` in Railway as well: the redeploy drops the held con
 
 ADR-041 keeps Android on the website and its installable web app until Android visitors exceed half the iPhone app's weekly active devices (App Store Connect, App Analytics) for two consecutive months.
 The Vercel plan does not record custom analytics events, so the install flow is counted first-party, in `install_event_counts` (`data/migrations/014_install_events.sql`).
-Each row is a Paris day, an event and a count; nothing about the visitor is stored, so there is nothing to export or delete for anyone.
+Each row is a Paris day, an event, a coarse platform (`android`, `ios` or `other`, worked out in the browser) and a count; nothing about the visitor is stored, so there is nothing to export or delete for anyone.
 
 | Event | Sent when |
 |---|---|
 | `install_section_tap` | The homepage "MonÉlu sur votre téléphone" install link or `/application` link is tapped |
 | `menu_entry_tap` | The mobile Menu "MonÉlu sur votre téléphone" entry is tapped |
-| `install_prompt_shown` | The browser's install window opens from the `/application` button |
-| `install_prompt_accepted` / `install_prompt_dismissed` | The visitor answers that window |
+| `install_prompt_available` | The browser offers installation (`beforeinstallprompt`), once per session, on any page |
+| `install_prompt_shown` | The browser's install window opens from the `/application` button, counted when it opens |
+| `install_prompt_accepted` / `install_prompt_dismissed` | The visitor answers that window (an unanswered window counts only as shown) |
 | `app_installed` | The browser fires `appinstalled`, whatever started the install (button, browser menu, Chrome's own hint) |
 | `app_store_badge_tap` | The App Store badge is tapped (only once `NEXT_PUBLIC_IOS_APP_STORE_ID` is set) |
 | `standalone_visit` | A browsing session runs as the installed web app (sent once per session) |
@@ -368,18 +369,23 @@ Weekly totals, newest week first:
 SELECT
   date_trunc('week', day)::date AS week,
   event,
+  platform,
   sum(count) AS total
 FROM install_event_counts
-WHERE day >= current_date - interval '10 weeks'
-GROUP BY 1, 2
-ORDER BY 1 DESC, 2;
+WHERE day >= (now() AT TIME ZONE 'Europe/Paris')::date - interval '10 weeks'
+GROUP BY 1, 2, 3
+ORDER BY 1 DESC, 2, 3;
 ```
 
 Reading it against the trigger:
 
-- `standalone_visit` per week is the number of sessions in the installed web app, the closest Android-side counterpart to the iPhone app's weekly active devices.
+- Read the `android` rows for the trigger: installed-app sessions and installs also happen on iPhone (home-screen web apps) and on desktop, under `ios` and `other`.
+- `standalone_visit` on `android` per week is the number of sessions in the installed web app on Android, the closest Android-side counterpart to the iPhone app's weekly active devices.
   It counts sessions, not devices, so it overstates people who open the app several times a week; read it as an upper bound.
-- `app_installed` per week, set against `install_section_tap + menu_entry_tap`, shows whether the entry points lead anywhere; `install_prompt_accepted / install_prompt_shown` is the acceptance rate of the browser's window.
+- `app_installed` per week, set against `install_section_tap + menu_entry_tap`, shows whether the entry points lead anywhere.
+  `install_prompt_shown / install_prompt_available` is how often an offered install gets as far as the window, and `install_prompt_accepted / install_prompt_shown` is the acceptance rate of windows opened.
 - The trigger itself compares all Android visitors to the website, which these counters do not measure.
   That number comes from Vercel Web Analytics page views broken down by operating system, which the Hobby plan does record once Web Analytics is enabled for the project in the Vercel dashboard (in October 2026 the API reported it as not enabled).
 - Note the comparison on the first of each month; the trigger needs two consecutive months above half before ADR-041 is revisited.
+- Every figure is a floor and can be gamed: ad blockers, offline taps and private browsing (no session storage, so no `standalone_visit` or `install_prompt_available`) lose counts, and the endpoint is anonymous, so anyone can add counts within its 20-per-minute per-IP limit.
+  Treat a sudden jump as suspect and check it against `app_installed` and the Vercel page views before acting on it.

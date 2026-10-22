@@ -1702,7 +1702,7 @@
           "Install events"
         ],
         "summary": "Compter une étape du parcours d'installation de l'application web",
-        "description": "Add one to today's count for an install-flow event. Write-only.\n\n`event` is one of: `install_section_tap` (the homepage \"MonÉlu sur votre\ntéléphone\" link), `menu_entry_tap` (the mobile Menu entry),\n`install_prompt_shown` / `install_prompt_accepted` /\n`install_prompt_dismissed` (the browser's install window and its answer),\n`app_installed` (the browser's `appinstalled` event), `app_store_badge_tap`\nand `standalone_visit` (a session opened as the installed web app, sent once\nper session by the site).\n\nOnly a per-day total per event is kept, by Paris date; nothing about the\ncaller is stored, and there is no read endpoint. Meant for the site's own UI.",
+        "description": "Add one to today's count for an install-flow event. Write-only.\n\n`event` is one of: `install_section_tap` (the homepage \"MonÉlu sur votre\ntéléphone\" link), `menu_entry_tap` (the mobile Menu entry),\n`install_prompt_available` (the browser offered installation, once per\nsession), `install_prompt_shown` (its install window opened from the\n`/application` button), `install_prompt_accepted` /\n`install_prompt_dismissed` (the answer),\n`app_installed` (the browser's `appinstalled` event), `app_store_badge_tap`\nand `standalone_visit` (a session opened as the installed web app, sent once\nper session by the site).\n\n`platform` is `android`, `ios` or `other` (default `other`), so the\nAndroid figures can be read apart from iPhone and desktop. Only a per-day\ntotal per event and platform is kept, by Paris date; nothing about the\ncaller is stored, and there is no read endpoint. Meant for the site's own UI.",
         "operationId": "recordInstallEvent",
         "requestBody": {
           "content": {
@@ -5262,6 +5262,7 @@
             "enum": [
               "install_section_tap",
               "menu_entry_tap",
+              "install_prompt_available",
               "install_prompt_shown",
               "install_prompt_accepted",
               "install_prompt_dismissed",
@@ -5270,6 +5271,16 @@
               "standalone_visit"
             ],
             "title": "Event"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "ios",
+              "other"
+            ],
+            "title": "Platform",
+            "default": "other"
           }
         },
         "type": "object",

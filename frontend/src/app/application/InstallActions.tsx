@@ -45,9 +45,11 @@ export function InstallActions() {
 
   async function install() {
     setPending(true)
+    // Counted when the window opens, so a window left unanswered still counts
+    // as shown (the button only exists while a prompt is available).
+    recordInstallEvent('install_prompt_shown')
     const result = await promptInstall()
     if (result !== 'unavailable') {
-      recordInstallEvent('install_prompt_shown')
       recordInstallEvent(result === 'accepted' ? 'install_prompt_accepted' : 'install_prompt_dismissed')
     }
     // 'unavailable' falls back to the menu instructions of the 'manual' state.

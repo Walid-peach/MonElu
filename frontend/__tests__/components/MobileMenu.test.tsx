@@ -113,7 +113,7 @@ describe('MobileMenu', () => {
     const onClose = jest.fn()
     renderMenu(true, onClose)
     fireEvent.click(screen.getByRole('link', { name: /MonÉlu sur votre téléphone/ }))
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ event: 'menu_entry_tap' })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ event: 'menu_entry_tap' })
     expect(onClose).toHaveBeenCalled()
   })
 

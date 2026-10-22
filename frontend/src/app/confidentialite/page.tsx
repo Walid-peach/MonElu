@@ -32,9 +32,11 @@ export default function ConfidentialitePage() {
         </p>
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: '10px 0 0' }}>
           Pour savoir si l&apos;application web est utile, MonÉlu compte aussi, par jour, quelques étapes de son
-          installation : touche sur un lien « MonÉlu sur votre téléphone », réponse à la fenêtre d&apos;installation du
-          navigateur, installation effectuée, ouverture de l&apos;application installée. Seul un total quotidien
-          par étape est conservé, sans adresse IP, sans identifiant et sans lien avec un visiteur.
+          installation : touche sur un lien « MonÉlu sur votre téléphone », proposition d&apos;installation faite
+          par le navigateur et réponse à sa fenêtre d&apos;installation, installation effectuée, ouverture de
+          l&apos;application installée. Seul un total quotidien
+          par étape et par type d&apos;appareil (Android, iPhone, autre) est conservé, sans adresse IP, sans
+          identifiant et sans lien avec un visiteur.
         </p>
       </LegalSection>
 

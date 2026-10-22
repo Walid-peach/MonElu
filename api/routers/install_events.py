@@ -7,9 +7,10 @@ how many installs happen, and how often the site is opened as the installed
 app. The Vercel plan does not record custom analytics events, so the counts
 are kept here, first-party.
 
-Each request adds one to a `(Paris day, event)` row and nothing else: no IP,
-user agent, URL, identifier or exact time is stored, so there is no personal
-data to protect, export or delete.
+Each request adds one to a `(Paris day, event, platform)` row and nothing
+else: `platform` is a coarse `android` / `ios` / `other` the browser works out,
+and no IP, user agent, URL, identifier or exact time is stored, so there is no
+personal data to protect, export or delete.
 """
 
 import logging
@@ -28,6 +29,7 @@ router = APIRouter()
 InstallEvent = Literal[
     "install_section_tap",
     "menu_entry_tap",
+    "install_prompt_available",
     "install_prompt_shown",
     "install_prompt_accepted",
     "install_prompt_dismissed",
@@ -36,19 +38,23 @@ InstallEvent = Literal[
     "standalone_visit",
 ]
 
-# Mirrored by the CHECK in data/migrations/014_install_events.sql and by
-# INSTALL_EVENTS in frontend/src/lib/installEvents.ts.
+Platform = Literal["android", "ios", "other"]
+
+# Mirrored by the CHECKs in data/migrations/014_install_events.sql and by
+# INSTALL_EVENTS / Platform in frontend/src/lib/installEvents.ts.
 INSTALL_EVENTS: tuple[str, ...] = get_args(InstallEvent)
+PLATFORMS: tuple[str, ...] = get_args(Platform)
 
 SQL_INCREMENT = """
-    INSERT INTO install_event_counts (day, event, count)
-    VALUES ((now() AT TIME ZONE 'Europe/Paris')::date, %(event)s, 1)
-    ON CONFLICT (day, event) DO UPDATE SET count = install_event_counts.count + 1
+    INSERT INTO install_event_counts (day, event, platform, count)
+    VALUES ((now() AT TIME ZONE 'Europe/Paris')::date, %(event)s, %(platform)s, 1)
+    ON CONFLICT (day, event, platform) DO UPDATE SET count = install_event_counts.count + 1
 """
 
 
 class InstallEventRequest(BaseModel):
     event: InstallEvent
+    platform: Platform = "other"
 
 
 class InstallEventResponse(BaseModel):
@@ -66,19 +72,23 @@ def record_install_event(request: Request, body: InstallEventRequest):
 
     `event` is one of: `install_section_tap` (the homepage "MonÉlu sur votre
     téléphone" link), `menu_entry_tap` (the mobile Menu entry),
-    `install_prompt_shown` / `install_prompt_accepted` /
-    `install_prompt_dismissed` (the browser's install window and its answer),
+    `install_prompt_available` (the browser offered installation, once per
+    session), `install_prompt_shown` (its install window opened from the
+    `/application` button), `install_prompt_accepted` /
+    `install_prompt_dismissed` (the answer),
     `app_installed` (the browser's `appinstalled` event), `app_store_badge_tap`
     and `standalone_visit` (a session opened as the installed web app, sent once
     per session by the site).
 
-    Only a per-day total per event is kept, by Paris date; nothing about the
+    `platform` is `android`, `ios` or `other` (default `other`), so the
+    Android figures can be read apart from iPhone and desktop. Only a per-day
+    total per event and platform is kept, by Paris date; nothing about the
     caller is stored, and there is no read endpoint. Meant for the site's own UI.
     """
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute(SQL_INCREMENT, {"event": body.event})
+                cur.execute(SQL_INCREMENT, {"event": body.event, "platform": body.platform})
             conn.commit()
     except Exception:
         logger.exception("Failed to record install event")
