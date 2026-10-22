@@ -30,6 +30,12 @@ export default function ConfidentialitePage() {
           intrusives - aucun bandeau de cookies n&apos;est donc affiché. Cette analyse sera revue si un outil de
           tracking plus intrusif est introduit à l&apos;avenir.
         </p>
+        <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: '10px 0 0' }}>
+          Pour savoir si l&apos;application web est utile, MonÉlu compte aussi, par jour, quelques étapes de son
+          installation : touche sur un lien « MonÉlu sur votre téléphone », réponse à la fenêtre d&apos;installation du
+          navigateur, installation effectuée, ouverture de l&apos;application installée. Seul un total quotidien
+          par étape est conservé, sans adresse IP, sans identifiant et sans lien avec un visiteur.
+        </p>
       </LegalSection>
 
       <LegalSection title="Stockage local (navigateur)">

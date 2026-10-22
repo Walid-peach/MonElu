@@ -10,6 +10,7 @@ import { FollowedDeputyChip } from './FollowedDeputyChip'
 import { MenuEntry } from './nav/MenuEntry'
 import { aboutSections, exploreSections, isEntryActive, phoneAppEntry } from './nav/navigation'
 import { isStandalone } from '@/lib/installState'
+import { recordInstallEvent } from '@/lib/installEvents'
 import { isLightOnlyPath } from '@/lib/theme'
 
 const sections = [...exploreSections, ...aboutSections]
@@ -144,7 +145,10 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
               entry={phoneAppEntry}
               active={isEntryActive(phoneAppEntry, pathname)}
               reachable={open}
-              onNavigate={onClose}
+              onNavigate={() => {
+                recordInstallEvent('menu_entry_tap')
+                onClose()
+              }}
             />
           </div>
         )}

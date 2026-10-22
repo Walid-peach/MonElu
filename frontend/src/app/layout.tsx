@@ -15,6 +15,7 @@ import { HideOnEmbed } from '@/components/HideOnEmbed'
 import { MainFrame } from '@/components/MainFrame'
 import { JsonLd } from '@/components/JsonLd'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { InstallEventsReporter } from '@/components/InstallEventsReporter'
 import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
@@ -108,6 +109,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <BottomNav />
           </Suspense>
         </ThemeProvider>
+        <InstallEventsReporter />
         <Analytics />
         <SpeedInsights />
       </body>

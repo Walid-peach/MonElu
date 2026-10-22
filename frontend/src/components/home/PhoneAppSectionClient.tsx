@@ -4,9 +4,12 @@ import Link from 'next/link'
 import { isIOS, isStandalone } from '@/lib/installState'
 import { SITE_HOST } from '@/lib/site'
 import { iosAppStoreId } from '@/lib/appStore'
+import { recordInstallEvent } from '@/lib/installEvents'
 import { AppStoreBadge } from '@/components/AppStoreBadge'
 
 const noopSubscribe = () => () => {}
+
+const countTap = () => recordInstallEvent('install_section_tap')
 
 const ctaStyle = {
   display: 'inline-flex',
@@ -91,7 +94,7 @@ export function PhoneAppSectionClient({ qrSvg }: { qrSvg: string }) {
         ) : (
           <>
             <div data-phone-app="phone" className="mt-5 md:hidden">
-              <Link href="/application" style={ctaStyle}>
+              <Link href="/application" style={ctaStyle} onClick={countTap}>
                 Installer MonÉlu
               </Link>
             </div>
@@ -109,7 +112,7 @@ export function PhoneAppSectionClient({ qrSvg }: { qrSvg: string }) {
                   Scannez pour retrouver MonÉlu sur votre téléphone.
                 </p>
                 <p style={{ margin: '8px 0 0', fontSize: 15 }}>
-                  <Link href="/application" style={{ color: 'var(--dp-text)' }}>
+                  <Link href="/application" style={{ color: 'var(--dp-text)' }} onClick={countTap}>
                     {SITE_HOST}/application
                   </Link>
                 </p>

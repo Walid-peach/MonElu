@@ -1,4 +1,6 @@
+'use client'
 import { APP_STORE_BADGE_SRC, appStoreUrl } from '@/lib/appStore'
+import { recordInstallEvent } from '@/lib/installEvents'
 
 const BADGE_HEIGHT = 40 // Apple's minimum on-screen height
 
@@ -10,6 +12,7 @@ export function AppStoreBadge({ id }: { id: string }) {
   return (
     <a
       href={appStoreUrl(id)}
+      onClick={() => recordInstallEvent('app_store_badge_tap')}
       style={{ display: 'inline-block', lineHeight: 0, margin: BADGE_HEIGHT / 4 }}
     >
       {/* A plain image: next/image refuses SVGs unless dangerouslyAllowSVG is on. */}
