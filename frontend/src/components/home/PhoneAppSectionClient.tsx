@@ -71,6 +71,9 @@ export function PhoneAppSectionClient({ qrSvg }: { qrSvg: string }) {
 
         {ios && appStoreId ? (
           <div data-phone-app="ios" style={{ marginTop: 20 }}>
+            <p style={{ ...textStyle, color: 'var(--dp-text)', fontWeight: 600 }}>
+              L&apos;application MonÉlu est disponible sur iPhone.
+            </p>
             <AppStoreBadge id={appStoreId} />
           </div>
         ) : ios ? (

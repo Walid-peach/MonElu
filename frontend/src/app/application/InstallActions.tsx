@@ -96,7 +96,7 @@ function ActionBody({
       if (appStoreId) {
         return (
           <>
-            <Lead>L&apos;application MonÉlu est disponible sur iPhone et iPad.</Lead>
+            <Lead>L&apos;application MonÉlu est disponible sur iPhone.</Lead>
             <AppStoreBadge id={appStoreId} />
           </>
         )

@@ -85,6 +85,8 @@ describe('iPhone visitors', () => {
       expect(badge.closest('a')).toHaveAttribute('href', 'https://apps.apple.com/app/id6740000000')
     }
     expect(screen.queryByText(/arrive bientôt/)).not.toBeInTheDocument()
+    // The app targets iPhone only (ios/Project.swift), so the copy says so.
+    expect(screen.getAllByText("L'application MonÉlu est disponible sur iPhone.")).toHaveLength(2)
   })
 })
 
