@@ -74,7 +74,7 @@ describe('PhoneAppSection (#596)', () => {
     const computer = container.querySelector('[data-phone-app="computer"]')!.closest('section')!
     expect(phone.className).toContain('md:hidden')
     expect(computer.className).toMatch(/\bhidden\b.*\bmd:block\b/)
-    expect(screen.getByRole('link', { name: "Installer l'application" })).toHaveAttribute('href', '/application')
+    expect(screen.getByRole('button', { name: "Installer l'application" })).toBeInTheDocument()
     expect(screen.getByText('Scannez pour retrouver MonÉlu sur votre téléphone.')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /QR code/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /\/application$/ })).toHaveAttribute('href', '/application')
@@ -88,7 +88,7 @@ describe('PhoneAppSection (#596)', () => {
     render(<PhoneAppSectionClient qrSvg="<svg></svg>" />)
     expect(screen.getByText(/L'application iPhone arrive bientôt/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Continuer sur le site/ })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: "Installer l'application" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: "Installer l'application" })).not.toBeInTheDocument()
     expect(screen.getByText(/l'app native arrive bientôt/)).toBeInTheDocument()
     expect(screen.queryByRole('img', { name: /QR code/ })).not.toBeInTheDocument()
   })

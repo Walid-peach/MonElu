@@ -87,7 +87,7 @@ describe('recordInstallEvent (#598)', () => {
 describe('where each event is sent', () => {
   it('homepage section links send install_section_tap', () => {
     render(<PhoneAppSectionClient qrSvg="<svg></svg>" />)
-    fireEvent.click(screen.getByRole('link', { name: "Installer l'application" }))
+    fireEvent.click(screen.getByRole('button', { name: "Installer l'application" }))
     fireEvent.click(screen.getByRole('link', { name: /\/application$/ }))
     expect(sentEvents()).toEqual(['install_section_tap', 'install_section_tap'])
   })
