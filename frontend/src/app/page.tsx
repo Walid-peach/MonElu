@@ -3,6 +3,8 @@ import * as Sentry from '@sentry/nextjs'
 import { api, Vote, Deputy, Scorecard } from '@/lib/api'
 import { AssemblyScrollExperience } from '@/components/home/AssemblyScrollExperience'
 import { HomeSummary } from '@/components/home/HomeSummary'
+import { MobileAgenda } from '@/components/home/MobileAgenda'
+import { MobileSummary } from '@/components/home/MobileSummary'
 import { PhoneAppSection } from '@/components/home/PhoneAppSection'
 import { UpcomingAgenda } from '@/components/home/UpcomingAgenda'
 import { addDays, parisToday } from '@/lib/agenda'
@@ -181,8 +183,15 @@ export default async function Home() {
   return (
     <div className="overflow-x-clip bg-[#070b14]">
       <AssemblyScrollExperience stats={homeStats} leadVote={pulseVote} deputyInfo={deputyInfo} />
-      <UpcomingAgenda agenda={agenda} />
-      <HomeSummary stats={homeStats} />
+      {/* Each section has a phone version below `md`; the desktop keeps its own. */}
+      <MobileAgenda agenda={agenda} />
+      <div className="hidden md:block">
+        <UpcomingAgenda agenda={agenda} />
+      </div>
+      <MobileSummary stats={homeStats} />
+      <div className="hidden md:block">
+        <HomeSummary stats={homeStats} />
+      </div>
       <PhoneAppSection />
     </div>
   )
