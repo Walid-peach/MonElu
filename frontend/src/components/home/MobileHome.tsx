@@ -195,6 +195,8 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
         >
           {deputyInfo ? (
             <>
+              {/* A real deputy, but not the visitor's own: say so (PR #609 review). */}
+              <span className={`${eyebrow} text-[color:var(--dp-text-muted)]`}>Exemple</span>
               <div className="flex items-center gap-2.5">
                 <DeputyAvatar name={deputyInfo.name} photoUrl={deputyInfo.photoUrl} decorative />
                 <div className="flex min-w-0 flex-1 flex-col">

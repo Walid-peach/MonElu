@@ -86,6 +86,14 @@ describe('MobileHome', () => {
     expect(feature(/Trouver qui vote comme vous/)).toHaveAttribute('href', '/quiz')
   })
 
+  // The previewed deputy is whoever voted on the lead vote, not the visitor's own.
+  it('labels the deputy preview as an example', () => {
+    render(<MobileHome stats={stats} leadVote={leadVote} deputyInfo={deputyInfo} />)
+    const card = screen.getByRole('link', { name: /Suivre votre député/ })
+    expect(card).toHaveTextContent('Exemple')
+    expect(card).toHaveTextContent('Marie Exemple')
+  })
+
   it('counts a tap on the install button', () => {
     const fetchMock = jest.fn().mockResolvedValue({ ok: true })
     global.fetch = fetchMock
