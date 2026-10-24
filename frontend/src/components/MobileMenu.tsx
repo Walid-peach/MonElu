@@ -13,7 +13,13 @@ import { isStandalone } from '@/lib/installState'
 import { recordInstallEvent } from '@/lib/installEvents'
 import { isLightOnlyPath } from '@/lib/theme'
 
-const sections = [...exploreSections, ...aboutSections]
+/** Which sheet: the parliament data (Explorer tab) or everything around it (Menu). */
+export type MobileMenuVariant = 'explore' | 'menu'
+
+const SHEETS = {
+  explore: { label: 'Explorer', sections: exploreSections },
+  menu: { label: 'Menu de navigation', sections: aboutSections },
+}
 
 const noopSubscribe = () => () => {}
 
@@ -21,11 +27,20 @@ const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
 /**
- * Mobile counterpart of the desktop dropdowns: the same sections, opened as a
- * bottom sheet from the bottom nav. Below `md` the site keeps its bottom tab
- * bar for the primary routes; this sheet carries everything else.
+ * Mobile counterpart of the desktop dropdowns, opened as a bottom sheet from
+ * the bottom nav. The bar's Explorer tab opens the "Explorer" sections and its
+ * Menu button the "À propos" ones, with the way to install the app on top.
  */
-export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function MobileMenu({
+  open,
+  onClose,
+  variant = 'menu',
+}: {
+  open: boolean
+  onClose: () => void
+  variant?: MobileMenuVariant
+}) {
+  const { label, sections } = SHEETS[variant]
   const pathname = usePathname()
   const { theme } = useTheme()
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -85,7 +100,7 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Menu de navigation"
+        aria-label={label}
         className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-2xl bg-white shadow-2xl transition-transform duration-200 ease-out dark:bg-[color:var(--dp-card-bg)]"
         style={{
           transform: open ? 'translateY(0)' : 'translateY(100%)',
@@ -114,9 +129,27 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
           </div>
         </div>
 
-        <div className="px-5 pt-4">
-          <FollowedDeputyChip />
-        </div>
+        {variant === 'explore' && (
+          <div className="px-5 pt-4">
+            <FollowedDeputyChip />
+          </div>
+        )}
+
+        {variant === 'menu' && !standalone && (
+          <div className="px-5 pt-4">
+            <div className="rounded-2xl bg-navy/[0.06] p-4 dark:bg-white/[0.06]">
+              <MenuEntry
+                entry={phoneAppEntry}
+                active={isEntryActive(phoneAppEntry, pathname)}
+                reachable={open}
+                onNavigate={() => {
+                  recordInstallEvent('menu_entry_tap')
+                  onClose()
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         {sections.map((section, i) => (
           <div key={section.title ?? i} className="px-5 pt-5">
@@ -138,20 +171,6 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
             </div>
           </div>
         ))}
-
-        {!standalone && (
-          <div className="px-5 pt-5">
-            <MenuEntry
-              entry={phoneAppEntry}
-              active={isEntryActive(phoneAppEntry, pathname)}
-              reachable={open}
-              onNavigate={() => {
-                recordInstallEvent('menu_entry_tap')
-                onClose()
-              }}
-            />
-          </div>
-        )}
       </div>
     </div>
   )

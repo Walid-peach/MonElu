@@ -22,7 +22,7 @@ export function Footer() {
     // dp-dark: the footer is navy in both themes, so its text tokens stay dark (#559).
     <footer
       data-print-hide
-      className="dp-dark pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8"
+      className="dp-dark pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8"
       style={{
         paddingTop: '32px',
         paddingLeft: '56px',

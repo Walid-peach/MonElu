@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 
-import { MobileMenu } from '@/components/MobileMenu'
+import { MobileMenu, type MobileMenuVariant } from '@/components/MobileMenu'
 import { ThemeProvider } from '@/components/ThemeProvider'
 
 let pathname = '/'
@@ -12,10 +12,10 @@ jest.mock('@/lib/api', () => ({
   api: { deputies: { get: jest.fn() } },
 }))
 
-function renderMenu(open: boolean, onClose = jest.fn()) {
+function renderMenu(open: boolean, onClose = jest.fn(), variant?: MobileMenuVariant) {
   return render(
     <ThemeProvider>
-      <MobileMenu open={open} onClose={onClose} />
+      <MobileMenu open={open} onClose={onClose} variant={variant} />
     </ThemeProvider>
   )
 }
@@ -83,7 +83,7 @@ describe('MobileMenu', () => {
 
   it('calls onClose when an entry is clicked, closing the sheet before navigation', () => {
     const onClose = jest.fn()
-    renderMenu(true, onClose)
+    renderMenu(true, onClose, 'explore')
 
     fireEvent.click(screen.getByRole('link', { name: /députés/i }))
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -135,5 +135,20 @@ describe('MobileMenu', () => {
     })
     renderMenu(true)
     expect(screen.queryByRole('link', { name: /MonÉlu sur votre téléphone/ })).not.toBeInTheDocument()
+  })
+
+  // The bar's Explorer tab and Menu button each open one half of the sections.
+  it('splits the parliament data from the pages around it', () => {
+    const { unmount } = renderMenu(true, jest.fn(), 'explore')
+    expect(screen.getByRole('dialog', { name: 'Explorer' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Ordre du jour/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Méthodologie/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /MonÉlu sur votre téléphone/ })).not.toBeInTheDocument()
+    unmount()
+
+    renderMenu(true)
+    expect(screen.getByRole('dialog', { name: 'Menu de navigation' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Méthodologie/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Ordre du jour/ })).not.toBeInTheDocument()
   })
 })

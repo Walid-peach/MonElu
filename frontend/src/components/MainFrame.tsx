@@ -7,7 +7,7 @@ export function MainFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isEmbed = pathname.startsWith('/embed')
   return (
-    <main className={isEmbed ? '' : 'pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0'}>
+    <main className={isEmbed ? '' : 'pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-0'}>
       {children}
     </main>
   )
