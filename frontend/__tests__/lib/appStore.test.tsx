@@ -96,7 +96,7 @@ it('leaves Android untouched when the ID is set', () => {
   withAppStoreId('6740000000', () => {
     render(<PhoneAppSectionClient qrSvg="<svg></svg>" />)
   })
-  expect(screen.getByRole('link', { name: "Installer l'application" })).toHaveAttribute('href', '/application')
+  expect(screen.getByRole('button', { name: "Installer l'application" })).toBeInTheDocument()
   expect(screen.queryByRole('img', { name: "Télécharger dans l'App Store" })).not.toBeInTheDocument()
 })
 
