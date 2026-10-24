@@ -58,9 +58,14 @@ describe('MobileAgenda', () => {
     expect(screen.getByText('Le budget de la Sécurité sociale')).toBeInTheDocument()
     expect(screen.queryByText('La réforme du logement')).not.toBeInTheDocument()
 
-    const tuesday = screen.getByRole('tab', { name: /MAR/ })
+    // Plain toggle buttons: no tab roles promising arrow-key navigation.
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+    const monday = screen.getByRole('button', { name: /LUN/ })
+    const tuesday = screen.getByRole('button', { name: /MAR/ })
+    expect(monday).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(tuesday)
-    expect(tuesday).toHaveAttribute('aria-selected', 'true')
+    expect(tuesday).toHaveAttribute('aria-pressed', 'true')
+    expect(monday).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByText('La réforme du logement')).toBeInTheDocument()
     expect(screen.queryByText('Le budget de la Sécurité sociale')).not.toBeInTheDocument()
   })

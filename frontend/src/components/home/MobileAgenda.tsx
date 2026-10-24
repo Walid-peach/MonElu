@@ -93,8 +93,10 @@ export function MobileAgenda({ agenda }: { agenda: AgendaResponse | null }) {
         </p>
       </div>
 
+      {/* Plain toggle buttons, not ARIA tabs: the tab pattern promises arrow-key
+          navigation, and five buttons need none (PR #610 review). */}
       <div
-        role="tablist"
+        role="group"
         aria-label="Jour de séance"
         className="grid gap-1.5"
         style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
@@ -106,8 +108,7 @@ export function MobileAgenda({ agenda }: { agenda: AgendaResponse | null }) {
             <button
               key={d.sitting_date}
               type="button"
-              role="tab"
-              aria-selected={on}
+              aria-pressed={on}
               aria-controls="ordre-du-jour-points"
               onClick={() => setSelected(i)}
               className={`flex h-[72px] flex-col items-center justify-center gap-0.5 rounded-2xl border ${
@@ -124,7 +125,7 @@ export function MobileAgenda({ agenda }: { agenda: AgendaResponse | null }) {
         })}
       </div>
 
-      <ol id="ordre-du-jour-points" role="tabpanel" className="flex flex-col">
+      <ol id="ordre-du-jour-points" aria-live="polite" className="flex flex-col">
         {shown.map(item => (
           <li key={item.point_uid} className="grid grid-cols-[52px_20px_minmax(0,1fr)]">
             <span className="pt-3.5 font-mono text-[13px] font-bold">{formatSittingTime(item.sitting_start) ?? ''}</span>
