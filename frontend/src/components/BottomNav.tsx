@@ -130,7 +130,7 @@ export function BottomNav() {
             >
               {QuizIcon}
             </Link>
-            <span aria-hidden="true" className="pb-1 text-[11px] font-bold text-red-civic dark:text-red-light">
+            <span aria-hidden="true" className="pb-1 text-[11px] font-bold text-[color:var(--dp-red)]">
               Quiz
             </span>
           </div>
