@@ -109,8 +109,15 @@ test.describe('smoke: nav visibility follows the md breakpoint', () => {
     const viewport = page.viewportSize()
     if (!viewport) throw new Error('no viewport configured for this project')
 
-    const desktopNavToggle = page.getByRole('button', { name: 'Explorer' })
-    const mobileMenuButton = page.getByRole('button', { name: 'Ouvrir le menu' })
+    // The phone tab bar has an "Explorer" button of its own, so the desktop
+    // toggle is looked up outside it.
+    const tabBarSelector = 'nav[aria-label="Navigation principale"]'
+    const desktopNavToggle = page
+      .locator(`nav:not(${tabBarSelector})`)
+      .getByRole('button', { name: 'Explorer' })
+    const mobileMenuButton = page
+      .locator(tabBarSelector)
+      .getByRole('button', { name: 'Ouvrir le menu' })
 
     if (viewport.width < 768) {
       await expect(mobileMenuButton).toBeVisible()
