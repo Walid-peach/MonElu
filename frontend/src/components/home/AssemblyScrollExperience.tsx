@@ -10,6 +10,7 @@ import type { AssemblyStats, LeadVoteSummary } from './LiveAssemblyPulse'
 import { LiveAssemblyPulse } from './LiveAssemblyPulse'
 import { HeroSearch } from '@/components/HeroSearch'
 import { TrustRow } from './TrustRow'
+import { MobileHome } from './MobileHome'
 import type { DeputyInfo } from '@/app/page'
 import { portraitSrc } from '@/lib/portraits'
 import { NAV_HEIGHT_PX } from '@/components/Nav'
@@ -72,94 +73,10 @@ function StaticExperience({ stats, leadVote }: Props) {
   )
 }
 
-// ---- mobile fallback (card stack, no cinematic) ----
-function MobileExperience({ stats, leadVote }: Props) {
-  return (
-    <section className="md:hidden">
-      <div className="relative isolate overflow-hidden bg-navy px-4 pb-10 pt-14 text-white">
-        {/*
-          Deliberately NOT `priority` (MON-200): this section is always mounted and
-          only hidden with `md:hidden`, so a priority preload would make every
-          desktop visitor download this optimized copy on top of the cinematic
-          image set. Lazy loading means a `display:none` section never fetches it,
-          while on mobile the image is in the initial viewport and starts loading
-          at first layout; `fetchPriority="high"` keeps it ahead of the other
-          below-the-fold card images for LCP.
-        */}
-        <Image
-          src="/exterior-morning.jpg"
-          alt="Vue extérieure de l'Assemblée Nationale"
-          fill
-          fetchPriority="high"
-          sizes="100vw"
-          className="object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(9,21,44,0.96)_0%,rgba(9,21,44,0.78)_52%,rgba(9,21,44,0.46)_100%)]" />
-        <div className="relative z-10">
-          <p className="text-xs font-semibold uppercase text-red-light">
-            Données officielles
-          </p>
-          {/* The page's single `<h1>` (MON-270). This section is server-rendered on
-              every viewport - the cinematic below it only ever adds `<h2>`s. */}
-          <h1 className="mt-5 font-serif text-4xl leading-tight text-white">
-            La vie politique française, enfin lisible.
-          </h1>
-          <p className="mt-4 text-base leading-7 text-white/76">
-            Chaque vote. Chaque député. En clair.
-          </p>
-          <div className="mt-6">
-            <HeroSearch
-              id="home-hero-search-mobile"
-              placeholder="Votre commune ou député..."
-              buttonLabel="Comprendre mon député"
-            />
-          </div>
-          <div className="mt-6">
-            <LiveAssemblyPulse stats={stats} leadVote={leadVote} compact />
-          </div>
-        </div>
-      </div>
-      <div className="space-y-5 px-4 py-8">
-        <article className="border border-navy/10 bg-white shadow-xl shadow-navy/6">
-          <div className="relative h-[220px] overflow-hidden bg-navy">
-            <Image src="/entrance.jpg" alt="Entrée de l'Assemblée Nationale" fill sizes="100vw" className="object-cover" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,21,44,0.12),rgba(9,21,44,0.72))]" />
-          </div>
-          <div className="p-5">
-            <p className="text-xs font-semibold uppercase text-red-civic">L&apos;Assemblée s&apos;anime</p>
-            <h2 className="mt-3 font-serif text-2xl leading-tight text-navy">L&apos;Assemblée vote chaque semaine.</h2>
-          </div>
-        </article>
-        <article className="border border-navy/10 bg-white shadow-xl shadow-navy/6">
-          <div className="relative h-[220px] overflow-hidden bg-navy">
-            <Image src="/hemicycle.jpg" alt="L'hémicycle de l'Assemblée Nationale" fill sizes="100vw" className="object-cover" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,21,44,0.12),rgba(9,21,44,0.72))]" />
-          </div>
-          <div className="p-5">
-            <p className="text-xs font-semibold uppercase text-red-civic">Dans l&apos;hémicycle</p>
-            <h2 className="mt-3 font-serif text-2xl leading-tight text-navy">
-              Chaque scrutin: {stats.deputies} positions individuelles.
-            </h2>
-          </div>
-        </article>
-        <article className="border border-navy/10 bg-white p-5 shadow-xl shadow-navy/6">
-          <p className="text-xs font-semibold uppercase text-red-civic">Le quiz</p>
-          <h2 className="mt-3 font-serif text-2xl leading-tight text-navy">
-            Quel député vote comme vous&nbsp;?
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-[color:var(--dp-text-muted)]">
-            Une dizaine de vrais scrutins, comparés aux votes réels des députés.
-          </p>
-          <Link
-            href="/quiz"
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-civic px-5 py-2.5 text-sm font-semibold text-white"
-          >
-            Faire le test →
-          </Link>
-        </article>
-      </div>
-    </section>
-  )
+// ---- phones: what MonÉlu does and the way to install it ----
+// `MobileHome` carries the page's single `<h1>` and hides itself from `md` up.
+function MobileExperience(props: Props) {
+  return <MobileHome {...props} />
 }
 
 // ---- cinematic scroll experience (desktop) ----
