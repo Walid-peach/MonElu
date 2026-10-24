@@ -78,8 +78,9 @@ describe('iPhone visitors', () => {
         </>,
       )
     })
+    // /application, then the homepage's phone card and its desktop section.
     const badges = screen.getAllByRole('img', { name: "Télécharger dans l'App Store" })
-    expect(badges).toHaveLength(2)
+    expect(badges).toHaveLength(3)
     for (const badge of badges) {
       expect(badge).toHaveAttribute('src', APP_STORE_BADGE_SRC)
       expect(badge.closest('a')).toHaveAttribute('href', 'https://apps.apple.com/app/id6740000000')
@@ -95,7 +96,7 @@ it('leaves Android untouched when the ID is set', () => {
   withAppStoreId('6740000000', () => {
     render(<PhoneAppSectionClient qrSvg="<svg></svg>" />)
   })
-  expect(screen.getByRole('link', { name: 'Installer MonÉlu' })).toHaveAttribute('href', '/application')
+  expect(screen.getByRole('link', { name: "Installer l'application" })).toHaveAttribute('href', '/application')
   expect(screen.queryByRole('img', { name: "Télécharger dans l'App Store" })).not.toBeInTheDocument()
 })
 
