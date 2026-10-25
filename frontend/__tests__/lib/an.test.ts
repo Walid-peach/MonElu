@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { anDeputyUrl, anDossierUrl, anScrutinUrl } from '@/lib/an'
 
 describe('anDeputyUrl', () => {
@@ -48,5 +50,17 @@ describe('anScrutinUrl', () => {
     expect(anScrutinUrl('')).toBeNull()
     expect(anScrutinUrl('9025')).toBeNull()
     expect(anScrutinUrl('VTANR5L17V9025/../admin')).toBeNull()
+  })
+})
+
+describe('links to the AN site', () => {
+  // The bare domain has no DNS record, so a link to it never loads (#619).
+  it('always name www.assemblee-nationale.fr', () => {
+    const files = (readdirSync(join(process.cwd(), 'src'), { recursive: true }) as string[])
+      .filter(f => /\.(ts|tsx)$/.test(f))
+    const offenders = files.filter(f =>
+      /https?:\/\/assemblee-nationale\.fr/.test(readFileSync(join(process.cwd(), 'src', f), 'utf8'))
+    )
+    expect(offenders).toEqual([])
   })
 })

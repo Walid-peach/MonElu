@@ -978,7 +978,7 @@ function ChatInner() {
             </div>
             <div style={{ textAlign: 'center', marginTop: 9, fontSize: 11.5, color: txt3 }}>
               MonÉlu peut faire des erreurs. Vérifiez les informations importantes sur{' '}
-              <a href="https://assemblee-nationale.fr" target="_blank" rel="noopener noreferrer" style={{ color: dk ? '#F87167' : '#C9302A', textDecoration: 'none' }}>
+              <a href="https://www.assemblee-nationale.fr" target="_blank" rel="noopener noreferrer" style={{ color: dk ? '#F87167' : '#C9302A', textDecoration: 'none' }}>
                 assemblee-nationale.fr
               </a>
             </div>
