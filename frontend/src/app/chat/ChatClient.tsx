@@ -605,7 +605,7 @@ function ChatInner() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: bg0 }}>
 
         {/* Top bar */}
-        <div style={{ height: 54, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', borderBottom: `1px solid ${bdr}`, background: bg0 }}>
+        <div className="px-4 md:px-7" style={{ height: 54, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottom: `1px solid ${bdr}`, background: bg0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: txt1, letterSpacing: '-0.01em' }}>Chat IA</span>
             <span style={{ background: dk ? 'rgba(255,255,255,0.08)' : '#EFF3FB', color: dk ? 'rgba(255,255,255,0.55)' : '#1B2B50', border: `1px solid ${dk ? 'rgba(255,255,255,0.10)' : 'rgba(27,43,80,0.12)'}`, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, letterSpacing: '0.03em' }}>
@@ -616,7 +616,7 @@ function ChatInner() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.2" strokeLinecap="round">
               <path d="m9 12 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
             </svg>
-            <span style={{ color: txt2 }}>Données officielles · Assemblée nationale</span>
+            <span style={{ color: txt2 }}>Données officielles<span className="hidden md:inline"> · Assemblée nationale</span></span>
           </div>
         </div>
 
@@ -625,7 +625,9 @@ function ChatInner() {
 
           {/* Empty state */}
           {!hasMessages && (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', minHeight: '100%' }}>
+            // Top-aligned below md: centred in a scroll area shorter than
+            // itself, the heading started out scrolled above the fold.
+            <div className="justify-start px-4 py-6 md:justify-center md:px-8 md:py-12" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100%' }}>
               <svg width="56" height="40" viewBox="0 0 30 22" fill="none" style={{ marginBottom: 18 }}>
                 <path d="M2 19 A13 13 0 0 1 28 19" stroke={dk ? 'rgba(255,255,255,0.85)' : '#1B2B50'} strokeWidth="2.2" strokeLinecap="round"/>
                 <path d="M6 19 A9 9 0 0 1 24 19" stroke="#9CA3AF" strokeWidth="2.2" strokeLinecap="round"/>
@@ -656,7 +658,8 @@ function ChatInner() {
                   <p style={{ fontSize: 15, color: txt2, textAlign: 'center', maxWidth: 400, margin: '0 0 36px', lineHeight: 1.65 }}>
                     Posez une question sur les votes, l&apos;absentéisme ou le bilan de n&apos;importe quel député de la XVII<sup>e</sup> législature.
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%', maxWidth: 620 }}>
+                  {/* One column below md: two leave each question about 110px wide. */}
+                  <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 10, width: '100%', maxWidth: 620 }}>
                     {SUGGESTIONS.map((s, i) => (
                       <button
                         key={i}
@@ -685,7 +688,7 @@ function ChatInner() {
 
           {/* Messages */}
           {hasMessages && (
-            <div style={{ padding: '32px 32px 16px', maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+            <div className="px-4 pb-4 pt-6 md:px-8 md:pt-8" style={{ maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
               {messages.map((msg, i) => {
                 if (msg.role === 'user') return (
                   <div key={i} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 28 }}>
@@ -909,7 +912,7 @@ function ChatInner() {
         </div>
 
         {/* Input bar */}
-        <div style={{ flexShrink: 0, padding: '12px 28px 20px', background: bg0 }}>
+        <div className="px-4 pb-4 pt-3 md:px-7 md:pb-5" style={{ flexShrink: 0, background: bg0 }}>
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
             <div style={{ display: 'inline-flex', padding: 3, borderRadius: 999, background: dk ? 'rgba(255,255,255,0.06)' : '#F0F1F4', marginBottom: 9 }}>
               {(['question', 'verify'] as const).map(m => {

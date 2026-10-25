@@ -52,14 +52,15 @@ export default async function VerificationPage({ params }: { params: Promise<{ i
         Vérification MonÉlu — verdict enregistré
       </p>
       <VerdictCard result={result} />
-      <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
+      {/* Below md the two actions stack as full-width targets (canvas "Verdict"). */}
+      <div className="mt-6 flex flex-col gap-3 text-sm md:flex-row md:flex-wrap md:items-center md:gap-4">
         <Link
           href={`/chat?mode=verify&claim=${encodeURIComponent(result.claim)}`}
-          className="border border-navy text-navy dark:border-[color:var(--dp-text)] dark:text-[color:var(--dp-text)] px-4 py-2 rounded-lg hover:bg-navy hover:text-white transition-colors"
+          className="flex h-12 items-center justify-center border border-navy text-navy dark:border-[color:var(--dp-text)] dark:text-[color:var(--dp-text)] px-4 rounded-lg hover:bg-navy hover:text-white transition-colors md:h-auto md:py-2"
         >
           Re-vérifier avec les données du jour
         </Link>
-        <Link href="/chat?mode=verify" className="text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)]">
+        <Link href="/chat?mode=verify" className="py-2 text-center text-[color:var(--dp-text-muted)] underline hover:text-navy dark:hover:text-[color:var(--dp-text)] md:py-0 md:text-left">
           Vérifier une autre affirmation
         </Link>
       </div>

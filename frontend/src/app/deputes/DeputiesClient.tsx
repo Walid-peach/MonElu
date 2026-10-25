@@ -7,6 +7,7 @@ import { getInitials, partyHex, partyShort } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { resolvePostalCode } from '@/lib/postal'
 import { departmentCode, departmentLabel } from '@/lib/departments'
+import { DeputiesMobile } from './DeputiesMobile'
 
 type DeputyList = { total: number; items: Deputy[]; limit: number; offset: number }
 type SortKey = 'nom' | 'region' | 'parti'
@@ -111,7 +112,19 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
   }
 
   return (
-    <div style={{ background: CREAM, minHeight: '100vh' }}>
+    <>
+    <DeputiesMobile
+      total={initial.total}
+      search={search}
+      onSearch={setSearch}
+      sort={sort}
+      onSort={setSort}
+      filtered={filtered}
+      groups={groupCounts}
+      postalNotFound={postalNotFound}
+      departmentLink={matchedDeptCode ? { href: `/departements/${matchedDeptCode}`, label: departmentLabel(matchedDeptCode) ?? matchedDeptCode } : null}
+    />
+    <div className="hidden md:block" style={{ background: CREAM, minHeight: '100vh' }}>
 
       {/* Hero */}
       <div
@@ -421,5 +434,6 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
         </div>
       </div>
     </div>
+    </>
   )
 }

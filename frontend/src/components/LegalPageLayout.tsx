@@ -9,17 +9,19 @@ interface LegalPageLayoutProps {
 export function LegalPageLayout({ eyebrow, title, children }: LegalPageLayoutProps) {
   return (
     <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
-      <div style={{ padding: '72px 56px 56px', background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
+      {/* Below md: the phone page kit's 20px gutter and 34px title (canvas
+          "Page texte"); 56px gutters left a phone about 260px of text. */}
+      <div className="px-5 pb-8 pt-8 md:px-14 md:pb-14 md:pt-[72px]" style={{ background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
         <div style={{ maxWidth: '760px', margin: '0 auto' }}>
-          <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">{eyebrow}</div>
-          <h1 className="font-newsreader text-headline" style={{ fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.02em', color: 'var(--dp-text)', margin: 0 }}>
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-red-civic md:mb-4">{eyebrow}</div>
+          <h1 className="font-newsreader text-[34px] md:text-headline" style={{ fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.02em', color: 'var(--dp-text)', margin: 0 }}>
             {title}
           </h1>
         </div>
       </div>
 
-      <div style={{ padding: '56px', background: 'var(--dp-card-bg)' }}>
-        <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '36px' }}>
+      <div className="px-5 py-8 md:p-14" style={{ background: 'var(--dp-card-bg)' }}>
+        <div className="gap-7 md:gap-9" style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
           {children}
         </div>
       </div>
