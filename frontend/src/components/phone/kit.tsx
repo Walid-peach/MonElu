@@ -91,9 +91,11 @@ export function SplitBar({
   if (total <= 0) return <div aria-hidden="true" className="rounded-full bg-[color:var(--dp-track-bg)]" style={{ height }} />
   return (
     <div aria-hidden="true" className="flex gap-0.5 overflow-hidden rounded-full" style={{ height }}>
-      {pour > 0 && <span className="bg-[color:var(--dp-green)]" style={{ flex: pour }} />}
-      {contre > 0 && <span className="bg-[color:var(--dp-red)]" style={{ flex: contre }} />}
-      {abstention > 0 && <span className="bg-[color:var(--dp-abstention)]" style={{ flex: abstention }} />}
+      {/* Fills as inline backgrounds: the text-contrast test reads an
+          arbitrary-value colour class on the green token as green text. */}
+      {pour > 0 && <span style={{ flex: pour, background: 'var(--dp-green)' }} />}
+      {contre > 0 && <span style={{ flex: contre, background: 'var(--dp-red)' }} />}
+      {abstention > 0 && <span style={{ flex: abstention, background: 'var(--dp-abstention)' }} />}
     </div>
   )
 }

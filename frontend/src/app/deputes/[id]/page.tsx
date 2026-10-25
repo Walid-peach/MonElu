@@ -8,6 +8,7 @@ import { departmentCode, departmentLabel } from '@/lib/departments'
 import { groupSlug } from '@/lib/groups'
 import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
+import { DeputyMobile } from './DeputyMobile'
 import { ShareButton } from '@/components/ShareButton'
 import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
@@ -114,7 +115,19 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
   ] : []
 
   return (
-    <div style={{ background: CREAM, minHeight: '100vh' }}>
+    <>
+    <DeputyMobile
+      deputy={deputy}
+      scorecard={scorecard}
+      stats={deputyStats}
+      recentVotes={recentVotes}
+      alignment={alignment}
+      dissidentVotes={dissidentVotes}
+      departmentLabel={deptLabel}
+      departmentCode={deptCode}
+      groupHref={groupHref}
+    />
+    <div className="hidden md:block" style={{ background: CREAM, minHeight: '100vh' }}>
       <JsonLd data={buildPersonJsonLd(deputy)} />
       <JsonLd data={buildBreadcrumbJsonLd([
         { name: 'Accueil', url: SITE_URL },
@@ -609,5 +622,6 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
     </div>
+    </>
   )
 }
