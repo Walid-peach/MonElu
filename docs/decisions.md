@@ -662,6 +662,21 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 
 **Trigger to revisit:** N/A — this is the terminal state for the deferral question. Future revisits would only concern the toggle's UX or token values, not whether dark mode gets built.
 
+### Amendment (2026-10-25, #612): the landing page follows the theme
+
+The landing page is no longer excluded.
+It now follows the site theme like every other page, and the toggle shows on it.
+The desktop cinematic scroll panels keep their fixed navy/red treatment, which already reads the same in both themes; the exclusion is lifted for everything else on `/`, chiefly the phone home page (`MobileHome` and the phone sections), which did not exist when this ADR was written and is a cream page.
+
+**Reason:** most visitors never touch the toggle, so a phone set to dark resolved the theme from the system on every page except `/`.
+Every trip through Accueil flipped the whole screen between light and dark, and the toggle was hidden on the one page where the flip started.
+A landing page that ignores the visitor's setting is the inconsistency, not the dark variant.
+
+**Impact:**
+- `isLightOnlyPath` is gone; `frontend/src/lib/theme.ts` holds the single theme store and the `<head>` script that applies it before the first paint.
+- The "Do NOT add a dark variant to the landing page" bullet above is superseded, except for the cinematic panels.
+- Homepage surfaces use the `--dp-*` tokens; the solid ink fill that draws "Pour" and selected chips is `--dp-solid-bg`/`--dp-solid-text`, which inverts in dark mode.
+
 ---
 
 ## ADR-028 — Friend comparison: opt-in answer storage in quiz shares, client-side comparison (MON-178/MON-179)
@@ -1814,7 +1829,7 @@ The list lives in `UserDefaults` on the phone; the previous single `monelu.follo
 7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
 8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never trust client-computed percentages; answers may be persisted only via the opt-in path in ADR-028 (see rule 11), never by default
 9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
-10. Dark mode is approved and being built (ADR-027, MON-103) — landing page stays light-only by design
+10. Dark mode covers every page, the landing page included since #612 (ADR-027 as amended) - only the desktop cinematic panels keep a fixed palette
 11. Quiz share answers may be stored only when the sharer opts in (`include_answers`, default off) for friend comparison (ADR-028) — never store answers by default, never add a server-side compare endpoint, and gate any *derived* field that re-encodes them the same way (`detail`, `themes`)
 12. When in doubt: check what's actually deployed before writing new code
 13. Sustainability funding is donations-first via HelloAsso, with the existing `api_keys.rate_limit_multiplier` (ADR-029, MON-116/MON-98) as the paid-tier mechanism — do not build Stripe/webhook billing until a real paying commercial API customer exists

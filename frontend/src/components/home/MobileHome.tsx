@@ -47,7 +47,7 @@ export function heroHemicycleDots(votesFor: number, votesAgainst: number, absten
 }
 
 const DOT_FILL: Record<HemicycleDot['kind'], string> = {
-  pour: '#0D1F3C',
+  pour: 'var(--dp-solid-bg)',
   contre: '#C9302C',
   abstention: '#B9B4AA',
 }
@@ -89,16 +89,16 @@ function FeatureCard({
   return (
     <Link href={href} className="group flex flex-col gap-3.5">
       <div className="flex items-baseline gap-3">
-        <span className="font-mono text-[13px] text-red-civic" aria-hidden="true">
+        <span className="font-mono text-[13px] text-[color:var(--dp-red)]" aria-hidden="true">
           {index}
         </span>
-        <h3 className="font-newsreader text-[23px] font-medium leading-tight text-navy">{title}</h3>
-        <span aria-hidden="true" className="ml-auto text-navy transition-transform group-active:translate-x-0.5">
+        <h3 className="font-newsreader text-[23px] font-medium leading-tight text-[color:var(--dp-text)]">{title}</h3>
+        <span aria-hidden="true" className="ml-auto text-[color:var(--dp-text)] transition-transform group-active:translate-x-0.5">
           →
         </span>
       </div>
       <p className="text-[15px] leading-relaxed text-[color:var(--dp-text-secondary)]">{text}</p>
-      <div aria-hidden="true" className="flex flex-col gap-3 rounded-2xl bg-gray-off p-3.5">
+      <div aria-hidden="true" className="flex flex-col gap-3 rounded-2xl bg-gray-off dark:bg-[color:var(--dp-page-bg)] p-3.5">
         {children}
       </div>
     </Link>
@@ -108,7 +108,7 @@ function FeatureCard({
 function SplitBar({ votesFor, votesAgainst, abstentions }: { votesFor: number; votesAgainst: number; abstentions: number }) {
   return (
     <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
-      <span className="bg-navy" style={{ flex: Math.max(votesFor, 0) }} />
+      <span className="bg-[color:var(--dp-solid-bg)]" style={{ flex: Math.max(votesFor, 0) }} />
       <span className="bg-red-civic" style={{ flex: Math.max(votesAgainst, 0) }} />
       <span className="bg-[#B9B4AA]" style={{ flex: Math.max(abstentions, 0) }} />
     </div>
@@ -127,15 +127,15 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
 
   return (
     <div className="md:hidden">
-      <section className="flex flex-col gap-5 bg-gray-off px-5 pb-10 pt-6 text-navy">
+      <section className="flex flex-col gap-5 bg-gray-off dark:bg-[color:var(--dp-page-bg)] px-5 pb-10 pt-6 text-[color:var(--dp-text)]">
         <p className={`${eyebrow} text-[color:var(--dp-text-muted)]`}>Assemblée nationale · 17e législature</p>
         {/* The page's single `<h1>` (MON-270). This section is server-rendered on
             every viewport - the cinematic only ever adds `<h2>`s. */}
-        <h1 className="font-serif text-[40px] leading-[1.02] tracking-[-0.01em] text-navy">
-          La vie politique française, <em className="text-red-civic">enfin lisible.</em>
+        <h1 className="font-serif text-[40px] leading-[1.02] tracking-[-0.01em] text-[color:var(--dp-text)]">
+          La vie politique française, <em className="text-[color:var(--dp-red)]">enfin lisible.</em>
         </h1>
         <p className="text-[17px] leading-normal text-[color:var(--dp-text-secondary)]">
-          <strong className="font-semibold text-navy">Chaque vote. Chaque député. En français clair.</strong>{' '}
+          <strong className="font-semibold text-[color:var(--dp-text)]">Chaque vote. Chaque député. En français clair.</strong>{' '}
           MonÉlu montre comment votent les 577 députés, scrutin par scrutin, et explique chaque texte sans jargon.
         </p>
 
@@ -143,7 +143,7 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
           <InstallButton />
           <Link
             href="/mon-depute"
-            className="flex h-[52px] items-center justify-center gap-2 rounded-2xl border-[1.5px] border-navy text-base font-medium text-navy"
+            className="flex h-[52px] items-center justify-center gap-2 rounded-2xl border-[1.5px] border-[color:var(--dp-text)] text-base font-medium text-[color:var(--dp-text)]"
           >
             Trouver mon député
             <span aria-hidden="true">→</span>
@@ -153,7 +153,7 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
           </p>
         </div>
 
-        <figure className="flex flex-col items-center gap-3 rounded-[20px] border border-[color:var(--dp-border)] bg-white px-4 pb-4 pt-5">
+        <figure className="flex flex-col items-center gap-3 rounded-[20px] border border-[color:var(--dp-border)] bg-[color:var(--dp-card-bg)] px-4 pb-4 pt-5">
           <svg viewBox="0 0 300 158" className="w-full max-w-[300px]" aria-hidden="true">
             {dots.map((d, i) => (
               <circle key={i} cx={d.x} cy={d.y} r={4} fill={DOT_FILL[d.kind]} />
@@ -161,17 +161,17 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
           </svg>
           <figcaption className="flex w-full flex-col gap-2.5">
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-[color:var(--dp-text-secondary)]">
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-navy" />Pour {NUMBER.format(leadVote.votesFor)}</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[color:var(--dp-solid-bg)]" />Pour {NUMBER.format(leadVote.votesFor)}</span>
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-civic" />Contre {NUMBER.format(leadVote.votesAgainst)}</span>
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#B9B4AA]" />Abstention {NUMBER.format(leadVote.abstentions)}</span>
             </div>
             {leadVote.href ? (
-              <Link href={leadVote.href} className="line-clamp-2 text-center text-[13px] leading-snug text-navy underline underline-offset-2">
+              <Link href={leadVote.href} className="line-clamp-2 text-center text-[13px] leading-snug text-[color:var(--dp-text)] underline underline-offset-2">
                 <span className="font-semibold">{leadVote.result}</span> · {leadVote.title}
               </Link>
             ) : (
               <p className="text-center text-[13px] text-[color:var(--dp-text-secondary)]">
-                <span className="font-semibold text-navy">{leadVote.result}</span> · {leadVote.title}
+                <span className="font-semibold text-[color:var(--dp-text)]">{leadVote.result}</span> · {leadVote.title}
               </p>
             )}
           </figcaption>
@@ -179,10 +179,10 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
 
       </section>
 
-      <section aria-labelledby="ce-que-fait-monelu" className="flex flex-col gap-8 border-t border-[color:var(--dp-border)] bg-white px-5 py-10">
+      <section aria-labelledby="ce-que-fait-monelu" className="flex flex-col gap-8 border-t border-[color:var(--dp-border)] bg-[color:var(--dp-card-bg)] px-5 py-10">
         <div className="flex flex-col gap-2.5">
-          <p className={`${eyebrow} text-red-civic`}>Ce que fait MonÉlu</p>
-          <h2 id="ce-que-fait-monelu" className="font-newsreader text-[32px] font-medium leading-[1.1] text-navy">
+          <p className={`${eyebrow} text-[color:var(--dp-red)]`}>Ce que fait MonÉlu</p>
+          <h2 id="ce-que-fait-monelu" className="font-newsreader text-[32px] font-medium leading-[1.1] text-[color:var(--dp-text)]">
             Quatre gestes pour suivre ceux qui votent en votre nom.
           </h2>
         </div>
@@ -200,23 +200,23 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
               <div className="flex items-center gap-2.5">
                 <DeputyAvatar name={deputyInfo.name} photoUrl={deputyInfo.photoUrl} decorative />
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-[15px] font-bold text-navy">{deputyInfo.name}</span>
+                  <span className="truncate text-[15px] font-bold text-[color:var(--dp-text)]">{deputyInfo.name}</span>
                   <span className="truncate text-xs text-[color:var(--dp-text-secondary)]">
                     {deputyInfo.party} · {deputyInfo.department}
                   </span>
                 </div>
-                <span className="rounded-full bg-navy px-3 py-1.5 text-[13px] text-white">Suivre</span>
+                <span className="rounded-full bg-[color:var(--dp-solid-bg)] px-3 py-1.5 text-[13px] text-[color:var(--dp-solid-text)]">Suivre</span>
               </div>
               <div className="flex gap-2 text-xs">
-                <span className="rounded-md bg-navy px-2 py-1 font-medium text-white">Pour {NUMBER.format(deputyInfo.votesFor)}</span>
+                <span className="rounded-md bg-[color:var(--dp-solid-bg)] px-2 py-1 font-medium text-[color:var(--dp-solid-text)]">Pour {NUMBER.format(deputyInfo.votesFor)}</span>
                 <span className="rounded-md bg-red-civic px-2 py-1 font-medium text-white">Contre {NUMBER.format(deputyInfo.votesAgainst)}</span>
-                <span className="rounded-md bg-[#EDECEA] px-2 py-1 font-medium text-navy">Abst. {NUMBER.format(deputyInfo.abstentions)}</span>
+                <span className="rounded-md bg-[#EDECEA] dark:bg-[color:var(--dp-track-bg)] px-2 py-1 font-medium text-[color:var(--dp-text)]">Abst. {NUMBER.format(deputyInfo.abstentions)}</span>
               </div>
             </>
           ) : (
             <div className="flex items-center gap-2.5">
-              <span className="h-10 w-10 rounded-full bg-[#E0DED9]" />
-              <span className="h-2.5 flex-1 rounded-full bg-[#E0DED9]" />
+              <span className="h-10 w-10 rounded-full bg-[#E0DED9] dark:bg-[color:var(--dp-border)]" />
+              <span className="h-2.5 flex-1 rounded-full bg-[#E0DED9] dark:bg-[color:var(--dp-border)]" />
             </div>
           )}
         </FeatureCard>
@@ -239,7 +239,7 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
               {leadVote.result}
             </span>
           </div>
-          <span className="line-clamp-3 font-newsreader text-[17px] leading-snug text-navy">{leadVote.title}</span>
+          <span className="line-clamp-3 font-newsreader text-[17px] leading-snug text-[color:var(--dp-text)]">{leadVote.title}</span>
           <SplitBar votesFor={leadVote.votesFor} votesAgainst={leadVote.votesAgainst} abstentions={leadVote.abstentions} />
         </FeatureCard>
 
@@ -249,7 +249,7 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
           title="Vérifier ce qu'on entend"
           text="Collez une phrase entendue à la télé ou lue en ligne : MonÉlu la confronte aux votes réels et cite ses sources."
         >
-          <div className="rounded-[14px] rounded-bl-[4px] border border-[color:var(--dp-border)] bg-white p-3 font-newsreader text-base italic text-navy">
+          <div className="rounded-[14px] rounded-bl-[4px] border border-[color:var(--dp-border)] bg-[color:var(--dp-card-bg)] p-3 font-newsreader text-base italic text-[color:var(--dp-text)]">
             « Mon député n&apos;a pas voté ce texte. »
           </div>
           <div className="flex flex-wrap gap-1.5 text-xs">
@@ -268,11 +268,11 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
         >
           <div className="flex gap-1">
             {Array.from({ length: 10 }, (_, i) => (
-              <span key={i} className={`h-1 flex-1 rounded-full ${i < 3 ? 'bg-navy' : 'bg-[#E0DED9]'}`} />
+              <span key={i} className={`h-1 flex-1 rounded-full ${i < 3 ? 'bg-[color:var(--dp-solid-bg)]' : 'bg-[#E0DED9] dark:bg-[color:var(--dp-border)]'}`} />
             ))}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <span className="flex h-11 items-center justify-center rounded-xl bg-navy text-[15px] font-medium text-white">Pour</span>
+            <span className="flex h-11 items-center justify-center rounded-xl bg-[color:var(--dp-solid-bg)] text-[15px] font-medium text-[color:var(--dp-solid-text)]">Pour</span>
             <span className="flex h-11 items-center justify-center rounded-xl bg-red-civic text-[15px] font-medium text-white">Contre</span>
           </div>
         </FeatureCard>
