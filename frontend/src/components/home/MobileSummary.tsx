@@ -54,25 +54,25 @@ export function MobileSummary({ stats }: { stats: AssemblyStats }) {
   return (
     <section
       aria-labelledby="en-bref-mobile"
-      className="flex flex-col gap-5 border-t border-[color:var(--dp-border)] bg-white pb-8 pt-9 text-navy md:hidden"
+      className="flex flex-col gap-5 border-t border-[color:var(--dp-border)] bg-[color:var(--dp-card-bg)] pb-8 pt-9 text-[color:var(--dp-text)] md:hidden"
     >
       <div className="flex flex-col gap-2 px-5">
-        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-red-civic">MonÉlu en bref</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[color:var(--dp-red)]">MonÉlu en bref</p>
         <h2 id="en-bref-mobile" className="font-newsreader text-[26px] font-medium leading-[1.15]">
           Le relevé de vote complet de chaque député, en accès libre.
         </h2>
       </div>
 
       <dl className="grid grid-cols-3 gap-2 px-5">
-        <div className="flex flex-col rounded-[14px] bg-navy p-2.5 text-white">
-          <dt className="text-xs text-white/80">députés</dt>
+        <div className="flex flex-col rounded-[14px] bg-[color:var(--dp-solid-bg)] p-2.5 text-[color:var(--dp-solid-text)]">
+          <dt className="text-xs opacity-80">députés</dt>
           <dd className="order-first font-serif text-[22px] leading-tight">{NUMBER.format(stats.deputies)}</dd>
         </div>
-        <div className="flex flex-col rounded-[14px] bg-gray-off p-2.5">
+        <div className="flex flex-col rounded-[14px] bg-gray-off dark:bg-[color:var(--dp-page-bg)] p-2.5">
           <dt className="text-xs text-[color:var(--dp-text-secondary)]">scrutins</dt>
           <dd className="order-first font-serif text-[22px] leading-tight">{NUMBER.format(stats.votes)}</dd>
         </div>
-        <div className="flex flex-col rounded-[14px] bg-gray-off p-2.5">
+        <div className="flex flex-col rounded-[14px] bg-gray-off dark:bg-[color:var(--dp-page-bg)] p-2.5">
           <dt className="text-xs text-[color:var(--dp-text-secondary)]">positions</dt>
           <dd className="order-first font-serif text-[22px] leading-tight">{COMPACT.format(stats.positions)}</dd>
         </div>
@@ -115,9 +115,9 @@ export function MobileSummary({ stats }: { stats: AssemblyStats }) {
             <li key={slug} className="flex-none">
               <Link
                 href={`/themes/${slug}`}
-                className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-gray-off py-0 pl-2.5 pr-3.5 text-[13px] font-medium"
+                className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-gray-off dark:bg-[color:var(--dp-page-bg)] py-0 pl-2.5 pr-3.5 text-[13px] font-medium"
               >
-                <span className="text-red-civic">{THEME_ICONS[slug] ?? THEME_ICONS.autre}</span>
+                <span className="text-[color:var(--dp-red)]">{THEME_ICONS[slug] ?? THEME_ICONS.autre}</span>
                 {name}
               </Link>
             </li>
@@ -140,9 +140,9 @@ export function MobileSummary({ stats }: { stats: AssemblyStats }) {
             prend pas position. {stats.lastUpdated}.
           </p>
           <p className="flex flex-wrap gap-x-4">
-            <Link href="/methodologie" className="font-semibold text-navy underline underline-offset-2">Méthodologie</Link>
-            <Link href="/donnees" className="font-semibold text-navy underline underline-offset-2">Données</Link>
-            <Link href="/developpeurs" className="font-semibold text-navy underline underline-offset-2">API publique</Link>
+            <Link href="/methodologie" className="font-semibold text-[color:var(--dp-text)] underline underline-offset-2">Méthodologie</Link>
+            <Link href="/donnees" className="font-semibold text-[color:var(--dp-text)] underline underline-offset-2">Données</Link>
+            <Link href="/developpeurs" className="font-semibold text-[color:var(--dp-text)] underline underline-offset-2">API publique</Link>
           </p>
         </div>
       </details>

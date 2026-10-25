@@ -1,4 +1,6 @@
-type Variant = 'light' | 'dark'
+// 'theme' follows the site theme through CSS, so it is right on the first
+// paint and never depends on hydration (#612).
+type Variant = 'light' | 'dark' | 'theme'
 
 interface MonEluLogoProps {
   size?: number
@@ -42,8 +44,8 @@ const FIGURE_BW = 17                   // body width
 const FIGURE_BH = 13                   // body height
 
 export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false }: MonEluLogoProps) {
-  const navy = variant === 'light' ? '#0D1F3C' : '#FFFFFF'
-  const gray = variant === 'light' ? '#C8C5C0' : 'rgba(255,255,255,0.4)'
+  const navy = variant === 'theme' ? 'var(--dp-logo-ink)' : variant === 'light' ? '#0D1F3C' : '#FFFFFF'
+  const gray = variant === 'theme' ? 'var(--dp-logo-muted)' : variant === 'light' ? '#C8C5C0' : 'rgba(255,255,255,0.4)'
   const red  = '#C9302C'
 
   return (
@@ -69,15 +71,15 @@ export function MonEluLogo({ size = 28, variant = 'light', hideWordmark = false 
                 width={ring.w}
                 height={ring.h}
                 rx={ring.rx}
-                fill={segColor(deg, navy, gray, red)}
+                style={{ fill: segColor(deg, navy, gray, red) }}
                 transform={`rotate(${deg - 90},${x},${y})`}
               />
             )
           })
         )}
         {/* Deputy at the podium */}
-        <circle cx={CX} cy={round3(FIGURE_CY)} r={FIGURE_R} fill={navy} />
-        <rect x={round3(CX - FIGURE_BW / 2)} y={round3(FIGURE_CY + FIGURE_R)} width={FIGURE_BW} height={FIGURE_BH} rx={3} fill={navy} />
+        <circle cx={CX} cy={round3(FIGURE_CY)} r={FIGURE_R} style={{ fill: navy }} />
+        <rect x={round3(CX - FIGURE_BW / 2)} y={round3(FIGURE_CY + FIGURE_R)} width={FIGURE_BW} height={FIGURE_BH} rx={3} style={{ fill: navy }} />
       </svg>
 
       {!hideWordmark && (

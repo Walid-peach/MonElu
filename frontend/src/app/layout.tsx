@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
-import Script from 'next/script'
 import { DM_Serif_Display, DM_Sans, Newsreader } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -18,7 +17,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import { InstallEventsReporter } from '@/components/InstallEventsReporter'
 import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
-import { THEME_STORAGE_KEY } from '@/lib/theme'
+import { THEME_INIT_SCRIPT } from '@/lib/theme'
 import { INSTALL_PROMPT_CAPTURE_SCRIPT } from '@/lib/installState'
 import { smartAppBannerMetadata } from '@/lib/appStore'
 
@@ -79,8 +78,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`}>
+    // suppressHydrationWarning: THEME_INIT_SCRIPT sets the theme class on
+    // <html> before React hydrates (#612).
+    <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`} suppressHydrationWarning>
       <head>
+        {/* First in <head>, so the theme is set before anything paints (#612). */}
+        <script id="theme-init" dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* A plain inline script, not next/script: in the App Router even
             beforeInteractive scripts wait for the bootstrap chunks, and Chrome
             can fire beforeinstallprompt as soon as the manifest loads. The
@@ -91,9 +94,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen">
-        <Script id="theme-no-flash" strategy="beforeInteractive">
-          {`(function(){try{if(window.location.pathname==='/')return;var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`}
-        </Script>
         <ThemeProvider>
           {/* Organization first: WebSite.publisher references it by @id (MON-273). */}
           <JsonLd data={[buildOrganizationJsonLd(), buildWebsiteJsonLd()]} />

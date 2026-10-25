@@ -48,6 +48,7 @@ const TEXT_ON_BACKGROUNDS: Record<string, string[]> = {
   '--dp-badge-neutral-text': ['--dp-badge-neutral-bg'],
   '--dp-badge-info-text': ['--dp-badge-info-bg'],
   '--dp-badge-abst-text': ['--dp-badge-abst-bg'],
+  '--dp-solid-text': ['--dp-solid-bg'],
 }
 
 type Rgba = { rgb: [number, number, number]; alpha: number }
@@ -315,7 +316,6 @@ describe('text token contrast', () => {
   // the tokens follow <html>'s theme, and dark muted grey on white is 3:1.
   it.each([
     ['app/embed/votes/[id]/page.tsx', 'dp-light'],
-    ['app/groupes/[slug]/page.tsx', 'dp-light'],
     ['components/ShareButton.tsx', 'dp-light'],
     ['components/EmbedButton.tsx', 'dp-light'],
     ['components/ReportErrorButton.tsx', 'dp-light'],

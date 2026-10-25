@@ -237,7 +237,7 @@ It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` f
 `e2e/smoke.spec.ts` asserts both halves at 390px and 1280px.
 - **Grey text goes through `--dp-text-secondary` / `--dp-text-muted`, never a literal** (#559).
 Tailwind's `gray-mid` is retired, and `#9CA3AF`, `#6B7280` and faint translucent white all missed WCAG AA as text.
-A surface that keeps one palette in both themes (the white popovers, the embed and `/groupes/[slug]` stay light; the footer, the chat sidebar and the `/a-propos` navy sections stay dark) carries the `dp-light` or `dp-dark` class from `globals.css`, which pins the tokens of its subtree to that palette (custom properties only: `dark:` utilities inside it still follow `<html>`).
+A surface that keeps one palette in both themes (the white popovers and the embed stay light; the footer, the chat sidebar and the `/a-propos` navy sections stay dark) carries the `dp-light` or `dp-dark` class from `globals.css`, which pins the tokens of its subtree to that palette (custom properties only: `dark:` utilities inside it still follow `<html>`).
 `__tests__/lib/text-token-contrast.test.ts` checks every text token on each surface and fails on a grey text literal, `text-gray-mid`, or sub-AA white text in `src/` (Open Graph images excepted).
 - **A page never keeps its own theme state** (MON-168).
 `ThemeProvider` (`src/components/ThemeProvider.tsx`) is the single source, stored under `THEME_STORAGE_KEY = 'monelu-theme'` and applied as the `dark` class on `<html>`; every consumer reads it through `useTheme()`.

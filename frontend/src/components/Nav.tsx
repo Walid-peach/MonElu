@@ -6,8 +6,6 @@ import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
 import { ThemeToggle } from './ThemeToggle'
-import { useTheme } from './ThemeProvider'
-import { isLightOnlyPath } from '@/lib/theme'
 import { MenuEntry } from './nav/MenuEntry'
 import {
   aboutSections,
@@ -29,7 +27,6 @@ const linkActive = 'text-navy dark:text-[color:var(--dp-text)]'
 
 export function Nav() {
   const pathname = usePathname()
-  const { theme } = useTheme()
   const [openMenu, setOpenMenu] = useState<MenuId | null>(null)
   const navRef = useRef<HTMLDivElement>(null)
 
@@ -63,7 +60,7 @@ export function Nav() {
       <Link href="/" className="flex items-center shrink-0">
         <MonEluLogo
           size={32}
-          variant={theme === 'dark' && !isLightOnlyPath(pathname) ? 'dark' : 'light'}
+          variant="theme"
         />
       </Link>
 
