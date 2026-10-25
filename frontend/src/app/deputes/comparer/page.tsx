@@ -45,7 +45,7 @@ export default function ComparerPage() {
           { name: 'Comparer deux députés', url: `${SITE_URL}/deputes/comparer` },
         ])}
       />
-      <div style={{ padding: '38px 24px 60px' }}>
+      <div className="px-4 pb-14 pt-6 md:px-6 md:pb-[60px] md:pt-[38px]">
         <div style={{ maxWidth: 980, margin: '0 auto' }}>
           <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--dp-red)' }}>
             Comparateur
