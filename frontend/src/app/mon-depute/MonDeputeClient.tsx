@@ -100,8 +100,10 @@ export function MonDeputeClient() {
 
   if (!deputyId || notFound) {
     return (
-      <div style={{ background: CREAM, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '56px 24px' }}>
-        <div style={{ maxWidth: 480, textAlign: 'center' }}>
+      // Below md the picker starts at the top, left-aligned, so the search sits
+      // under the thumb instead of floating mid-screen.
+      <div className="items-start px-5 pb-14 pt-6 md:items-center md:px-6 md:py-14" style={{ background: CREAM, minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
+        <div className="w-full md:text-center" style={{ maxWidth: 480 }}>
           <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: RED, marginBottom: 16 }}>
             Mon député
           </div>
@@ -144,8 +146,7 @@ export function MonDeputeClient() {
 
   return (
     <div style={{ background: CREAM, minHeight: '100vh' }}>
-      <div style={{
-        padding: '38px 56px 44px',
+      <div className="px-5 pb-8 pt-6 md:px-14 md:pb-[44px] md:pt-[38px]" style={{
         background: `linear-gradient(180deg,var(--dp-card-bg) 0%,${CREAM} 100%)`,
         borderBottom: '1px solid var(--dp-border-subtle)',
       }}>
@@ -204,7 +205,7 @@ export function MonDeputeClient() {
         </div>
       </div>
 
-      <div style={{ padding: '44px 56px 80px' }}>
+      <div className="px-4 pb-16 pt-8 md:px-14 md:pb-20 md:pt-[44px]">
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 44 }}>
 
           {/* What changed since last visit */}
@@ -228,7 +229,7 @@ export function MonDeputeClient() {
           )}
 
           {/* Stats */}
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <section className="gap-3 md:gap-5" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
             {presencePct !== null && (
               <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '22px 24px' }}>
                 <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 10 }}>Taux de présence</div>
