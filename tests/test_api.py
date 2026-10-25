@@ -582,6 +582,7 @@ def test_get_vote_found(client, mock_cursor):
     assert resp.status_code == 200
     data = resp.json()
     assert data["vote_id"] == "VTANR5L17V1"
+    assert data["an_url"] == "https://www.assemblee-nationale.fr/dyn/17/scrutins/1"
     assert "positions" in data
     assert len(data["positions"]) == 1
 

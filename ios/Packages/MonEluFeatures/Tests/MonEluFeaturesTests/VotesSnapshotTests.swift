@@ -58,7 +58,8 @@ struct VotesSnapshotTests {
             item: full.item, votesFor: full.votesFor, votesAgainst: full.votesAgainst, abstentions: full.abstentions,
             positions: full.positions.filter { groups.contains($0.group ?? GroupPositions.nonInscrit) },
             dossierTitle: full.dossierTitle, dossierURL: full.dossierURL,
-            totalVoters: full.totalVoters, dossierID: full.dossierID, dossierStatus: full.dossierStatus
+            totalVoters: full.totalVoters, dossierID: full.dossierID, dossierStatus: full.dossierStatus,
+            officialURL: full.officialURL
         )
         // The theme and the bill are links, so the page sits in a stack
         // (outside one a link renders disabled), sized explicitly. The

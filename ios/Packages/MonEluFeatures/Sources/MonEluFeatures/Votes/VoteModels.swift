@@ -98,11 +98,14 @@ public struct VoteDetail: Hashable, Sendable {
     public let dossierID: String?
     /// The bill's derived status (`en_navette`, …).
     public let dossierStatus: String?
+    /// The scrutin's page on assemblee-nationale.fr (the API's `an_url`, #617).
+    public let officialURL: URL?
 
     public init(
         item: VoteItem, votesFor: Int?, votesAgainst: Int?, abstentions: Int?,
         positions: [DeputyPosition], dossierTitle: String?, dossierURL: URL?,
-        totalVoters: Int? = nil, dossierID: String? = nil, dossierStatus: String? = nil
+        totalVoters: Int? = nil, dossierID: String? = nil, dossierStatus: String? = nil,
+        officialURL: URL? = nil
     ) {
         self.item = item
         self.votesFor = votesFor
@@ -114,6 +117,7 @@ public struct VoteDetail: Hashable, Sendable {
         self.totalVoters = totalVoters
         self.dossierID = dossierID
         self.dossierStatus = dossierStatus
+        self.officialURL = officialURL
     }
 
     /// The bill has a page (the API's `lois_url` is set only then), so the

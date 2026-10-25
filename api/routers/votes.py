@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 from psycopg2 import sql
 from starlette.requests import Request
 
+from api.an_links import an_scrutin_url
 from api.csv_export import csv_response
 from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter, tiered_limit
@@ -320,6 +321,8 @@ def get_vote(request: Request, vote_id: str):
     that bill has no page (a legislature-16 dossier, for one). `dossier` is null
     when `dossier_id` is.
 
+    `an_url` is the scrutin's page on assemblee-nationale.fr.
+
     404 when the id is unknown.
     """
     try:
@@ -355,6 +358,7 @@ def get_vote(request: Request, vote_id: str):
 
     return VoteDetail(
         **vote,
+        an_url=an_scrutin_url(vote["vote_id"]),
         dossier=dossier,
         positions=[VotePosition(**r) for r in position_rows],
     )

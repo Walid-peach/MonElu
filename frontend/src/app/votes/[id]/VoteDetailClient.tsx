@@ -9,7 +9,7 @@ import { getInitials, partyHex } from '@/lib/utils'
 import { groupSlug } from '@/lib/groups'
 import { resolvePostalCode } from '@/lib/postal'
 import { csvUrl } from '@/lib/api'
-import { anDossierUrl } from '@/lib/an'
+import { anDossierUrl, anScrutinUrl } from '@/lib/an'
 import dynamic from 'next/dynamic'
 import { HemicycleChart } from '@/components/HemicycleChart'
 import type { HemicycleDeputy } from '@/lib/hemicycle'
@@ -152,6 +152,7 @@ export function VoteDetailClient(props: Props) {
   // Shared with the vote's JSON-LD (MON-267): the link a reader clicks and the
   // `Event.about` a crawler reads must be the same URL, guard included.
   const dossierUrl = anDossierUrl(dossierId)
+  const scrutinUrl = anScrutinUrl(voteId)
 
   return (
     <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
@@ -297,12 +298,14 @@ export function VoteDetailClient(props: Props) {
 
               {/* Actions */}
               <div className="flex-wrap" style={{ display: 'flex', gap: 10 }}>
-                <a
-                  href={`https://www.assemblee-nationale.fr/dyn/scrutins/${voteId}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dp-active-bg)', color: '#fff', padding: '11px 18px', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
-                  Voir le texte officiel
-                </a>
+                {scrutinUrl && (
+                  <a
+                    href={scrutinUrl}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dp-active-bg)', color: '#fff', padding: '11px 18px', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
+                    Voir le texte officiel
+                  </a>
+                )}
                 <a
                   href={`${apiUrl}/votes/${voteId}`}
                   target="_blank" rel="noopener noreferrer"
@@ -573,7 +576,7 @@ export function VoteDetailClient(props: Props) {
               <div style={{ font: '700 11px/1 var(--font-sans)', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--dp-text-muted)', marginBottom: 14 }}>Sources officielles</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
-                  { label: 'Assemblée nationale', href: `https://www.assemblee-nationale.fr/dyn/scrutins/${voteId}` },
+                  ...(scrutinUrl ? [{ label: 'Assemblée nationale', href: scrutinUrl }] : []),
                   { label: 'API MonÉlu — données brutes', href: `${apiUrl}/votes/${voteId}` },
                 ].map(({ label, href }) => (
                   <a key={href} href={href} target="_blank" rel="noopener noreferrer"
