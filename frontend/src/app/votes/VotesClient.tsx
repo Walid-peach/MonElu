@@ -10,6 +10,7 @@ import { AsyncStatus } from '@/components/ui/AsyncStatus'
 import { ContentSkeleton } from '@/components/ui/ContentSkeleton'
 import { useLoadingPhase } from '@/lib/loadingPolicy'
 import { VoteRowSkeleton } from './VoteRowSkeleton'
+import { VotesMobile } from './VotesMobile'
 
 const SKELETON_ROW_COUNT = 8
 
@@ -104,7 +105,23 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
   }
 
   return (
-    <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
+    <>
+    <VotesMobile
+      votes={votes}
+      total={total}
+      result={result}
+      theme={theme}
+      themes={THEMES}
+      onFilter={changeFilter}
+      inputVal={inputVal}
+      onInput={setInputVal}
+      onSearch={handleSearch}
+      page={page}
+      totalPages={totalPages}
+      onPage={p => { setPage(p); window.scrollTo({ top: 0 }) }}
+      loadingPhase={loadingPhase}
+    />
+    <div className="hidden md:block" style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
 
       {/* ── Hero ── */}
       <div className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8 sm:pb-10" style={{ background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
@@ -335,5 +352,6 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
         </div>
       </div>
     </div>
+    </>
   )
 }

@@ -6,6 +6,8 @@ jest.mock('swr', () => ({ __esModule: true, default: jest.fn() }))
 import useSWR from 'swr'
 const mockUseSWR = useSWR as jest.Mock
 
+jest.mock('@/app/votes/VotesMobile', () => ({ VotesMobile: () => null }))
+
 import { VotesClient } from '@/app/votes/VotesClient'
 import { LOADING_INLINE_MS, LOADING_NO_INDICATOR_MS } from '@/lib/loadingPolicy'
 

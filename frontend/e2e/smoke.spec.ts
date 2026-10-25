@@ -66,8 +66,10 @@ test.describe('smoke: /votes row columns are not clipped', () => {
   // doesn't lay out grid columns or honor overflow clipping.
   test('first row title and result badge are visible', async ({ page }) => {
     await page.goto('/votes')
-    const firstRow = page.locator('a[href^="/votes/"]').first()
-    await firstRow.waitFor({ state: 'attached' })
+    // The phone and desktop lists are both in the DOM, one of them hidden by
+    // a breakpoint class, so the row is the first one this viewport shows.
+    const firstRow = page.locator('a[href^="/votes/"]').filter({ visible: true }).first()
+    await firstRow.waitFor({ state: 'visible' })
     await expect(firstRow.getByText(/^Scrutin n°/).first()).toBeVisible()
     await expect(firstRow.getByText(/^Adopté$|^Rejeté$/).first()).toBeVisible()
   })
