@@ -9,11 +9,22 @@ const STATIC_ROUTES = ['/', '/deputes', '/votes', '/agenda', '/chat', '/quiz']
 async function firstDetailHref(page: Page, listPath: string, hrefPrefix: string, exclude: string[] = []) {
   await page.goto(listPath)
   const links = page.locator(`a[href^="${hrefPrefix}"]`)
-  await links.first().waitFor({ state: 'attached' })
-  const hrefs = await links.evaluateAll(els => els.map(el => el.getAttribute('href')))
-  const href = hrefs.find((h): h is string => !!h && !exclude.includes(h))
-  if (!href) throw new Error(`no link matching ${hrefPrefix} (excluding ${exclude.join(', ')}) found on ${listPath}`)
-  return href
+  // Polled rather than read once: a single read straight after the first link
+  // attaches raced client re-renders that briefly replace the list (the
+  // /votes flake fixed in VotesClient). The list still has to show a row
+  // within the timeout, so a page that never lists anything fails here.
+  let href: string | undefined
+  await expect
+    .poll(
+      async () => {
+        const hrefs = await links.evaluateAll(els => els.map(el => el.getAttribute('href')))
+        href = hrefs.find((h): h is string => !!h && !exclude.includes(h))
+        return href
+      },
+      { message: `no link matching ${hrefPrefix} (excluding ${exclude.join(', ')}) found on ${listPath}` },
+    )
+    .toBeTruthy()
+  return href as string
 }
 
 async function assertNoHorizontalOverflow(page: Page) {

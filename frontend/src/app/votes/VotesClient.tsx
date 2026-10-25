@@ -68,15 +68,25 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
     router.replace(`/votes${qs ? `?${qs}` : ''}`, { scroll: false })
   }, [result, theme, router])
 
+  // The unfiltered first page is exactly what VotesPage already rendered on the
+  // server, so it is never fetched again from the browser. Refetching it used to
+  // put the list in its loading phase on every visit: past
+  // LOADING_NO_INDICATOR_MS the 50 server-rendered rows were swapped for a
+  // "Chargement…" status until the duplicate request came back - and under the
+  // API's per-IP rate limit (one CI runner, four parallel projects) that could
+  // be seconds, long enough for the smoke tier to find no vote link at all.
+  const isInitialView = !result && !theme && !search && offset === 0
   const { data, isLoading } = useSWR(
-    `votes:${result}:${theme}:${search}:${offset}`,
+    isInitialView ? null : `votes:${result}:${theme}:${search}:${offset}`,
     () => api.votes.list({ result: result || undefined, theme: theme || undefined, search: search || undefined, limit: PAGE_SIZE, offset }),
     { keepPreviousData: true }
   )
   const loadingPhase = useLoadingPhase(isLoading)
 
-  const votes = data?.items ?? (search ? [] : initial.items)
-  const total = data?.total  ?? (search ? 0 : initial.total)
+  // keepPreviousData still hands back the last filtered list once the key goes
+  // null, so the initial view reads `initial` explicitly rather than `data`.
+  const votes = isInitialView ? initial.items : data?.items ?? (search ? [] : initial.items)
+  const total = isInitialView ? initial.total : data?.total ?? (search ? 0 : initial.total)
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 

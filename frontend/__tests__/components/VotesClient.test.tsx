@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Explicit factory mock so useSWR is a controllable jest.fn().
@@ -74,6 +74,46 @@ describe('VotesClient pagination', () => {
   })
 })
 
+// SWR answers a null key with no data and no request in flight; the mocks
+// below follow that so the initial view behaves as it does in a browser.
+const fetching = (list: ReturnType<typeof makeList>) => (key: string | null) =>
+  key === null ? { data: undefined, isLoading: false } : { data: list, isLoading: true }
+
+describe('VotesClient initial view', () => {
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.clearAllMocks()
+  })
+
+  it('does not refetch the server-rendered first page', () => {
+    mockUseSWR.mockImplementation(fetching(makeList(120)))
+    render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+    expect(mockUseSWR.mock.calls.every(([key]) => key === null)).toBe(true)
+  })
+
+  // The CI smoke tier opens a vote from this list: the rows the server
+  // rendered must still be there however long the API takes to answer.
+  it('keeps the server-rendered rows past every loading threshold', () => {
+    mockUseSWR.mockImplementation(fetching(makeList(120)))
+    render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+    act(() => {
+      jest.advanceTimersByTime(LOADING_INLINE_MS + 50)
+    })
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Test vote/ })).toHaveAttribute('href', '/votes/v1')
+  })
+
+  it('shows the initial list again, not the last filtered one, once filters are cleared', () => {
+    const filtered = { ...makeList(3), items: [{ ...vote, vote_id: 'v2', vote_title: 'Filtered vote' }] }
+    // What keepPreviousData returns for a null key after a filtered fetch.
+    mockUseSWR.mockReturnValue({ data: filtered, isLoading: false })
+    render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+    expect(screen.getByRole('link', { name: /Test vote/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Filtered vote/ })).not.toBeInTheDocument()
+  })
+})
+
 describe('VotesClient loading treatment (MON-215)', () => {
   beforeEach(() => jest.useFakeTimers())
   afterEach(() => {
@@ -82,8 +122,9 @@ describe('VotesClient loading treatment (MON-215)', () => {
   })
 
   it('does not show a loader for a fast completion under the no-indicator threshold', () => {
-    mockUseSWR.mockReturnValue({ data: makeList(120), isLoading: true })
+    mockUseSWR.mockImplementation(fetching(makeList(120)))
     render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Adoptés' }))
 
     act(() => {
       jest.advanceTimersByTime(LOADING_NO_INDICATOR_MS - 50)
@@ -92,8 +133,9 @@ describe('VotesClient loading treatment (MON-215)', () => {
   })
 
   it('shows subtle inline activity between the no-indicator and skeleton thresholds', () => {
-    mockUseSWR.mockReturnValue({ data: makeList(120), isLoading: true })
+    mockUseSWR.mockImplementation(fetching(makeList(120)))
     render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Adoptés' }))
 
     act(() => {
       jest.advanceTimersByTime(LOADING_NO_INDICATOR_MS + 50)
@@ -105,8 +147,9 @@ describe('VotesClient loading treatment (MON-215)', () => {
   })
 
   it('shows the layout-matched row skeleton for a delayed completion', () => {
-    mockUseSWR.mockReturnValue({ data: makeList(120), isLoading: true })
+    mockUseSWR.mockImplementation(fetching(makeList(120)))
     render(<VotesClient initial={makeList(120)} heroStats={heroStats} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Adoptés' }))
 
     act(() => {
       jest.advanceTimersByTime(LOADING_INLINE_MS + 50)
