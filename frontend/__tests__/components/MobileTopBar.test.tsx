@@ -128,6 +128,28 @@ describe('MobileDrawer', () => {
     expect(drawer().parentElement).toHaveAttribute('aria-hidden', 'true')
   })
 
+  // PR #614 review: closing must not leave keyboard focus on <body>.
+  it('gives focus back to the ☰ that opened it', () => {
+    pathname = '/deputes'
+    renderBar()
+    const trigger = screen.getByRole('button', { name: 'Ouvrir le menu' })
+    trigger.focus()
+    fireEvent.click(trigger)
+    expect(drawer().contains(document.activeElement)).toBe(true)
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('sets the chosen theme', () => {
+    pathname = '/deputes'
+    renderBar()
+    act(() => openMobileMenu())
+    fireEvent.click(within(drawer()).getByRole('button', { name: 'Sombre' }))
+    expect(window.localStorage.getItem('monelu-theme')).toBe('dark')
+    expect(within(drawer()).getByRole('button', { name: 'Sombre' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   // The homepage hero has its own ☰, which opens the same drawer.
   it('opens from anywhere through openMobileMenu()', () => {
     renderBar()

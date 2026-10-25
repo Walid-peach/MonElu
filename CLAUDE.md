@@ -244,6 +244,11 @@ A surface that keeps one palette in both themes (the white popovers and the embe
 `/chat` shipped with a private `monelu-dark` localStorage flag instead, so the nav toggle darkened the chrome and left the whole conversation panel white - the two systems shared no state and no key, and neither toggle moved the other half.
 The chat page still computes its colors as inline styles rather than Tailwind classes (it is the largest file in the app), which is fine: what matters is that the `dk` boolean feeding them comes from `useTheme()`.
 `__tests__/app/chat-theme.test.tsx` fails if `'monelu-dark'` reappears in `ChatClient.tsx` or if the panel background stops tracking the stored site theme.
+- **Phones get a different chrome in the browser and in the installed web app** (#614).
+In the browser, `MobileTopBar` (☰, search, "Installer", and the `MobileDrawer` menu) sits at the top; inside the installed app, `BottomNav` sits at the bottom, and neither shows from `md` up.
+The switch is CSS, keyed on `data-installed`, which `INSTALLED_FLAG_SCRIPT` (`src/lib/installState.ts`) sets on `<html>` from `<head>` before the first paint, with the same test as `isStandalone()` (iOS home-screen icons need `navigator.standalone`).
+Style anything that differs between the two with the Tailwind `installed:` variant (`tailwind.config.ts`), never with a client-side `isStandalone()` branch, which would flash the wrong bar until hydration.
+The bottom spacing the floating tab bar needs (`MainFrame` on `/chat`, the phone `Footer`) is `installed:` only, and `/chat`'s full-screen shell subtracts the top bar's 60px on phones in the browser.
 - **Every static route must appear in `sitemap.ts`** (MON-265).
 `/deputes/comparer` shipped as a client-only page with no metadata and no sitemap entry, reachable only by clicking through from inside the app - a finished feature invisible to search and to LLM crawlers, with nothing reporting it.
 `__tests__/app/sitemap-coverage.test.ts` now enumerates every non-dynamic `page.tsx` and fails if its path is absent from `sitemap.ts`; `~offline` is the single allowlisted exclusion, and dynamic routes are out of scope (they are enumerated from the API, from a slug table, or are snapshot URLs kept out by decision - MON-264).
