@@ -8,6 +8,7 @@ import './globals.css'
 import { Nav } from '@/components/Nav'
 import { GlobalSearch } from '@/components/GlobalSearch'
 import { BottomNav } from '@/components/BottomNav'
+import { MobileTopBar } from '@/components/MobileTopBar'
 import { PageTransition } from '@/components/PageTransition'
 import { FreshnessBadge } from '@/components/FreshnessBadge'
 import { Footer } from '@/components/Footer'
@@ -19,7 +20,7 @@ import { InstallEventsReporter } from '@/components/InstallEventsReporter'
 import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import { THEME_STORAGE_KEY } from '@/lib/theme'
-import { INSTALL_PROMPT_CAPTURE_SCRIPT } from '@/lib/installState'
+import { INSTALL_PROMPT_CAPTURE_SCRIPT, INSTALLED_FLAG_SCRIPT } from '@/lib/installState'
 import { smartAppBannerMetadata } from '@/lib/appStore'
 
 const serif = DM_Serif_Display({
@@ -79,7 +80,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`}>
+    // suppressHydrationWarning: INSTALLED_FLAG_SCRIPT may add `data-installed`
+    // to this element before React hydrates; it only covers <html>'s own attributes.
+    <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`} suppressHydrationWarning>
       <head>
         {/* A plain inline script, not next/script: in the App Router even
             beforeInteractive scripts wait for the bootstrap chunks, and Chrome
@@ -89,6 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           id="install-prompt-capture"
           dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_CAPTURE_SCRIPT }}
         />
+        <script id="installed-flag" dangerouslySetInnerHTML={{ __html: INSTALLED_FLAG_SCRIPT }} />
       </head>
       <body className="min-h-screen">
         <Script id="theme-no-flash" strategy="beforeInteractive">
@@ -99,6 +103,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <JsonLd data={[buildOrganizationJsonLd(), buildWebsiteJsonLd()]} />
           <Suspense fallback={null}>
             <Nav />
+          </Suspense>
+          {/* Phones in the browser; the installed app keeps BottomNav (H1). */}
+          <Suspense fallback={null}>
+            <MobileTopBar />
           </Suspense>
           {/* Triggerless: the nav menus and the mobile sheet open it, plus ⌘K. */}
           <HideOnEmbed><GlobalSearch hideTrigger /></HideOnEmbed>

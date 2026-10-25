@@ -6,6 +6,7 @@ import type { DeputyInfo } from '@/app/page'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { isStandalone } from '@/lib/installState'
 import { recordInstallEvent } from '@/lib/installEvents'
+import { openMobileMenu } from '@/lib/mobileMenu'
 
 type Props = {
   stats: AssemblyStats
@@ -128,6 +129,23 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
   return (
     <div className="md:hidden">
       <section className="flex flex-col gap-5 bg-gray-off px-5 pb-10 pt-6 text-navy">
+        {/* The top bar stays hidden until this hero scrolls past, so the hero
+            carries the wordmark and ☰ (H1); the installed app has its tab bar. */}
+        <div className="-mb-1 flex items-center justify-between installed:hidden">
+          <span className="font-serif text-2xl text-navy">
+            Mon<span className="text-red-civic">É</span>lu
+          </span>
+          <button
+            type="button"
+            onClick={openMobileMenu}
+            aria-label="Ouvrir le menu"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--dp-border)] bg-white text-navy"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h10" />
+            </svg>
+          </button>
+        </div>
         <p className={`${eyebrow} text-[color:var(--dp-text-muted)]`}>Assemblée nationale · 17e législature</p>
         {/* The page's single `<h1>` (MON-270). This section is server-rendered on
             every viewport - the cinematic only ever adds `<h2>`s. */}

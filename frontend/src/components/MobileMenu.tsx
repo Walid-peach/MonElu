@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useRef, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
@@ -8,6 +8,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { useTheme } from './ThemeProvider'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
 import { MenuEntry } from './nav/MenuEntry'
+import { useModalSheet } from './nav/useModalSheet'
 import { aboutSections, exploreSections, isEntryActive, phoneAppEntry } from './nav/navigation'
 import { isStandalone } from '@/lib/installState'
 import { recordInstallEvent } from '@/lib/installEvents'
@@ -22,9 +23,6 @@ const SHEETS = {
 }
 
 const noopSubscribe = () => () => {}
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
 /**
  * Mobile counterpart of the desktop dropdowns, opened as a bottom sheet from
@@ -47,43 +45,7 @@ export function MobileMenu({
   // The installed web app does not offer to install itself (#596).
   const standalone = useSyncExternalStore(noopSubscribe, isStandalone, () => false)
 
-  useEffect(() => {
-    if (!open) return
-
-    // A real aria-modal dialog needs a focus trap: without one, Tab can walk
-    // focus out into the page content sitting behind the sheet.
-    function focusableElements(): HTMLElement[] {
-      return Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
-    }
-
-    focusableElements()[0]?.focus()
-
-    function onKeyDown(e: globalThis.KeyboardEvent) {
-      if (e.key === 'Escape') {
-        onClose()
-        return
-      }
-      if (e.key !== 'Tab') return
-      const elements = focusableElements()
-      if (elements.length === 0) return
-      const first = elements[0]
-      const last = elements[elements.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [open, onClose])
+  useModalSheet(open, onClose, dialogRef)
 
   return (
     <div
