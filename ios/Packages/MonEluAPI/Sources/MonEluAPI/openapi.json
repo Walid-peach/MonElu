@@ -1139,7 +1139,7 @@
           "Votes"
         ],
         "summary": "One scrutin in full, including how every deputy voted",
-        "description": "A single scrutin with its tallies and the complete per-deputy roll call.\n\n`positions` is the whole chamber in one array - typically 577 entries, not\npaginated. Each `position` is `pour`, `contre`, `abstention` or `nonVotant`;\n`abstention` and `nonVotant` are different and must not be summed.\n\nThe aggregate counters (`votes_for`, `votes_against`, `abstentions`,\n`total_voters`) come from the Assemblée's own synthesis rather than from\ncounting `positions`, so prefer them when quoting a tally. `summary_plain` is\nan LLM-generated plain-French gloss of the title and may be null.\n\n`dossier_id` links the scrutin to its bill, but is present on a minority of\nvotes: the Assemblée only began tagging scrutins with a dossier in March 2026.\nIts absence says nothing about the vote. When it is set, `dossier` carries\nthe bill's title and status and `lois_url`, its MonÉlu bill page - null when\nthat bill has no page (a legislature-16 dossier, for one). `dossier` is null\nwhen `dossier_id` is.\n\n404 when the id is unknown.",
+        "description": "A single scrutin with its tallies and the complete per-deputy roll call.\n\n`positions` is the whole chamber in one array - typically 577 entries, not\npaginated. Each `position` is `pour`, `contre`, `abstention` or `nonVotant`;\n`abstention` and `nonVotant` are different and must not be summed.\n\nThe aggregate counters (`votes_for`, `votes_against`, `abstentions`,\n`total_voters`) come from the Assemblée's own synthesis rather than from\ncounting `positions`, so prefer them when quoting a tally. `summary_plain` is\nan LLM-generated plain-French gloss of the title and may be null.\n\n`dossier_id` links the scrutin to its bill, but is present on a minority of\nvotes: the Assemblée only began tagging scrutins with a dossier in March 2026.\nIts absence says nothing about the vote. When it is set, `dossier` carries\nthe bill's title and status and `lois_url`, its MonÉlu bill page - null when\nthat bill has no page (a legislature-16 dossier, for one). `dossier` is null\nwhen `dossier_id` is.\n\n`an_url` is the scrutin's page on assemblee-nationale.fr.\n\n404 when the id is unknown.",
         "operationId": "getVote",
         "parameters": [
           {
@@ -4375,7 +4375,7 @@
         "example": {
           "scrutin": {
             "abstentions": 7,
-            "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+            "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
             "closest": false,
             "deputy_position": "pour",
             "dossier_id": "DLR5L17N53980",
@@ -4516,7 +4516,7 @@
             {
               "scrutin": {
                 "abstentions": 7,
-                "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+                "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
                 "closest": false,
                 "deputy_position": "pour",
                 "dossier_id": "DLR5L17N53980",
@@ -4693,7 +4693,7 @@
           "an_url": {
             "type": "string",
             "title": "An Url",
-            "description": "The scrutin's official page on assemblee-nationale.fr"
+            "description": "The scrutin's official page on assemblee-nationale.fr; the legislature's list of scrutins when the id is not an AN scrutin uid"
           },
           "dossier_id": {
             "title": "Dossier Id",
@@ -4716,7 +4716,7 @@
         "description": "One scrutin card: everything the card shows, nothing left to compute.",
         "example": {
           "abstentions": 7,
-          "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+          "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
           "closest": false,
           "deputy_position": "pour",
           "dossier_id": "DLR5L17N53980",
@@ -6942,6 +6942,11 @@
             "title": "Vote Type",
             "type": "string"
           },
+          "an_url": {
+            "title": "An Url",
+            "description": "The scrutin's official page on assemblee-nationale.fr; null when the id is not an AN scrutin uid (#617)",
+            "type": "string"
+          },
           "dossier_id": {
             "title": "Dossier Id",
             "type": "string"
@@ -6973,6 +6978,7 @@
         "description": "Full vote — used in GET /votes/{vote_id}.",
         "example": {
           "abstentions": 7,
+          "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
           "dossier": {
             "dossier_uid": "DLR5L17N53980",
             "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N53980",

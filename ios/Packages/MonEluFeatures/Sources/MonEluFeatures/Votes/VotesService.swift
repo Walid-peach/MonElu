@@ -64,7 +64,8 @@ extension VoteDetail {
             dossierURL: vote.dossier?.loisUrl.flatMap(URL.init(string:)),
             totalVoters: vote.totalVoters,
             dossierID: vote.dossier?.dossierUid,
-            dossierStatus: vote.dossier?.status
+            dossierStatus: vote.dossier?.status,
+            officialURL: vote.anUrl.flatMap(URL.init(string:))
         )
     }
 }

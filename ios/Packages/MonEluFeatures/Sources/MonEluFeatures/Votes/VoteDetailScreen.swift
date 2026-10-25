@@ -133,19 +133,26 @@ struct VoteDetailContent: View {
             .joined(separator: " · ")
     }
 
-    /// The Assemblée as the source, and the licence its data is under.
-    private var source: some View {
-        Link(destination: URL(string: "https://www.assemblee-nationale.fr/dyn/scrutins/\(vote.item.id)")!) {
-            Label(
-                "Source : Assemblée nationale\(vote.scrutinNumber.map { ", scrutin n° \($0)" } ?? "") · Licence Ouverte 2.0",
-                systemImage: "arrow.up.right.square"
-            )
-            .font(.footnote)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
+    /// The Assemblée as the source, and the licence its data is under; a
+    /// link to the scrutin's page when the API gave one.
+    @ViewBuilder private var source: some View {
+        if let url = vote.officialURL {
+            Link(destination: url) { sourceLabel }
+                .tint(Palette.textSecondary)
+                .accessibilityHint("Ouvre le scrutin sur le site de l'Assemblée nationale")
+        } else {
+            sourceLabel.foregroundStyle(Palette.textSecondary)
         }
-        .tint(Palette.textSecondary)
-        .accessibilityHint("Ouvre le scrutin sur le site de l'Assemblée nationale")
+    }
+
+    private var sourceLabel: some View {
+        Label(
+            "Source : Assemblée nationale\(vote.scrutinNumber.map { ", scrutin n° \($0)" } ?? "") · Licence Ouverte 2.0",
+            systemImage: "arrow.up.right.square"
+        )
+        .font(.footnote)
+        .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

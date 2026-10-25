@@ -746,6 +746,7 @@ class VoteDetail(VoteSummary):
                 "summary_plain": ("Le texte issu de la commission mixte paritaire a été adopté."),
                 "theme": "Justice & Sécurité",
                 "vote_type": "sps",
+                "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
                 "dossier_id": "DLR5L17N53980",
                 "dossier": {
                     "dossier_uid": "DLR5L17N53980",
@@ -773,6 +774,11 @@ class VoteDetail(VoteSummary):
     )
 
     vote_type: Optional[str] = None
+    an_url: Optional[str] = Field(
+        default=None,
+        description="The scrutin's official page on assemblee-nationale.fr; null when the id "
+        "is not an AN scrutin uid (#617)",
+    )
     dossier_id: Optional[str] = None
     dossier: Optional[VoteDossierRef] = Field(
         default=None, description="The scrutin's bill; null when dossier_id is absent"
@@ -1468,7 +1474,7 @@ _FEED_SCRUTIN_EXAMPLE = {
         {"deputy_id": "PA720892", "position": "pour"},
         {"deputy_id": "PA793218", "position": "contre"},
     ],
-    "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+    "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
     "dossier_id": "DLR5L17N53980",
     "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N53980",
 }
@@ -1519,7 +1525,10 @@ class FeedScrutin(_Base):
         description="Each followed deputy with a recorded position on this scrutin, in the "
         "followed order; empty when none",
     )
-    an_url: str = Field(description="The scrutin's official page on assemblee-nationale.fr")
+    an_url: str = Field(
+        description="The scrutin's official page on assemblee-nationale.fr; the legislature's "
+        "list of scrutins when the id is not an AN scrutin uid"
+    )
     dossier_id: Optional[str] = None
     lois_url: Optional[str] = Field(
         default=None, description="The bill's MonÉlu page; null unless the dossier has one"

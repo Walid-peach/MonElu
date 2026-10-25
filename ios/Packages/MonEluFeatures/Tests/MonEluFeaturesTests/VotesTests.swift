@@ -118,6 +118,7 @@ struct LiveVotesServiceTests {
         #expect(vote.abstentions == 2)
         #expect(vote.positions.count == 24)
         #expect(vote.dossierURL?.path() == "/lois/DLR5L17N52746")
+        #expect(vote.officialURL?.absoluteString == "https://www.assemblee-nationale.fr/dyn/17/scrutins/8434")
     }
 
     @Test @MainActor func unknownVoteIsAnErrorStateNotACrash() async {

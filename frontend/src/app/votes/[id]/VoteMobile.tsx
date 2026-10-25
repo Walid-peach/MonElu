@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ShareButton } from '@/components/ShareButton'
 import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { csvUrl } from '@/lib/api'
+import { anScrutinUrl } from '@/lib/an'
 import { groupSlug } from '@/lib/groups'
 import { Eyebrow, ResultBadge, SplitBar, cardClass } from '@/components/phone/kit'
 
@@ -42,6 +43,7 @@ export function VoteHeroMobile({
   dossierUrl: string | null
 }) {
   const adopted = result === 'adopté'
+  const scrutinUrl = anScrutinUrl(voteId)
   return (
     <div className="flex flex-col gap-4 px-4 pb-2 pt-4 md:hidden">
       <Link href="/votes" className="flex items-center gap-1 self-start text-sm font-semibold text-[color:var(--dp-red)]">
@@ -87,14 +89,16 @@ export function VoteHeroMobile({
           Majorité absolue : 289 voix.
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={`https://www.assemblee-nationale.fr/dyn/scrutins/${voteId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="dp-dark flex h-11 flex-1 items-center justify-center rounded-xl bg-navy px-4 text-sm font-semibold text-white dark:bg-[color:var(--dp-active-bg)]"
-          >
-            Texte officiel
-          </a>
+          {scrutinUrl && (
+            <a
+              href={scrutinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="dp-dark flex h-11 flex-1 items-center justify-center rounded-xl bg-navy px-4 text-sm font-semibold text-white dark:bg-[color:var(--dp-active-bg)]"
+            >
+              Texte officiel
+            </a>
+          )}
           <a
             href={csvUrl.votePositions(voteId)}
             download
