@@ -13,6 +13,7 @@ import { anDossierUrl } from '@/lib/an'
 import dynamic from 'next/dynamic'
 import { HemicycleChart } from '@/components/HemicycleChart'
 import type { HemicycleDeputy } from '@/lib/hemicycle'
+import { GroupBreakdownMobile, VoteHeroMobile } from './VoteMobile'
 
 // The 3D replay is the default view. It is client-only and loaded as its own
 // chunk after hydration, so the vote page's server HTML and first bundle stay as they were.
@@ -155,8 +156,9 @@ export function VoteDetailClient(props: Props) {
   return (
     <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
 
-      {/* ── Sticky scroll bar ── */}
-      <div style={{
+      {/* ── Sticky scroll bar ── (desktop only: the phone hero stays in
+          view, and the phone top bar already sits at the top) */}
+      <div className="hidden md:block" style={{
         position: 'fixed', left: 0, right: 0, top: 64, zIndex: 50,
         opacity: showBar ? 1 : 0,
         transform: showBar ? 'translateY(0)' : 'translateY(-28px)',
@@ -182,8 +184,23 @@ export function VoteDetailClient(props: Props) {
         </div>
       </div>
 
+      <VoteHeroMobile
+        voteId={voteId}
+        voteTitle={voteTitle}
+        headline={headline}
+        summary={summary}
+        result={result}
+        votedAt={votedAt}
+        theme={theme}
+        votesFor={votesFor}
+        votesAgainst={votesAgainst}
+        abstentions={abstentions}
+        totalVoters={totalVoters}
+        dossierUrl={dossierUrl}
+      />
+
       {/* ── Hero ── */}
-      <div ref={heroRef} style={{ padding: '38px 56px 48px', background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
+      <div ref={heroRef} className="hidden md:block" style={{ padding: '38px 56px 48px', background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
 
           {/* Breadcrumb */}
@@ -323,7 +340,7 @@ export function VoteDetailClient(props: Props) {
       </div>
 
       {/* ── Body ── */}
-      <div className="px-5 py-10 sm:px-14 sm:py-[52px] sm:pb-20">
+      <div className="px-4 pb-10 pt-8 md:px-14 md:py-[52px] md:pb-20">
         <div className="flex flex-col xl:flex-row xl:items-start" style={{ maxWidth: 1180, margin: '0 auto', gap: 56 }}>
 
           {/* Main column */}
@@ -339,7 +356,7 @@ export function VoteDetailClient(props: Props) {
                     ? 'Chaque vote tombe dans le siège de son député, placé selon son groupe parlementaire. La vue à plat permet de survoler chaque siège pour voir le détail.'
                     : 'Un point par député ayant pris part au scrutin, placé selon son groupe parlementaire. Survolez ou touchez un siège pour voir le détail.'}
                 </p>
-                <div style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, padding: '24px 28px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
+                <div className="p-3 md:px-7 md:py-6" style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
                   {replay3d ? (
                     <HemicycleReplay
                       deputies={hemicycleDeputies}
@@ -437,7 +454,8 @@ export function VoteDetailClient(props: Props) {
                 <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '12px 0 4px', letterSpacing: '-0.01em' }}>Comment chaque groupe a voté</h2>
                 <p style={{ fontSize: 15, color: 'var(--dp-text-secondary)', margin: '0 0 22px', maxWidth: 560 }}>Position majoritaire exprimée par les membres de chaque groupe parlementaire.</p>
 
-                <div style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
+                <GroupBreakdownMobile groups={groups} />
+                <div className="hidden md:block" style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px 90px', gap: 14, padding: '12px 24px', borderBottom: '1px solid var(--dp-border)', background: 'var(--dp-header-bg)', font: '600 11px/1 var(--font-sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--dp-text-muted)' }}>
                     <span>Groupe</span><span>Position</span><span style={{ textAlign: 'right' }}>Pour</span><span style={{ textAlign: 'right' }}>Contre</span>
                     <span style={{ textAlign: 'right' }}>Abst.</span>
