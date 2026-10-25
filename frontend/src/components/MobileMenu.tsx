@@ -5,14 +5,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MonEluLogo } from './MonEluLogo'
 import { ThemeToggle } from './ThemeToggle'
-import { useTheme } from './ThemeProvider'
 import { FollowedDeputyChip } from './FollowedDeputyChip'
 import { MenuEntry } from './nav/MenuEntry'
 import { useModalSheet } from './nav/useModalSheet'
 import { aboutSections, exploreSections, isEntryActive, phoneAppEntry } from './nav/navigation'
 import { isStandalone } from '@/lib/installState'
 import { recordInstallEvent } from '@/lib/installEvents'
-import { isLightOnlyPath } from '@/lib/theme'
 
 /** Which sheet: the parliament data (Explorer tab) or everything around it (Menu). */
 export type MobileMenuVariant = 'explore' | 'menu'
@@ -40,7 +38,6 @@ export function MobileMenu({
 }) {
   const { label, sections } = SHEETS[variant]
   const pathname = usePathname()
-  const { theme } = useTheme()
   const dialogRef = useRef<HTMLDivElement>(null)
   // The installed web app does not offer to install itself (#596).
   const standalone = useSyncExternalStore(noopSubscribe, isStandalone, () => false)
@@ -73,7 +70,7 @@ export function MobileMenu({
           <Link href="/" className="flex items-center" onClick={onClose}>
             <MonEluLogo
               size={28}
-              variant={theme === 'dark' && !isLightOnlyPath(pathname) ? 'dark' : 'light'}
+              variant="theme"
             />
           </Link>
           <div className="flex items-center gap-2">

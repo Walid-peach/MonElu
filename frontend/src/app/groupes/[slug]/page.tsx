@@ -13,10 +13,13 @@ import { canonicalUrl } from '@/lib/site'
 export const dynamicParams = true
 export const revalidate = 86400
 
-const NAVY  = '#1B2B50'
-const CREAM = '#F7F4ED'
-const LINE  = '#E4E6EA'
-const RED   = '#C9302A'
+// #612: the page follows the site theme through the shared tokens.
+const NAVY  = 'var(--dp-text)'
+const CREAM = 'var(--dp-page-bg)'
+const CARD  = 'var(--dp-card-bg)'
+const LINE  = 'var(--dp-border)'
+const RED   = 'var(--dp-red)'
+const GREEN = 'var(--dp-badge-pos-text)'
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
@@ -51,7 +54,7 @@ const MAJORITY_LABEL: Record<string, string> = {
 }
 
 const MAJORITY_COLOR: Record<string, string> = {
-  pour: '#15803D',
+  pour: GREEN,
   contre: RED,
   abstention: 'var(--dp-text-muted)',
 }
@@ -83,17 +86,15 @@ export default async function GroupPage(
   ])
 
   return (
-    // dp-light: this page keeps its cream and white surfaces in both themes,
-    // so its text tokens stay light (#559).
-    <div className="dp-light" style={{ background: CREAM, minHeight: '100vh' }}>
+    <div style={{ background: CREAM, minHeight: '100vh' }}>
       <JsonLd data={breadcrumb} />
 
       {/* Hero */}
       <div
         className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8 sm:pb-10"
         style={{
-          background: `linear-gradient(180deg,#fff 0%,${CREAM} 100%)`,
-          borderBottom: '1px solid #ECE7DC',
+          background: `linear-gradient(180deg,${CARD} 0%,${CREAM} 100%)`,
+          borderBottom: '1px solid var(--dp-border-subtle)',
         }}
       >
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
@@ -111,7 +112,7 @@ export default async function GroupPage(
           }}>
             {data.name}
           </h1>
-          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: '#4B5563', maxWidth: 560 }}>
+          <p style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: 'var(--dp-text-secondary)', maxWidth: 560 }}>
             Les {data.member_count} député{data.member_count !== 1 ? 's' : ''} de ce
             groupe à l&apos;Assemblée nationale : présence, cohésion et votes qui les divisent.
           </p>
@@ -119,7 +120,7 @@ export default async function GroupPage(
           {/* Aggregate cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" style={{ marginTop: 30, maxWidth: 900 }}>
             {avgPresencePct !== null && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+              <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
                 <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Présence moyenne
                 </div>
@@ -134,7 +135,7 @@ export default async function GroupPage(
               </div>
             )}
             {cohesionPct !== null && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+              <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
                 <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Cohésion du groupe
                 </div>
@@ -147,7 +148,7 @@ export default async function GroupPage(
               </div>
             )}
             {topDissident && (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
+              <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 22px' }}>
                 <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 8 }}>
                   Le plus dissident
                 </div>
@@ -183,9 +184,9 @@ export default async function GroupPage(
                     key={m.deputy_id}
                     href={`/deputes/${m.deputy_id}`}
                     style={{
-                      display: 'block', background: '#fff', border: `1px solid ${LINE}`,
+                      display: 'block', background: CARD, border: `1px solid ${LINE}`,
                       borderRadius: 12, padding: '20px 22px', textDecoration: 'none',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      boxShadow: '0 1px 3px var(--dp-shadow-sm)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
@@ -227,8 +228,8 @@ export default async function GroupPage(
                 Les députés qui s&apos;écartent le plus du groupe
               </h2>
               <div style={{
-                background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12,
-                overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
+                overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)',
               }}>
                 {data.most_dissident_members.map((m, i) => (
                   <Link
@@ -237,7 +238,7 @@ export default async function GroupPage(
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       padding: '14px 22px', textDecoration: 'none', gap: 16,
-                      borderBottom: i < data.most_dissident_members.length - 1 ? '1px solid #F0F1F3' : 'none',
+                      borderBottom: i < data.most_dissident_members.length - 1 ? '1px solid var(--dp-border-subtle)' : 'none',
                     }}
                   >
                     <span style={{ fontWeight: 600, fontSize: 14.5, color: NAVY }}>{m.full_name}</span>
@@ -292,8 +293,8 @@ export default async function GroupPage(
 function VoteBreakdownList({ votes }: { votes: GroupVoteBreakdown[] }) {
   return (
     <div style={{
-      background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12,
-      overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
+      overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)',
     }}>
       {votes.map((v, i) => (
         <Link
@@ -301,7 +302,7 @@ function VoteBreakdownList({ votes }: { votes: GroupVoteBreakdown[] }) {
           href={`/votes/${v.vote_id}`}
           style={{
             display: 'block', padding: '16px 22px', textDecoration: 'none',
-            borderBottom: i < votes.length - 1 ? '1px solid #F0F1F3' : 'none',
+            borderBottom: i < votes.length - 1 ? '1px solid var(--dp-border-subtle)' : 'none',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -309,7 +310,7 @@ function VoteBreakdownList({ votes }: { votes: GroupVoteBreakdown[] }) {
               {v.vote_title}
             </span>
             <span style={{ display: 'flex', gap: 12, alignItems: 'baseline', whiteSpace: 'nowrap' }}>
-              <span className="font-mono" style={{ fontSize: 12.5, color: '#15803D' }}>{v.pour} pour</span>
+              <span className="font-mono" style={{ fontSize: 12.5, color: GREEN }}>{v.pour} pour</span>
               <span className="font-mono" style={{ fontSize: 12.5, color: RED }}>{v.contre} contre</span>
               {v.abstention > 0 && (
                 <span className="font-mono" style={{ fontSize: 12.5, color: 'var(--dp-text-muted)' }}>{v.abstention} abst.</span>

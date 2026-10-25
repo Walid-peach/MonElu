@@ -47,13 +47,16 @@
 
 /* #559: .dp-light and .dp-dark pin a subtree to one palette whatever the
    site theme, for surfaces that keep their colours in both themes: the white
-   popovers, the embed and the /groupes page stay light, the footer and the
-   chat sidebar stay navy. Text on them still goes through the tokens, so it
+   popovers and the embed stay light, the footer and the chat sidebar stay
+   navy. Text on them still goes through the tokens, so it
    is held to the same contrast check as the rest of the site. They pin the
    custom properties only: Tailwind dark: variants still follow <html>, and
    the print reset below does not reach a .dp-dark subtree. */
 :root,
 .dp-light {
+  /* #612: native controls, scrollbars, autofill and the overscroll area
+     follow the palette, and .dark below flips it. */
+  color-scheme: light;
   --color-bg: theme('colors.gray.off');
   --color-fg: theme('colors.navy.DEFAULT');
 
@@ -88,6 +91,15 @@
      with hardcoded white text, so it must stay dark-enough-for-white-text
      in both themes rather than inverting like --dp-text does. */
   --dp-active-bg: #1B2B50;
+  /* #612: the solid ink fill the homepage draws "Pour" and selected chips
+     with: navy under white in light mode, inverted in dark mode, where a navy
+     fill would vanish into the navy page. Unlike --dp-active-bg it inverts,
+     so its text has its own token. */
+  --dp-solid-bg: theme('colors.navy.DEFAULT');
+  --dp-solid-text: #FFFFFF;
+  /* #612: MonEluLogo variant="theme" (the nav and the menu). */
+  --dp-logo-ink: theme('colors.navy.DEFAULT');
+  --dp-logo-muted: #C8C5C0;
   /* MON-163: same reasoning as --dp-active-bg, for solid accent-colored CTA
      buttons paired with hardcoded white text (e.g. "Poser une question",
      "Rechercher", the print button). --dp-accent itself is allowed to
@@ -149,12 +161,12 @@
   --focus-ring: #2563EB;
 }
 
-/* MON-154: dark-mode theme tokens. The `dark` class is toggled on <html> by
-   ThemeProvider and never applied on the landing page (ADR-027). Page- and
-   component-level dark: variants land in follow-up MON-103 sub-issues — this
-   only wires the mechanism through the shared body background/foreground. */
+/* MON-154: dark-mode theme tokens. The `dark` class is set on <html> by
+   lib/theme.ts on every page, the landing page included since #612 (ADR-027
+   amendment). */
 .dark,
 .dp-dark {
+  color-scheme: dark;
   --color-bg: #0B1424;
   --color-fg: #F1F0EC;
 
@@ -193,6 +205,10 @@
   --dp-badge-abst-bg: rgba(217,119,6,0.18);
   --dp-badge-abst-text: #F5B759;
   --dp-sticky-bg: rgba(18,29,48,0.92);
+  --dp-solid-bg: #F1F0EC;
+  --dp-solid-text: #0D1F3C;
+  --dp-logo-ink: #FFFFFF;
+  --dp-logo-muted: rgba(255,255,255,0.4);
 
   /* MON-197: lightened so each still clears 4.5:1 against --dp-card-bg
      (#121D30) — the originals (esp. --party-rn navy-on-navy) fell as low as
@@ -265,6 +281,7 @@
   @page { size: A4; margin: 14mm; }
 
   :root {
+    color-scheme: light;
     --color-bg: theme('colors.gray.off');
     --color-fg: theme('colors.navy.DEFAULT');
     --dp-page-bg: #F7F4ED;
@@ -298,6 +315,10 @@
     --dp-badge-abst-bg: #FDF1DC;
     --dp-badge-abst-text: #92400E;
     --dp-sticky-bg: rgba(255,255,255,0.94);
+    --dp-solid-bg: theme('colors.navy.DEFAULT');
+    --dp-solid-text: #FFFFFF;
+    --dp-logo-ink: theme('colors.navy.DEFAULT');
+    --dp-logo-muted: #C8C5C0;
     --party-rn: #003189;
     --party-epr: #B58C2A;
     --party-lfi: #C9302A;

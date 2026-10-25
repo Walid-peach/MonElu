@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import { getFollowedDeputyId } from '@/lib/mon-depute'
 import { isStandalone } from '@/lib/installState'
 import { recordInstallEvent } from '@/lib/installEvents'
-import { isLightOnlyPath } from '@/lib/theme'
+import { setTheme } from '@/lib/theme'
 import { openGlobalSearch } from '../GlobalSearch'
 import { useTheme } from '../ThemeProvider'
 import { isActivePath } from './navigation'
@@ -73,7 +73,7 @@ function useFollowedDeputyName(open: boolean): string | null {
 export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname()
   const panelRef = useRef<HTMLDivElement>(null)
-  const { theme, toggleTheme } = useTheme()
+  const { theme } = useTheme()
   const standalone = useSyncExternalStore(noopSubscribe, isStandalone, () => false)
   const deputyName = useFollowedDeputyName(open)
   useModalSheet(open, onClose, panelRef)
@@ -184,28 +184,26 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
             </div>
           </div>
 
-          {!isLightOnlyPath(pathname) && (
-            <div className="flex items-center justify-between gap-2.5 px-2">
-              <span className="text-sm font-medium">Apparence</span>
-              <div role="group" aria-label="Apparence" className="flex rounded-[11px] bg-[#EDECEA] p-[3px] dark:bg-white/10">
-                {(['light', 'dark'] as const).map(value => {
-                  const on = theme === value
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      tabIndex={tabIndex}
-                      aria-pressed={on}
-                      onClick={() => { if (!on) toggleTheme() }}
-                      className={`h-9 rounded-lg px-3 text-[13px] ${on ? 'bg-white font-bold text-navy' : 'font-medium'}`}
-                    >
-                      {value === 'light' ? 'Clair' : 'Sombre'}
-                    </button>
-                  )
-                })}
-              </div>
+          <div className="flex items-center justify-between gap-2.5 px-2">
+            <span className="text-sm font-medium">Apparence</span>
+            <div role="group" aria-label="Apparence" className="flex rounded-[11px] bg-[#EDECEA] p-[3px] dark:bg-white/10">
+              {(['light', 'dark'] as const).map(value => {
+                const on = theme === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    tabIndex={tabIndex}
+                    aria-pressed={on}
+                    onClick={() => setTheme(value)}
+                    className={`h-9 rounded-lg px-3 text-[13px] ${on ? 'bg-white font-bold text-navy' : 'font-medium'}`}
+                  >
+                    {value === 'light' ? 'Clair' : 'Sombre'}
+                  </button>
+                )
+              })}
             </div>
-          )}
+          </div>
 
           {!standalone && (
             <Link
