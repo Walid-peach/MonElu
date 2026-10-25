@@ -146,11 +146,11 @@ export default function AProposPage() {
       <JsonLd data={buildFaqJsonLd(A_PROPOS_FAQ)} />
 
       {/* ====== HERO ====== */}
-      <div style={{ padding: '72px 56px 64px', background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
-        <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 400px', gap: '80px', alignItems: 'center' }}>
+      <div className="px-5 pb-12 pt-10 md:px-14 md:pb-16 md:pt-[72px]" style={{ background: 'linear-gradient(180deg,var(--dp-card-bg) 0%,var(--dp-page-bg) 100%)', borderBottom: '1px solid var(--dp-border-subtle)' }}>
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_400px] md:gap-[80px]" style={{ maxWidth: '1180px', margin: '0 auto', alignItems: 'center' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-5">Notre mission</div>
-            <h1 className="font-newsreader text-headline" style={{ fontWeight: 600, lineHeight: 1.06, letterSpacing: '-0.02em', color: 'var(--dp-text)', margin: '0 0 22px', maxWidth: '600px' }}>
+            <h1 className="font-newsreader text-[40px] md:text-headline" style={{ fontWeight: 600, lineHeight: 1.06, letterSpacing: '-0.02em', color: 'var(--dp-text)', margin: '0 0 22px', maxWidth: '600px' }}>
               La démocratie mérite<br />des données <em>en clair</em>.
             </h1>
             <p style={{ fontSize: '18px', lineHeight: 1.65, color: 'var(--dp-text-secondary)', maxWidth: '500px', margin: '0 0 32px' }}>
@@ -190,8 +190,8 @@ export default function AProposPage() {
       </div>
 
       {/* ====== MANIFESTE ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
-        <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '80px', alignItems: 'start' }}>
+      <div className="px-5 py-12 md:px-14 md:py-20" style={{ borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr] md:gap-[80px]" style={{ maxWidth: '1180px', margin: '0 auto', alignItems: 'start' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Pourquoi MonÉlu</div>
             <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px' }} />
@@ -211,13 +211,13 @@ export default function AProposPage() {
       </div>
 
       {/* ====== VALEURS ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
+      <div className="px-5 py-12 md:px-14 md:py-20" style={{ borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
           <div style={{ marginBottom: '48px' }}>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Nos engagements</div>
             <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: 0, letterSpacing: '-0.015em' }}>Ce qui nous guide</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px' }}>
+          <div className="grid grid-cols-1 gap-[24px] md:grid-cols-3">
             {valeurs.map((v) => (
               <div key={v.title} style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '12px', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -233,24 +233,28 @@ export default function AProposPage() {
 
       {/* ====== STACK TECHNIQUE ====== */}
       {/* dp-dark: the navy sections stay navy in both themes, so their text tokens stay dark (#559). */}
-      <div className="dp-dark" style={{ padding: '80px 56px', borderBottom: '1px solid #ECE7DC', background: '#111C35' }}>
+      <div className="dp-dark px-5 py-12 md:px-14 md:py-20" style={{ borderBottom: '1px solid #ECE7DC', background: '#111C35' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '52px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div className="flex-wrap gap-4 md:flex-nowrap" style={{ marginBottom: '52px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '14px' }}>Architecture</div>
               <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: '#fff', margin: 0, letterSpacing: '-0.015em' }}>
                 Une infrastructure de production,<br />pas un prototype.
               </h2>
             </div>
-            <div style={{ fontSize: '13.5px', color: 'var(--dp-text-secondary)', maxWidth: '320px', lineHeight: 1.6, textAlign: 'right' }}>
+            <div className="md:text-right" style={{ fontSize: '13.5px', color: 'var(--dp-text-secondary)', maxWidth: '320px', lineHeight: 1.6 }}>
               Code source ouvert · audit indépendant possible · aucune donnée personnelle collectée
             </div>
           </div>
 
           {/* Pipeline flow */}
-          <div style={{ display: 'flex', alignItems: 'stretch', marginBottom: '48px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', overflow: 'hidden' }}>
+          <div className="flex-col md:flex-row" style={{ display: 'flex', alignItems: 'stretch', marginBottom: '48px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', overflow: 'hidden' }}>
             {pipeline.map((pl, i) => (
-              <div key={pl.step} style={{ flex: 1, padding: '28px 22px', borderRight: i < pipeline.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+              <div
+                key={pl.step}
+                className={i < pipeline.length - 1 ? 'border-b border-white/[0.07] md:border-b-0 md:border-r' : undefined}
+                style={{ flex: 1, padding: '28px 22px' }}
+              >
                 <div className="font-mono" style={{ fontWeight: 700, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '14px' }}>{pl.step}</div>
                 <div style={{ fontWeight: 700, fontSize: '16px', color: '#fff', marginBottom: '8px' }}>{pl.title}</div>
                 <div style={{ fontSize: '13px', lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>{pl.desc}</div>
@@ -264,7 +268,7 @@ export default function AProposPage() {
           </div>
 
           {/* Tech grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>
+          <div className="grid grid-cols-2 gap-[16px] md:grid-cols-4">
             {techCards.map((tc) => (
               <div key={tc.name} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '20px 18px' }}>
                 <div className="font-mono" style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#E0786E', marginBottom: '10px' }}>{tc.cat}</div>
@@ -277,8 +281,8 @@ export default function AProposPage() {
       </div>
 
       {/* ====== SOURCES & TRANSPARENCE ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
-        <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 420px', gap: '72px', alignItems: 'start' }}>
+      <div className="px-5 py-12 md:px-14 md:py-20" style={{ borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_420px] md:gap-[72px]" style={{ maxWidth: '1180px', margin: '0 auto', alignItems: 'start' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Transparence des données</div>
             <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '0 0 22px', letterSpacing: '-0.015em' }}>D&apos;où viennent les données&nbsp;?</h2>
@@ -328,8 +332,8 @@ export default function AProposPage() {
       </div>
 
       {/* ====== API ====== */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
-        <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 540px', gap: '80px', alignItems: 'center' }}>
+      <div className="px-5 py-12 md:px-14 md:py-20" style={{ borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_540px] md:gap-[80px]" style={{ maxWidth: '1180px', margin: '0 auto', alignItems: 'center' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Pour les développeurs</div>
             <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '0 0 20px', letterSpacing: '-0.015em' }}>
@@ -406,8 +410,8 @@ export default function AProposPage() {
       {/* Visible question/answer copy, and the source of this page's FAQPage
           JSON-LD (MON-268) - schema.org requires both halves to be readable
           here, so the markup and the section below cannot disagree. */}
-      <div style={{ padding: '80px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
-        <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '80px', alignItems: 'start' }}>
+      <div className="px-5 py-12 md:px-14 md:py-20" style={{ borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-page-bg)' }}>
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr] md:gap-[80px]" style={{ maxWidth: '1180px', margin: '0 auto', alignItems: 'start' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Questions fréquentes</div>
             <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px', marginBottom: '20px' }} />
@@ -432,8 +436,8 @@ export default function AProposPage() {
       </div>
 
       {/* ====== CONTACT ====== */}
-      <div style={{ padding: '64px 56px', borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
-        <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '80px', alignItems: 'start' }}>
+      <div className="px-5 py-12 md:px-14 md:py-16" style={{ borderBottom: '1px solid var(--dp-border-subtle)', background: 'var(--dp-card-bg)' }}>
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr] md:gap-[80px]" style={{ maxWidth: '1180px', margin: '0 auto', alignItems: 'start' }}>
           <div>
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-4">Contact</div>
             <div style={{ width: '40px', height: '3px', background: 'var(--dp-text)', borderRadius: '2px', marginBottom: '20px' }} />
@@ -442,7 +446,7 @@ export default function AProposPage() {
             </p>
           </div>
 
-          <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '14px', padding: '32px', display: 'flex', alignItems: 'center', gap: '32px' }}>
+          <div className="flex-col items-start gap-5 p-5 md:flex-row md:items-center md:gap-8 md:p-8" style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '14px', display: 'flex' }}>
             <Image
               src="https://github.com/Walid-peach.png"
               alt="Walid Elkhoukh"
@@ -494,7 +498,7 @@ export default function AProposPage() {
       </div>
 
       {/* ====== CTA FINAL ====== */}
-      <div className="dp-dark" style={{ padding: '80px 56px', background: '#1B2B50' }}>
+      <div className="dp-dark px-5 py-12 md:px-14 md:py-20" style={{ background: '#1B2B50' }}>
         <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '48px', flexWrap: 'wrap' }}>
           <div>
             <h2 className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: '#fff', margin: '0 0 14px', letterSpacing: '-0.015em' }}>
