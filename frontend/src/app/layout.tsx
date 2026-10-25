@@ -7,6 +7,7 @@ import './globals.css'
 import { Nav } from '@/components/Nav'
 import { GlobalSearch } from '@/components/GlobalSearch'
 import { BottomNav } from '@/components/BottomNav'
+import { MobileTopBar } from '@/components/MobileTopBar'
 import { PageTransition } from '@/components/PageTransition'
 import { FreshnessBadge } from '@/components/FreshnessBadge'
 import { Footer } from '@/components/Footer'
@@ -18,7 +19,7 @@ import { InstallEventsReporter } from '@/components/InstallEventsReporter'
 import { SITE_DESCRIPTION, buildOrganizationJsonLd, buildWebsiteJsonLd } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import { THEME_INIT_SCRIPT } from '@/lib/theme'
-import { INSTALL_PROMPT_CAPTURE_SCRIPT } from '@/lib/installState'
+import { INSTALL_PROMPT_CAPTURE_SCRIPT, INSTALLED_FLAG_SCRIPT } from '@/lib/installState'
 import { smartAppBannerMetadata } from '@/lib/appStore'
 
 const serif = DM_Serif_Display({
@@ -78,8 +79,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // suppressHydrationWarning: THEME_INIT_SCRIPT sets the theme class on
-    // <html> before React hydrates (#612).
+    // suppressHydrationWarning: THEME_INIT_SCRIPT sets the theme class (#612)
+    // and INSTALLED_FLAG_SCRIPT may add `data-installed` on <html> before
+    // React hydrates; it only covers <html>'s own attributes.
     <html lang="fr" className={`${serif.variable} ${sans.variable} ${newsreader.variable}`} suppressHydrationWarning>
       <head>
         {/* First in <head>, so the theme is set before anything paints (#612). */}
@@ -92,6 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           id="install-prompt-capture"
           dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_CAPTURE_SCRIPT }}
         />
+        <script id="installed-flag" dangerouslySetInnerHTML={{ __html: INSTALLED_FLAG_SCRIPT }} />
       </head>
       <body className="min-h-screen">
         <ThemeProvider>
@@ -99,6 +102,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <JsonLd data={[buildOrganizationJsonLd(), buildWebsiteJsonLd()]} />
           <Suspense fallback={null}>
             <Nav />
+          </Suspense>
+          {/* Phones in the browser; the installed app keeps BottomNav (H1). */}
+          <Suspense fallback={null}>
+            <MobileTopBar />
           </Suspense>
           {/* Triggerless: the nav menus and the mobile sheet open it, plus ⌘K. */}
           <HideOnEmbed><GlobalSearch hideTrigger /></HideOnEmbed>

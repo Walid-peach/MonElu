@@ -259,6 +259,12 @@
     outline-offset: 2px;
     border-radius: 2px;
   }
+
+  /* MobileTopBar is sticky at the top of phone pages in the browser (not in
+     the installed app): an in-page anchor must land below its 60px. */
+  @media (max-width: 767px) {
+    html:not([data-installed]) { scroll-padding-top: 4.5rem; }
+  }
 }
 
 @layer utilities {

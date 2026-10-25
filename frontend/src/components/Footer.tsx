@@ -29,10 +29,10 @@ export function Footer() {
   return (
     <>
       {/* Phones (G3): the wordmark, one wrapped row of links and the licence line,
-          with room below for the floating tab bar. */}
+          with room below for the installed app's floating tab bar. */}
       <footer
         data-print-hide
-        className="dp-dark flex flex-col gap-3.5 bg-[#091629] px-5 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 text-[13px] md:hidden"
+        className="dp-dark flex flex-col gap-3.5 bg-[#091629] px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-6 text-[13px] installed:pb-[calc(7rem+env(safe-area-inset-bottom))] md:hidden"
       >
         <div className="flex items-baseline justify-between gap-3">
           <span className="font-serif text-[22px] text-white">

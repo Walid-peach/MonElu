@@ -499,7 +499,13 @@ function ChatInner() {
   }
 
   return (
-    <div className={dk ? 'dp-dark' : 'dp-light'} style={{ display: 'flex', height: 'calc(100dvh - 4rem)', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: bg0 }}>
+    // The shell fills the screen under the site chrome: 4rem, plus the 60px
+    // MobileTopBar on a phone in the browser (it is hidden from md up and in
+    // the installed app, which keep the 4rem).
+    <div
+      className={`${dk ? 'dp-dark' : 'dp-light'} [--chat-chrome:calc(4rem+60px)] md:[--chat-chrome:4rem] installed:[--chat-chrome:4rem]`}
+      style={{ display: 'flex', height: 'calc(100dvh - var(--chat-chrome))', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: bg0 }}
+    >
 
       {/* Screen-reader announcement of new assistant/verdict/error messages only —
           never the full conversation (RGAA 9.3 / WCAG 4.1.3). */}

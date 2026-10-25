@@ -109,15 +109,15 @@ test.describe('smoke: nav visibility follows the md breakpoint', () => {
     const viewport = page.viewportSize()
     if (!viewport) throw new Error('no viewport configured for this project')
 
-    // The phone tab bar has an "Explorer" button of its own, so the desktop
-    // toggle is looked up outside it.
+    // The installed app's tab bar has an "Explorer" button of its own, so the
+    // desktop toggle is looked up outside it.
     const tabBarSelector = 'nav[aria-label="Navigation principale"]'
     const desktopNavToggle = page
       .locator(`nav:not(${tabBarSelector})`)
       .getByRole('button', { name: 'Explorer' })
-    const mobileMenuButton = page
-      .locator(tabBarSelector)
-      .getByRole('button', { name: 'Ouvrir le menu' })
+    // In the phone browser the ☰ is the homepage hero's (the top bar slides in
+    // only once the hero scrolls past); hidden copies do not match getByRole.
+    const mobileMenuButton = page.getByRole('button', { name: 'Ouvrir le menu' })
 
     if (viewport.width < 768) {
       await expect(mobileMenuButton).toBeVisible()
