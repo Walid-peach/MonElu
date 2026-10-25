@@ -21,7 +21,8 @@ export function dayTab(isoDate: string): { weekday: string; day: string } {
   }
 }
 
-function ItemCard({ item }: { item: AgendaItem }) {
+/** One agenda point as a timeline card; shared with the /agenda phone layout. */
+export function AgendaItemCard({ item }: { item: AgendaItem }) {
   const { lead } = agendaHeadline(item)
   const kind = showsPointType(item.point_type, lead) ? item.point_type : null
   const href = agendaItemHref(item)
@@ -137,7 +138,7 @@ export function MobileAgenda({ agenda }: { agenda: AgendaResponse | null }) {
                 }`}
               />
             </span>
-            <ItemCard item={item} />
+            <AgendaItemCard item={item} />
           </li>
         ))}
       </ol>
