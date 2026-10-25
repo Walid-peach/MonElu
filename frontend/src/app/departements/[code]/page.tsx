@@ -11,6 +11,7 @@ import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 import { DepartmentMobile } from './DepartmentMobile'
+import { CircoAnchorScroll } from './CircoAnchorScroll'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -102,6 +103,7 @@ export default async function DepartmentPage(
     <>
     <JsonLd data={breadcrumb} />
     <DepartmentMobile data={data} nationalPresenceRate={nationalStats?.avg_presence_rate ?? null} />
+    <CircoAnchorScroll />
     <div className="hidden md:block" style={{ background: CREAM, minHeight: '100vh' }}>
 
       {/* Hero */}

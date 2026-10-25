@@ -58,4 +58,10 @@ describe('DepartmentMobile', () => {
     expect(vote).toHaveAttribute('href', '/votes/V1')
     expect(within(vote).getByText('Adopté')).toBeInTheDocument()
   })
+
+  it('tags each card with its circonscription anchor', () => {
+    render(<DepartmentMobile data={data} nationalPresenceRate={null} />)
+    const cards = screen.getAllByRole('listitem').filter(li => li.hasAttribute('data-circo-anchor'))
+    expect(cards.map(li => li.getAttribute('data-circo-anchor'))).toEqual(['circo-1', 'circo-3'])
+  })
 })

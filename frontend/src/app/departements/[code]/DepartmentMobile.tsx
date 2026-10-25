@@ -18,7 +18,9 @@ function pct(rate: number | null | undefined): number | null {
 /**
  * The department page below `md` (canvas "Département"): the seats as one
  * bar of group colours, the deputies by circonscription, and the votes that
- * split them. The desktop layout in `page.tsx` keeps the `#circo-N` anchors.
+ * split them. The `#circo-N` ids stay on the desktop cards in `page.tsx` (an id
+ * must be unique); these cards carry `data-circo-anchor` instead, which
+ * `CircoAnchorScroll` scrolls to when the id's own card is hidden.
  */
 export function DepartmentMobile({
   data,
@@ -100,7 +102,7 @@ export function DepartmentMobile({
             const n = circoNumber(d.circonscription)
             const solemn = pct(d.solennel_participation_rate)
             return (
-              <li key={d.deputy_id}>
+              <li key={d.deputy_id} data-circo-anchor={n !== null ? `circo-${n}` : undefined} className="scroll-mt-24">
                 <Link href={`/deputes/${d.deputy_id}`} className={`${cardClass} flex items-center gap-3 p-3`}>
                   <span
                     aria-hidden="true"
