@@ -197,6 +197,11 @@ async function skipGroupStep(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Je préfère ne pas dire / passer' }))
 }
 
+// Starting the quiz scrolls back to the top, which jsdom does not implement.
+beforeAll(() => {
+  window.scrollTo = jest.fn()
+})
+
 beforeEach(() => {
   jest.clearAllMocks()
   mockQuestions.mockResolvedValue(QUESTIONS)
