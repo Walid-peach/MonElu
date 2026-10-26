@@ -293,6 +293,21 @@ def test_get_alignment_not_found(client, mock_cursor):
     mock_cursor.fetchone.return_value = None
     resp = client.get("/deputies/NONEXISTENT/alignment")
     assert resp.status_code == 404
+    assert resp.json()["detail"] == "Deputy not found"
+
+
+def test_get_alignment_known_deputy_without_group_is_not_called_unknown(client, mock_cursor):
+    # No mart row, but the deputy exists (a former deputy with no group, #622).
+    mock_cursor.fetchone.side_effect = [None, {"?column?": 1}]
+    resp = client.get("/deputies/PA795950/alignment")
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == (
+        "No party-line alignment for this deputy: they have no parliamentary group"
+    )
+    assert mock_cursor.execute.call_args.args == (
+        "SELECT 1 FROM deputies WHERE deputy_id = %s",
+        ("PA795950",),
+    )
 
 
 def test_get_dissident_votes(client, mock_cursor):

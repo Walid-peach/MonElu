@@ -491,6 +491,11 @@ def get_scorecard(request: Request, deputy_id: str):
     return DeputyScorecard(**row)
 
 
+SQL_DEPUTY_EXISTS = "SELECT 1 FROM deputies WHERE deputy_id = %s"
+
+NO_ALIGNMENT_DETAIL = "No party-line alignment for this deputy: they have no parliamentary group"
+
+
 @router.get(
     "/{deputy_id}/alignment",
     response_model=DeputyAlignment,
@@ -511,7 +516,9 @@ def get_alignment(request: Request, deputy_id: str):
     group for every vote in the window, which distorts the figure for anyone who
     changed groups mid-legislature.
 
-    404 when the id is unknown.
+    404 when the id is unknown ("Deputy not found"), and also, with a different
+    detail, for a known deputy with no group to align with - today that means
+    a former deputy whose group was never resolved (#622).
     """
     try:
         with get_conn() as conn:
@@ -534,11 +541,19 @@ def get_alignment(request: Request, deputy_id: str):
                     (deputy_id,),
                 )
                 row = cur.fetchone()
+                if not row:
+                    cur.execute(SQL_DEPUTY_EXISTS, (deputy_id,))
+                    known = cur.fetchone() is not None
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
 
     if not row:
-        raise HTTPException(status_code=404, detail="Deputy not found")
+        # The mart holds only deputies with a group, so a missing row is not
+        # proof the deputy is unknown (#622).
+        raise HTTPException(
+            status_code=404,
+            detail=NO_ALIGNMENT_DETAIL if known else "Deputy not found",
+        )
     return DeputyAlignment(**row)
 
 
