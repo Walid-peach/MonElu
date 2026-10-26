@@ -1,7 +1,8 @@
 """
 ingest_deputies.py
 Fetches all current deputies from the Assemblée Nationale Open Data portal
-(static ZIP export) and upserts them into the deputies table.
+(static ZIP export) and upserts them into the deputies table, then closes the
+mandate of every deputy who has left since (#621).
 
 Usage:
     python scripts/ingest_deputies.py
@@ -47,9 +48,35 @@ DEPUTIES_ZIP_PATH = (
     "/AMO10_deputes_actifs_mandats_actifs_organes.json.zip"
 )
 
+# Every deputy, senator and minister of the legislature with all of their
+# mandates, ended ones included. AMO10 lists sitting deputies only, so a deputy
+# who leaves simply drops out of it; this is the export that says when (#621).
+ALL_MANDATES_ZIP_PATH = (
+    "/static/openData/repository/17/amo/deputes_senateurs_ministres_legislature"
+    "/AMO20_dep_sen_min_tous_mandats_et_organes.json.zip"
+)
+
+LEGISLATURE = "17"
+
 # ---------------------------------------------------------------------------
 # Data fetch
 # ---------------------------------------------------------------------------
+
+
+def _read_acteurs(raw: bytes) -> list[dict]:
+    """The acteur dicts of an AMO ZIP export (one JSON file per acteur)."""
+    acteurs = []
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        actor_files = [
+            n for n in zf.namelist() if n.startswith("json/acteur/") and n.endswith(".json")
+        ]
+        log.info("ZIP contains %d actor files.", len(actor_files))
+        for name in actor_files:
+            with zf.open(name) as f:
+                data = json.load(f)
+            # Each file is {"acteur": {...}}
+            acteurs.append(data.get("acteur") or data)
+    return acteurs
 
 
 def fetch_all_deputies(zip_path: str | None = None) -> list[dict]:
@@ -63,19 +90,7 @@ def fetch_all_deputies(zip_path: str | None = None) -> list[dict]:
         log.info("Downloading deputies ZIP from %s…", url)
         raw = download_with_retry(url)
 
-    all_items = []
-    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
-        actor_files = [
-            n for n in zf.namelist() if n.startswith("json/acteur/") and n.endswith(".json")
-        ]
-        log.info("ZIP contains %d actor files.", len(actor_files))
-        for name in actor_files:
-            with zf.open(name) as f:
-                data = json.load(f)
-            # Each file is {"acteur": {...}}
-            acteur = data.get("acteur") or data
-            all_items.append(acteur)
-
+    all_items = _read_acteurs(raw)
     log.info("Total deputies fetched: %d", len(all_items))
     return all_items
 
@@ -162,6 +177,33 @@ def parse_deputy(item: dict) -> dict | None:
         return None
 
 
+def acteur_uid(item: dict) -> str:
+    return (
+        item.get("uid", {}).get("#text") if isinstance(item.get("uid"), dict) else item.get("uid")
+    )
+
+
+def an_mandate_end(acteur: dict) -> str | None:
+    """When the acteur's legislature-17 seat in the Assemblée ended, or None.
+
+    None while any of those mandates is still running, and when there is none
+    at all. A deputy can hold several: one ended by a ministerial appointment
+    and a second when they came back, both starting on election day (#621), so
+    the answer is the latest end date, never the mandate that started last.
+    """
+    mandats = (acteur.get("mandats") or {}).get("mandat") or []
+    if isinstance(mandats, dict):
+        mandats = [mandats]
+    seats = [
+        m
+        for m in mandats
+        if m.get("typeOrgane") == "ASSEMBLEE" and str(m.get("legislature")) == LEGISLATURE
+    ]
+    if not seats or any(not m.get("dateFin") for m in seats):
+        return None
+    return max(m["dateFin"][:10] for m in seats)
+
+
 # ---------------------------------------------------------------------------
 # Database upsert
 # ---------------------------------------------------------------------------
@@ -215,6 +257,74 @@ ON CONFLICT (deputy_id) DO UPDATE SET
 """
 
 
+# Rows still marked as sitting that the active export no longer lists.
+SELECT_DEPARTED_SQL = """
+SELECT deputy_id FROM deputies
+WHERE mandate_end IS NULL AND NOT (deputy_id = ANY(%(active_ids)s))
+"""
+
+# A write like any other: `ingested_at` and `changed_at` both move, so the
+# cache scope purges the deputy's pages (GH #353, ADR-039).
+CLOSE_MANDATE_SQL = """
+UPDATE deputies
+SET mandate_end = %(mandate_end)s, ingested_at = NOW(), changed_at = NOW()
+WHERE deputy_id = %(deputy_id)s AND mandate_end IS NULL
+"""
+
+
+def close_departed_mandates(
+    active_ids: list[str], fetch_all_mandates=None
+) -> dict[str, str | None]:
+    """Give every deputy who has left the Assemblée their mandate end date (#621).
+
+    AMO10 lists sitting deputies only, so a deputy who leaves drops out of it
+    and the upsert never touches their row again: without this they stay
+    "sitting" forever, two to a seat. AMO20 is downloaded only on a run that
+    finds such a row. A deputy AMO20 does not show as departed is left alone
+    and reported; the dbt test `assert_one_sitting_deputy_per_seat` then fails
+    the daily run's data-quality gate.
+
+    Never raises: this runs inside a critical step, and a failure here must
+    not block votes ingestion (it is caught by the same dbt test instead).
+    Returns {deputy_id: end date or None} for the rows it looked at.
+    """
+    conn = None
+    try:
+        conn = connect_with_retry(DATABASE_URL)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(SELECT_DEPARTED_SQL, {"active_ids": active_ids})
+                departed = [r[0] for r in cur.fetchall()]
+                if not departed:
+                    return {}
+                log.info("%d deputies left since the last run: %s", len(departed), departed)
+                acteurs = (fetch_all_mandates or fetch_all_mandates_export)()
+                by_id = {acteur_uid(a): a for a in acteurs}
+                ends = {d: an_mandate_end(by_id[d]) if d in by_id else None for d in departed}
+                closed = [{"deputy_id": d, "mandate_end": e} for d, e in ends.items() if e]
+                psycopg2.extras.execute_batch(cur, CLOSE_MANDATE_SQL, closed)
+        log.info("Closed %d mandates.", len(closed))
+        unresolved = sorted(d for d, e in ends.items() if not e)
+        if unresolved:
+            log.error(
+                "No end date in AMO20 for deputies missing from the active export: %s",
+                unresolved,
+            )
+        return ends
+    except Exception as exc:
+        log.error("Could not close departed mandates (%s): %s", type(exc).__name__, exc)
+        return {}
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def fetch_all_mandates_export() -> list[dict]:
+    url = f"{AN_API_BASE_URL}{ALL_MANDATES_ZIP_PATH}"
+    log.info("Downloading all-mandates ZIP from %s…", url)
+    return _read_acteurs(download_with_retry(url))
+
+
 def _upsert_records(records: list[dict]) -> None:
     conn = connect_with_retry(DATABASE_URL)
     try:
@@ -245,6 +355,7 @@ def upsert_deputies(raw_items: list[dict]) -> int:
         # source freshness checks (MON-220).
         sys.exit(1)
     _upsert_records(records)
+    close_departed_mandates([r["deputy_id"] for r in records])
     return len(records)
 
 

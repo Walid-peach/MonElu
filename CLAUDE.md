@@ -170,6 +170,11 @@ Never guard a `DO UPDATE` with a `WHERE` that skips unchanged rows, and never ma
 `ingest_agenda.py` has a third column, `last_seen_at`, which ADR-030 makes visibility depend on.
 The summary generators leave both AN-facing columns alone (our own text is not a new AN record) and report the ids they wrote through `--changed-ids-out`, rewritten after every committed batch so a crash mid-sweep still reports what landed.
 - `migrate.py` doubles as the Railway start hook (runs before uvicorn in `railway.json`)
+- **A deputy who leaves the Assemblée must get a `mandate_end`** (#621).
+`ingest_deputies.py` reads AMO10, which lists sitting deputies only, so a departed deputy just drops out of it and the upsert never touches their row again; `mandate_end IS NULL` is what "sitting" means everywhere (the `active` filter, `/groups` seat counts, the RAG chunks).
+After the upsert, `close_departed_mandates()` finds the rows still sitting that AMO10 no longer lists and closes them with the date AMO20 (all mandates of the legislature) records - downloaded only on a run that finds one.
+It never raises, since it runs inside a critical step; `transform/tests/assert_one_sitting_deputy_per_seat.sql` is the guard instead, failing the daily data-quality gate when a seat has two sitting deputies or the chamber more than 577.
+Fewer than 577 is normal: a seat stays vacant until a by-election.
 - `run_ingestion_prod.py` orchestrates the full pipeline for production runs, including `ingest_agenda.py` (MON-210) and `ingest_dossiers.py` (MON-243) as non-critical steps - an agenda- or dossier-feed failure must not block core deputies/votes/positions ingestion
 - **`ingest_dossiers.py` is the bill parcours, and it is not driven by `--since`** (MON-243, ADR-035).
 It ingests every `DLR5L17*` dossier from `Dossiers_Legislatifs.json.zip` and flattens the nested `actesLegislatifs` tree into `dossier_actes`, preserving the structure through `parent_uid`/`depth`/`ordinal` (a per-dossier pre-order counter, so `ORDER BY ordinal` replays the tree in one pass).
