@@ -1,0 +1,27 @@
+{
+  "comment": "Website paths and whether the iPhone app opens them (#623). frontend/__tests__/app/apple-app-site-association.test.ts checks the website's apple-app-site-association against this file and every page route; AppRouteTests checks AppRoute(url:) parses every path in opens_in_app.",
+  "opens_in_app": [
+    "/deputes/PA1008",
+    "/votes/VTANR5L17V1",
+    "/groupes/rassemblement-national",
+    "/themes/sante-social",
+    "/departements/971",
+    "/departements/2A"
+  ],
+  "stays_on_web": [
+    "/deputes",
+    "/votes",
+    "/deputes/PA1008/dossier",
+    "/deputes/PA1008.md",
+    "/votes/VTANR5L17V1.md",
+    "/deputes/comparer",
+    "/deputes/tableau",
+    "/quiz",
+    "/quiz/s/3f2a1c9e-8d7b-4e6f-a5c4-2b1d0e9f8a7c",
+    "/lois/DLR5L17N54951",
+    "/chat/s/3f2a1c9e-8d7b-4e6f-a5c4-2b1d0e9f8a7c",
+    "/verifier/v/3f2a1c9e-8d7b-4e6f-a5c4-2b1d0e9f8a7c",
+    "/agenda",
+    "/"
+  ]
+}
