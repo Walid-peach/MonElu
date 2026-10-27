@@ -1,13 +1,34 @@
+import os
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlparse
 
-import pytest
-from fastapi.testclient import TestClient
+from dotenv import dotenv_values, find_dotenv
 
-import api.account_auth as _account_auth
-import api.db as _db
-import api.groq_health as _groq_health
-import api.main as _main
-from api.main import app
+# Before anything imports a module that calls load_dotenv() (#621). From a
+# worktree, find_dotenv() walks up to the main checkout's .env, whose
+# DATABASE_URL may be production: a unit test that reached unmocked ingestion
+# code once wrote to the production deputies table through it. Any database
+# URL that does not name a local host is replaced with one that cannot
+# connect (an unset one stays unset); load_dotenv() never overrides a
+# variable that is already set, so .env cannot bring it back.
+# tests/integration/conftest.py applies the same host rule to the suite that
+# does need a database.
+_LOCAL_DB_HOSTS = {"localhost", "127.0.0.1", "::1", "postgres", "db"}
+_UNREACHABLE_DB = "postgresql://unit-tests@127.0.0.1:1/unit_tests"  # pragma: allowlist secret
+_dotenv = dotenv_values(find_dotenv(usecwd=True))
+for _name in ("DATABASE_URL", "ACCOUNT_DATABASE_URL"):
+    _url = os.environ.get(_name) or _dotenv.get(_name) or ""
+    if _url and (urlparse(_url).hostname or "").lower() not in _LOCAL_DB_HOSTS:
+        os.environ[_name] = _UNREACHABLE_DB
+
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+import api.account_auth as _account_auth  # noqa: E402
+import api.db as _db  # noqa: E402
+import api.groq_health as _groq_health  # noqa: E402
+import api.main as _main  # noqa: E402
+from api.main import app  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
