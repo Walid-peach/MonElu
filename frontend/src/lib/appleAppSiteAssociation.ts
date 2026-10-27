@@ -14,22 +14,50 @@ const TEAM_ID = /^[A-Z0-9]{10}$/
 const BUNDLE_ID = /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/
 
 /**
- * The pages the app opens. Exclusions come first because Apple applies the
- * first component that matches: the `.md` twins (MON-271) and the two list
- * tools under `/deputes` stay on the web.
+ * The pages the app opens: exactly the paths `AppRoute(url:)` in the app
+ * parses, one segment after the prefix. Exclusions come first because Apple
+ * applies the first component that matches, and its `*` also spans `/`, so
+ * `/deputes/*` alone would claim `/deputes/<id>/dossier`, which the app
+ * cannot show (#623). The `.md` twins (MON-271), the two list tools under
+ * `/deputes` and every nested page stay on the web, as do shared quiz results
+ * (`/quiz/s/<id>`), which the app has no screen for.
+ *
+ * `frontend/__tests__/app/apple-app-site-association.test.ts` and the app's
+ * `AppRouteTests` both read `app_links.json` in the app's test fixtures, so
+ * the two sides cannot drift apart.
  */
 export const APP_LINK_COMPONENTS: Array<{ '/': string; exclude?: true }> = [
   { '/': '/deputes/*.md', exclude: true },
   { '/': '/votes/*.md', exclude: true },
   { '/': '/deputes/comparer', exclude: true },
   { '/': '/deputes/tableau', exclude: true },
+  { '/': '/deputes/*/*', exclude: true },
+  { '/': '/votes/*/*', exclude: true },
+  { '/': '/groupes/*/*', exclude: true },
+  { '/': '/themes/*/*', exclude: true },
+  { '/': '/departements/*/*', exclude: true },
   { '/': '/deputes/*' },
   { '/': '/votes/*' },
   { '/': '/groupes/*' },
   { '/': '/themes/*' },
   { '/': '/departements/*' },
-  { '/': '/quiz/s/*' },
 ]
+
+/**
+ * Whether the app is given `path`, applying the components the way Apple
+ * does: the first one whose pattern matches decides, `*` matches any run of
+ * characters (`/` included) and `?` exactly one.
+ */
+export function opensInApp(path: string): boolean {
+  for (const component of APP_LINK_COMPONENTS) {
+    const pattern = component['/']
+      .split('')
+      .map((c) => (c === '*' ? '.*' : c === '?' ? '.' : c.replace(/[.+^${}()|[\]\\]/g, '\\$&')))
+      .join('')
+    if (new RegExp(`^${pattern}$`).test(path)) return !component.exclude
+  }
+  return false
+}
 
 export type AppleAppSiteAssociation = {
   applinks: { details: Array<{ appIDs: string[]; components: typeof APP_LINK_COMPONENTS }> }
