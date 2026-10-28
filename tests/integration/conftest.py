@@ -95,6 +95,9 @@ CREATE TABLE IF NOT EXISTS analytics_marts.mart_vote_summary (
 );
 -- Added for GET /votes/{vote_id}'s dossier block (#369); the real mart carries it.
 ALTER TABLE analytics_marts.mart_vote_summary ADD COLUMN IF NOT EXISTS dossier_id TEXT;
+-- Added for GET /votes/{vote_id}'s typical turnout (#627); the real mart carries it.
+ALTER TABLE analytics_marts.mart_vote_summary
+    ADD COLUMN IF NOT EXISTS deputies_with_position INTEGER DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS analytics_marts.mart_party_alignment (
     deputy_id             TEXT PRIMARY KEY,
