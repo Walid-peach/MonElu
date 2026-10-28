@@ -18,6 +18,7 @@ struct VotesSnapshotTests {
         caveats: [
             .init(id: "non_votant", text: "`nonVotant` n'est pas `abstention`. Un non-votant était présent dans l'hémicycle sans exprimer de vote."),
             .init(id: "llm_generated", text: "Les résumés en langage clair sont générés par un LLM. Le scrutin d'origine fait foi."),
+            .init(id: "vote_participation", text: "La participation compte des votes, pas des présences. Le `nonVotant` compte comme participant."),
         ]
     )
 
@@ -59,7 +60,13 @@ struct VotesSnapshotTests {
             positions: full.positions.filter { groups.contains($0.group ?? GroupPositions.nonInscrit) },
             dossierTitle: full.dossierTitle, dossierURL: full.dossierURL,
             totalVoters: full.totalVoters, dossierID: full.dossierID, dossierStatus: full.dossierStatus,
-            officialURL: full.officialURL
+            officialURL: full.officialURL, voteType: full.voteType,
+            pctPour: full.pctPour, pctContre: full.pctContre, pctAbstention: full.pctAbstention,
+            majorityRequired: full.majorityRequired,
+            // The turnout card and the groups' turnout lines are `turnoutCard`
+            // and `groupsWithTurnout`, apart: with them the whole page passes
+            // the repository's 500 KB limit on an image.
+            turnout: nil
         )
         // The theme and the bill are links, so the page sits in a stack
         // (outside one a link renders disabled), sized explicitly. The
@@ -78,6 +85,45 @@ struct VotesSnapshotTests {
             },
             variant,
             height: variant.size.isAccessibilityCategory ? 4140 : 1450
+        )
+    }
+
+    /// The turnout card (#627): an ordinary vote well below its usual turnout,
+    /// with its median tick, badge and caveat.
+    @Test(arguments: Variant.all)
+    func turnoutCard(_ variant: Variant) {
+        let turnout = VoteTurnout(
+            participants: 41, nonVoting: 1, seats: 577, rate: 0.0711,
+            typicalRate: 0.2305, comparison: "below", groups: []
+        )
+        checkSnapshot(
+            TurnoutCard(turnout: turnout, voteType: "spo", configuration: Self.configuration)
+                .padding(16)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .background(Palette.pageBackground),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 1100 : 420
+        )
+    }
+
+    /// Each group's split with the share of its members who took part (#627).
+    @Test(arguments: Variant.all)
+    func groupsWithTurnout(_ variant: Variant) async throws {
+        let vote = try await LiveVotesService(client: stubClient(try fixture("vote_detail"))).vote(id: "VTANR5L17V8434")
+        checkSnapshot(
+            Card {
+                VStack(spacing: 0) {
+                    ForEach(Array(vote.positionsByGroup.prefix(3).enumerated()), id: \.element.id) { index, group in
+                        if index > 0 { Divider().overlay(Palette.border) }
+                        GroupPositionsRow(group: group, turnout: vote.turnout(of: group))
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .background(Palette.pageBackground),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 900 : 300
         )
     }
 
