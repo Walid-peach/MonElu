@@ -314,7 +314,7 @@ export function VoteDetailClient(props: Props) {
                 <div style={{ flex: 1, background: 'var(--dp-border)' }} />
               </div>
               <div style={{ fontSize: 12, color: 'var(--dp-text-muted)', marginBottom: 22 }}>
-                Pourcentages des voix exprimées.
+                En part des votants (pour, contre et abstention).
               </div>
 
               {/* Majority note (#627): half the votes cast plus one, or 289 on a censure motion */}
@@ -493,7 +493,7 @@ export function VoteDetailClient(props: Props) {
               <section>
                 <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--dp-red)' }}>Ventilation par groupe</div>
                 <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '12px 0 4px', letterSpacing: '-0.01em' }}>Comment chaque groupe a voté</h2>
-                <p style={{ fontSize: 15, color: 'var(--dp-text-secondary)', margin: '0 0 22px', maxWidth: 560 }}>Position majoritaire de chaque groupe parlementaire, en part des voix exprimées, et part de ses membres qui ont pris part au vote.</p>
+                <p style={{ fontSize: 15, color: 'var(--dp-text-secondary)', margin: '0 0 22px', maxWidth: 560 }}>Position majoritaire de chaque groupe parlementaire, en part de ses votants (non-votants exclus), et part de ses membres qui ont pris part au vote.</p>
 
                 <GroupBreakdownMobile groups={groups} />
                 <div className="hidden md:block" style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>

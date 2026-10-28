@@ -94,7 +94,7 @@ export function VoteHeroMobile({
         </dl>
         <SplitBar pour={votesFor} contre={votesAgainst} abstention={abstentions} />
         <p className="text-[13px] leading-relaxed text-[color:var(--dp-text-secondary)]">
-          Pourcentages des voix exprimées.
+          En part des votants (pour, contre et abstention).
           {majorityRequired != null && <> Majorité requise : {majorityRequired.toLocaleString('fr-FR')} voix.</>}
         </p>
         <div className="flex flex-wrap items-center gap-2">
