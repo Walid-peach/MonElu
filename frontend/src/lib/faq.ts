@@ -62,6 +62,12 @@ export const METHODOLOGIE_FAQ: FaqItem[] = [
       "Le résultat d'un scrutin (adopté ou rejeté) n'est jamais recalculé par MonÉlu : il est repris tel quel du champ officiel publié par l'Assemblée nationale pour ce scrutin. La 17ᵉ législature n'ayant pas de majorité stable, les scrutins rejetés sont, à ce jour, plus nombreux que les scrutins adoptés.",
   },
   {
+    id: 'participation',
+    question: "Comment est calculée la participation à un scrutin ?",
+    answer:
+      "La participation à un scrutin est la part des 577 sièges de l'Assemblée occupés par un député ayant une position enregistrée sur ce scrutin, non-votants compris, selon la même règle que le taux de présence. Elle compte des votes, pas des présences : un député peut être dans l'hémicycle sans voter, ou voter par délégation sans y être (chacun en porte une au plus). Elle est comparée à la médiane des scrutins du même type, parce qu'un scrutin ordinaire réunit d'habitude une petite partie de l'hémicycle et un vote solennel presque tous les députés. La majorité requise est la moitié des suffrages exprimés (pour et contre) plus une, sauf pour une motion de censure, qui doit réunir la majorité des 577 députés, soit 289 voix.",
+  },
+  {
     id: 'horizon',
     question: "Quelle période couvrent les données, et à quelle fréquence sont-elles mises à jour ?",
     answer:

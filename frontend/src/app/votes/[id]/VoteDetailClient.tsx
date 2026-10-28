@@ -14,6 +14,8 @@ import dynamic from 'next/dynamic'
 import { HemicycleChart } from '@/components/HemicycleChart'
 import type { HemicycleDeputy } from '@/lib/hemicycle'
 import { GroupBreakdownMobile, VoteHeroMobile } from './VoteMobile'
+import { VoteParticipationCard } from './VoteParticipation'
+import type { VoteParticipation } from '@/lib/api'
 
 // The 3D replay is the default view. It is client-only and loaded as its own
 // chunk after hydration, so the vote page's server HTML and first bundle stay as they were.
@@ -40,6 +42,10 @@ interface GroupRow {
   position: 'Pour' | 'Contre' | 'Partagé'
   forPct: number
   agtPct: number
+  abstPct: number
+  participants: number
+  members: number | null
+  participationPct: number | null
 }
 
 interface Dissident {
@@ -70,7 +76,9 @@ interface Props {
   votesFor: number
   votesAgainst: number
   abstentions: number
-  totalVoters: number
+  majorityRequired: number | null
+  participation: VoteParticipation | null
+  voteType: string | null
   pourPct: number
   contrePct: number
   abstPct: number
@@ -89,6 +97,19 @@ const POSITION_LABELS: Record<string, string> = {
   nonVotant: 'Non votant',
 }
 
+// Groupe, Position, Pour, Contre, Abst., Non-vot., Participation (#627)
+const GROUP_COLUMNS = '170px minmax(110px, 1fr) 64px 64px 64px 72px 84px'
+
+/** A share of a group's expressed positions, with its count underneath. */
+function ShareCell({ pct, count, color }: { pct: number; count: number; color: string }) {
+  return (
+    <div className="font-mono" style={{ textAlign: 'right' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color }}>{pct}&nbsp;%</div>
+      <div style={{ fontSize: 11, color: 'var(--dp-text-muted)', marginTop: 2 }}>{count}</div>
+    </div>
+  )
+}
+
 function shortDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
@@ -96,7 +117,7 @@ function shortDate(dateStr: string): string {
 export function VoteDetailClient(props: Props) {
   const {
     voteId, voteTitle, result, votedAt, summary, dossierId, theme,
-    votesFor, votesAgainst, abstentions, totalVoters,
+    votesFor, votesAgainst, abstentions, majorityRequired, participation, voteType,
     pourPct, contrePct, abstPct,
     groups, dissidents, related, apiUrl, deputyLookup, hemicycleDeputies,
   } = props
@@ -196,7 +217,10 @@ export function VoteDetailClient(props: Props) {
         votesFor={votesFor}
         votesAgainst={votesAgainst}
         abstentions={abstentions}
-        totalVoters={totalVoters}
+        pourPct={pourPct}
+        contrePct={contrePct}
+        abstPct={abstPct}
+        majorityRequired={majorityRequired}
         dossierUrl={dossierUrl}
       />
 
@@ -267,16 +291,19 @@ export function VoteDetailClient(props: Props) {
               {/* Big numbers */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, textAlign: 'center', marginBottom: 22 }}>
                 <div style={{ borderRight: '1px solid var(--dp-track-bg)', padding: '0 12px' }}>
-                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-badge-pos-text)', letterSpacing: '-0.02em' }}>{votesFor.toLocaleString('fr-FR')}</div>
+                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-badge-pos-text)', letterSpacing: '-0.02em' }}>{pourPct}&nbsp;%</div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dp-badge-pos-text)', marginTop: 3, letterSpacing: '0.04em' }}>POUR</div>
+                  <div className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-muted)', marginTop: 4 }}>{votesFor.toLocaleString('fr-FR')} voix</div>
                 </div>
                 <div style={{ borderRight: '1px solid var(--dp-track-bg)', padding: '0 12px' }}>
-                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-red)', letterSpacing: '-0.02em' }}>{votesAgainst.toLocaleString('fr-FR')}</div>
+                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-red)', letterSpacing: '-0.02em' }}>{contrePct}&nbsp;%</div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dp-red)', marginTop: 3, letterSpacing: '0.04em' }}>CONTRE</div>
+                  <div className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-muted)', marginTop: 4 }}>{votesAgainst.toLocaleString('fr-FR')} voix</div>
                 </div>
                 <div style={{ padding: '0 12px' }}>
-                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-text-muted)', letterSpacing: '-0.02em' }}>{abstentions.toLocaleString('fr-FR')}</div>
+                  <div className="font-newsreader text-section-lg" style={{ fontWeight: 600, color: 'var(--dp-text-muted)', letterSpacing: '-0.02em' }}>{abstPct}&nbsp;%</div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dp-text-muted)', marginTop: 3, letterSpacing: '0.04em' }}>ABST.</div>
+                  <div className="font-mono" style={{ fontSize: 12, color: 'var(--dp-text-muted)', marginTop: 4 }}>{abstentions.toLocaleString('fr-FR')} voix</div>
                 </div>
               </div>
 
@@ -286,15 +313,17 @@ export function VoteDetailClient(props: Props) {
                 <div style={{ width: `${contrePct}%`, background: 'var(--dp-red)' }} />
                 <div style={{ flex: 1, background: 'var(--dp-border)' }} />
               </div>
-              <div className="font-mono" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--dp-text-muted)', marginBottom: 22 }}>
-                <span>{pourPct}%</span><span>{contrePct}%</span><span>{abstPct}%</span>
+              <div style={{ fontSize: 12, color: 'var(--dp-text-muted)', marginBottom: 22 }}>
+                Pourcentages des voix exprimées.
               </div>
 
-              {/* Quorum note */}
-              <div style={{ background: 'var(--dp-track-bg)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--dp-text-secondary)', lineHeight: 1.5, marginBottom: 20 }}>
-                <span style={{ fontWeight: 600, color: 'var(--dp-text)' }}>Majorité absolue requise : </span>289 voix.<br />
-                Votants : {totalVoters.toLocaleString('fr-FR')} sur 577 députés inscrits.
-              </div>
+              {/* Majority note (#627): half the votes cast plus one, or 289 on a censure motion */}
+              {majorityRequired != null && (
+                <div style={{ background: 'var(--dp-track-bg)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--dp-text-secondary)', lineHeight: 1.5, marginBottom: 20 }}>
+                  <span style={{ fontWeight: 600, color: 'var(--dp-text)' }}>Majorité requise : </span>
+                  {majorityRequired.toLocaleString('fr-FR')} voix{voteType === 'moc' ? ', la majorité des 577 députés.' : ', la moitié des suffrages exprimés plus une.'}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex-wrap" style={{ display: 'flex', gap: 10 }}>
@@ -348,6 +377,15 @@ export function VoteDetailClient(props: Props) {
 
           {/* Main column */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 52 }}>
+
+            {/* Participation (#627) */}
+            {participation && (
+              <section>
+                <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--dp-red)' }}>Participation</div>
+                <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '12px 0 20px', letterSpacing: '-0.01em' }}>Combien de députés ont voté</h2>
+                <VoteParticipationCard participation={participation} voteType={voteType} />
+              </section>
+            )}
 
             {/* Hémicycle */}
             {hemicycleDeputies.length > 0 && (
@@ -455,11 +493,11 @@ export function VoteDetailClient(props: Props) {
               <section>
                 <div style={{ font: '700 12px/1 var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--dp-red)' }}>Ventilation par groupe</div>
                 <h2 className="font-newsreader text-section-sm" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '12px 0 4px', letterSpacing: '-0.01em' }}>Comment chaque groupe a voté</h2>
-                <p style={{ fontSize: 15, color: 'var(--dp-text-secondary)', margin: '0 0 22px', maxWidth: 560 }}>Position majoritaire exprimée par les membres de chaque groupe parlementaire.</p>
+                <p style={{ fontSize: 15, color: 'var(--dp-text-secondary)', margin: '0 0 22px', maxWidth: 560 }}>Position majoritaire de chaque groupe parlementaire, en part des voix exprimées, et part de ses membres qui ont pris part au vote.</p>
 
                 <GroupBreakdownMobile groups={groups} />
                 <div className="hidden md:block" style={{ background: 'var(--dp-card-bg)', border: '1px solid var(--dp-border)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px 90px', gap: 14, padding: '12px 24px', borderBottom: '1px solid var(--dp-border)', background: 'var(--dp-header-bg)', font: '600 11px/1 var(--font-sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--dp-text-muted)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: GROUP_COLUMNS, gap: 14, padding: '12px 24px', borderBottom: '1px solid var(--dp-border)', background: 'var(--dp-header-bg)', font: '600 11px/1 var(--font-sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--dp-text-muted)' }}>
                     <span>Groupe</span><span>Position</span><span style={{ textAlign: 'right' }}>Pour</span><span style={{ textAlign: 'right' }}>Contre</span>
                     <span style={{ textAlign: 'right' }}>Abst.</span>
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 5 }}>
@@ -471,13 +509,14 @@ export function VoteDetailClient(props: Props) {
                         align="right"
                       />
                     </span>
+                    <span style={{ textAlign: 'right' }}>Particip.</span>
                   </div>
                   {groups.map((g) => {
                     const posColor = g.position === 'Pour' ? 'var(--dp-badge-pos-text)' : g.position === 'Contre' ? 'var(--dp-badge-neg-text)' : 'var(--dp-badge-neutral-text)'
                     const posBg   = g.position === 'Pour' ? 'var(--dp-badge-pos-bg)' : g.position === 'Contre' ? 'var(--dp-badge-neg-bg)' : 'var(--dp-badge-neutral-bg)'
                     const href = groupSlug(g.name)
                     return (
-                      <div key={g.name} style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px 80px 80px 90px', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--dp-track-bg)', alignItems: 'center', background: 'var(--dp-card-bg)' }}>
+                      <div key={g.name} style={{ display: 'grid', gridTemplateColumns: GROUP_COLUMNS, gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--dp-track-bg)', alignItems: 'center', background: 'var(--dp-card-bg)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                           <span style={{ width: 9, height: 9, borderRadius: 999, flexShrink: 0, background: g.color, display: 'inline-block' }} />
                           {href ? (
@@ -495,10 +534,14 @@ export function VoteDetailClient(props: Props) {
                           </div>
                           <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 11px', borderRadius: 999, color: posColor, background: posBg, flexShrink: 0 }}>{g.position}</span>
                         </div>
-                        <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-badge-pos-text)', textAlign: 'right', fontWeight: 600 }}>{g.pour}</div>
-                        <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-red)', textAlign: 'right', fontWeight: 600 }}>{g.contre}</div>
-                        <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-text-muted)', textAlign: 'right' }}>{g.abst}</div>
+                        <ShareCell pct={g.forPct} count={g.pour} color="var(--dp-badge-pos-text)" />
+                        <ShareCell pct={g.agtPct} count={g.contre} color="var(--dp-red)" />
+                        <ShareCell pct={g.abstPct} count={g.abst} color="var(--dp-text-muted)" />
                         <div className="font-mono" style={{ fontSize: 13, color: 'var(--dp-text-muted)', textAlign: 'right' }}>{g.nonVotant}</div>
+                        <div className="font-mono" style={{ textAlign: 'right' }} title={g.members != null ? `${g.participants} sur ${g.members} membres` : undefined}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dp-text)' }}>{g.participationPct != null ? `${g.participationPct} %` : '-'}</div>
+                          {g.members != null && <div style={{ fontSize: 11, color: 'var(--dp-text-muted)', marginTop: 2 }}>{g.participants}/{g.members}</div>}
+                        </div>
                       </div>
                     )
                   })}

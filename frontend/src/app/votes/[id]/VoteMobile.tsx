@@ -26,7 +26,10 @@ export function VoteHeroMobile({
   votesFor,
   votesAgainst,
   abstentions,
-  totalVoters,
+  pourPct,
+  contrePct,
+  abstPct,
+  majorityRequired,
   dossierUrl,
 }: {
   voteId: string
@@ -39,7 +42,10 @@ export function VoteHeroMobile({
   votesFor: number
   votesAgainst: number
   abstentions: number
-  totalVoters: number
+  pourPct: number
+  contrePct: number
+  abstPct: number
+  majorityRequired: number | null
   dossierUrl: string | null
 }) {
   const adopted = result === 'adopté'
@@ -72,21 +78,24 @@ export function VoteHeroMobile({
         <dl className="grid grid-cols-3 text-center">
           <div className="flex flex-col-reverse">
             <dt className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--dp-badge-pos-text)]">Pour</dt>
-            <dd className="font-newsreader text-[30px] font-semibold leading-tight">{votesFor.toLocaleString('fr-FR')}</dd>
+            <dd className="font-mono text-xs text-[color:var(--dp-text-muted)]">{votesFor.toLocaleString('fr-FR')} voix</dd>
+            <dd className="font-newsreader text-[30px] font-semibold leading-tight">{pourPct}&nbsp;%</dd>
           </div>
           <div className="flex flex-col-reverse border-x border-[color:var(--dp-track-bg)]">
             <dt className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--dp-red)]">Contre</dt>
-            <dd className="font-newsreader text-[30px] font-semibold leading-tight">{votesAgainst.toLocaleString('fr-FR')}</dd>
+            <dd className="font-mono text-xs text-[color:var(--dp-text-muted)]">{votesAgainst.toLocaleString('fr-FR')} voix</dd>
+            <dd className="font-newsreader text-[30px] font-semibold leading-tight">{contrePct}&nbsp;%</dd>
           </div>
           <div className="flex flex-col-reverse">
             <dt className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--dp-text-secondary)]">Abst.</dt>
-            <dd className="font-newsreader text-[30px] font-semibold leading-tight">{abstentions.toLocaleString('fr-FR')}</dd>
+            <dd className="font-mono text-xs text-[color:var(--dp-text-muted)]">{abstentions.toLocaleString('fr-FR')} voix</dd>
+            <dd className="font-newsreader text-[30px] font-semibold leading-tight">{abstPct}&nbsp;%</dd>
           </div>
         </dl>
         <SplitBar pour={votesFor} contre={votesAgainst} abstention={abstentions} />
         <p className="text-[13px] leading-relaxed text-[color:var(--dp-text-secondary)]">
-          {adopted ? 'Adopté' : 'Rejeté'} avec {totalVoters.toLocaleString('fr-FR')} votants sur 577 députés.
-          Majorité absolue : 289 voix.
+          Pourcentages des voix exprimées.
+          {majorityRequired != null && <> Majorité requise : {majorityRequired.toLocaleString('fr-FR')} voix.</>}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {scrutinUrl && (
@@ -145,6 +154,12 @@ export interface GroupBreakdown {
   abst: number
   nonVotant: number
   position: 'Pour' | 'Contre' | 'Partagé'
+  forPct: number
+  agtPct: number
+  abstPct: number
+  participants: number
+  members: number | null
+  participationPct: number | null
 }
 
 /** Each group's split as a card: name, majority, bar and counts. */
@@ -174,9 +189,14 @@ export function GroupBreakdownMobile({ groups }: { groups: GroupBreakdown[] }) {
             </div>
             <SplitBar pour={g.pour} contre={g.contre} abstention={g.abst} height={8} />
             <p className="text-[13px] text-[color:var(--dp-text-secondary)]">
-              {g.pour} pour · {g.contre} contre · {g.abst} abst.
+              {g.forPct} % pour ({g.pour}) · {g.agtPct} % contre ({g.contre}) · {g.abstPct} % abst. ({g.abst})
               {g.nonVotant > 0 ? ` · ${g.nonVotant} non-votant${g.nonVotant > 1 ? 's' : ''}` : ''}
             </p>
+            {g.participationPct != null && (
+              <p className="text-[13px] text-[color:var(--dp-text-secondary)]">
+                Participation : <span className="font-semibold text-[color:var(--dp-text)]">{g.participationPct} %</span> ({g.participants} sur {g.members} membres)
+              </p>
+            )}
           </li>
         )
       })}

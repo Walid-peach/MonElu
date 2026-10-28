@@ -190,6 +190,18 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
+      <LegalSection id="participation" title={faqTitle('participation')}>
+        <p style={textStyle}>
+          La participation à un scrutin est la part des 577 sièges de l&apos;Assemblée occupés par un député ayant une position enregistrée sur ce scrutin, non-votants compris, selon la même règle que le taux de présence. Elle compte des votes, pas des présences : un député peut être dans l&apos;hémicycle sans voter, ou voter par délégation sans y être (chacun en porte une au plus). Elle est comparée à la médiane des scrutins du même type, parce qu&apos;un scrutin ordinaire réunit d&apos;habitude une petite partie de l&apos;hémicycle et un vote solennel presque tous les députés. La majorité requise est la moitié des suffrages exprimés (pour et contre) plus une, sauf pour une motion de censure, qui doit réunir la majorité des 577 députés, soit 289 voix.
+        </p>
+        <p style={sourceLineStyle}>
+          Source :{' '}
+          <a href={`${REPO_BASE}/api/routers/votes.py`} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+            votes.py
+          </a>
+        </p>
+      </LegalSection>
+
       <LegalSection id="horizon" title={faqTitle('horizon')}>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           La base de production couvre les scrutins depuis le <strong>1er juillet 2025</strong> (limite de
