@@ -65,7 +65,29 @@ extension VoteDetail {
             totalVoters: vote.totalVoters,
             dossierID: vote.dossier?.dossierUid,
             dossierStatus: vote.dossier?.status,
-            officialURL: vote.anUrl.flatMap(URL.init(string:))
+            officialURL: vote.anUrl.flatMap(URL.init(string:)),
+            voteType: vote.voteType,
+            pctPour: vote.pctPour,
+            pctContre: vote.pctContre,
+            pctAbstention: vote.pctAbstention,
+            majorityRequired: vote.majorityRequired,
+            turnout: vote.participation.map(VoteTurnout.init)
+        )
+    }
+}
+
+extension VoteTurnout {
+    init(_ participation: Components.Schemas.VoteParticipation) {
+        self.init(
+            participants: participation.participants,
+            nonVoting: participation.nonVoting,
+            seats: participation.seats,
+            rate: participation.rate,
+            typicalRate: participation.typicalRate,
+            comparison: participation.comparison,
+            groups: (participation.groups ?? []).map {
+                GroupTurnout(group: $0.partyShort, participants: $0.participants, members: $0.members, rate: $0.rate)
+            }
         )
     }
 }

@@ -19,6 +19,62 @@
     "lois_url": "https://mon-elu.vercel.app/lois/DLR5L17N52746"
   },
   "ingested_at": null,
+  "pct_pour": 0.7582,
+  "pct_contre": 0.2363,
+  "pct_abstention": 0.0055,
+  "majority_required": 182,
+  "participation": {
+    "participants": 366,
+    "non_voting": 2,
+    "seats": 577,
+    "rate": 0.6343,
+    "typical_rate": 0.8925,
+    "comparison": "usual",
+    "groups": [
+      {
+        "party_short": "RN",
+        "participants": 21,
+        "members": 123,
+        "rate": 0.1707
+      },
+      {
+        "party_short": "EPR",
+        "participants": 84,
+        "members": 90,
+        "rate": 0.9333
+      },
+      {
+        "party_short": "LFI",
+        "participants": 66,
+        "members": 71,
+        "rate": 0.9296
+      },
+      {
+        "party_short": "SOC",
+        "participants": 60,
+        "members": 66,
+        "rate": 0.9091
+      },
+      {
+        "party_short": "ECS",
+        "participants": 35,
+        "members": 38,
+        "rate": 0.9211
+      },
+      {
+        "party_short": "HOR",
+        "participants": 31,
+        "members": 34,
+        "rate": 0.9118
+      },
+      {
+        "party_short": "GDR",
+        "participants": 16,
+        "members": 17,
+        "rate": 0.9412
+      }
+    ]
+  },
   "positions": [
     {
       "deputy_id": "PA841633",

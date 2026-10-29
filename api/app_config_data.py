@@ -105,6 +105,13 @@ CAVEATS: list[tuple[str, str]] = [
         "**26 mars 2026** : les étapes antérieures du parcours d'un texte n'affichent "
         "aucun vote, ce qui ne veut pas dire qu'il n'y en a pas eu.",
     ),
+    (
+        "vote_participation",
+        "La participation à un scrutin compte des votes, pas des présences : un député "
+        "peut être dans l'hémicycle sans voter, ou voter par délégation sans y être "
+        "(chacun en porte une au plus). Le `nonVotant` compte comme participant, et le "
+        "total est rapporté aux 577 sièges, sièges vacants compris.",
+    ),
 ]
 
 

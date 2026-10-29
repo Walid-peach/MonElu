@@ -73,8 +73,28 @@ export type Vote = {
   theme?: string | null
 }
 
+// The turnout `GET /votes/{id}` computes (#627): every recorded position over
+// the chamber's 577 seats, against the median for the same vote_type.
+export type VoteParticipation = {
+  participants: number
+  non_voting: number
+  seats: number
+  rate: number
+  typical_rate?: number | null
+  comparison?: 'below' | 'usual' | 'above' | null
+  groups: Array<{
+    party_short: string | null
+    participants: number
+    members: number
+    rate: number
+  }>
+}
+
 export type VoteDetail = Vote & {
   dossier_id?: string | null
+  vote_type?: string | null
+  majority_required?: number | null
+  participation?: VoteParticipation | null
   positions?: Array<{
     deputy_id: string
     full_name: string

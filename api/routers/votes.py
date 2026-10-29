@@ -16,12 +16,108 @@ from api.routers.lois import SQL_DOSSIER_REF, lois_url
 from api.schemas import (
     VoteDetail,
     VoteDossierRef,
+    VoteGroupParticipation,
     VoteListResponse,
+    VoteParticipation,
     VotePosition,
     VoteSummary,
 )
 
 router = APIRouter()
+
+# Turnout (#627). The denominator is the chamber's 577 seats rather than the
+# seats filled on the vote's date: `deputies` holds only the deputies ingested
+# since the pipeline started, so a count of mandates covering an old date comes
+# out several seats short, while a vacancy moves the rate by under a point.
+CHAMBER_SEATS = 577
+# A motion de censure needs the votes of a majority of the chamber's members
+# (Constitution, art. 49), whatever the turnout; every other scrutin needs a
+# majority of the votes cast.
+CENSURE_MAJORITY = CHAMBER_SEATS // 2 + 1
+CENSURE_VOTE_TYPE = "moc"
+# A turnout under half the typical rate for its vote type is `below`, over 1.5
+# times it `above`. Ordinary scrutins sit around a fifth of the chamber, so the
+# bands are relative rather than fixed percentages.
+BELOW_TYPICAL = 0.5
+ABOVE_TYPICAL = 1.5
+
+SQL_TYPICAL_PARTICIPANTS = """
+SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY deputies_with_position) AS median
+FROM analytics_marts.mart_vote_summary
+WHERE vote_type = %(vote_type)s
+"""
+
+# Group members whose mandate covered the vote's date: the same mandate window
+# ADR-019 uses as the presence denominator, so a deputy elected later is not
+# counted as absent from a group they had not joined yet.
+SQL_GROUP_MEMBERS = """
+SELECT party_short, COUNT(*) AS members
+FROM deputies
+WHERE mandate_start <= %(voted_on)s
+  AND (mandate_end IS NULL OR mandate_end >= %(voted_on)s)
+GROUP BY party_short
+"""
+
+
+def majority_required(
+    vote_type: Optional[str], votes_for: Optional[int], votes_against: Optional[int]
+) -> Optional[int]:
+    """Votes needed to adopt: half the votes cast plus one, 289 for a censure motion."""
+    if vote_type == CENSURE_VOTE_TYPE:
+        return CENSURE_MAJORITY
+    cast = (votes_for or 0) + (votes_against or 0)
+    return cast // 2 + 1 if cast else None
+
+
+def share(count: Optional[int], total: Optional[int]) -> Optional[float]:
+    """count / total as a 0-1 rate, None when nobody voted."""
+    return round((count or 0) / total, 4) if total else None
+
+
+def compare_to_typical(rate: float, typical_rate: Optional[float]) -> Optional[str]:
+    """`below`, `usual` or `above` the typical rate; None when there is none."""
+    if not typical_rate:
+        return None
+    if rate < typical_rate * BELOW_TYPICAL:
+        return "below"
+    if rate > typical_rate * ABOVE_TYPICAL:
+        return "above"
+    return "usual"
+
+
+def build_participation(
+    positions: list[dict], typical_participants: Optional[float], group_members: list[dict]
+) -> VoteParticipation:
+    """Turnout from the roll call: every recorded position counts (ADR-019)."""
+    participants = len(positions)
+    rate = participants / CHAMBER_SEATS
+    typical_rate = (
+        round(typical_participants / CHAMBER_SEATS, 4) if typical_participants is not None else None
+    )
+    by_group: dict[Optional[str], int] = {}
+    for position in positions:
+        by_group[position["party_short"]] = by_group.get(position["party_short"], 0) + 1
+    groups = [
+        VoteGroupParticipation(
+            party_short=row["party_short"],
+            participants=by_group.get(row["party_short"], 0),
+            members=row["members"],
+            rate=round(min(1.0, by_group.get(row["party_short"], 0) / row["members"]), 4),
+        )
+        for row in group_members
+        if row["members"]
+    ]
+    groups.sort(key=lambda g: (-g.members, g.party_short or ""))
+    return VoteParticipation(
+        participants=participants,
+        non_voting=sum(1 for p in positions if p["position"] == "nonVotant"),
+        seats=CHAMBER_SEATS,
+        rate=round(rate, 4),
+        typical_rate=typical_rate,
+        comparison=compare_to_typical(rate, typical_rate),
+        groups=groups,
+    )
+
 
 # The values of votes.scrutin_kind, as classified at ingestion (ADR-035 §4).
 # Mirrors scripts.ingest_votes.SCRUTIN_KINDS; tests/test_api.py pins the two.
@@ -323,6 +419,26 @@ def get_vote(request: Request, vote_id: str):
 
     `an_url` is the scrutin's page on assemblee-nationale.fr.
 
+    `pct_pour`, `pct_contre` and `pct_abstention` are the three tallies over
+    `total_voters`, 0 to 1 (`nonVotant` is not among them).
+
+    `majority_required` is the number of `pour` votes needed to adopt: half the
+    votes cast (`votes_for` + `votes_against`) plus one, or 289 for a motion de
+    censure (`vote_type` `moc`), which needs a majority of the chamber.
+
+    `participation` is the turnout. `participants` counts every deputy with a
+    recorded position, `nonVotant` included (`non_voting` says how many), the
+    same rule as `presence_rate`; `rate` divides it by the chamber's 577 seats,
+    0 to 1. It counts votes, not physical attendance: a deputy can sit in the
+    chamber without voting, or vote by proxy (one proxy each) without being
+    there. `typical_rate` is the median rate of every scrutin of the same
+    `vote_type`, and `comparison` places this one against it: `below` (under
+    half of it), `usual` or `above` (over one and a half times it). Ordinary
+    scrutins (`spo`) usually draw a fifth of the chamber, solemn ones (`sps`)
+    nearly all of it. `groups` gives each group's participants over its members
+    whose mandate covered the vote's date, keyed by the same `party_short` as
+    `positions`.
+
     404 when the id is unknown.
     """
     try:
@@ -349,6 +465,13 @@ def get_vote(request: Request, vote_id: str):
                 )
                 position_rows = cur.fetchall()
 
+                cur.execute(SQL_TYPICAL_PARTICIPANTS, {"vote_type": vote.get("vote_type")})
+                typical = cur.fetchone()
+                group_members = []
+                if vote.get("voted_at") is not None:
+                    cur.execute(SQL_GROUP_MEMBERS, {"voted_on": vote["voted_at"].date()})
+                    group_members = cur.fetchall()
+
                 dossier = None
                 if vote.get("dossier_id"):
                     cur.execute(SQL_DOSSIER_REF, {"dossier_uid": vote["dossier_id"]})
@@ -360,6 +483,15 @@ def get_vote(request: Request, vote_id: str):
         **vote,
         an_url=an_scrutin_url(vote["vote_id"]),
         dossier=dossier,
+        pct_pour=share(vote.get("votes_for"), vote.get("total_voters")),
+        pct_contre=share(vote.get("votes_against"), vote.get("total_voters")),
+        pct_abstention=share(vote.get("abstentions"), vote.get("total_voters")),
+        majority_required=majority_required(
+            vote.get("vote_type"), vote.get("votes_for"), vote.get("votes_against")
+        ),
+        participation=build_participation(
+            position_rows, typical["median"] if typical else None, group_members
+        ),
         positions=[VotePosition(**r) for r in position_rows],
     )
 

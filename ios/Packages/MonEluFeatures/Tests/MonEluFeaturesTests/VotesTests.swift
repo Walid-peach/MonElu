@@ -119,6 +119,17 @@ struct LiveVotesServiceTests {
         #expect(vote.positions.count == 24)
         #expect(vote.dossierURL?.path() == "/lois/DLR5L17N52746")
         #expect(vote.officialURL?.absoluteString == "https://www.assemblee-nationale.fr/dyn/17/scrutins/8434")
+        // The turnout, the shares and the majority, all as the API sent them (#627).
+        #expect(vote.voteType == "sps")
+        #expect(vote.pctPour == 0.7582)
+        #expect(vote.majorityRequired == 182)
+        #expect(vote.turnout?.participants == 366)
+        #expect(vote.turnout?.nonVoting == 2)
+        #expect(vote.turnout?.rate == 0.6343)
+        #expect(vote.turnout?.typicalRate == 0.8925)
+        #expect(vote.turnout?.comparison == "usual")
+        let lfi = try #require(vote.positionsByGroup.first { $0.group == "LFI" })
+        #expect(vote.turnout(of: lfi) == GroupTurnout(group: "LFI", participants: 66, members: 71, rate: 0.9296))
     }
 
     @Test @MainActor func unknownVoteIsAnErrorStateNotACrash() async {
@@ -132,6 +143,22 @@ struct LiveVotesServiceTests {
 struct GroupPositionsTests {
     private func position(_ group: String?, _ position: String) -> DeputyPosition {
         DeputyPosition(deputyID: UUID().uuidString, name: "X", group: group, position: position)
+    }
+
+    @Test @MainActor func theParticipantsLineNamesTheNonVotants() {
+        func line(_ participants: Int, _ nonVoting: Int) -> String {
+            TurnoutCard(
+                turnout: VoteTurnout(
+                    participants: participants, nonVoting: nonVoting, seats: 577, rate: 0.2,
+                    typicalRate: nil, comparison: nil, groups: []
+                ),
+                voteType: nil, configuration: .defaults
+            ).participantsLine
+        }
+        #expect(line(128, 0) == "128 députés.")
+        #expect(line(128, 1) == "128 députés, dont 1 non-votant.")
+        #expect(line(128, 2) == "128 députés, dont 2 non-votants.")
+        #expect(line(1, 0) == "1 député.")
     }
 
     @Test func talliesPerGroupLargestFirst() {

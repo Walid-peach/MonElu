@@ -41,6 +41,7 @@ export const CAVEATS = [
   'Le compteur « députés suivis » dépasse 577 : il dénombre toutes les personnes ayant siégé depuis le début de la législature, remplacements compris.',
   'Les résumés en langage clair et les réponses de l\'assistant sont générés par un LLM. Ce sont des aides à la lecture, pas des sources - le scrutin d\'origine fait foi.',
   'L\'Assemblée ne rattache ses scrutins au texte qu\'ils concernent que depuis le **26 mars 2026** : les étapes antérieures du parcours d\'un texte n\'affichent aucun vote, ce qui ne veut pas dire qu\'il n\'y en a pas eu.',
+  'La participation à un scrutin compte des votes, pas des présences : un député peut être dans l\'hémicycle sans voter, ou voter par délégation sans y être (chacun en porte une au plus). Le `nonVotant` compte comme participant, et le total est rapporté aux 577 sièges, sièges vacants compris.',
 ]
 
 const SECTIONS: Array<{ path: string; what: string }> = [
@@ -168,6 +169,12 @@ Source : \`transform/models/marts/mart_party_alignment.sql\`, \`transform/models
 ### Pourcentages pour / contre / abstention
 
 Calculés sur les seules positions exprimées, \`nonVotant\` exclu de ce calcul-là mais inclus dans la présence.
+
+### Participation à un scrutin
+
+Les députés ayant une position enregistrée sur le scrutin, \`nonVotant\` compris (même règle que la présence), rapportés aux 577 sièges, et comparés à la médiane des scrutins du même type (ordinaire, solennel, motion de censure). Ce sont des votes, pas des présences : un député peut être en séance sans voter, ou voter par délégation sans y être. La majorité requise est la moitié des suffrages exprimés plus une, ou 289 voix pour une motion de censure.
+
+Source : \`api/routers/votes.py\`.
 
 ### Résultat d'un scrutin
 

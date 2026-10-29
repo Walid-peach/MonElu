@@ -42,6 +42,7 @@ _VOTE_SUMMARY = {
 
 _VOTE_DETAIL = {
     **_VOTE_SUMMARY,
+    "voted_at": datetime(2024, 7, 16, 15, 0),
     "vote_type": None,
     "dossier_id": None,
     "ingested_at": None,
@@ -591,8 +592,8 @@ def test_latest_votes(client, mock_cursor):
 
 
 def test_get_vote_found(client, mock_cursor):
-    mock_cursor.fetchone.return_value = _VOTE_DETAIL
-    mock_cursor.fetchall.return_value = [_POSITION]
+    mock_cursor.fetchone.side_effect = [_VOTE_DETAIL, {"median": None}]
+    mock_cursor.fetchall.side_effect = [[_POSITION], [{"party_short": "RN", "members": 123}]]
     resp = client.get("/votes/VTANR5L17V1")
     assert resp.status_code == 200
     data = resp.json()
@@ -600,6 +601,101 @@ def test_get_vote_found(client, mock_cursor):
     assert data["an_url"] == "https://www.assemblee-nationale.fr/dyn/17/scrutins/1"
     assert "positions" in data
     assert len(data["positions"]) == 1
+
+
+def test_get_vote_participation(client, mock_cursor):
+    """The turnout counts every recorded position, nonVotant included (#627, ADR-019)."""
+    positions = [
+        {**_POSITION, "deputy_id": "PA1", "position": "pour"},
+        {**_POSITION, "deputy_id": "PA2", "position": "contre"},
+        {**_POSITION, "deputy_id": "PA3", "party_short": "LIOT", "position": "nonVotant"},
+    ]
+    mock_cursor.fetchone.side_effect = [{**_VOTE_DETAIL, "vote_type": "spo"}, {"median": 115.4}]
+    mock_cursor.fetchall.side_effect = [
+        positions,
+        [{"party_short": "RN", "members": 123}, {"party_short": "LIOT", "members": 23}],
+    ]
+    resp = client.get("/votes/VTANR5L17V1")
+    assert resp.status_code == 200
+    data = resp.json()
+    part = data["participation"]
+    assert part["participants"] == 3
+    assert part["non_voting"] == 1
+    assert part["seats"] == 577
+    assert part["rate"] == round(3 / 577, 4)
+    assert part["typical_rate"] == 0.2
+    assert part["comparison"] == "below"
+    assert part["groups"] == [
+        {"party_short": "RN", "participants": 2, "members": 123, "rate": 0.0163},
+        {"party_short": "LIOT", "participants": 1, "members": 23, "rate": 0.0435},
+    ]
+    # 289 pour + 250 contre cast
+    assert data["majority_required"] == 270
+    assert (data["pct_pour"], data["pct_contre"], data["pct_abstention"]) == (
+        round(289 / 539, 4),
+        round(250 / 539, 4),
+        round(10 / 539, 4),
+    )
+    assert mock_cursor.execute.call_args_list[2].args[1] == {"vote_type": "spo"}
+    assert mock_cursor.execute.call_args_list[3].args[1] == {
+        "voted_on": datetime(2024, 7, 16).date()
+    }
+
+
+def test_majority_required():
+    """Half the votes cast plus one; a censure motion needs 289 whatever the turnout."""
+    from api.routers.votes import majority_required
+
+    assert majority_required("spo", 41, 85) == 64
+    assert majority_required("sps", 300, 200) == 251
+    assert majority_required("moc", 120, None) == 289
+    assert majority_required("spo", 0, 0) is None
+    assert majority_required(None, None, None) is None
+
+
+def test_share():
+    """A tally over the voters, None when nobody voted."""
+    from api.routers.votes import share
+
+    assert share(41, 128) == 0.3203
+    assert share(None, 128) == 0.0
+    assert share(3, 0) is None
+    assert share(3, None) is None
+
+
+def test_compare_to_typical():
+    """Below half the typical rate is `below`, over 1.5 times it `above`."""
+    from api.routers.votes import compare_to_typical
+
+    assert compare_to_typical(0.09, 0.2) == "below"
+    assert compare_to_typical(0.1, 0.2) == "usual"
+    assert compare_to_typical(0.3, 0.2) == "usual"
+    assert compare_to_typical(0.31, 0.2) == "above"
+    assert compare_to_typical(0.97, 0.95) == "usual"
+    assert compare_to_typical(0.2, None) is None
+
+
+def test_build_participation_edges():
+    """No positions is a zero rate; a group rate is capped at 1; empty groups are skipped."""
+    from api.routers.votes import build_participation
+
+    empty = build_participation([], None, [{"party_short": "RN", "members": 123}])
+    assert (empty.participants, empty.rate, empty.typical_rate, empty.comparison) == (
+        0,
+        0.0,
+        None,
+        None,
+    )
+    assert empty.groups[0].participants == 0
+
+    # A position recorded outside the stored mandate window can push a group past
+    # its member count; the rate is capped, the counts stay as recorded.
+    over = build_participation(
+        [{**_POSITION, "deputy_id": f"PA{i}"} for i in range(3)],
+        None,
+        [{"party_short": "RN", "members": 2}, {"party_short": "NI", "members": 0}],
+    )
+    assert [(g.party_short, g.participants, g.rate) for g in over.groups] == [("RN", 3, 1.0)]
 
 
 def test_get_vote_not_found(client, mock_cursor):

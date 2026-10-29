@@ -82,6 +82,55 @@ public struct DeputyPosition: Hashable, Sendable {
     }
 }
 
+/// How much of the chamber took part in a scrutin (the API's
+/// `participation`, #627). Every figure is the API's; the app only shows it.
+public struct VoteTurnout: Hashable, Sendable {
+    /// Deputies with a recorded position, non-votants included.
+    public let participants: Int
+    /// Of which non-votants: present, no position taken.
+    public let nonVoting: Int
+    /// The chamber's seats (577).
+    public let seats: Int
+    /// participants / seats, 0 to 1.
+    public let rate: Double
+    /// The median rate of the scrutins of the same type; nil when unknown.
+    public let typicalRate: Double?
+    /// `below`, `usual` or `above` the typical rate; nil when unknown.
+    public let comparison: String?
+    /// Each group's turnout, keyed like `DeputyPosition.group`.
+    public let groups: [GroupTurnout]
+
+    public init(
+        participants: Int, nonVoting: Int, seats: Int, rate: Double,
+        typicalRate: Double?, comparison: String?, groups: [GroupTurnout]
+    ) {
+        self.participants = participants
+        self.nonVoting = nonVoting
+        self.seats = seats
+        self.rate = rate
+        self.typicalRate = typicalRate
+        self.comparison = comparison
+        self.groups = groups
+    }
+}
+
+/// One group's turnout: its participants over its members on the vote's date.
+public struct GroupTurnout: Hashable, Sendable {
+    /// The group's short label; nil for the non-inscrits.
+    public let group: String?
+    public let participants: Int
+    public let members: Int
+    /// participants / members, 0 to 1.
+    public let rate: Double
+
+    public init(group: String?, participants: Int, members: Int, rate: Double) {
+        self.group = group
+        self.participants = participants
+        self.members = members
+        self.rate = rate
+    }
+}
+
 /// A scrutin's detail.
 public struct VoteDetail: Hashable, Sendable {
     public let item: VoteItem
@@ -100,12 +149,24 @@ public struct VoteDetail: Hashable, Sendable {
     public let dossierStatus: String?
     /// The scrutin's page on assemblee-nationale.fr (the API's `an_url`, #617).
     public let officialURL: URL?
+    /// `spo` (ordinary), `sps` (solemn) or `moc` (censure motion).
+    public let voteType: String?
+    /// The three tallies over the voters, 0 to 1 (the API's `pct_*`).
+    public let pctPour: Double?
+    public let pctContre: Double?
+    public let pctAbstention: Double?
+    /// The `pour` votes needed to adopt (the API's `majority_required`).
+    public let majorityRequired: Int?
+    /// The turnout (the API's `participation`, #627).
+    public let turnout: VoteTurnout?
 
     public init(
         item: VoteItem, votesFor: Int?, votesAgainst: Int?, abstentions: Int?,
         positions: [DeputyPosition], dossierTitle: String?, dossierURL: URL?,
         totalVoters: Int? = nil, dossierID: String? = nil, dossierStatus: String? = nil,
-        officialURL: URL? = nil
+        officialURL: URL? = nil, voteType: String? = nil,
+        pctPour: Double? = nil, pctContre: Double? = nil, pctAbstention: Double? = nil,
+        majorityRequired: Int? = nil, turnout: VoteTurnout? = nil
     ) {
         self.item = item
         self.votesFor = votesFor
@@ -118,6 +179,17 @@ public struct VoteDetail: Hashable, Sendable {
         self.dossierID = dossierID
         self.dossierStatus = dossierStatus
         self.officialURL = officialURL
+        self.voteType = voteType
+        self.pctPour = pctPour
+        self.pctContre = pctContre
+        self.pctAbstention = pctAbstention
+        self.majorityRequired = majorityRequired
+        self.turnout = turnout
+    }
+
+    /// The API's turnout for a group of `positionsByGroup`, if it sent one.
+    func turnout(of group: GroupPositions) -> GroupTurnout? {
+        turnout?.groups.first { ($0.group ?? GroupPositions.nonInscrit) == group.group }
     }
 
     /// The bill has a page (the API's `lois_url` is set only then), so the

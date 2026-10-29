@@ -1139,7 +1139,7 @@
           "Votes"
         ],
         "summary": "One scrutin in full, including how every deputy voted",
-        "description": "A single scrutin with its tallies and the complete per-deputy roll call.\n\n`positions` is the whole chamber in one array - typically 577 entries, not\npaginated. Each `position` is `pour`, `contre`, `abstention` or `nonVotant`;\n`abstention` and `nonVotant` are different and must not be summed.\n\nThe aggregate counters (`votes_for`, `votes_against`, `abstentions`,\n`total_voters`) come from the Assemblée's own synthesis rather than from\ncounting `positions`, so prefer them when quoting a tally. `summary_plain` is\nan LLM-generated plain-French gloss of the title and may be null.\n\n`dossier_id` links the scrutin to its bill, but is present on a minority of\nvotes: the Assemblée only began tagging scrutins with a dossier in March 2026.\nIts absence says nothing about the vote. When it is set, `dossier` carries\nthe bill's title and status and `lois_url`, its MonÉlu bill page - null when\nthat bill has no page (a legislature-16 dossier, for one). `dossier` is null\nwhen `dossier_id` is.\n\n`an_url` is the scrutin's page on assemblee-nationale.fr.\n\n404 when the id is unknown.",
+        "description": "A single scrutin with its tallies and the complete per-deputy roll call.\n\n`positions` is the whole chamber in one array - typically 577 entries, not\npaginated. Each `position` is `pour`, `contre`, `abstention` or `nonVotant`;\n`abstention` and `nonVotant` are different and must not be summed.\n\nThe aggregate counters (`votes_for`, `votes_against`, `abstentions`,\n`total_voters`) come from the Assemblée's own synthesis rather than from\ncounting `positions`, so prefer them when quoting a tally. `summary_plain` is\nan LLM-generated plain-French gloss of the title and may be null.\n\n`dossier_id` links the scrutin to its bill, but is present on a minority of\nvotes: the Assemblée only began tagging scrutins with a dossier in March 2026.\nIts absence says nothing about the vote. When it is set, `dossier` carries\nthe bill's title and status and `lois_url`, its MonÉlu bill page - null when\nthat bill has no page (a legislature-16 dossier, for one). `dossier` is null\nwhen `dossier_id` is.\n\n`an_url` is the scrutin's page on assemblee-nationale.fr.\n\n`pct_pour`, `pct_contre` and `pct_abstention` are the three tallies over\n`total_voters`, 0 to 1 (`nonVotant` is not among them).\n\n`majority_required` is the number of `pour` votes needed to adopt: half the\nvotes cast (`votes_for` + `votes_against`) plus one, or 289 for a motion de\ncensure (`vote_type` `moc`), which needs a majority of the chamber.\n\n`participation` is the turnout. `participants` counts every deputy with a\nrecorded position, `nonVotant` included (`non_voting` says how many), the\nsame rule as `presence_rate`; `rate` divides it by the chamber's 577 seats,\n0 to 1. It counts votes, not physical attendance: a deputy can sit in the\nchamber without voting, or vote by proxy (one proxy each) without being\nthere. `typical_rate` is the median rate of every scrutin of the same\n`vote_type`, and `comparison` places this one against it: `below` (under\nhalf of it), `usual` or `above` (over one and a half times it). Ordinary\nscrutins (`spo`) usually draw a fifth of the chamber, solemn ones (`sps`)\nnearly all of it. `groups` gives each group's participants over its members\nwhose mandate covered the vote's date, keyed by the same `party_short` as\n`positions`.\n\n404 when the id is unknown.",
         "operationId": "getVote",
         "parameters": [
           {
@@ -6960,6 +6960,29 @@
             "type": "string",
             "format": "date-time"
           },
+          "pct_pour": {
+            "title": "Pct Pour",
+            "description": "votes_for / total_voters, 0-1; null when nobody voted",
+            "type": "number"
+          },
+          "pct_contre": {
+            "title": "Pct Contre",
+            "description": "votes_against / total_voters, 0-1; null when nobody voted",
+            "type": "number"
+          },
+          "pct_abstention": {
+            "title": "Pct Abstention",
+            "description": "abstentions / total_voters, 0-1; null when nobody voted",
+            "type": "number"
+          },
+          "majority_required": {
+            "title": "Majority Required",
+            "description": "Votes needed to adopt: half the votes cast (pour + contre) plus one, or 289 for a motion de censure; null when nobody voted pour or contre",
+            "type": "integer"
+          },
+          "participation": {
+            "$ref": "#/components/schemas/VoteParticipation"
+          },
           "positions": {
             "items": {
               "$ref": "#/components/schemas/VotePosition"
@@ -6987,6 +7010,32 @@
           },
           "dossier_id": "DLR5L17N53980",
           "ingested_at": "2026-07-22T06:12:03Z",
+          "majority_required": 266,
+          "participation": {
+            "comparison": "usual",
+            "groups": [
+              {
+                "members": 123,
+                "participants": 120,
+                "party_short": "RN",
+                "rate": 0.9756
+              },
+              {
+                "members": 23,
+                "participants": 21,
+                "party_short": "LIOT",
+                "rate": 0.913
+              }
+            ],
+            "non_voting": 1,
+            "participants": 538,
+            "rate": 0.9324,
+            "seats": 577,
+            "typical_rate": 0.9532
+          },
+          "pct_abstention": 0.013,
+          "pct_contre": 0.3333,
+          "pct_pour": 0.6536,
           "positions": [
             {
               "deputy_id": "PA720892",
@@ -7039,6 +7088,37 @@
         ],
         "title": "VoteDossierRef",
         "description": "The bill a scrutin belongs to, embedded in GET /votes/{vote_id} (#369)."
+      },
+      "VoteGroupParticipation": {
+        "properties": {
+          "party_short": {
+            "title": "Party Short",
+            "type": "string"
+          },
+          "participants": {
+            "type": "integer",
+            "title": "Participants",
+            "description": "Group members with a recorded position"
+          },
+          "members": {
+            "type": "integer",
+            "title": "Members",
+            "description": "Group members whose mandate covered the vote's date"
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate",
+            "description": "participants / members, 0-1, capped at 1"
+          }
+        },
+        "type": "object",
+        "required": [
+          "participants",
+          "members",
+          "rate"
+        ],
+        "title": "VoteGroupParticipation",
+        "description": "One group's turnout on a scrutin, inside `VoteParticipation.groups` (#627)."
       },
       "VoteListResponse": {
         "properties": {
@@ -7095,6 +7175,57 @@
           "offset": 0,
           "total": 5561
         }
+      },
+      "VoteParticipation": {
+        "properties": {
+          "participants": {
+            "type": "integer",
+            "title": "Participants",
+            "description": "Deputies with a recorded position, nonVotant included (ADR-019)"
+          },
+          "non_voting": {
+            "type": "integer",
+            "title": "Non Voting",
+            "description": "Of which nonVotant: present, no position taken"
+          },
+          "seats": {
+            "type": "integer",
+            "title": "Seats",
+            "description": "Seats in the chamber (577)"
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate",
+            "description": "participants / seats, 0-1"
+          },
+          "typical_rate": {
+            "title": "Typical Rate",
+            "description": "Median rate over every scrutin of the same vote_type; null when unknown",
+            "type": "number"
+          },
+          "comparison": {
+            "title": "Comparison",
+            "description": "`below` (under half the typical rate), `above` (over 1.5 times it) or `usual`; null when typical_rate is null",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/VoteGroupParticipation"
+            },
+            "type": "array",
+            "title": "Groups",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "participants",
+          "non_voting",
+          "seats",
+          "rate"
+        ],
+        "title": "VoteParticipation",
+        "description": "How much of the chamber took part in a scrutin (#627)."
       },
       "VotePosition": {
         "properties": {
