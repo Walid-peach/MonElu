@@ -202,6 +202,7 @@ Unlike vote summaries there is no `summarize_backfill.yml` equivalent behind the
 - Lineage docs auto-deployed to GitHub Pages on push to `master`
 
 **`rag/`** — Phase 2 semantic search
+- Generated summaries are never evidence (#631): `chunker.py` keeps an amendment summary only with `summary_basis = 'official_text'` and labels every summary as a reading aid (`READING_AID_LABEL`), and `RAG_TEMPLATE` forbids citing it. `verify.py` sends the model official titles and recorded positions only, so a summary cannot reach a verdict.
 - `pipeline/chunker.py`: Five chunk strategies: `vote` (one per scrutin), `deputy` (one per député), `party` (one per parliamentary group), `global_stats` (aggregate overview), `notable_deputy` (vote-by-vote for high-profile deputies). Uses tiktoken (cl100k_base) for token counting.
 - `pipeline/embedder.py`: Batched OpenAI embedding (100 chunks/batch), stores into `document_chunks`.
 - `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. **`build` has exactly one mode** (ADR-037, MON-256): a full rebuild (~$0.006/run) that re-embeds into a `document_chunks_staging` table and swaps it in atomically (`ALTER TABLE ... RENAME`) once every step succeeds (MON-233) - `document_chunks` is never truncated up front, so a mid-run failure leaves the previous index live.
