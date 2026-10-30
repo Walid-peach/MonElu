@@ -76,6 +76,21 @@ SUMMARY_PROMPT = (
     "International | Autre"
 )
 
+SUMMARY_PROMPT_AGENDA = (
+    "Tu reformules pour le grand public une ligne de l'ordre du jour de l'Assemblée nationale.\n"
+    "Règles :\n"
+    "- Une seule phrase courte, en français clair, sans verbe de remplissage.\n"
+    "- N'ajoute aucun but, contenu, enjeu ou détail absent de la ligne. Un débat reste un "
+    "débat : n'en fais pas une réforme.\n"
+    "- Ne commence jamais par « Le texte porte sur », et ne devine rien.\n"
+    "- Exemple : « Débat sur l'avenir de l'orientation des lycéens vers le supérieur. »\n"
+    'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
+    "Theme doit être EXACTEMENT l'un de :\n"
+    "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
+)
+
 SUMMARY_PROMPT_PROCEDURAL = (
     "Tu es un assistant civique neutre. Ce texte est une MOTION PROCÉDURALE.\n"
     "En 2 phrases maximum en français clair :\n"

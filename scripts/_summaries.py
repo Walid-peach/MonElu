@@ -54,6 +54,14 @@ PROCEDURAL_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# Wording that means the model is guessing at content it was not given (#633).
+GUESS_PATTERNS = re.compile(
+    r"probablement|vraisemblablement|sans doute|certaines dispositions|notamment en\b"
+    r"|semble viser|pourrait viser",
+    re.IGNORECASE,
+)
+PADDED_OPENING_PATTERN = re.compile(r"^\s*le texte porte sur\b", re.IGNORECASE)
+
 
 def is_procedural(title: str) -> bool:
     return bool(PROCEDURAL_PATTERNS.search(title))
@@ -75,6 +83,15 @@ def detect_motion_type(title: str) -> str:
     if "exception d'irrecevabilité" in lower or "exception dirrecevabilite" in lower:
         return "exception d'irrecevabilité"
     return "motion procédurale"
+
+
+def agenda_rejection_reason(summary: str) -> str | None:
+    """Why a generated agenda line must not be stored, None when it may."""
+    if GUESS_PATTERNS.search(summary):
+        return "guess"
+    if PADDED_OPENING_PATTERN.search(summary):
+        return "padded_opening"
+    return None
 
 
 def call_groq(client, system: str, user: str, max_retries: int = 6) -> str | None:
