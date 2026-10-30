@@ -8,9 +8,13 @@ Usage:
     python -m scripts.generate_vote_summaries
     python -m scripts.generate_vote_summaries --since 2025-07-01
     python -m scripts.generate_vote_summaries --dry-run   # print without writing
+    python -m scripts.generate_vote_summaries --limit 100
+    python -m scripts.generate_vote_summaries --backlog   # print the pending count
+    python -m scripts.generate_vote_summaries --clear-legacy-amendments
 """
 
 import argparse
+import hashlib
 import logging
 import os
 import sys
@@ -24,22 +28,30 @@ from dotenv import load_dotenv
 try:
     from scripts._cache_scope import write_changed_ids
     from scripts._summaries import (
+        AMENDMENT_MAX_TOKENS,
         BATCH_SIZE,
+        MAX_TOKENS,
         MODEL,
+        amendment_user_message,
         call_groq,
         detect_motion_type,
         is_procedural,
         parse_response,
+        rejection_reason,
     )
 except ImportError:  # running as a plain file: python scripts/generate_vote_summaries.py
     from _cache_scope import write_changed_ids
     from _summaries import (
+        AMENDMENT_MAX_TOKENS,
         BATCH_SIZE,
+        MAX_TOKENS,
         MODEL,
+        amendment_user_message,
         call_groq,
         detect_motion_type,
         is_procedural,
         parse_response,
+        rejection_reason,
     )
 
 load_dotenv()
@@ -50,6 +62,54 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+BASIS_OFFICIAL_TEXT = "official_text"
+BASIS_REJECTED = "rejected"
+# Different texts sharing one sentence on this scale means the prompt or the
+# source has broken, not that a few amendments happen to read alike.
+MIN_DUPLICATES_TO_FAIL = 5
+MAX_DUPLICATE_RATE = 0.2
+
+# An amendment vote is only ever summarized from its official text (#630,
+# ADR-043): with no vote_amendments row it makes no LLM call and keeps its title.
+SQL_PENDING = """
+FROM votes v
+LEFT JOIN vote_amendments a ON a.vote_id = v.vote_id
+WHERE v.voted_at >= %(since)s
+  AND (
+    (v.scrutin_kind = 'amendement' AND a.vote_id IS NOT NULL AND v.summary_basis IS NULL)
+    OR (v.scrutin_kind IS DISTINCT FROM 'amendement' AND v.summary_plain IS NULL)
+  )
+"""
+
+SQL_PENDING_ROWS = f"""
+SELECT v.vote_id, v.vote_title, v.result, v.scrutin_kind,
+       a.is_sub_amendment, a.dispositif, a.expose_sommaire
+{SQL_PENDING}
+ORDER BY v.summary_plain IS NULL DESC, v.voted_at DESC
+"""
+
+SQL_STORED_AMENDMENT_SUMMARIES = """
+SELECT v.summary_plain, a.dispositif
+FROM votes v JOIN vote_amendments a ON a.vote_id = v.vote_id
+WHERE v.summary_basis = 'official_text'
+"""
+
+# Summaries written from a title alone. Clearing them is safe to repeat: the
+# title stays on the page, and the sweep rewrites those with official text.
+SQL_CLEAR_LEGACY = """
+UPDATE votes SET summary_plain = NULL
+WHERE scrutin_kind = 'amendement' AND summary_basis IS NULL AND summary_plain IS NOT NULL
+"""
+
+
+def source_key(dispositif: str) -> str:
+    return hashlib.sha256(dispositif.encode()).hexdigest()
+
+
+def duplicate_of_other_source(summary: str, source: str, seen: dict[str, str]) -> bool:
+    """True when another text already has this sentence; identical amendments may share it."""
+    return seen.setdefault(summary, source) != source
+
 
 def process_batch(
     client,
@@ -59,7 +119,11 @@ def process_batch(
     stats: dict,
     changed_ids_out: str | None = None,
 ) -> None:
-    from rag.chain.prompts import SUMMARY_PROMPT, SUMMARY_PROMPT_PROCEDURAL
+    from rag.chain.prompts import (
+        SUMMARY_PROMPT,
+        SUMMARY_PROMPT_AMENDMENT,
+        SUMMARY_PROMPT_PROCEDURAL,
+    )
 
     updates = []
     for vote in batch:
@@ -67,7 +131,11 @@ def process_batch(
         title = vote["vote_title"]
         result = vote["result"] or "inconnu"
 
-        if is_procedural(title):
+        is_amendment = vote.get("scrutin_kind") == "amendement"
+        if is_amendment:
+            system = SUMMARY_PROMPT_AMENDMENT
+            user_msg = amendment_user_message(vote)
+        elif is_procedural(title):
             motion_type = detect_motion_type(title)
             system = SUMMARY_PROMPT_PROCEDURAL
             user_msg = (
@@ -77,7 +145,8 @@ def process_batch(
             system = SUMMARY_PROMPT
             user_msg = f'Titre : "{title}"\nRésultat : {result}'
 
-        raw = call_groq(client, system, user_msg)
+        max_tokens = AMENDMENT_MAX_TOKENS if is_amendment else MAX_TOKENS
+        raw = call_groq(client, system, user_msg, max_tokens=max_tokens)
         if raw is None:
             stats["errors"] += 1
             continue
@@ -89,18 +158,35 @@ def process_batch(
             continue
 
         summary, theme = parsed
+        basis = None
+        if is_amendment:
+            reason = rejection_reason(summary, title)
+            source = source_key(vote["dispositif"])
+            seen = stats.setdefault("seen_summaries", {})
+            if reason is None and duplicate_of_other_source(summary, source, seen):
+                reason = "duplicate"
+            if reason:
+                log.warning("Rejected %s (%s): %s", vote_id, reason, summary[:120])
+                rejected = stats.setdefault("rejected", {})
+                rejected[reason] = rejected.get(reason, 0) + 1
+                summary, basis = None, BASIS_REJECTED
+            else:
+                basis = BASIS_OFFICIAL_TEXT
+
         if dry_run:
             proc_flag = " [PROCEDURAL]" if is_procedural(title) else ""
-            log.info("[DRY-RUN]%s %s | theme=%s | %s", proc_flag, vote_id, theme, summary[:80])
+            log.info("[DRY-RUN]%s %s | theme=%s | %s", proc_flag, vote_id, theme, summary)
         else:
-            updates.append((summary, theme, vote_id))
-        stats["generated"] += 1
+            updates.append((summary, theme, basis, vote_id))
+        if basis != BASIS_REJECTED:
+            stats["generated"] += 1
 
     if updates and not dry_run:
         with conn.cursor() as cur:
             psycopg2.extras.execute_batch(
                 cur,
-                "UPDATE votes SET summary_plain = %s, theme = %s WHERE vote_id = %s",
+                "UPDATE votes SET summary_plain = %s, theme = %s, summary_basis = %s "
+                "WHERE vote_id = %s",
                 updates,
             )
         conn.commit()
@@ -111,7 +197,7 @@ def process_batch(
         # record changed", which is what the dbt staging layer and the change
         # detection in run_ingestion_prod.py both read it as. A summary is our
         # own text, not a new record from upstream.
-        stats.setdefault("summarized_vote_ids", []).extend(vote_id for _, _, vote_id in updates)
+        stats.setdefault("summarized_vote_ids", []).extend(update[-1] for update in updates)
         # Rewritten after every committed batch, not once at the end: a run that
         # commits 40 summaries and then dies (a Groq 429 cascade, a job timeout)
         # must not leave those 40 vote pages stale with nothing reporting it.
@@ -148,6 +234,15 @@ def check_summary_yield(stats: dict) -> None:
         sys.exit(1)
 
 
+def check_duplicate_rate(stats: dict) -> None:
+    """Exit 1 when many votes drew one sentence for different texts (#630)."""
+    duplicates = stats.get("rejected", {}).get("duplicate", 0)
+    attempted = stats["generated"] + sum(stats.get("rejected", {}).values())
+    if duplicates >= MIN_DUPLICATES_TO_FAIL and duplicates / attempted > MAX_DUPLICATE_RATE:
+        log.error("%d of %d amendment summaries duplicated another text.", duplicates, attempted)
+        sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate vote summaries via Groq")
     parser.add_argument(
@@ -159,6 +254,21 @@ def main() -> None:
         "--dry-run",
         action="store_true",
         help="Print summaries without writing to DB.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Stop after this many votes, so a long sweep stays inside Groq's daily quota.",
+    )
+    parser.add_argument(
+        "--backlog",
+        action="store_true",
+        help="Print how many votes are pending, then exit. Needs no Groq key.",
+    )
+    parser.add_argument(
+        "--clear-legacy-amendments",
+        action="store_true",
+        help="Clear amendment summaries written from a title alone, then exit (#630).",
     )
     parser.add_argument(
         "--changed-ids-out",
@@ -173,12 +283,26 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    if not groq_api_key:
-        raise EnvironmentError("GROQ_API_KEY is not set.")
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise EnvironmentError("DATABASE_URL is not set.")
+
+    if args.backlog or args.clear_legacy_amendments:
+        conn = psycopg2.connect(database_url)
+        with conn.cursor() as cur:
+            if args.clear_legacy_amendments:
+                cur.execute(SQL_CLEAR_LEGACY)
+                log.info("Cleared %d legacy amendment summaries", cur.rowcount)
+            else:
+                cur.execute(f"SELECT COUNT(*) {SQL_PENDING}", {"since": args.since})
+                print(cur.fetchone()[0])
+        conn.commit()
+        conn.close()
+        return
+
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if not groq_api_key:
+        raise EnvironmentError("GROQ_API_KEY is not set.")
 
     import warnings
 
@@ -191,17 +315,12 @@ def main() -> None:
     conn = psycopg2.connect(database_url)
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT vote_id, vote_title, result
-            FROM votes
-            WHERE summary_plain IS NULL
-              AND voted_at >= %s
-            ORDER BY voted_at DESC
-            """,
-            (args.since,),
-        )
+        cur.execute(SQL_PENDING_ROWS, {"since": args.since})
         rows = [dict(r) for r in cur.fetchall()]
+        cur.execute(SQL_STORED_AMENDMENT_SUMMARIES)
+        seen = {r["summary_plain"]: source_key(r["dispositif"]) for r in cur.fetchall()}
+    if args.limit:
+        rows = rows[: args.limit]
 
     log.info(
         "Found %d votes without summaries (since %s)%s",
@@ -216,7 +335,13 @@ def main() -> None:
         conn.close()
         return
 
-    stats: dict = {"generated": 0, "errors": 0, "summarized_vote_ids": []}
+    stats: dict = {
+        "generated": 0,
+        "errors": 0,
+        "summarized_vote_ids": [],
+        "seen_summaries": seen,
+        "rejected": {},
+    }
     total_batches = (len(rows) + BATCH_SIZE - 1) // BATCH_SIZE
 
     for i in range(0, len(rows), BATCH_SIZE):
@@ -236,7 +361,10 @@ def main() -> None:
         stats["generated"],
         stats["errors"],
     )
+    if stats["rejected"]:
+        log.info("Rejected by reason: %s", stats["rejected"])
     check_summary_yield(stats)
+    check_duplicate_rate(stats)
 
 
 if __name__ == "__main__":
