@@ -22,6 +22,25 @@ from rag.constants import LLM_MAX_TOKENS, LLM_MODEL  # noqa: E402
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
 
 _CONFIDENCE_PATTERN = re.compile(r"\[Confiance\s*:\s*(ÉLEVÉ|MOYEN|FAIBLE)\]", re.IGNORECASE)
+_CITATION_MARKER_PATTERN = re.compile(r"【([^】]*)】")
+_BOLD_PATTERN = re.compile(r"\*\*(.+?)\*\*|__(.+?)__", re.DOTALL)
+_STYLE_PATTERNS = {
+    "citation_marker": re.compile(r"[【】]"),
+    "bold": re.compile(r"\*\*|__"),
+    "recap": re.compile(r"\b(?:en résumé|en conclusion|en somme)\b", re.IGNORECASE),
+    "closing_note": re.compile(r"(?:sont|est) contenues? dans|sources fournies", re.IGNORECASE),
+}
+
+
+def clean_answer_style(answer: str) -> str:
+    """Remove model habits a prompt rule cannot fully stop (#632)."""
+    answer = _CITATION_MARKER_PATTERN.sub(r"(\1)", answer).replace("【", "").replace("】", "")
+    return _BOLD_PATTERN.sub(lambda m: m.group(1) or m.group(2), answer).strip()
+
+
+def style_violations(answer: str) -> list[str]:
+    """Names of the chat style rules an answer breaks, for the evaluation suite."""
+    return [name for name, pattern in _STYLE_PATTERNS.items() if pattern.search(answer)]
 
 
 def extract_confidence(answer: str) -> tuple[str, str]:
@@ -95,6 +114,7 @@ def ask(
     )
 
     clean_answer, _llm_confidence = extract_confidence(response.choices[0].message.content)
+    clean_answer = clean_answer_style(clean_answer)
     computed_confidence = compute_confidence(chunks)
 
     return {
