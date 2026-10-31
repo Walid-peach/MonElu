@@ -8,11 +8,12 @@ vocabulary and retry/parse logic via scripts/_summaries.py.
 
 Two things differ from the vote generator, both from ADR-030:
 
-* **Stubs get no LLM call.** 16 % of ODJ points have an `objet` whose entire
+* **Stubs and clear lines get no LLM call.** 16 % of ODJ points have an `objet` whose entire
   content is "Discussion" or "Questions au Gouvernement". Sending one word to
   an LLM would invent specifics on a civic-transparency site, so these keep
   `summary_plain IS NULL` and the frontend renders `point_type` instead
-  (frontend/src/lib/agenda.ts:agendaHeadline).
+  (frontend/src/lib/agenda.ts:agendaHeadline). An objet short enough to read
+  as it is skips the call too, because a summary could only pad it (#633).
 * **Regeneration is driven by the ingest upsert, not by this script.**
   `ingest_agenda.py` nulls `summary_plain`/`theme` when an item's `objet_hash`
   changes, so a reworded item simply reappears in this script's
@@ -43,6 +44,7 @@ try:
     from scripts._http import connect_with_retry
     from scripts._summaries import (
         BATCH_SIZE,
+        agenda_rejection_reason,
         call_groq,
         detect_motion_type,
         is_procedural,
@@ -53,6 +55,7 @@ except ImportError:  # running as a plain file: python scripts/generate_agenda_s
     from _http import connect_with_retry
     from _summaries import (
         BATCH_SIZE,
+        agenda_rejection_reason,
         call_groq,
         detect_motion_type,
         is_procedural,
@@ -71,6 +74,9 @@ log = logging.getLogger(__name__)
 # value is "Discussion" or "Questions au Gouvernement". Measured across the
 # full export by the MON-208 spike (scripts/explore_agenda.py).
 STUB_OBJET_MAX_LEN = 30
+# Up to this length an objet is already a readable line, and a summary could
+# only restate it or pad it (#633). The frontend shows the objet instead.
+CLEAR_OBJET_MAX_LEN = 120
 
 _CANCELLED_STATES = ("Annulé", "Supprimé")
 
@@ -86,6 +92,20 @@ CANDIDATE_SQL = """
       AND (point_etat IS NULL OR point_etat NOT IN %s)
       AND sitting_start >= %s
     ORDER BY sitting_start ASC, point_uid ASC
+"""
+
+SQL_KNOWN_SUMMARIES = """
+    SELECT DISTINCT ON (objet) objet, summary_plain, theme
+    FROM agenda_items
+    WHERE summary_plain IS NOT NULL AND objet IS NOT NULL
+    ORDER BY objet, sitting_start DESC
+"""
+
+# Written before #633. Clearing them hands the items back to this sweep, so
+# nothing has to be run by hand, and the statement matches nothing afterwards.
+SQL_CLEAR_PADDED = """
+    UPDATE agenda_items SET summary_plain = NULL, theme = NULL
+    WHERE summary_plain ILIKE 'Le texte porte sur%'
 """
 
 
@@ -104,6 +124,12 @@ def is_stub(objet: str | None, point_type: str | None = None) -> bool:
     return len(text) <= STUB_OBJET_MAX_LEN
 
 
+def is_clear(objet: str | None) -> bool:
+    """Is the official wording already short enough to show as it is?"""
+    text = (objet or "").strip()
+    return len(text) <= CLEAR_OBJET_MAX_LEN and not is_procedural(text)
+
+
 def process_batch(
     client,
     batch: list[dict],
@@ -115,16 +141,25 @@ def process_batch(
     # Imported here, not at module scope, so the module stays importable (and
     # unit-testable) without rag/ on the path - the same shape the vote
     # generator uses.
-    from rag.chain.prompts import SUMMARY_PROMPT, SUMMARY_PROMPT_PROCEDURAL
+    from rag.chain.prompts import SUMMARY_PROMPT_AGENDA, SUMMARY_PROMPT_PROCEDURAL
 
     updates = []
+    known = stats.get("known_summaries", {})
     for item in batch:
         point_uid = item["point_uid"]
         objet = item["objet"]
 
-        if is_stub(objet, item.get("point_type")):
+        if is_stub(objet, item.get("point_type")) or is_clear(objet):
             # No call, no write: the row keeps summary_plain IS NULL by design.
             stats["stubs"] += 1
+            continue
+
+        # The same séance item recurs across sittings and must read the same.
+        if objet in known:
+            summary, theme = known[objet]
+            if not dry_run:
+                updates.append((summary, theme, point_uid))
+            stats["reused"] = stats.get("reused", 0) + 1
             continue
 
         procedural = is_procedural(objet)
@@ -132,8 +167,8 @@ def process_batch(
             system = SUMMARY_PROMPT_PROCEDURAL
             user_msg = f'Type de motion : {detect_motion_type(objet)}\nTitre : "{objet}"'
         else:
-            system = SUMMARY_PROMPT
-            user_msg = f'Titre : "{objet}"'
+            system = SUMMARY_PROMPT_AGENDA
+            user_msg = f'Ligne : "{objet}"'
 
         raw = call_groq(client, system, user_msg)
         if raw is None:
@@ -147,6 +182,15 @@ def process_batch(
             continue
 
         summary, theme = parsed
+        reason = agenda_rejection_reason(summary)
+        if reason:
+            # Stays NULL: the frontend shows the official objet, and a reader
+            # losing a sentence is better than one getting an invented purpose.
+            log.warning("Rejected %s (%s): %s", point_uid, reason, summary[:120])
+            stats["rejected"] = stats.get("rejected", 0) + 1
+            continue
+
+        known[objet] = (summary, theme)
         if dry_run:
             proc_flag = " [PROCEDURAL]" if procedural else ""
             log.info("[DRY-RUN]%s %s | theme=%s | %s", proc_flag, point_uid, theme, summary[:80])
@@ -216,8 +260,13 @@ def main() -> None:
     conn = connect_with_retry(database_url)
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        if not args.dry_run:
+            cur.execute(SQL_CLEAR_PADDED)
+            conn.commit()
         cur.execute(CANDIDATE_SQL, (_CANCELLED_STATES, _CANCELLED_STATES, args.since))
         rows = [dict(r) for r in cur.fetchall()]
+        cur.execute(SQL_KNOWN_SUMMARIES)
+        known = {r["objet"]: (r["summary_plain"], r["theme"]) for r in cur.fetchall()}
 
     log.info(
         "Found %d agenda items without summaries (sitting on or after %s)%s",
@@ -232,7 +281,13 @@ def main() -> None:
         conn.close()
         return
 
-    stats: dict = {"generated": 0, "errors": 0, "stubs": 0, "summarized_point_uids": []}
+    stats: dict = {
+        "generated": 0,
+        "errors": 0,
+        "stubs": 0,
+        "summarized_point_uids": [],
+        "known_summaries": known,
+    }
     total_batches = (len(rows) + BATCH_SIZE - 1) // BATCH_SIZE
 
     for i in range(0, len(rows), BATCH_SIZE):
@@ -246,8 +301,11 @@ def main() -> None:
     conn.close()
     write_changed_ids(args.changed_ids_out, stats["summarized_point_uids"])
     log.info(
-        "Done — generated: %d, stubs skipped: %d, errors: %d (will retry on next run)",
+        "Done — generated: %d, reused: %d, rejected: %d, stubs skipped: %d, "
+        "errors: %d (will retry on next run)",
         stats["generated"],
+        stats.get("reused", 0),
+        stats.get("rejected", 0),
         stats["stubs"],
         stats["errors"],
     )

@@ -57,6 +57,8 @@ PROCEDURAL_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+PADDED_OPENING_PATTERN = re.compile(r"^\s*le texte porte sur\b", re.IGNORECASE)
+
 
 def is_procedural(title: str) -> bool:
     return bool(PROCEDURAL_PATTERNS.search(title))
@@ -85,7 +87,7 @@ def detect_motion_type(title: str) -> str:
 MAX_DISPOSITIF_CHARS = 1500
 MAX_EXPOSE_CHARS = 800
 
-# Wording that means the model is guessing at content it was not given (#630).
+# Wording that means the model is guessing at content it was not given (#630, #633).
 GUESS_PATTERNS = re.compile(
     r"probablement|vraisemblablement|sans doute|certaines dispositions|notamment en\b"
     r"|semble viser|pourrait viser",
@@ -129,6 +131,15 @@ def rejection_reason(summary: str, title: str) -> str | None:
         return "bare_reference"
     if restates_title(summary, title):
         return "restates_title"
+    return None
+
+
+def agenda_rejection_reason(summary: str) -> str | None:
+    """Why a generated agenda line must not be stored, None when it may."""
+    if GUESS_PATTERNS.search(summary):
+        return "guess"
+    if PADDED_OPENING_PATTERN.search(summary):
+        return "padded_opening"
     return None
 
 
