@@ -24,6 +24,8 @@ from rag.constants import NOTABLE_DEPUTIES  # noqa: E402
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 TOKEN_WARN_THRESHOLD = 500
+# RAG_TEMPLATE tells the chat what this label means, so the two move together.
+READING_AID_LABEL = "Aide à la lecture rédigée par MonÉlu, pas une source officielle"
 
 # text-embedding-3-small uses the cl100k_base tokenizer (same as ada-002)
 _enc = tiktoken.get_encoding("cl100k_base")
@@ -74,6 +76,17 @@ def _fmt_date(dt) -> str:
     return dt.strftime("%d/%m/%Y")
 
 
+def _reading_aid(row: dict) -> str | None:
+    """A vote's generated summary, if it may enter the index (#631, ADR-043).
+
+    An amendment summary not written from the official text stays out.
+    """
+    summary = row.get("summary_plain")
+    if row.get("scrutin_kind") == "amendement" and row.get("summary_basis") != "official_text":
+        return None
+    return summary
+
+
 def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
     conn = _get_conn()
     chunks = []
@@ -84,7 +97,7 @@ def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
                     """
                     SELECT vote_id, vote_title, result, voted_at,
                            votes_for, votes_against, abstentions, total_voters,
-                           summary_plain, theme
+                           summary_plain, summary_basis, scrutin_kind, theme
                     FROM votes
                     WHERE vote_id = ANY(%s)
                     ORDER BY voted_at DESC
@@ -96,7 +109,7 @@ def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
                     """
                     SELECT vote_id, vote_title, result, voted_at,
                            votes_for, votes_against, abstentions, total_voters,
-                           summary_plain, theme
+                           summary_plain, summary_basis, scrutin_kind, theme
                     FROM votes
                     ORDER BY voted_at DESC
                     """
@@ -115,8 +128,9 @@ def chunk_votes(vote_ids: set[str] | None = None) -> list[dict]:
             f"{row['abstentions'] or 0} abstentions "
             f"sur {row['total_voters'] or 0} votants."
         )
-        if row.get("summary_plain"):
-            content += f"\nRésumé : {row['summary_plain']}"
+        reading_aid = _reading_aid(row)
+        if reading_aid:
+            content += f"\n{READING_AID_LABEL} : {reading_aid}"
         metadata = {
             "chunk_type": "vote",
             "vote_id": row["vote_id"],

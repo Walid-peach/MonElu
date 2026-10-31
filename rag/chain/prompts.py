@@ -204,6 +204,10 @@ Instructions :
 - Réponds en te basant UNIQUEMENT sur les sources ci-dessus
 - Si plusieurs sources sont pertinentes, synthétise-les
 - Si une source contredit une autre, signale-le
+- Une ligne « Aide à la lecture » est écrite par MonÉlu et n'est pas une source : \
+ne la cite jamais et ne présente jamais son contenu comme ce que dit la loi. Ce \
+que tu affirmes d'un texte doit venir de son titre officiel ou du résultat du \
+vote. Si seule cette aide décrit le contenu, précise « d'après le résumé de MonÉlu »
 - Les sources sont des extraits : ne calcule AUCUN classement, total \
 global ou comparaison entre groupes à partir des députés ou votes \
 mentionnés. Si la réponse exige un tel calcul et qu'aucune source ne \
