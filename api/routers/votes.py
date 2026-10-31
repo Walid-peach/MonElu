@@ -479,21 +479,24 @@ def get_vote(request: Request, vote_id: str):
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
 
-    return VoteDetail(
+    # A dict rather than keyword arguments: the mart has its own pct_pour and
+    # pct_contre columns, and naming a key `**vote` also holds raises TypeError.
+    fields = {
         **vote,
-        an_url=an_scrutin_url(vote["vote_id"]),
-        dossier=dossier,
-        pct_pour=share(vote.get("votes_for"), vote.get("total_voters")),
-        pct_contre=share(vote.get("votes_against"), vote.get("total_voters")),
-        pct_abstention=share(vote.get("abstentions"), vote.get("total_voters")),
-        majority_required=majority_required(
+        "an_url": an_scrutin_url(vote["vote_id"]),
+        "dossier": dossier,
+        "pct_pour": share(vote.get("votes_for"), vote.get("total_voters")),
+        "pct_contre": share(vote.get("votes_against"), vote.get("total_voters")),
+        "pct_abstention": share(vote.get("abstentions"), vote.get("total_voters")),
+        "majority_required": majority_required(
             vote.get("vote_type"), vote.get("votes_for"), vote.get("votes_against")
         ),
-        participation=build_participation(
+        "participation": build_participation(
             position_rows, typical["median"] if typical else None, group_members
         ),
-        positions=[VotePosition(**r) for r in position_rows],
-    )
+        "positions": [VotePosition(**r) for r in position_rows],
+    }
+    return VoteDetail(**fields)
 
 
 def _dossier_ref(dossier_id: str, row: Optional[dict]) -> VoteDossierRef:
