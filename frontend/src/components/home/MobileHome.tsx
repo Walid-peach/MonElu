@@ -1,6 +1,7 @@
 'use client'
 import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { MonEluLogo } from '@/components/MonEluLogo'
 import type { AssemblyStats, LeadVoteSummary } from './LiveAssemblyPulse'
 import type { DeputyInfo } from '@/app/page'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
@@ -128,6 +129,7 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
   return (
     <div className="md:hidden">
       <section className="flex flex-col gap-5 bg-gray-off px-5 pb-10 pt-6 text-navy">
+        <MonEluLogo size={40} />
         <p className={`${eyebrow} text-[color:var(--dp-text-muted)]`}>Assemblée nationale · 17e législature</p>
         {/* The page's single `<h1>` (MON-270). This section is server-rendered on
             every viewport - the cinematic only ever adds `<h2>`s. */}

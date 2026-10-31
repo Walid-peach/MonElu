@@ -50,7 +50,11 @@ let project = Project(
                 "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
             ]),
             sources: ["MonElu/Sources/**"],
-            dependencies: packageNames.map { .package(product: $0) }
+            resources: ["MonElu/Resources/**"],
+            dependencies: packageNames.map { .package(product: $0) },
+            settings: .settings(base: [
+                "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+            ])
         ),
         .target(
             name: "MonEluTests",

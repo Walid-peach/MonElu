@@ -360,7 +360,7 @@ count is low.
 
 ## ADR-018 — Rebuild logo as inline SVG React component (Plan C)
 **Date:** 2026-06-09
-**Status:** Current
+**Status:** Logo superseded by ADR-043; dark-mode deferral superseded by ADR-027
 
 **Decision:** Replace the existing `MonEluLogo.tsx` (a simplified geometric placeholder — 8 rotating squares) with a new inline SVG component that faithfully renders the hemicycle arc + deputy figure + wordmark from the canonical brand asset (`docs/assets/MonElu_LOGO-SVG.png`).
 
@@ -1833,3 +1833,22 @@ The list lives in `UserDefaults` on the phone; the previous single `monelu.follo
 26. The iPhone app is SwiftUI in `ios/`, and the API is its source of truth (ADR-041, #429) - never put business logic in the app that the API already computes, never rename, retype or remove an API field, route or operationId the app reads without ADR-041 §5's add-first sequence and a raised minimum version in `GET /app/config`, never ship a public App Store build that talks to a Railway hostname, and keep `railway.json`'s `!/ios/**` watch pattern and `deploy.yml`'s `ios/**` ignore so iOS-only commits never redeploy the API or re-run dbt against production
 27. Native clients keep the Supabase session in the Keychain and call FastAPI with the bearer token directly (ADR-041 §6, amending ADR-040 §4) - the browser rule in rule 25 is unchanged; `/account/*` is rate-limited per verified account, never per IP, and CORS stays `allow_credentials=False`
 28. The app's Accueil feed and weekly recap are computed by the API (`GET /feed`, `GET /feed/week`) from scrutins, positions and agenda items only (ADR-042, #560) - follows stay on the phone and travel as `deputies`/`theme` query parameters (`deputy_id` kept for installed builds; at most 10 deputies, all equal, recap never summed across them - ADR-042 amendment, #582), never in the account tables; the noise rule (full cards for `ensemble`/`motion`, others only within 20 votes, the rest rolled up) lives in the router, not the app; never add a card that needs data MonÉlu does not ingest (amendment authors, interventions), and never add likes, reactions, streaks or notifications to it
+
+
+---
+
+## ADR-043 — Share the approved MÉ monogram across iOS and web
+**Date:** 2026-10-31
+**Status:** Current
+
+**Decision:** Use the user-approved “Seamless fold” MÉ monogram (combination 25), with its navy ligature, equally bold connecting stroke, red accent and cream background, for the native app and website.
+
+**Reason:** The user selected this design and explicitly asked to update the website too. Preserve the approved artwork instead of approximating its geometry with a new hand-drawn SVG. This supersedes ADR-018's hemicycle-logo implementation; ADR-027's dark-mode behavior remains in force.
+
+**Impact:**
+- The tracked master is `ios/MonElu/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png` (1024 × 1024, opaque). The app target includes that asset catalog.
+- Run `node scripts/generate_icons.js` from `frontend/` to produce the compact WebP header mark, PNG browser icon, Apple touch icon and PWA icons. The maskable icon adds safe-area padding.
+- Reuse `MonEluLogo` in navigation, the mobile home brand row, the menu and both footers. Its cream icon stays identical in both themes; `variant="dark"` changes the wordmark for dark surfaces.
+- Place the mark beside the MonÉlu name, separate from editorial page headings. Do not restore the old hemicycle logo or use the full-size raster master in the header.
+
+**Trigger to revisit:** A new approved brand design or a faithful vector master supplied for this same monogram.

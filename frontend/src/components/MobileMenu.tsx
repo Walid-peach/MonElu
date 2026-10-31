@@ -110,7 +110,7 @@ export function MobileMenu({
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 bg-white border-b border-gray-border dark:bg-[color:var(--dp-card-bg)] dark:border-[color:var(--dp-border)]">
           <Link href="/" className="flex items-center" onClick={onClose}>
             <MonEluLogo
-              size={28}
+              size={36}
               variant={theme === 'dark' && !isLightOnlyPath(pathname) ? 'dark' : 'light'}
             />
           </Link>
