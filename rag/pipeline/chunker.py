@@ -79,10 +79,11 @@ def _fmt_date(dt) -> str:
 def _reading_aid(row: dict) -> str | None:
     """A vote's generated summary, if it may enter the index (#631, ADR-043).
 
-    An amendment summary not written from the official text stays out.
+    An amendment or article summary not written from the official text stays out.
     """
     summary = row.get("summary_plain")
-    if row.get("scrutin_kind") == "amendement" and row.get("summary_basis") != "official_text":
+    needs_source = row.get("scrutin_kind") in ("amendement", "article")
+    if needs_source and row.get("summary_basis") != "official_text":
         return None
     return summary
 
