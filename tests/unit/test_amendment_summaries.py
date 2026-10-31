@@ -6,7 +6,10 @@ Amendements.json.zip. Matching is pinned hard because a wrong match publishes a
 confident summary of a different amendment.
 """
 
+import subprocess
+import sys
 from datetime import date
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -272,3 +275,10 @@ class TestRunGuards:
 
     def test_small_window_cannot_fail_on_match_rate(self):
         check_amendment_yield(100, 0, 0, MIN_VOTES_FOR_MATCH_RATE - 1)
+
+
+def test_the_script_can_download_when_run_as_a_plain_file():
+    """The workflows run it by path, where only the fallback import applies (#630)."""
+    probe = "import ingest_amendments as m; m.download_with_retry, m.connect_with_retry"
+    scripts_dir = Path(__file__).parents[2] / "scripts"
+    subprocess.run([sys.executable, "-c", probe], cwd=scripts_dir, check=True)
