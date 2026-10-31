@@ -1853,6 +1853,40 @@ Other vote kinds keep the title-based prompt, because their titles name the whol
 - Amendment votes have no theme until they get a summary.
 - The code-built short title for votes without a summary is left to #634, which decides what the headline is.
 
+## ADR-044 - Article summaries are written from the examined text or not at all (#642)
+
+**Status:** Accepted, 2026-10-31.
+
+### Context
+
+ADR-043 kept the title-based prompt for other vote kinds "because their titles name the whole text".
+That is false for an article vote: its title names the whole bill, so its summary described the bill.
+Of 188 sampled article summaries, 96 opened with "Le texte" and 33 used guessing words.
+
+### Decision
+
+1. **The source is the HTML the AN publishes for each text**, at `/dyn/opendata/<uid>.html`.
+Standard texts mark every article heading (`assnat9ArticleNum`) and its body (`assnatLoiTexte`).
+`Dossiers_Legislatifs.json.zip` lists the documents and their titles.
+2. **The text is the one examined, not the one adopted.** Only deposited and committee texts count (`B` and `BTC`), and the newest published on or before the vote wins.
+An adopted text is left out because a rejected article is not in it.
+So a summary describes the article as debated, and an amendment adopted during the sitting is not reflected.
+3. **The bill comes from the title and the document list, not from `votes.dossier_id`.** That field is empty before March 2026 (ADR-035).
+A title that matches no document, or an article missing from every examined text, gets no row.
+4. **A deleted article has no source.** When the newest text holds the heading with no real content, an older reading is not used, because it is not what was voted.
+5. **Only voted articles are stored**, in `vote_articles`, one row per scrutin.
+6. **The ADR-043 rules apply unchanged:** no source means no LLM call, `summary_basis` records what happened, and a refused summary stays empty and is not retried.
+`rejection_reason()` now also refuses a summary whose subject is the bill.
+A summary the model declines to write counts as refused too, so it costs no quota the next day.
+7. **Old summaries are cleared and the marts rebuilt in one run**, by `backfill_article_text.yml`.
+Articles go before the amendment backlog in the daily sweep, because there are few of them.
+
+### Consequences
+
+- 548 of the 643 article votes in production find their text, a real count over the published files.
+- Budget bills and other texts published in an older template mark no article heading, so they keep their official title.
+- `summary_basis` now covers amendments and articles, and `_reading_aid()` keeps a title-only summary of either out of the RAG index.
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1884,3 +1918,4 @@ Other vote kinds keep the title-based prompt, because their titles name the whol
 27. Native clients keep the Supabase session in the Keychain and call FastAPI with the bearer token directly (ADR-041 §6, amending ADR-040 §4) - the browser rule in rule 25 is unchanged; `/account/*` is rate-limited per verified account, never per IP, and CORS stays `allow_credentials=False`
 28. The app's Accueil feed and weekly recap are computed by the API (`GET /feed`, `GET /feed/week`) from scrutins, positions and agenda items only (ADR-042, #560) - follows stay on the phone and travel as `deputies`/`theme` query parameters (`deputy_id` kept for installed builds; at most 10 deputies, all equal, recap never summed across them - ADR-042 amendment, #582), never in the account tables; the noise rule (full cards for `ensemble`/`motion`, others only within 20 votes, the rest rolled up) lives in the router, not the app; never add a card that needs data MonÉlu does not ingest (amendment authors, interventions), and never add likes, reactions, streaks or notifications to it
 29. An amendment summary comes from `vote_amendments` or does not exist (ADR-043, #630) - never send an amendment title to the model as its source, never pick a candidate when a vote matches more than one amendment, and never remove a `rejection_reason()` guard to raise the yield
+30. An article summary comes from `vote_articles` or does not exist (ADR-044, #642) - never send an article title to the model as its source, and never fall back to an older reading when the newest examined text shows the article deleted

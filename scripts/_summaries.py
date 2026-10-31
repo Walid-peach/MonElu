@@ -25,9 +25,9 @@ BATCH_SIZE = 5
 MODEL = "openai/gpt-oss-120b"
 TEMPERATURE = 0.1
 MAX_TOKENS = 150
-# An amendment prompt carries official text, so reasoning takes more of the
-# budget: at 150 about one reply in seven was cut before its JSON closed (#630).
-AMENDMENT_MAX_TOKENS = 400
+# A prompt carrying official text takes more of the budget for reasoning: at 150
+# about one amendment reply in seven was cut before its JSON closed (#630).
+OFFICIAL_TEXT_MAX_TOKENS = 400
 # gpt-oss is a reasoning model and reasoning tokens count against MAX_TOKENS.
 # At default effort a 150-token budget was fully consumed by reasoning and the
 # summary came back truncated mid-sentence ("Le Parlement a"). "low" lands at
@@ -60,6 +60,10 @@ PROCEDURAL_PATTERNS = re.compile(
 PADDED_OPENING_PATTERN = re.compile(r"^\s*le texte porte sur\b", re.IGNORECASE)
 
 
+# The model answers this when the official text is not enough, as its prompt asks.
+DECLINED_PATTERN = re.compile(r'"summary"\s*:\s*""')
+
+
 def is_procedural(title: str) -> bool:
     return bool(PROCEDURAL_PATTERNS.search(title))
 
@@ -86,6 +90,7 @@ def detect_motion_type(title: str) -> str:
 # The dispositif comes first: it is what the vote changes.
 MAX_DISPOSITIF_CHARS = 1500
 MAX_EXPOSE_CHARS = 800
+MAX_ARTICLE_CHARS = 2500
 
 # Wording that means the model is guessing at content it was not given (#630, #633).
 GUESS_PATTERNS = re.compile(
@@ -94,7 +99,12 @@ GUESS_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 # A partial vote is never "the text": a reader takes that for the whole bill.
-TEXT_SUBJECT_PATTERN = re.compile(r"^\s*le texte\b", re.IGNORECASE)
+TEXT_SUBJECT_PATTERN = re.compile(
+    r"^\s*(?:le|ce) texte\b"
+    r"|^\s*(?:la|cette) proposition de (?:loi|r[ée]solution)\b"
+    r"|^\s*(?:le|ce) projet de loi\b",
+    re.IGNORECASE,
+)
 # "Supprimer les alinéas 31 à 35" is true and tells a reader nothing.
 BARE_REFERENCE_PATTERN = re.compile(r"\balin[ée]as?\s+\d", re.IGNORECASE)
 TOKEN_PATTERN = re.compile(r"[^\W\d_]{4,}", re.UNICODE)
@@ -112,6 +122,11 @@ def amendment_user_message(vote: dict) -> str:
     return message
 
 
+def article_user_message(vote: dict) -> str:
+    """The official text of the article voted, under its own heading."""
+    return f"{vote['article_label']}\n{vote['article_text'][:MAX_ARTICLE_CHARS]}"
+
+
 def restates_title(summary: str, title: str) -> bool:
     """True when nearly every word of the summary is already in the title."""
     words = {w.lower() for w in TOKEN_PATTERN.findall(summary)}
@@ -122,7 +137,9 @@ def restates_title(summary: str, title: str) -> bool:
 
 
 def rejection_reason(summary: str, title: str) -> str | None:
-    """Why a generated amendment summary must not be stored, None when it may."""
+    """Why a generated amendment or article summary must not be stored, None when it may."""
+    if not summary:
+        return "declined"
     if GUESS_PATTERNS.search(summary):
         return "guess"
     if TEXT_SUBJECT_PATTERN.search(summary):

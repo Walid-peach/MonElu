@@ -123,6 +123,7 @@ class TestIngestScriptsUseConnectWithRetry:
         "ingest_agenda.py",
         "ingest_dossiers.py",
         "ingest_amendments.py",
+        "ingest_articles.py",
     ]
 
     @pytest.mark.parametrize("module", INGEST_MODULES)

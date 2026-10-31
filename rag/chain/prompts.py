@@ -98,6 +98,27 @@ SUMMARY_PROMPT_AGENDA = (
     "International | Autre"
 )
 
+SUMMARY_PROMPT_ARTICLE = (
+    "Tu résumes pour le grand public un seul article d'un texte de loi soumis au vote de "
+    "l'Assemblée nationale. On te donne le texte de cet article tel qu'il a été examiné.\n"
+    "Règles :\n"
+    "- Une seule phrase courte, à l'infinitif, qui dit ce que fait cet article et rien "
+    "d'autre (ex. : « Allonger de 10 à 20 ans le délai de prescription de ce délit. »).\n"
+    "- Ne décris jamais la loi entière ni son objectif général.\n"
+    "- Traduis les références au code en langage courant. Ne cite jamais un numéro "
+    "d'article ou d'alinéa.\n"
+    "- Respecte le sens exact, et n'ajoute rien qui ne soit pas dans l'article. S'il ne "
+    "suffit pas à comprendre ce qui change, réponds avec un champ summary vide.\n"
+    "- Ne mentionne ni le résultat du vote, ni le numéro de l'article.\n"
+    "- N'écris jamais « Le texte », et ne devine rien : aucune hypothèse, aucun "
+    "« probablement », aucun « notamment ».\n"
+    'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
+    "Theme doit être EXACTEMENT l'un de :\n"
+    "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
+)
+
 SUMMARY_PROMPT_AMENDMENT = (
     "Tu résumes pour le grand public un amendement soumis au vote de l'Assemblée nationale. "
     "On te donne son dispositif (ce qu'il change réellement) et l'exposé de son auteur.\n"

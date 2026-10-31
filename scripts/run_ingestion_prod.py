@@ -253,6 +253,13 @@ def main() -> None:
             if t_amendments is None:
                 soft_failures.append("Amendments")
 
+            # Same reasoning for article text (#642, ADR-044).
+            t_articles = run_step(
+                "Articles", "ingest_articles.py", ["--since", args.since], critical=False
+            )
+            if t_articles is None:
+                soft_failures.append("Articles")
+
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
         n_positions = row_count(lock_conn, "vote_positions")
@@ -384,6 +391,7 @@ def main() -> None:
         log.info("║  Agenda    :          (%s)      ║", _fmt(t_agenda))
         log.info("║  Dossiers  :          (%s)      ║", _fmt(t_dossiers))
         log.info("║  Amendments:          (%s)      ║", _fmt(t_amendments))
+        log.info("║  Articles  :          (%s)      ║", _fmt(t_articles))
         log.info("║  Summaries :          (%s)      ║", _fmt(t_summaries))
         log.info("║  Agenda sum:          (%s)      ║", _fmt(t_agenda_summaries))
         log.info("╠══════════════════════════════════════╣")
