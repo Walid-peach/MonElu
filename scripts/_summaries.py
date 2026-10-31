@@ -25,6 +25,9 @@ BATCH_SIZE = 5
 MODEL = "openai/gpt-oss-120b"
 TEMPERATURE = 0.1
 MAX_TOKENS = 150
+# An amendment prompt carries official text, so reasoning takes more of the
+# budget: at 150 about one reply in seven was cut before its JSON closed (#630).
+AMENDMENT_MAX_TOKENS = 400
 # gpt-oss is a reasoning model and reasoning tokens count against MAX_TOKENS.
 # At default effort a 150-token budget was fully consumed by reasoning and the
 # summary came back truncated mid-sentence ("Le Parlement a"). "low" lands at
@@ -54,12 +57,6 @@ PROCEDURAL_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-# Wording that means the model is guessing at content it was not given (#633).
-GUESS_PATTERNS = re.compile(
-    r"probablement|vraisemblablement|sans doute|certaines dispositions|notamment en\b"
-    r"|semble viser|pourrait viser",
-    re.IGNORECASE,
-)
 PADDED_OPENING_PATTERN = re.compile(r"^\s*le texte porte sur\b", re.IGNORECASE)
 
 
@@ -85,6 +82,58 @@ def detect_motion_type(title: str) -> str:
     return "motion procédurale"
 
 
+# What goes to the model, cut so one long budget amendment cannot use up a call.
+# The dispositif comes first: it is what the vote changes.
+MAX_DISPOSITIF_CHARS = 1500
+MAX_EXPOSE_CHARS = 800
+
+# Wording that means the model is guessing at content it was not given (#630, #633).
+GUESS_PATTERNS = re.compile(
+    r"probablement|vraisemblablement|sans doute|certaines dispositions|notamment en\b"
+    r"|semble viser|pourrait viser",
+    re.IGNORECASE,
+)
+# A partial vote is never "the text": a reader takes that for the whole bill.
+TEXT_SUBJECT_PATTERN = re.compile(r"^\s*le texte\b", re.IGNORECASE)
+# "Supprimer les alinéas 31 à 35" is true and tells a reader nothing.
+BARE_REFERENCE_PATTERN = re.compile(r"\balin[ée]as?\s+\d", re.IGNORECASE)
+TOKEN_PATTERN = re.compile(r"[^\W\d_]{4,}", re.UNICODE)
+# Share of a summary's words already in the title that makes it a restatement.
+RESTATED_TITLE_RATIO = 0.8
+
+
+def amendment_user_message(vote: dict) -> str:
+    """The official text a summary is written from, dispositif first."""
+    kind = "Sous-amendement" if vote["is_sub_amendment"] else "Amendement"
+    message = f"Type : {kind}\nDispositif : {vote['dispositif'][:MAX_DISPOSITIF_CHARS]}"
+    expose = vote.get("expose_sommaire")
+    if expose:
+        message += f"\nExposé de l'auteur : {expose[:MAX_EXPOSE_CHARS]}"
+    return message
+
+
+def restates_title(summary: str, title: str) -> bool:
+    """True when nearly every word of the summary is already in the title."""
+    words = {w.lower() for w in TOKEN_PATTERN.findall(summary)}
+    if not words:
+        return True
+    title_words = {w.lower() for w in TOKEN_PATTERN.findall(title)}
+    return len(words & title_words) / len(words) >= RESTATED_TITLE_RATIO
+
+
+def rejection_reason(summary: str, title: str) -> str | None:
+    """Why a generated amendment summary must not be stored, None when it may."""
+    if GUESS_PATTERNS.search(summary):
+        return "guess"
+    if TEXT_SUBJECT_PATTERN.search(summary):
+        return "text_subject"
+    if BARE_REFERENCE_PATTERN.search(summary):
+        return "bare_reference"
+    if restates_title(summary, title):
+        return "restates_title"
+    return None
+
+
 def agenda_rejection_reason(summary: str) -> str | None:
     """Why a generated agenda line must not be stored, None when it may."""
     if GUESS_PATTERNS.search(summary):
@@ -94,7 +143,9 @@ def agenda_rejection_reason(summary: str) -> str | None:
     return None
 
 
-def call_groq(client, system: str, user: str, max_retries: int = 6) -> str | None:
+def call_groq(
+    client, system: str, user: str, max_retries: int = 6, max_tokens: int = MAX_TOKENS
+) -> str | None:
     """Call Groq with exponential backoff on 429. SDK retries are disabled (max_retries=0
     on the client) so this is the sole retry controller."""
     for attempt in range(max_retries):
@@ -106,7 +157,7 @@ def call_groq(client, system: str, user: str, max_retries: int = 6) -> str | Non
                     {"role": "user", "content": user},
                 ],
                 temperature=TEMPERATURE,
-                max_tokens=MAX_TOKENS,
+                max_tokens=max_tokens,
                 reasoning_effort=REASONING_EFFORT,
             )
             return resp.choices[0].message.content.strip()

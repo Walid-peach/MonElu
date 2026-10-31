@@ -91,6 +91,31 @@ SUMMARY_PROMPT_AGENDA = (
     "International | Autre"
 )
 
+SUMMARY_PROMPT_AMENDMENT = (
+    "Tu résumes pour le grand public un amendement soumis au vote de l'Assemblée nationale. "
+    "On te donne son dispositif (ce qu'il change réellement) et l'exposé de son auteur.\n"
+    "Règles :\n"
+    "- Une seule phrase courte, à l'infinitif, qui commence par ce que fait l'amendement "
+    "(ex. : « Rendre obligatoire l'affichage du Nutri-Score sur les produits alimentaires. »).\n"
+    "- Appuie-toi d'abord sur le dispositif. L'exposé sert uniquement à comprendre ce que "
+    "le dispositif change.\n"
+    "- Si le dispositif renvoie seulement à des alinéas (« Supprimer les alinéas 31 à 35 »), "
+    "dis ce que ces alinéas contiennent, d'après l'exposé. Ne cite jamais un numéro d'alinéa.\n"
+    "- Respecte le sens exact : ne confonds pas assujettir et exonérer, ni patronal et salarial. "
+    "Si le dispositif et l'exposé ne suffisent pas, réponds avec un champ summary vide.\n"
+    "- L'exposé est un plaidoyer : ne reprends ni ses arguments, ni ses jugements, ni le "
+    "but que l'auteur affiche.\n"
+    "- Pour un sous-amendement, dis ce qu'il change dans l'amendement visé.\n"
+    "- Ne mentionne ni le numéro, ni l'auteur, ni l'article, ni le résultat du vote.\n"
+    "- N'écris jamais « Le texte », et ne devine rien : aucune hypothèse, aucun "
+    "« probablement », aucun « notamment ».\n"
+    'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
+    "Theme doit être EXACTEMENT l'un de :\n"
+    "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
+)
+
 SUMMARY_PROMPT_PROCEDURAL = (
     "Tu es un assistant civique neutre. Ce texte est une MOTION PROCÉDURALE.\n"
     "En 2 phrases maximum en français clair :\n"

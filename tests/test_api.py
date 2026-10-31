@@ -642,6 +642,18 @@ def test_get_vote_participation(client, mock_cursor):
     }
 
 
+def test_get_vote_survives_the_marts_own_percentage_columns(client, mock_cursor):
+    """The real mart has pct_pour and pct_contre, so `**vote` must not collide (#627)."""
+    mock_cursor.fetchone.side_effect = [
+        {**_VOTE_DETAIL, "pct_pour": 0.5362, "pct_contre": 0.4638},
+        {"median": 115.4},
+    ]
+    mock_cursor.fetchall.side_effect = [[], []]
+    resp = client.get("/votes/VTANR5L17V1")
+    assert resp.status_code == 200
+    assert resp.json()["pct_pour"] == round(289 / 539, 4)
+
+
 def test_majority_required():
     """Half the votes cast plus one; a censure motion needs 289 whatever the turnout."""
     from api.routers.votes import majority_required

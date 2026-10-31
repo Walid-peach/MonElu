@@ -1818,6 +1818,41 @@ The list lives in `UserDefaults` on the phone; the previous single `monelu.follo
 
 ---
 
+## ADR-043 - Amendment summaries are written from the official text or not at all (#630)
+
+**Status:** Accepted, 2026-10-30.
+
+### Context
+
+Vote summaries were generated from the title and result alone.
+An amendment's title gives its number, author and article, not what it changes, so the model filled the gap.
+Of the 435 amendment summaries among the 500 latest votes, 215 only said an article was modified and 76 used filler or hedging, and some described the wrong change.
+
+### Decision
+
+1. **The source is `Amendements.json.zip`.** The AN publishes it at about 348 MB and 975 MB unpacked, and it parses in seconds.
+It is downloaded only when an amendment vote in the run's window still has no text.
+2. **Only voted amendments are stored**, in `vote_amendments`, one row per scrutin.
+The export holds about 143 000 amendments, and the database has 500 MB on the free tier.
+3. **The match comes from the title, and uncertainty means no match.**
+A scrutin carries no amendment reference, so `ingest_amendments.py` uses the number, the first author and the dates.
+Over the 2 200 latest votes, 1 852 of 1 937 amendment votes matched, and 1 848 of the 1 850 dated matches agree with the recorded outcome.
+A wrong match publishes a confident summary of another amendment, so ambiguity never picks a candidate.
+4. **No source text, no LLM call.** An unmatched vote keeps its official title, which frontends already fall back to.
+5. **Guards in code, not only in the prompt.** `rejection_reason()` refuses guesses, « Le texte » as a subject, bare paragraph references and restated titles.
+Two different texts may not share a sentence.
+A refused summary stays empty with `summary_basis = 'rejected'` and is not retried, so it costs no quota the next day.
+6. **The dispositif outranks the exposé.** The exposé is advocacy, and it can describe a different change: amendment 1359's speaks of the employer share while its dispositif excludes the employee share.
+7. **Old summaries are cleared at once and rewritten gradually.** `backfill_amendment_text.yml` clears them, and the daily runs rewrite up to 210 a day, newest first.
+Groq's free tier allows 8 000 tokens a minute and one amendment call uses about 900, and a reader losing a summary is better than a reader getting a false one.
+
+### Consequences
+
+- `summary_basis` tells a checked summary from a title-only one, and only amendments use it.
+Other vote kinds keep the title-based prompt, because their titles name the whole text.
+- Amendment votes have no theme until they get a summary.
+- The code-built short title for votes without a summary is left to #634, which decides what the headline is.
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1848,3 +1883,4 @@ The list lives in `UserDefaults` on the phone; the previous single `monelu.follo
 26. The iPhone app is SwiftUI in `ios/`, and the API is its source of truth (ADR-041, #429) - never put business logic in the app that the API already computes, never rename, retype or remove an API field, route or operationId the app reads without ADR-041 §5's add-first sequence and a raised minimum version in `GET /app/config`, never ship a public App Store build that talks to a Railway hostname, and keep `railway.json`'s `!/ios/**` watch pattern and `deploy.yml`'s `ios/**` ignore so iOS-only commits never redeploy the API or re-run dbt against production
 27. Native clients keep the Supabase session in the Keychain and call FastAPI with the bearer token directly (ADR-041 §6, amending ADR-040 §4) - the browser rule in rule 25 is unchanged; `/account/*` is rate-limited per verified account, never per IP, and CORS stays `allow_credentials=False`
 28. The app's Accueil feed and weekly recap are computed by the API (`GET /feed`, `GET /feed/week`) from scrutins, positions and agenda items only (ADR-042, #560) - follows stay on the phone and travel as `deputies`/`theme` query parameters (`deputy_id` kept for installed builds; at most 10 deputies, all equal, recap never summed across them - ADR-042 amendment, #582), never in the account tables; the noise rule (full cards for `ensemble`/`motion`, others only within 20 votes, the rest rolled up) lives in the router, not the app; never add a card that needs data MonÉlu does not ingest (amendment authors, interventions), and never add likes, reactions, streaks or notifications to it
+29. An amendment summary comes from `vote_amendments` or does not exist (ADR-043, #630) - never send an amendment title to the model as its source, never pick a candidate when a vote matches more than one amendment, and never remove a `rejection_reason()` guard to raise the yield

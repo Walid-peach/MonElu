@@ -46,6 +46,7 @@ def test_the_full_table_set_is_covered():
     assert set(created) == {
         "public.deputies",
         "public.votes",
+        "public.vote_amendments",
         "public.vote_positions",
         "public.document_chunks",
         "public.api_keys",
