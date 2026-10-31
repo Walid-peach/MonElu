@@ -35,7 +35,7 @@ from dotenv import load_dotenv
 try:
     from scripts._http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 except ImportError:  # running as a plain file: python scripts/ingest_amendments.py
-    from _http import SKIP_RATE_THRESHOLD, connect_with_retry
+    from _http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
 
 load_dotenv()
 
