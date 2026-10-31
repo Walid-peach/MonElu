@@ -1,0 +1,52 @@
+# One-off, safe to re-run (#630, ADR-043): attaches official text to every
+# amendment vote in production, then clears the summaries written from a title
+# alone. The daily runs rewrite those from the official text, newest first, at
+# the rate Groq's free quota allows. Until then a vote shows its official title.
+name: MonÉlu — Backfill Amendment Text
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: summaries
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ingest.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-ingest.txt
+
+      - name: Attach official text
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/ingest_amendments.py --since 2024-07-07
+
+      - name: Clear summaries written from a title alone
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m scripts.generate_vote_summaries --clear-legacy-amendments
+
+      - name: Revalidate frontend cache
+        # An empty body is the full purge: this rewrites thousands of votes.
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+        run: |
+          curl -sf --retry 3 --retry-delay 10 --retry-all-errors \
+            -X POST "$FRONTEND_URL/api/revalidate" \
+            -H "x-revalidate-secret: $REVALIDATE_SECRET"

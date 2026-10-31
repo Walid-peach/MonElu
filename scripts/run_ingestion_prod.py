@@ -53,6 +53,10 @@ DEPUTIES_ZIP_PATH = (
     "/AMO10_deputes_actifs_mandats_actifs_organes.json.zip"
 )
 
+# Keeps this step and summarize_backfill.yml inside Groq's free daily quota while
+# the amendment summaries are rewritten; the rest wait for the next run (#630).
+DAILY_SUMMARY_LIMIT = 60
+
 
 def _download_zips(tmp_dir: str) -> tuple[str, str]:
     """Download each AN ZIP once; the steps read them via --zip-path."""
@@ -240,6 +244,15 @@ def main() -> None:
             if t_dossiers is None:
                 soft_failures.append("Dossiers")
 
+            # Non-critical for the same reason, and after Votes because it
+            # matches scrutin titles to the official amendments (#630, ADR-043).
+            # It only downloads the export when a vote in the window has no text.
+            t_amendments = run_step(
+                "Amendments", "ingest_amendments.py", ["--since", args.since], critical=False
+            )
+            if t_amendments is None:
+                soft_failures.append("Amendments")
+
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
         n_positions = row_count(lock_conn, "vote_positions")
@@ -299,7 +312,14 @@ def main() -> None:
         t_summaries = run_step(
             "Vote summaries",
             "generate_vote_summaries.py",
-            ["--since", args.since, "--changed-ids-out", vote_summary_ids_path],
+            [
+                "--since",
+                args.since,
+                "--limit",
+                str(DAILY_SUMMARY_LIMIT),
+                "--changed-ids-out",
+                vote_summary_ids_path,
+            ],
             critical=False,
         )
         if t_summaries is None:
@@ -363,6 +383,7 @@ def main() -> None:
         log.info("║  Party fix :          (%s)      ║", _fmt(t_party))
         log.info("║  Agenda    :          (%s)      ║", _fmt(t_agenda))
         log.info("║  Dossiers  :          (%s)      ║", _fmt(t_dossiers))
+        log.info("║  Amendments:          (%s)      ║", _fmt(t_amendments))
         log.info("║  Summaries :          (%s)      ║", _fmt(t_summaries))
         log.info("║  Agenda sum:          (%s)      ║", _fmt(t_agenda_summaries))
         log.info("╠══════════════════════════════════════╣")
