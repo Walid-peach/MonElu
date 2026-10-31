@@ -53,6 +53,9 @@ MIGRATIONS = [
     Path(__file__).parents[2] / "data" / "migrations" / "013_account_schema.sql",
     # install_event_counts (#598). test_install_events.py runs the real upsert.
     Path(__file__).parents[2] / "data" / "migrations" / "014_install_events.sql",
+    # vote_amendments + votes.summary_basis (#630). The chunker reads summary_basis
+    # on every vote row (#631), so test_chunker.py fails without it.
+    Path(__file__).parents[2] / "data" / "migrations" / "015_vote_amendments.sql",
 ]
 
 # Minimal mart stub DDL — mirrors the columns read by api/routers/deputies.py
