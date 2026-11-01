@@ -33,7 +33,7 @@ struct FeedServiceTests {
         #expect(closest.kind == "amendement")
         #expect(closest.positions == [FeedDeputyPosition(deputyID: "PA1008", position: "pour")])
         #expect(closest.loiID == nil)
-        #expect(closest.officialURL?.absoluteString == "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9101")
+        #expect(closest.officialURL?.absoluteString == "https://www.assemblee-nationale.fr/dyn/17/scrutins/9101")
     }
 
     @Test func aBillWithAPageKeepsItsID() async throws {

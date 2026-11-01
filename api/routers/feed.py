@@ -24,6 +24,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, HTTPException, Query
 from starlette.requests import Request
 
+from api.an_links import AN_SCRUTINS_INDEX_URL, an_scrutin_url
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from api.routers.agenda import _AGENDA_QUERY, _CANCELLED_STATES, _dossier_url
@@ -108,11 +109,6 @@ def paris_midnight(day: date) -> datetime:
     return datetime(day.year, day.month, day.day, tzinfo=PARIS)
 
 
-def an_scrutin_url(vote_id: str) -> str:
-    """Official AN page of one scrutin - the link the website and the app already use."""
-    return f"https://www.assemblee-nationale.fr/dyn/scrutins/{vote_id}"
-
-
 # ---------------------------------------------------------------------------
 # The noise rule and the feed itself (ADR-042 §3-4) - pure functions
 # ---------------------------------------------------------------------------
@@ -188,7 +184,7 @@ def to_scrutin(row: dict, deputy_ids: list[str], *, closest: bool = False) -> Fe
         closest=closest,
         deputy_position=position_of(row, deputy_ids[0]) if deputy_ids else None,
         positions=positions,
-        an_url=an_scrutin_url(row["vote_id"]),
+        an_url=an_scrutin_url(row["vote_id"]) or AN_SCRUTINS_INDEX_URL,
         dossier_id=row.get("dossier_id"),
         lois_url=lois_url(row["dossier_id"]) if row.get("has_scrutins") else None,
     )

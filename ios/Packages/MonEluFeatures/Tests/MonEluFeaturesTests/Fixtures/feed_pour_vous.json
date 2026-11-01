@@ -25,7 +25,7 @@
         "closest": true,
         "deputy_position": "pour",
         "positions": [{"deputy_id": "PA1008", "position": "pour"}],
-        "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9101"
+        "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/9101"
       }
     },
     {
@@ -46,7 +46,7 @@
         "closest": false,
         "deputy_position": "abstention",
         "positions": [{"deputy_id": "PA1008", "position": "abstention"}],
-        "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9100",
+        "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/9100",
         "dossier_id": "DLR5L17N53980",
         "lois_url": "https://monelu.fr/lois/DLR5L17N53980"
       }
@@ -69,7 +69,7 @@
         "closest": false,
         "deputy_position": "pour",
         "positions": [{"deputy_id": "PA1008", "position": "pour"}],
-        "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V9099"
+        "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/9099"
       }
     },
     {

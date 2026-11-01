@@ -301,7 +301,7 @@ export function ComparerClient() {
   return (
     <>
       {/* Mode tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }} role="group" aria-label="Comparer avec">
         {([
           { key: 'deputy', label: 'Un autre député' },
           { key: 'party', label: 'Son groupe' },
@@ -310,6 +310,8 @@ export function ComparerClient() {
           <button
             key={t.key}
             onClick={() => syncUrl({ mode: t.key })}
+            aria-pressed={mode === t.key}
+            className="min-h-10"
             style={{
               padding: '9px 18px', borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
               border: `1px solid ${mode === t.key ? 'var(--dp-active-bg)' : LINE}`,
@@ -323,7 +325,9 @@ export function ComparerClient() {
       </div>
 
       {/* Pickers */}
-      <div style={{ display: 'grid', gridTemplateColumns: mode === 'deputy' ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 30 }}>
+      {/* The two pickers stack below md: side by side they leave a phone
+          about 150px per search field. */}
+      <div className={`grid grid-cols-1 gap-3 md:gap-4 ${mode === 'deputy' ? 'md:grid-cols-2' : ''}`} style={{ marginBottom: 30 }}>
         <DeputyPicker
           placeholder="Rechercher le premier député…"
           selected={deputyA}
@@ -378,7 +382,7 @@ export function ComparerClient() {
               {deputyA.full_name} n&apos;est rattaché·e à aucun groupe politique — la comparaison par groupe n&apos;est pas disponible. Essayez la moyenne nationale, ou comparez à un autre député.
             </div>
           ) : (
-            <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '10px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
+            <div className="px-4 py-2.5 md:px-[26px]" style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
               {rows.map(r => (
                 <CompareRow key={r.key} label={r.label} aPct={r.a} bPct={r.b} aColor={NAVY} bColor={ACCENT} />
               ))}
@@ -387,7 +391,7 @@ export function ComparerClient() {
 
           {/* Party alignment (deputy-vs-deputy only) */}
           {mode === 'deputy' && sideA.alignment && sideB?.alignment && (
-            <div style={{ marginTop: 24, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '20px 26px', boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
+            <div className="px-4 py-5 md:px-[26px]" style={{ marginTop: 24, background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>
               <div style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', fontWeight: 500, marginBottom: 14 }}>
                 Alignement avec son groupe politique
               </div>

@@ -42,7 +42,7 @@ export default function DonneesPage() {
                 )}
               </div>
               <p style={{ fontSize: '14px', lineHeight: 1.65, color: 'var(--dp-text-secondary)', margin: '8px 0 10px' }}>{e.what}</p>
-              <div style={{ fontFamily: 'monospace', fontSize: '12.5px', color: 'var(--dp-text)', marginBottom: 8 }}>
+              <div style={{ fontFamily: 'monospace', fontSize: '12.5px', color: 'var(--dp-text)', marginBottom: 8, overflowWrap: 'anywhere' }}>
                 GET {API_BASE}{e.pattern}
               </div>
               <div style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--dp-text-muted)' }}>
@@ -77,7 +77,7 @@ export default function DonneesPage() {
           2.0 (Etalab) — la même licence que les sources officielles. La seule obligation est de
           mentionner la source et la date. Attribution suggérée :
         </p>
-        <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', color: 'var(--dp-text)', fontFamily: 'monospace' }}>
+        <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', color: 'var(--dp-text)', fontFamily: 'monospace', overflowWrap: 'anywhere' }}>
           {DATA_ATTRIBUTION}
         </div>
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: '10px 0 0' }}>

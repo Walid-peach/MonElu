@@ -64,16 +64,31 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
   const contrePct = Math.round(vote.votes_against / (vote.total_voters || 1) * 100)
   const abstPct   = Math.round(vote.abstentions   / (vote.total_voters || 1) * 100)
 
-  // Build group rows
+  // Each group's turnout, keyed the way groupVotesByParty keys its rows (#627).
+  const membersByParty: Record<string, number> = {}
+  for (const g of vote.participation?.groups ?? []) {
+    const name = normalizePartyShort(g.party_short) || 'Non inscrit'
+    membersByParty[name] = (membersByParty[name] ?? 0) + g.members
+  }
+
+  // Build group rows. Pour/contre/abstention shares divide by the expressed
+  // positions only: nonVotant is presence, not an opinion (ADR-019).
   const partyMap = groupVotesByParty(vote.positions ?? [])
   const groups = Object.entries(partyMap)
     .map(([name, counts]) => {
-      const total  = counts.pour + counts.contre + counts.abstention + counts.nonVotant
-      const forPct = Math.round(counts.pour   / (total || 1) * 100)
-      const agtPct = Math.round(counts.contre / (total || 1) * 100)
+      const expressed = counts.pour + counts.contre + counts.abstention
+      const forPct  = Math.round(counts.pour       / (expressed || 1) * 100)
+      const agtPct  = Math.round(counts.contre     / (expressed || 1) * 100)
+      const abstPct = Math.round(counts.abstention / (expressed || 1) * 100)
       const position: 'Pour' | 'Contre' | 'Partagé' =
         counts.pour > counts.contre ? 'Pour' : counts.contre > counts.pour ? 'Contre' : 'Partagé'
-      return { name, color: partyHex(name), pour: counts.pour, contre: counts.contre, abst: counts.abstention, nonVotant: counts.nonVotant, position, forPct, agtPct }
+      const participants = expressed + counts.nonVotant
+      const members = membersByParty[name] ?? null
+      const participationPct = members ? Math.round(Math.min(1, participants / members) * 100) : null
+      return {
+        name, color: partyHex(name), pour: counts.pour, contre: counts.contre, abst: counts.abstention, nonVotant: counts.nonVotant,
+        position, forPct, agtPct, abstPct, participants, members, participationPct,
+      }
     })
     .sort((a, b) => (b.pour + b.contre + b.abst + b.nonVotant) - (a.pour + a.contre + a.abst + a.nonVotant))
 
@@ -180,7 +195,9 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
           votesFor={vote.votes_for}
           votesAgainst={vote.votes_against}
           abstentions={vote.abstentions}
-          totalVoters={vote.total_voters}
+          majorityRequired={vote.majority_required ?? null}
+          participation={vote.participation ?? null}
+          voteType={vote.vote_type ?? null}
           pourPct={pourPct}
           contrePct={contrePct}
           abstPct={abstPct}

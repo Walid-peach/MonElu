@@ -275,6 +275,9 @@ export function QuizResultCard({ result }: { result: QuizMatchResponse }) {
       // Grid rather than a plain block: grid rows take their automatic minimum
       // size, so the panel holds its 4:5 portrait ratio when it has room and
       // grows past it instead of clipping when every block is present.
+      // `aspect-ratio` only grows to fit its content when the box is not a
+      // scroll container, so the rounded corners are kept with `overflow:
+      // clip` rather than `hidden`, which clipped the last block on a phone.
       style={{
         display: 'grid',
         gridTemplateRows: 'auto 1fr auto',
@@ -283,7 +286,7 @@ export function QuizResultCard({ result }: { result: QuizMatchResponse }) {
         margin: '0 auto',
         border: `3px solid ${BAND}`,
         borderRadius: 10,
-        overflow: 'hidden',
+        overflow: 'clip',
         background: 'var(--dp-card-bg)',
       }}
     >

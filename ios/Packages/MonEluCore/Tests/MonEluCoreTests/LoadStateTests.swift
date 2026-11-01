@@ -193,6 +193,27 @@ struct AppRouteTests {
         #expect(AppRoute(url: try #require(URL(string: link))) == nil)
     }
 
+    /// The website paths its apple-app-site-association hands to the app
+    /// (#623). The website's Jest test checks the file claims exactly these
+    /// and every page route of the same shape; here each must open a screen,
+    /// or a tapped link would land on whatever tab was already showing.
+    struct AppLinks: Decodable {
+        let opensInApp: [String]
+
+        enum CodingKeys: String, CodingKey { case opensInApp = "opens_in_app" }
+
+        static let fixture: AppLinks = {
+            let url = Bundle.module.url(forResource: "app_links", withExtension: "json", subdirectory: "Fixtures")!
+            return try! JSONDecoder().decode(AppLinks.self, from: Data(contentsOf: url))
+        }()
+    }
+
+    @Test(arguments: AppLinks.fixture.opensInApp)
+    func everyLinkTheWebsiteHandsOverOpensAScreen(_ path: String) throws {
+        let url = try #require(URL(string: "https://mon-elu.vercel.app" + path))
+        #expect(AppRoute(url: url) != nil)
+    }
+
     @Test func routesOpenInExplorer() {
         #expect(AppRoute.deputy(id: "PA1").tab == .explore)
         #expect(AppRoute.vote(id: "V1").tab == .explore)

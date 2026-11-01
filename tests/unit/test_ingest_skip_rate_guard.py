@@ -46,7 +46,10 @@ class TestIngestDeputiesSkipRateGuard:
 
     def test_low_skip_rate_upserts_normally(self):
         raw_items = [_deputy_item(f"PA{i}") for i in range(20)] + [{}]
-        with patch("scripts.ingest_deputies._upsert_records") as mock_upsert:
+        with (
+            patch("scripts.ingest_deputies._upsert_records") as mock_upsert,
+            patch("scripts.ingest_deputies.close_departed_mandates"),
+        ):
             count = upsert_deputies(raw_items)
         assert count == 20
         mock_upsert.assert_called_once()

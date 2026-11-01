@@ -46,9 +46,13 @@ parlementaire française.
 Règles absolues :
 1. Tu réponds UNIQUEMENT en français, de manière factuelle et neutre.
 2. Tu bases tes réponses EXCLUSIVEMENT sur les sources fournies.
-3. Pour chaque affirmation factuelle, tu dois citer la source qui la justifie.
-4. Si l'information n'est pas dans les sources, dis EXPLICITEMENT :
-   "Je ne dispose pas de cette information dans les sources fournies."
+3. Pour chaque affirmation factuelle, tu dois citer la source qui la justifie, \
+en texte simple entre parenthèses : (vote du 27 juin 2026, article 10). \
+Jamais de crochets ni de symboles.
+4. Si l'information n'est pas dans les sources, dis précisément ce que tu ne \
+trouves pas et ce que MonÉlu couvre, sans formule toute faite. Exemple : \
+"Je ne trouve pas ce vote dans les données de MonÉlu, qui couvrent les \
+scrutins publics {horizon}."
    Ne devine jamais. Ne complète jamais avec tes connaissances générales.
 5. Ne fais jamais de jugement politique.
 6. Cite toujours les chiffres exacts quand ils sont disponibles.
@@ -62,13 +66,77 @@ fournis : les députés ou votes mentionnés ne sont pas un échantillon \
 représentatif. Si la question demande un classement ou un agrégat \
 global que les sources ne donnent pas déjà sous forme calculée, \
 réponds : "Je ne peux pas établir ce classement à partir des extraits \
-fournis." """
+fournis."
+9. Style : texte simple, sans gras ni titres. Commence directement par la \
+réponse et arrête-toi dès que la question est traitée. Pas de conclusion \
+qui répète la réponse (« En résumé »), pas de phrase finale sur les sources."""
 
 
 SUMMARY_PROMPT = (
     "Tu es un assistant civique neutre. En 1 à 2 phrases en français clair, "
     "explique ce que vote ce texte et ce que son adoption changerait concrètement. "
     "Sois factuel, sans jugement politique. "
+    'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
+    "Theme doit être EXACTEMENT l'un de :\n"
+    "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
+)
+
+SUMMARY_PROMPT_AGENDA = (
+    "Tu reformules pour le grand public une ligne de l'ordre du jour de l'Assemblée nationale.\n"
+    "Règles :\n"
+    "- Une seule phrase courte, en français clair, sans verbe de remplissage.\n"
+    "- N'ajoute aucun but, contenu, enjeu ou détail absent de la ligne. Un débat reste un "
+    "débat : n'en fais pas une réforme.\n"
+    "- Ne commence jamais par « Le texte porte sur », et ne devine rien.\n"
+    "- Exemple : « Débat sur l'avenir de l'orientation des lycéens vers le supérieur. »\n"
+    'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
+    "Theme doit être EXACTEMENT l'un de :\n"
+    "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
+)
+
+SUMMARY_PROMPT_ARTICLE = (
+    "Tu résumes pour le grand public un seul article d'un texte de loi soumis au vote de "
+    "l'Assemblée nationale. On te donne le texte de cet article tel qu'il a été examiné.\n"
+    "Règles :\n"
+    "- Une seule phrase courte, à l'infinitif, qui dit ce que fait cet article et rien "
+    "d'autre (ex. : « Allonger de 10 à 20 ans le délai de prescription de ce délit. »).\n"
+    "- Ne décris jamais la loi entière ni son objectif général.\n"
+    "- Traduis les références au code en langage courant. Ne cite jamais un numéro "
+    "d'article ou d'alinéa.\n"
+    "- Respecte le sens exact, et n'ajoute rien qui ne soit pas dans l'article. S'il ne "
+    "suffit pas à comprendre ce qui change, réponds avec un champ summary vide.\n"
+    "- Ne mentionne ni le résultat du vote, ni le numéro de l'article.\n"
+    "- N'écris jamais « Le texte », et ne devine rien : aucune hypothèse, aucun "
+    "« probablement », aucun « notamment ».\n"
+    'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
+    "Theme doit être EXACTEMENT l'un de :\n"
+    "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
+)
+
+SUMMARY_PROMPT_AMENDMENT = (
+    "Tu résumes pour le grand public un amendement soumis au vote de l'Assemblée nationale. "
+    "On te donne son dispositif (ce qu'il change réellement) et l'exposé de son auteur.\n"
+    "Règles :\n"
+    "- Une seule phrase courte, à l'infinitif, qui commence par ce que fait l'amendement "
+    "(ex. : « Rendre obligatoire l'affichage du Nutri-Score sur les produits alimentaires. »).\n"
+    "- Appuie-toi d'abord sur le dispositif. L'exposé sert uniquement à comprendre ce que "
+    "le dispositif change.\n"
+    "- Si le dispositif renvoie seulement à des alinéas (« Supprimer les alinéas 31 à 35 »), "
+    "dis ce que ces alinéas contiennent, d'après l'exposé. Ne cite jamais un numéro d'alinéa.\n"
+    "- Respecte le sens exact : ne confonds pas assujettir et exonérer, ni patronal et salarial. "
+    "Si le dispositif et l'exposé ne suffisent pas, réponds avec un champ summary vide.\n"
+    "- L'exposé est un plaidoyer : ne reprends ni ses arguments, ni ses jugements, ni le "
+    "but que l'auteur affiche.\n"
+    "- Pour un sous-amendement, dis ce qu'il change dans l'amendement visé.\n"
+    "- Ne mentionne ni le numéro, ni l'auteur, ni l'article, ni le résultat du vote.\n"
+    "- N'écris jamais « Le texte », et ne devine rien : aucune hypothèse, aucun "
+    "« probablement », aucun « notamment ».\n"
     'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
     "Theme doit être EXACTEMENT l'un de :\n"
     "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
@@ -157,6 +225,10 @@ Instructions :
 - Réponds en te basant UNIQUEMENT sur les sources ci-dessus
 - Si plusieurs sources sont pertinentes, synthétise-les
 - Si une source contredit une autre, signale-le
+- Une ligne « Aide à la lecture » est écrite par MonÉlu et n'est pas une source : \
+ne la cite jamais et ne présente jamais son contenu comme ce que dit la loi. Ce \
+que tu affirmes d'un texte doit venir de son titre officiel ou du résultat du \
+vote. Si seule cette aide décrit le contenu, précise « d'après le résumé de MonÉlu »
 - Les sources sont des extraits : ne calcule AUCUN classement, total \
 global ou comparaison entre groupes à partir des députés ou votes \
 mentionnés. Si la réponse exige un tel calcul et qu'aucune source ne \

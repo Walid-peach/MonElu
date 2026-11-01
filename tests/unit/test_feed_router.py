@@ -208,7 +208,7 @@ def test_card_fields(monkeypatch):
     assert card.scrutin_kind == "autre"
     assert card.margin == 5
     assert card.theme_slug == "justice-securite"
-    assert card.an_url == "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V1"
+    assert card.an_url == "https://www.assemblee-nationale.fr/dyn/17/scrutins/1"
     assert card.lois_url == "https://monelu.fr/lois/DLR5L17N1"
 
 

@@ -7,7 +7,7 @@
   "start_url": "/mon-depute",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
+  "background_color": "#0D1F3C",
   "theme_color": "#0D1F3C",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

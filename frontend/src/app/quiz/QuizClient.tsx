@@ -36,7 +36,7 @@ const kicker: React.CSSProperties = {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ background: CREAM, minHeight: '100vh' }}>
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 20px 96px' }}>{children}</div>
+      <div className="px-5 pb-24 pt-6 md:pt-10" style={{ maxWidth: 760, margin: '0 auto' }}>{children}</div>
     </div>
   )
 }
@@ -367,17 +367,20 @@ export function QuizClient() {
 
   // ------------------------------------------------------------------ intro
   if (phase === 'intro') {
+    // One tree for both widths, so the page keeps a single h1 and each notice
+    // once. Below md it follows the canvas "Quiz": left-aligned, the three
+    // steps spelled out instead of the paragraph, and a full-width button.
     return (
       <Shell>
-        <div style={{ textAlign: 'center', paddingTop: 40 }}>
-          <div style={{ ...kicker, marginBottom: 16 }}>Le quiz</div>
+        <div className="flex flex-col gap-4 md:block md:pt-10 md:text-center">
+          <div className="md:mb-4" style={kicker}>Le quiz</div>
           <h1
-            className="font-newsreader text-[clamp(30px,5vw,46px)]"
+            className="font-newsreader text-[34px] max-md:leading-[1.08] md:text-[clamp(30px,5vw,46px)]"
             style={{ fontWeight: 600, color: NAVY, margin: 0, letterSpacing: '-0.015em' }}
           >
             {focusDeputyName ? `Votez-vous comme ${focusDeputyName} ?` : 'Quel député vote comme vous ?'}
           </h1>
-          <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: 'var(--dp-text-secondary)' }}>
+          <p className="hidden md:block" style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: 'var(--dp-text-secondary)' }}>
             {focusDeputyName ? (
               <>Répondez aux 10 scrutins et voyez votre accord avec {focusDeputyName} — et avec les 577 députés.</>
             ) : (
@@ -388,20 +391,36 @@ export function QuizClient() {
               </>
             )}
           </p>
-          <p style={{ margin: '14px auto 0', maxWidth: 520, fontSize: 13.5, color: GRAY }}>
+          <ol className="flex flex-col gap-2.5 md:hidden">
+            {[
+              'Dix vrais scrutins de l’Assemblée, posés en français courant.',
+              'Pour, contre ou abstention : glissez la carte ou touchez un bouton.',
+              focusDeputyName
+                ? `Votre accord avec ${focusDeputyName}, et avec les 577 députés.`
+                : 'Les députés et les groupes qui votent le plus comme vous.',
+            ].map((step, i) => (
+              <li key={i} className="flex items-start gap-3 rounded-2xl border border-[color:var(--dp-border)] bg-[color:var(--dp-card-bg)] p-3.5">
+                <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[color:var(--dp-track-bg)] font-mono text-sm font-bold text-[color:var(--dp-text)]">
+                  {i + 1}
+                </span>
+                <span className="text-[15px] leading-snug text-[color:var(--dp-text)]">{step}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="md:mx-auto md:mt-3.5" style={{ maxWidth: 520, fontSize: 13.5, color: GRAY }}>
             Sans compte. Vos réponses restent dans votre navigateur : rien n’est enregistré
             tant que vous ne partagez pas vos résultats.
           </p>
           {effectiveCompareShare && (
-            <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 14, color: NAVY, fontWeight: 600 }}>
+            <p className="md:mx-auto md:mt-[18px]" style={{ maxWidth: 520, fontSize: 14, color: NAVY, fontWeight: 600 }}>
               Faites le test pour voir votre accord avec le résultat qu’on vous a partagé.
             </p>
           )}
           {compareNotice && (
-            <p style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 13.5, color: RED }}>{compareNotice}</p>
+            <p className="md:mx-auto md:mt-[18px]" style={{ maxWidth: 520, fontSize: 13.5, color: RED }}>{compareNotice}</p>
           )}
           {questionsError ? (
-            <p style={{ marginTop: 28, fontSize: 15, color: RED }}>
+            <p className="md:mt-7" style={{ fontSize: 15, color: RED }}>
               Impossible de charger le questionnaire pour le moment. Réessayez dans un instant.
             </p>
           ) : (
@@ -409,19 +428,19 @@ export function QuizClient() {
               onClick={() => {
                 track('quiz_start')
                 setPhase('questions')
+                // The intro is taller than the deck on a phone: without this
+                // the deck opens scrolled past its counter, under the top bar.
+                window.scrollTo({ top: 0 })
               }}
               disabled={!questions}
+              className="h-[54px] w-full justify-center rounded-[14px] text-base md:mt-8 md:h-auto md:w-auto md:rounded-[9px] md:px-[30px] md:py-[13px] md:text-[15.5px]"
               style={{
-                marginTop: 32,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
                 background: ACCENT,
                 color: '#fff',
-                padding: '13px 30px',
-                borderRadius: 9,
                 fontWeight: 600,
-                fontSize: 15.5,
                 border: 'none',
                 cursor: questions ? 'pointer' : 'wait',
                 opacity: questions ? 1 : 0.6,

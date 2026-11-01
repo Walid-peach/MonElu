@@ -360,7 +360,7 @@ count is low.
 
 ## ADR-018 — Rebuild logo as inline SVG React component (Plan C)
 **Date:** 2026-06-09
-**Status:** Logo superseded by ADR-043; dark-mode deferral superseded by ADR-027
+**Status:** Logo superseded by ADR-045; dark-mode deferral superseded by ADR-027
 
 **Decision:** Replace the existing `MonEluLogo.tsx` (a simplified geometric placeholder — 8 rotating squares) with a new inline SVG component that faithfully renders the hemicycle arc + deputy figure + wordmark from the canonical brand asset (`docs/assets/MonElu_LOGO-SVG.png`).
 
@@ -661,6 +661,21 @@ These are full human-readable slugs, not the existing `CANONICAL_SHORT_LABELS` c
 - Tailwind `darkMode` strategy (class-based, driven by the toggle) and the toggle's persistence mechanism are decided in the first sub-issue (theme infra), not re-litigated per page.
 
 **Trigger to revisit:** N/A — this is the terminal state for the deferral question. Future revisits would only concern the toggle's UX or token values, not whether dark mode gets built.
+
+### Amendment (2026-10-25, #612): the landing page follows the theme
+
+The landing page is no longer excluded.
+It now follows the site theme like every other page, and the toggle shows on it.
+The desktop cinematic scroll panels keep their fixed navy/red treatment, which already reads the same in both themes; the exclusion is lifted for everything else on `/`, chiefly the phone home page (`MobileHome` and the phone sections), which did not exist when this ADR was written and is a cream page.
+
+**Reason:** most visitors never touch the toggle, so a phone set to dark resolved the theme from the system on every page except `/`.
+Every trip through Accueil flipped the whole screen between light and dark, and the toggle was hidden on the one page where the flip started.
+A landing page that ignores the visitor's setting is the inconsistency, not the dark variant.
+
+**Impact:**
+- `isLightOnlyPath` is gone; `frontend/src/lib/theme.ts` holds the single theme store and the `<head>` script that applies it before the first paint.
+- The "Do NOT add a dark variant to the landing page" bullet above is superseded, except for the cinematic panels.
+- Homepage surfaces use the `--dp-*` tokens; the solid ink fill that draws "Pour" and selected chips is `--dp-solid-bg`/`--dp-solid-text`, which inverts in dark mode.
 
 ---
 
@@ -1803,6 +1818,93 @@ The list lives in `UserDefaults` on the phone; the previous single `monelu.follo
 
 ---
 
+## ADR-043 - Amendment summaries are written from the official text or not at all (#630)
+
+**Status:** Accepted, 2026-10-30.
+
+### Context
+
+Vote summaries were generated from the title and result alone.
+An amendment's title gives its number, author and article, not what it changes, so the model filled the gap.
+Of the 435 amendment summaries among the 500 latest votes, 215 only said an article was modified and 76 used filler or hedging, and some described the wrong change.
+
+### Decision
+
+1. **The source is `Amendements.json.zip`.** The AN publishes it at about 348 MB and 975 MB unpacked, and it parses in seconds.
+It is downloaded only when an amendment vote in the run's window still has no text.
+2. **Only voted amendments are stored**, in `vote_amendments`, one row per scrutin.
+The export holds about 143 000 amendments, and the database has 500 MB on the free tier.
+3. **The match comes from the title, and uncertainty means no match.**
+A scrutin carries no amendment reference, so `ingest_amendments.py` uses the number, the first author and the dates.
+Over the 2 200 latest votes, 1 852 of 1 937 amendment votes matched, and 1 848 of the 1 850 dated matches agree with the recorded outcome.
+A wrong match publishes a confident summary of another amendment, so ambiguity never picks a candidate.
+4. **No source text, no LLM call.** An unmatched vote keeps its official title, which frontends already fall back to.
+5. **Guards in code, not only in the prompt.** `rejection_reason()` refuses guesses, « Le texte » as a subject, bare paragraph references and restated titles.
+Two different texts may not share a sentence.
+A refused summary stays empty with `summary_basis = 'rejected'` and is not retried, so it costs no quota the next day.
+6. **The dispositif outranks the exposé.** The exposé is advocacy, and it can describe a different change: amendment 1359's speaks of the employer share while its dispositif excludes the employee share.
+7. **Old summaries are cleared at once and rewritten gradually.** `backfill_amendment_text.yml` clears them, and the daily runs rewrite up to 210 a day, newest first.
+Groq's free tier allows 8 000 tokens a minute and one amendment call uses about 900, and a reader losing a summary is better than a reader getting a false one.
+
+### Consequences
+
+- `summary_basis` tells a checked summary from a title-only one, and only amendments use it.
+Other vote kinds keep the title-based prompt, because their titles name the whole text.
+- Amendment votes have no theme until they get a summary.
+- The code-built short title for votes without a summary is left to #634, which decides what the headline is.
+
+## ADR-044 - Article summaries are written from the examined text or not at all (#642)
+
+**Status:** Accepted, 2026-10-31.
+
+### Context
+
+ADR-043 kept the title-based prompt for other vote kinds "because their titles name the whole text".
+That is false for an article vote: its title names the whole bill, so its summary described the bill.
+Of 188 sampled article summaries, 96 opened with "Le texte" and 33 used guessing words.
+
+### Decision
+
+1. **The source is the HTML the AN publishes for each text**, at `/dyn/opendata/<uid>.html`.
+Standard texts mark every article heading (`assnat9ArticleNum`) and its body (`assnatLoiTexte`).
+`Dossiers_Legislatifs.json.zip` lists the documents and their titles.
+2. **The text is the one examined, not the one adopted.** Only deposited and committee texts count (`B` and `BTC`), and the newest published on or before the vote wins.
+An adopted text is left out because a rejected article is not in it.
+So a summary describes the article as debated, and an amendment adopted during the sitting is not reflected.
+3. **The bill comes from the title and the document list, not from `votes.dossier_id`.** That field is empty before March 2026 (ADR-035).
+A title that matches no document, or an article missing from every examined text, gets no row.
+4. **A deleted article has no source.** When the newest text holds the heading with no real content, an older reading is not used, because it is not what was voted.
+5. **Only voted articles are stored**, in `vote_articles`, one row per scrutin.
+6. **The ADR-043 rules apply unchanged:** no source means no LLM call, `summary_basis` records what happened, and a refused summary stays empty and is not retried.
+`rejection_reason()` now also refuses a summary whose subject is the bill.
+A summary the model declines to write counts as refused too, so it costs no quota the next day.
+7. **Old summaries are cleared and the marts rebuilt in one run**, by `backfill_article_text.yml`.
+Articles go before the amendment backlog in the daily sweep, because there are few of them.
+
+### Consequences
+
+- 548 of the 643 article votes in production find their text, a real count over the published files.
+- Budget bills and other texts published in an older template mark no article heading, so they keep their official title.
+- `summary_basis` now covers amendments and articles, and `_reading_aid()` keeps a title-only summary of either out of the RAG index.
+
+## ADR-045 — Share the approved MÉ monogram across iOS and web
+**Date:** 2026-10-31
+**Status:** Current
+
+**Decision:** Use the user-approved “Seamless fold” MÉ monogram (combination 25), with its navy ligature, equally bold connecting stroke, red accent and cream background, for the native app and website.
+
+**Reason:** The user selected this design and explicitly asked to update the website too. Preserve the approved artwork instead of approximating its geometry with a new hand-drawn SVG. This supersedes ADR-018's hemicycle-logo implementation; ADR-027's dark-mode behavior remains in force.
+
+**Impact:**
+- The tracked master is `ios/MonElu/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png` (1024 × 1024, opaque). The app target includes that asset catalog.
+- Run `node scripts/generate_icons.js` from `frontend/` to produce the compact WebP header mark, PNG browser icon, Apple touch icon and PWA icons. The maskable icon adds safe-area padding.
+- Reuse `MonEluLogo` in navigation, the mobile home brand row, the mobile top bar, both menus and both footers. Its cream icon stays identical in both themes; `variant="dark"` changes the wordmark for dark surfaces and `variant="theme"` follows the CSS theme on first paint.
+- Place the mark beside the MonÉlu name, separate from editorial page headings. Do not restore the old hemicycle logo or use the full-size raster master in the header.
+
+**Trigger to revisit:** A new approved brand design or a faithful vector master supplied for this same monogram.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1814,7 +1916,7 @@ The list lives in `UserDefaults` on the phone; the previous single `monelu.follo
 7. Never auto-run `POST /verify/` from intent detection (ADR-023) — detection only nudges; verification is an explicit user action
 8. Quiz matching is stateless and quiz shares store only server-computed results (ADR-025) - never trust client-computed percentages; answers may be persisted only via the opt-in path in ADR-028 (see rule 11), never by default
 9. Group profile pages use live SQL aggregation over existing marts and a hardcoded slug map, not a new mart or a groups table (ADR-026) - never link a group page for a NULL-party deputy
-10. Dark mode is approved and being built (ADR-027, MON-103) — landing page stays light-only by design
+10. Dark mode covers every page, the landing page included since #612 (ADR-027 as amended) - only the desktop cinematic panels keep a fixed palette
 11. Quiz share answers may be stored only when the sharer opts in (`include_answers`, default off) for friend comparison (ADR-028) — never store answers by default, never add a server-side compare endpoint, and gate any *derived* field that re-encodes them the same way (`detail`, `themes`)
 12. When in doubt: check what's actually deployed before writing new code
 13. Sustainability funding is donations-first via HelloAsso, with the existing `api_keys.rate_limit_multiplier` (ADR-029, MON-116/MON-98) as the paid-tier mechanism — do not build Stripe/webhook billing until a real paying commercial API customer exists
@@ -1833,22 +1935,5 @@ The list lives in `UserDefaults` on the phone; the previous single `monelu.follo
 26. The iPhone app is SwiftUI in `ios/`, and the API is its source of truth (ADR-041, #429) - never put business logic in the app that the API already computes, never rename, retype or remove an API field, route or operationId the app reads without ADR-041 §5's add-first sequence and a raised minimum version in `GET /app/config`, never ship a public App Store build that talks to a Railway hostname, and keep `railway.json`'s `!/ios/**` watch pattern and `deploy.yml`'s `ios/**` ignore so iOS-only commits never redeploy the API or re-run dbt against production
 27. Native clients keep the Supabase session in the Keychain and call FastAPI with the bearer token directly (ADR-041 §6, amending ADR-040 §4) - the browser rule in rule 25 is unchanged; `/account/*` is rate-limited per verified account, never per IP, and CORS stays `allow_credentials=False`
 28. The app's Accueil feed and weekly recap are computed by the API (`GET /feed`, `GET /feed/week`) from scrutins, positions and agenda items only (ADR-042, #560) - follows stay on the phone and travel as `deputies`/`theme` query parameters (`deputy_id` kept for installed builds; at most 10 deputies, all equal, recap never summed across them - ADR-042 amendment, #582), never in the account tables; the noise rule (full cards for `ensemble`/`motion`, others only within 20 votes, the rest rolled up) lives in the router, not the app; never add a card that needs data MonÉlu does not ingest (amendment authors, interventions), and never add likes, reactions, streaks or notifications to it
-
-
----
-
-## ADR-043 — Share the approved MÉ monogram across iOS and web
-**Date:** 2026-10-31
-**Status:** Current
-
-**Decision:** Use the user-approved “Seamless fold” MÉ monogram (combination 25), with its navy ligature, equally bold connecting stroke, red accent and cream background, for the native app and website.
-
-**Reason:** The user selected this design and explicitly asked to update the website too. Preserve the approved artwork instead of approximating its geometry with a new hand-drawn SVG. This supersedes ADR-018's hemicycle-logo implementation; ADR-027's dark-mode behavior remains in force.
-
-**Impact:**
-- The tracked master is `ios/MonElu/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png` (1024 × 1024, opaque). The app target includes that asset catalog.
-- Run `node scripts/generate_icons.js` from `frontend/` to produce the compact WebP header mark, PNG browser icon, Apple touch icon and PWA icons. The maskable icon adds safe-area padding.
-- Reuse `MonEluLogo` in navigation, the mobile home brand row, the menu and both footers. Its cream icon stays identical in both themes; `variant="dark"` changes the wordmark for dark surfaces.
-- Place the mark beside the MonÉlu name, separate from editorial page headings. Do not restore the old hemicycle logo or use the full-size raster master in the header.
-
-**Trigger to revisit:** A new approved brand design or a faithful vector master supplied for this same monogram.
+29. An amendment summary comes from `vote_amendments` or does not exist (ADR-043, #630) - never send an amendment title to the model as its source, never pick a candidate when a vote matches more than one amendment, and never remove a `rejection_reason()` guard to raise the yield
+30. An article summary comes from `vote_articles` or does not exist (ADR-044, #642) - never send an article title to the model as its source, and never fall back to an older reading when the newest examined text shows the article deleted

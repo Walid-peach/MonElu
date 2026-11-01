@@ -1,5 +1,6 @@
 # This is the single retry backstop for vote summaries: it sweeps every vote
-# with summary_plain IS NULL, independent of ingest_prod.yml's --since window
+# still waiting for one (see SQL_PENDING in generate_vote_summaries.py),
+# independent of ingest_prod.yml's --since window
 # (MON-221). ingest_prod.yml (06:00 UTC) also runs generate_vote_summaries.py,
 # scoped to that run's ingestion window, so a summary generated same-day
 # doesn't wait a full day for this job — but this job, not that step, is what
@@ -45,16 +46,9 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          count=$(python3 -c "
-          import psycopg2, os
-          conn = psycopg2.connect(os.environ['DATABASE_URL'])
-          cur = conn.cursor()
-          cur.execute(\"SELECT COUNT(*) FROM votes WHERE summary_plain IS NULL AND voted_at >= '2024-07-07'\")
-          print(cur.fetchone()[0])
-          conn.close()
-          ")
+          count=$(python -m scripts.generate_vote_summaries --since 2024-07-07 --backlog)
           echo "remaining=$count" >> "$GITHUB_OUTPUT"
-          echo "Votes without summaries: $count"
+          echo "Votes waiting for a summary: $count"
 
       - name: Run summarizer
         if: steps.backlog.outputs.remaining != '0'
@@ -75,7 +69,7 @@ jobs:
           # without pipefail, and tee's exit code would then mask the failure).
           set -o pipefail
           status=0
-          python -m scripts.generate_vote_summaries --since 2024-07-07 \
+          python -m scripts.generate_vote_summaries --since 2024-07-07 --limit 150 \
             --changed-ids-out /tmp/summarized_vote_ids.txt 2>&1 | tee /tmp/summary_run.log || status=$?
           generated=$(grep "Done —" /tmp/summary_run.log | grep -oP "generated: \K[0-9]+" || echo "0")
           errors=$(grep "Done —" /tmp/summary_run.log | grep -oP "errors: \K[0-9]+" || echo "0")

@@ -53,6 +53,14 @@ describe('BottomNav', () => {
     expect(screen.getByRole('link', { name: 'Demander' })).toHaveAttribute('href', '/chat')
   })
 
+  // The phone browser gets MobileTopBar; this bar belongs to the installed app.
+  it('shows in the installed web app only', () => {
+    renderNav()
+    expect(bar().className).toMatch(/^hidden\b/)
+    expect(bar().className).toMatch(/\binstalled:block\b/)
+    expect(bar().className).toMatch(/\bmd:!hidden\b/)
+  })
+
   it('marks the current tab', () => {
     pathname = '/verifier/v/abc'
     renderNav()

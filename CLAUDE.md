@@ -56,7 +56,7 @@ Production API: https://monelu-production.up.railway.app
 | RAG embeddings | OpenAI `text-embedding-3-small` | 1 536 dimensions, ~$0.006 per full re-index |
 | RAG inference | Groq `openai/gpt-oss-120b` | temperature=0.2; free tier. Routing/claim detection use `openai/gpt-oss-20b`. Both are reasoning models - reasoning tokens count against `max_tokens` |
 | Vector index | Exact cosine scan via pgvector (`<=>`) | ANN index dropped at ~3.7k chunks (migration 003) — exact scan is ms-fast with perfect recall |
-| CI/CD | GitHub Actions (7 workflows) | See Workflows section |
+| CI/CD | GitHub Actions (9 workflows) | See Workflows section |
 | Error tracking | Sentry (API + frontend) | Opt-in via `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` — no-ops when unset. See `docs/monitoring.md` |
 | Experiment tracking | MLflow (local) | router suite + retrieval suite eval (17 questions total) · needs the dbt marts populated (ADR-038) |
 | IaC | Terraform ~> 5.0 (AWS, archived) | `archive/infra-aws/` — not applied, kept as reference |
@@ -131,6 +131,8 @@ Assemblée Nationale Open Data (ZIPs)
 | `deploy.yml` | Merge to `master`, except iOS-only merges (`paths-ignore: ios/**`, ADR-041) | dbt deps → run → test against prod Supabase |
 | `ingest_prod.yml` | Daily 06:00 UTC, weekdays | Ingest new votes + deputies + rebuild RAG index, then `dbt run` → operational tail. Every step after `dbt run` is `continue-on-error` + `!cancelled()`, and a final **data-quality gate** re-fails the job on `dbt snapshot`/`dbt test`/`dbt source freshness`/quiz-validation outcomes (MON-250) plus a failed cache revalidation (GH #352 — with every ISR interval a one-day fallback, a missed purge is a day of stale pages, and the `curl` retries first). The revalidation `curl` POSTs the run's **cache scope** (GH #353, ADR-039): the data families and the individual scrutins/deputies this run actually changed, so a no-op run purges nothing — a failing assertion must never skip cache revalidation or the monitoring probes. The DB-size probe is deliberately outside the gate. |
 | `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window - the actual retry backstop (MON-221). `check_summary_yield()` exits 1 when the run attempted work and generated nothing (GH #384 - six green runs against an expired Groq key); a partial failure stays green and retries tomorrow. Its revalidation is scoped to the `summaries` family plus the vote ids it wrote (GH #353) — never the `votes` family, which carries the `health` tag the root layout reads. The `Run summarizer` step captures that exit code (`|| status=$?`) and re-raises it only after writing `generated`/`errors` to `$GITHUB_OUTPUT` - `shell: bash` runs with `-eo pipefail`, so letting the pipeline fail on its own would abort the step before the counts are parsed and the job summary would report 0/0 on exactly the runs that need them. |
+| `backfill_amendment_text.yml` | Manual, one-off (#630, ADR-043) | Attaches official text to every amendment vote and clears summaries written from a title alone; safe to re-run |
+| `backfill_article_text.yml` | Manual, one-off (#642, ADR-044) | Attaches official text to every article vote, clears summaries written from a title alone and rebuilds the marts in the same run; safe to re-run |
 | `dbt_docs.yml` | Push to `master` touching `transform/` | Generate + deploy lineage docs to GitHub Pages |
 | `llm_contract.yml` | Weekly Mon 08:00 UTC + on changes to the LLM call sites | Runs `tests/live` against the real Groq API: asserts the configured models still exist and still satisfy the call shapes (tool call, JSON mode, token budgets). The PR gate mocks Groq and `/health` never calls it, so this is the only check that catches an upstream model decommission - the 2026-09 outage was invisible to both. Deliberately off the PR gate: a third-party outage must not block merges. |
 
@@ -170,6 +172,18 @@ Never guard a `DO UPDATE` with a `WHERE` that skips unchanged rows, and never ma
 `ingest_agenda.py` has a third column, `last_seen_at`, which ADR-030 makes visibility depend on.
 The summary generators leave both AN-facing columns alone (our own text is not a new AN record) and report the ids they wrote through `--changed-ids-out`, rewritten after every committed batch so a crash mid-sweep still reports what landed.
 - `migrate.py` doubles as the Railway start hook (runs before uvicorn in `railway.json`)
+- **A deputy who leaves the Assemblée must get a `mandate_end`** (#621).
+`ingest_deputies.py` reads AMO10, which lists sitting deputies only, so a departed deputy just drops out of it and the upsert never touches their row again; `mandate_end IS NULL` is what "sitting" means everywhere (the `active` filter, `/groups` seat counts, the RAG chunks).
+After the upsert, `close_departed_mandates()` finds the rows still sitting that AMO10 no longer lists and closes them with the date AMO20 (all mandates of the legislature) records - downloaded only on a run that finds one.
+It never raises, since it runs inside a critical step; `transform/tests/assert_one_sitting_deputy_per_seat.sql` is the guard instead, failing the daily data-quality gate when a seat has two sitting deputies or the chamber more than 577.
+Fewer than 577 is normal: a seat stays vacant until a by-election.
+- **`ingest_amendments.py` is the only source of an amendment summary** (#630, ADR-043).
+It matches amendment scrutins to `Amendements.json.zip` by number, first author and dates, stores the text of voted amendments in `vote_amendments`, and leaves a vote unmatched rather than guess between candidates.
+`generate_vote_summaries.py` makes no LLM call for an amendment vote without a row, sets `votes.summary_basis`, and leaves a summary empty when `rejection_reason()` refuses it.
+`--limit` keeps a run inside Groq's quota, and `backfill_amendment_text.yml` is the one-off that attaches text to old votes and clears their title-only summaries.
+- **`ingest_articles.py` is the only source of an article summary** (#642, ADR-044).
+It matches article scrutins by title to the deposited or committee text last published before the vote, reads the article from `/dyn/opendata/<uid>.html`, and stores it in `vote_articles`.
+A title with no matching document, an article with no heading (budget bills mark none) or a deleted article gets no row, so `generate_vote_summaries.py` makes no LLM call and the vote keeps its title.
 - `run_ingestion_prod.py` orchestrates the full pipeline for production runs, including `ingest_agenda.py` (MON-210) and `ingest_dossiers.py` (MON-243) as non-critical steps - an agenda- or dossier-feed failure must not block core deputies/votes/positions ingestion
 - **`ingest_dossiers.py` is the bill parcours, and it is not driven by `--since`** (MON-243, ADR-035).
 It ingests every `DLR5L17*` dossier from `Dossiers_Legislatifs.json.zip` and flattens the nested `actesLegislatifs` tree into `dossier_actes`, preserving the structure through `parent_uid`/`depth`/`ordinal` (a per-dossier pre-order counter, so `ORDER BY ordinal` replays the tree in one pass).
@@ -192,6 +206,7 @@ Unlike vote summaries there is no `summarize_backfill.yml` equivalent behind the
 - Lineage docs auto-deployed to GitHub Pages on push to `master`
 
 **`rag/`** — Phase 2 semantic search
+- Generated summaries are never evidence (#631): `chunker.py` keeps an amendment or article summary only with `summary_basis = 'official_text'` and labels every summary as a reading aid (`READING_AID_LABEL`), and `RAG_TEMPLATE` forbids citing it. `verify.py` sends the model official titles and recorded positions only, so a summary cannot reach a verdict.
 - `pipeline/chunker.py`: Five chunk strategies: `vote` (one per scrutin), `deputy` (one per député), `party` (one per parliamentary group), `global_stats` (aggregate overview), `notable_deputy` (vote-by-vote for high-profile deputies). Uses tiktoken (cl100k_base) for token counting.
 - `pipeline/embedder.py`: Batched OpenAI embedding (100 chunks/batch), stores into `document_chunks`.
 - `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. **`build` has exactly one mode** (ADR-037, MON-256): a full rebuild (~$0.006/run) that re-embeds into a `document_chunks_staging` table and swaps it in atomically (`ALTER TABLE ... RENAME`) once every step succeeds (MON-233) - `document_chunks` is never truncated up front, so a mid-run failure leaves the previous index live.
@@ -237,13 +252,18 @@ It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` f
 `e2e/smoke.spec.ts` asserts both halves at 390px and 1280px.
 - **Grey text goes through `--dp-text-secondary` / `--dp-text-muted`, never a literal** (#559).
 Tailwind's `gray-mid` is retired, and `#9CA3AF`, `#6B7280` and faint translucent white all missed WCAG AA as text.
-A surface that keeps one palette in both themes (the white popovers, the embed and `/groupes/[slug]` stay light; the footer, the chat sidebar and the `/a-propos` navy sections stay dark) carries the `dp-light` or `dp-dark` class from `globals.css`, which pins the tokens of its subtree to that palette (custom properties only: `dark:` utilities inside it still follow `<html>`).
+A surface that keeps one palette in both themes (the white popovers and the embed stay light; the footer, the chat sidebar and the `/a-propos` navy sections stay dark) carries the `dp-light` or `dp-dark` class from `globals.css`, which pins the tokens of its subtree to that palette (custom properties only: `dark:` utilities inside it still follow `<html>`).
 `__tests__/lib/text-token-contrast.test.ts` checks every text token on each surface and fails on a grey text literal, `text-gray-mid`, or sub-AA white text in `src/` (Open Graph images excepted).
 - **A page never keeps its own theme state** (MON-168).
 `ThemeProvider` (`src/components/ThemeProvider.tsx`) is the single source, stored under `THEME_STORAGE_KEY = 'monelu-theme'` and applied as the `dark` class on `<html>`; every consumer reads it through `useTheme()`.
 `/chat` shipped with a private `monelu-dark` localStorage flag instead, so the nav toggle darkened the chrome and left the whole conversation panel white - the two systems shared no state and no key, and neither toggle moved the other half.
 The chat page still computes its colors as inline styles rather than Tailwind classes (it is the largest file in the app), which is fine: what matters is that the `dk` boolean feeding them comes from `useTheme()`.
 `__tests__/app/chat-theme.test.tsx` fails if `'monelu-dark'` reappears in `ChatClient.tsx` or if the panel background stops tracking the stored site theme.
+- **Phones get a different chrome in the browser and in the installed web app** (#614).
+In the browser, `MobileTopBar` (☰, search, "Installer", and the `MobileDrawer` menu) sits at the top; inside the installed app, `BottomNav` sits at the bottom, and neither shows from `md` up.
+The switch is CSS, keyed on `data-installed`, which `INSTALLED_FLAG_SCRIPT` (`src/lib/installState.ts`) sets on `<html>` from `<head>` before the first paint, with the same test as `isStandalone()` (iOS home-screen icons need `navigator.standalone`).
+Style anything that differs between the two with the Tailwind `installed:` variant (`tailwind.config.ts`), never with a client-side `isStandalone()` branch, which would flash the wrong bar until hydration.
+The bottom spacing the floating tab bar needs (`MainFrame` on `/chat`, the phone `Footer`) is `installed:` only, and `/chat`'s full-screen shell subtracts the top bar's 60px on phones in the browser.
 - **Every static route must appear in `sitemap.ts`** (MON-265).
 `/deputes/comparer` shipped as a client-only page with no metadata and no sitemap entry, reachable only by clicking through from inside the app - a finished feature invisible to search and to LLM crawlers, with nothing reporting it.
 `__tests__/app/sitemap-coverage.test.ts` now enumerates every non-dynamic `page.tsx` and fails if its path is absent from `sitemap.ts`; `~offline` is the single allowlisted exclusion, and dynamic routes are out of scope (they are enumerated from the API, from a slug table, or are snapshot URLs kept out by decision - MON-264).
@@ -281,7 +301,7 @@ The endpoint validates the caller's `url` against that allowlist before building
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
 - `networking`, `s3`, `rds` modules are the only parts worth salvaging if an AWS migration ever happens; `ec2` does not survive that design.
 
-**`data/migrations/`** — 14 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
+**`data/migrations/`** — 16 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
 - `001_init.sql`: `deputies`, `votes`, `vote_positions`, `document_chunks`
 - All `CREATE TABLE IF NOT EXISTS` — safe to re-run
 - `migrate.py` keeps a `schema_migrations` ledger: each file is applied once and skipped on later deploys
@@ -302,6 +322,8 @@ The endpoint validates the caller's `url` against that allowlist before building
 | `deputies` | 577 deputy profiles (party, department, photo_url, mandate dates) |
 | `votes` | Legislative votes (title, result adopté/rejeté, aggregate counts) |
 | `vote_positions` | Per-deputy position per vote (pour/contre/abstention/nonVotant) |
+| `vote_amendments` | Official text of each voted amendment, one row per scrutin (#630, ADR-043): the only source of an amendment summary |
+| `vote_articles` | Official text of each voted article, one row per scrutin (#642, ADR-044): the only source of an article summary |
 | `document_chunks` | Phase 2: content + JSONB metadata + vector(1536) |
 | `api_keys` | Manually-issued public API keys (sha256 hash, label, rate_limit_multiplier) |
 | `api_key_usage` | Per-key, per-endpoint, per-day request counters for usage accounting |

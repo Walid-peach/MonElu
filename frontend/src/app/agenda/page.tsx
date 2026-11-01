@@ -15,6 +15,7 @@ import { themeColors } from '@/lib/utils'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
+import { AgendaMobile } from './AgendaMobile'
 
 // The agenda table only changes when `ingest_agenda.py` runs, and that run
 // POSTs /api/revalidate, which invalidates this path - so the timer below is
@@ -76,8 +77,13 @@ export default async function AgendaPage() {
   ])
 
   return (
-    <div style={{ background: CREAM, minHeight: '100vh' }}>
-      <JsonLd data={breadcrumb} />
+    <>
+    <JsonLd data={breadcrumb} />
+    <AgendaMobile
+      days={week?.days ?? []}
+      empty={<EmptyState nextDay={nextDay} unavailable={week === null} />}
+    />
+    <div className="hidden md:block" style={{ background: CREAM, minHeight: '100vh' }}>
 
       <div
         className="px-5 sm:px-14 pt-8 sm:pt-[50px] pb-8 sm:pb-10"
@@ -148,6 +154,7 @@ export default async function AgendaPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 

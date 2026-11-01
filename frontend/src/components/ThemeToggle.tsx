@@ -1,14 +1,9 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
-import { isLightOnlyPath } from '@/lib/theme'
 import { useTheme } from './ThemeProvider'
 
 export function ThemeToggle({ className = '' }: { className?: string }) {
-  const pathname = usePathname()
   const { theme, toggleTheme } = useTheme()
-
-  if (isLightOnlyPath(pathname)) return null
 
   const isDark = theme === 'dark'
 

@@ -26,7 +26,8 @@ from scripts.generate_agenda_summaries import (
 SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"
 
 SUBSTANTIVE = (
-    "Suite de la discussion du projet de loi de financement de la sécurité sociale pour 2026"
+    "Suite de la discussion du projet de loi de financement de la sécurité sociale pour 2026, "
+    "après engagement de la procédure accélérée"
 )
 
 
@@ -144,7 +145,7 @@ class TestProcessBatch:
         assert "motion de censure" in sent[1]["content"]
 
     def test_substantive_objet_gets_the_standard_prompt(self):
-        from rag.chain.prompts import SUMMARY_PROMPT
+        from rag.chain.prompts import SUMMARY_PROMPT_AGENDA
 
         client = _client(_ok_payload())
         batch = [{"point_uid": "PT1", "objet": SUBSTANTIVE, "point_type": "Discussion"}]
@@ -152,7 +153,7 @@ class TestProcessBatch:
         process_batch(client, batch, dry_run=True, conn=_conn(), stats=_stats())
 
         sent = client.chat.completions.create.call_args.kwargs["messages"]
-        assert sent[0]["content"] == SUMMARY_PROMPT
+        assert sent[0]["content"] == SUMMARY_PROMPT_AGENDA
         # An agenda item has not been voted yet - promising a result would be a lie.
         assert "Résultat" not in sent[1]["content"]
 
@@ -180,6 +181,51 @@ class TestProcessBatch:
 
         assert stats == {"generated": 0, "errors": 1, "stubs": 0}
         conn.commit.assert_not_called()
+
+
+class TestNoPadding:
+    """Agenda lines say what the item says, once (#633)."""
+
+    CLEAR = "Suite de la discussion du projet de loi de finances pour 2027 (première partie)"
+
+    def test_clear_official_wording_reaches_no_llm(self):
+        client = _client(_ok_payload())
+        stats = _stats()
+        batch = [{"point_uid": "PT1", "objet": self.CLEAR, "point_type": "Discussion"}]
+        process_batch(client, batch, dry_run=False, conn=_conn(), stats=stats)
+        client.chat.completions.create.assert_not_called()
+        assert stats["stubs"] == 1
+
+    def test_identical_wording_reuses_one_summary(self):
+        client = _client(_ok_payload())
+        stats = {**_stats(), "known_summaries": {SUBSTANTIVE: ("Une ligne.", "Autre")}}
+        batch = [{"point_uid": "PT1", "objet": SUBSTANTIVE, "point_type": "Discussion"}]
+        with patch("scripts.generate_agenda_summaries.psycopg2.extras.execute_batch") as batched:
+            process_batch(client, batch, dry_run=False, conn=_conn(), stats=stats)
+        client.chat.completions.create.assert_not_called()
+        assert batched.call_args.args[2] == [("Une ligne.", "Autre", "PT1")]
+
+    def test_two_items_in_one_run_share_a_call(self):
+        client = _client(_ok_payload())
+        stats = {**_stats(), "known_summaries": {}}
+        batch = [
+            {"point_uid": "PT1", "objet": SUBSTANTIVE, "point_type": "Discussion"},
+            {"point_uid": "PT2", "objet": SUBSTANTIVE, "point_type": "Discussion"},
+        ]
+        with patch("scripts.generate_agenda_summaries.psycopg2.extras.execute_batch"):
+            process_batch(client, batch, dry_run=False, conn=_conn(), stats=stats)
+        assert client.chat.completions.create.call_count == 1
+
+    def test_padded_opening_stays_empty(self):
+        import json
+
+        payload = json.dumps({"summary": "Le texte porte sur le budget.", "theme": "Autre"})
+        stats = _stats()
+        batch = [{"point_uid": "PT1", "objet": SUBSTANTIVE, "point_type": "Discussion"}]
+        with patch("scripts.generate_agenda_summaries.psycopg2.extras.execute_batch") as batched:
+            process_batch(_client(payload), batch, dry_run=False, conn=_conn(), stats=stats)
+        batched.assert_not_called()
+        assert stats["rejected"] == 1
 
 
 class TestIdempotence:

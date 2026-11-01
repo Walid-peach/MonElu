@@ -8,6 +8,7 @@ import { themeName, themeSlug, THEME_ENTRIES } from '@/lib/themes'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
+import { ThemeMobile } from './ThemeMobile'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -77,8 +78,10 @@ export default async function ThemePage(
   ])
 
   return (
-    <div style={{ background: CREAM, minHeight: '100vh' }}>
-      <JsonLd data={breadcrumb} />
+    <>
+    <JsonLd data={breadcrumb} />
+    <ThemeMobile data={data} canonicalSlug={canonicalSlug} />
+    <div className="hidden md:block" style={{ background: CREAM, minHeight: '100vh' }}>
 
       {/* Hero */}
       <div
@@ -270,5 +273,6 @@ export default async function ThemePage(
         </div>
       </div>
     </div>
+    </>
   )
 }

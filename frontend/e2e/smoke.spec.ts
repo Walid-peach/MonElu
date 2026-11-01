@@ -9,11 +9,22 @@ const STATIC_ROUTES = ['/', '/deputes', '/votes', '/agenda', '/chat', '/quiz']
 async function firstDetailHref(page: Page, listPath: string, hrefPrefix: string, exclude: string[] = []) {
   await page.goto(listPath)
   const links = page.locator(`a[href^="${hrefPrefix}"]`)
-  await links.first().waitFor({ state: 'attached' })
-  const hrefs = await links.evaluateAll(els => els.map(el => el.getAttribute('href')))
-  const href = hrefs.find((h): h is string => !!h && !exclude.includes(h))
-  if (!href) throw new Error(`no link matching ${hrefPrefix} (excluding ${exclude.join(', ')}) found on ${listPath}`)
-  return href
+  // Polled rather than read once: a single read straight after the first link
+  // attaches raced client re-renders that briefly replace the list (the
+  // /votes flake fixed in VotesClient). The list still has to show a row
+  // within the timeout, so a page that never lists anything fails here.
+  let href: string | undefined
+  await expect
+    .poll(
+      async () => {
+        const hrefs = await links.evaluateAll(els => els.map(el => el.getAttribute('href')))
+        href = hrefs.find((h): h is string => !!h && !exclude.includes(h))
+        return href
+      },
+      { message: `no link matching ${hrefPrefix} (excluding ${exclude.join(', ')}) found on ${listPath}` },
+    )
+    .toBeTruthy()
+  return href as string
 }
 
 async function assertNoHorizontalOverflow(page: Page) {
@@ -55,8 +66,10 @@ test.describe('smoke: /votes row columns are not clipped', () => {
   // doesn't lay out grid columns or honor overflow clipping.
   test('first row title and result badge are visible', async ({ page }) => {
     await page.goto('/votes')
-    const firstRow = page.locator('a[href^="/votes/"]').first()
-    await firstRow.waitFor({ state: 'attached' })
+    // The phone and desktop lists are both in the DOM, one of them hidden by
+    // a breakpoint class, so the row is the first one this viewport shows.
+    const firstRow = page.locator('a[href^="/votes/"]').filter({ visible: true }).first()
+    await firstRow.waitFor({ state: 'visible' })
     await expect(firstRow.getByText(/^Scrutin n°/).first()).toBeVisible()
     await expect(firstRow.getByText(/^Adopté$|^Rejeté$/).first()).toBeVisible()
   })
@@ -109,15 +122,15 @@ test.describe('smoke: nav visibility follows the md breakpoint', () => {
     const viewport = page.viewportSize()
     if (!viewport) throw new Error('no viewport configured for this project')
 
-    // The phone tab bar has an "Explorer" button of its own, so the desktop
-    // toggle is looked up outside it.
+    // The installed app's tab bar has an "Explorer" button of its own, so the
+    // desktop toggle is looked up outside it.
     const tabBarSelector = 'nav[aria-label="Navigation principale"]'
     const desktopNavToggle = page
       .locator(`nav:not(${tabBarSelector})`)
       .getByRole('button', { name: 'Explorer' })
-    const mobileMenuButton = page
-      .locator(tabBarSelector)
-      .getByRole('button', { name: 'Ouvrir le menu' })
+    // In the phone browser the ☰ is the homepage hero's (the top bar slides in
+    // only once the hero scrolls past); hidden copies do not match getByRole.
+    const mobileMenuButton = page.getByRole('button', { name: 'Ouvrir le menu' })
 
     if (viewport.width < 768) {
       await expect(mobileMenuButton).toBeVisible()

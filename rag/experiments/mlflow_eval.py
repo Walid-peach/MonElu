@@ -254,6 +254,7 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
         _rag_chain.retrieve = _cosine_with_k
 
     results = []
+    style_violation_count = 0
     sql_count = 0
     similarities = []
     per_question = []
@@ -276,6 +277,12 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
                 if result.get("data_source") == "SQL":
                     sql_count += 1
                 score = keyword_score(result["answer"], qa["keywords"])
+                # Only model-written answers: SQL answers come from our own templates.
+                if result.get("data_source") == "RAG":
+                    violations = _rag_chain.style_violations(result["answer"])
+                    style_violation_count += len(violations)
+                    if violations:
+                        print(f"         → style: {', '.join(violations)}", flush=True)
 
                 # Flag router/retrieval mismatches
                 expected_sql = qa.get("expect_sql", False)
@@ -313,6 +320,7 @@ def run_config(label: str, k: int, use_sql_router: bool, retriever_type: str = "
             rag_avg_sim = round(sum(rag_sims) / len(rag_sims), 3) if rag_sims else 0
 
             mlflow.log_metric("keyword_score", avg_score)
+            mlflow.log_metric("style_violations", style_violation_count)
             mlflow.log_metric("avg_similarity", avg_sim)
             mlflow.log_metric("rag_avg_similarity", rag_avg_sim)
             mlflow.log_metric("sql_routed_count", sql_count)

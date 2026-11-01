@@ -3,6 +3,10 @@ import userEvent from '@testing-library/user-event'
 
 import { DeputiesClient } from '@/app/deputes/DeputiesClient'
 
+// These tests cover the desktop layout; the phone layout has its own
+// (DeputiesMobile.test.tsx), so it is stubbed here to keep queries unambiguous.
+jest.mock('@/app/deputes/DeputiesMobile', () => ({ DeputiesMobile: () => null }))
+
 const makeDeputy = (overrides = {}) => ({
   deputy_id: 'PA001',
   full_name: 'Jean Dupont',

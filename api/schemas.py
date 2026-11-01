@@ -725,6 +725,36 @@ class VoteDossierRef(_Base):
     )
 
 
+class VoteGroupParticipation(_Base):
+    """One group's turnout on a scrutin, inside `VoteParticipation.groups` (#627)."""
+
+    party_short: Optional[str] = None
+    participants: int = Field(description="Group members with a recorded position")
+    members: int = Field(description="Group members whose mandate covered the vote's date")
+    rate: float = Field(description="participants / members, 0-1, capped at 1")
+
+
+class VoteParticipation(_Base):
+    """How much of the chamber took part in a scrutin (#627)."""
+
+    participants: int = Field(
+        description="Deputies with a recorded position, nonVotant included (ADR-019)"
+    )
+    non_voting: int = Field(description="Of which nonVotant: present, no position taken")
+    seats: int = Field(description="Seats in the chamber (577)")
+    rate: float = Field(description="participants / seats, 0-1")
+    typical_rate: Optional[float] = Field(
+        default=None,
+        description="Median rate over every scrutin of the same vote_type; null when unknown",
+    )
+    comparison: Optional[str] = Field(
+        default=None,
+        description="`below` (under half the typical rate), `above` (over 1.5 times it) or "
+        "`usual`; null when typical_rate is null",
+    )
+    groups: list[VoteGroupParticipation] = []
+
+
 class VoteDetail(VoteSummary):
     """Full vote — used in GET /votes/{vote_id}."""
 
@@ -746,6 +776,7 @@ class VoteDetail(VoteSummary):
                 "summary_plain": ("Le texte issu de la commission mixte paritaire a été adopté."),
                 "theme": "Justice & Sécurité",
                 "vote_type": "sps",
+                "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
                 "dossier_id": "DLR5L17N53980",
                 "dossier": {
                     "dossier_uid": "DLR5L17N53980",
@@ -754,6 +785,22 @@ class VoteDetail(VoteSummary):
                     "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N53980",
                 },
                 "ingested_at": "2026-07-22T06:12:03Z",
+                "pct_pour": 0.6536,
+                "pct_contre": 0.3333,
+                "pct_abstention": 0.013,
+                "majority_required": 266,
+                "participation": {
+                    "participants": 538,
+                    "non_voting": 1,
+                    "seats": 577,
+                    "rate": 0.9324,
+                    "typical_rate": 0.9532,
+                    "comparison": "usual",
+                    "groups": [
+                        {"party_short": "RN", "participants": 120, "members": 123, "rate": 0.9756},
+                        {"party_short": "LIOT", "participants": 21, "members": 23, "rate": 0.913},
+                    ],
+                },
                 "positions": [
                     {
                         "deputy_id": "PA720892",
@@ -773,11 +820,31 @@ class VoteDetail(VoteSummary):
     )
 
     vote_type: Optional[str] = None
+    an_url: Optional[str] = Field(
+        default=None,
+        description="The scrutin's official page on assemblee-nationale.fr; null when the id "
+        "is not an AN scrutin uid (#617)",
+    )
     dossier_id: Optional[str] = None
     dossier: Optional[VoteDossierRef] = Field(
         default=None, description="The scrutin's bill; null when dossier_id is absent"
     )
     ingested_at: Optional[datetime] = None
+    pct_pour: Optional[float] = Field(
+        default=None, description="votes_for / total_voters, 0-1; null when nobody voted"
+    )
+    pct_contre: Optional[float] = Field(
+        default=None, description="votes_against / total_voters, 0-1; null when nobody voted"
+    )
+    pct_abstention: Optional[float] = Field(
+        default=None, description="abstentions / total_voters, 0-1; null when nobody voted"
+    )
+    majority_required: Optional[int] = Field(
+        default=None,
+        description="Votes needed to adopt: half the votes cast (pour + contre) plus one, "
+        "or 289 for a motion de censure; null when nobody voted pour or contre",
+    )
+    participation: Optional[VoteParticipation] = None
     positions: list[VotePosition] = []
 
 
@@ -1468,7 +1535,7 @@ _FEED_SCRUTIN_EXAMPLE = {
         {"deputy_id": "PA720892", "position": "pour"},
         {"deputy_id": "PA793218", "position": "contre"},
     ],
-    "an_url": "https://www.assemblee-nationale.fr/dyn/scrutins/VTANR5L17V8433",
+    "an_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
     "dossier_id": "DLR5L17N53980",
     "lois_url": f"{DEFAULT_FRONTEND_BASE_URL}/lois/DLR5L17N53980",
 }
@@ -1519,7 +1586,10 @@ class FeedScrutin(_Base):
         description="Each followed deputy with a recorded position on this scrutin, in the "
         "followed order; empty when none",
     )
-    an_url: str = Field(description="The scrutin's official page on assemblee-nationale.fr")
+    an_url: str = Field(
+        description="The scrutin's official page on assemblee-nationale.fr; the legislature's "
+        "list of scrutins when the id is not an AN scrutin uid"
+    )
     dossier_id: Optional[str] = None
     lois_url: Optional[str] = Field(
         default=None, description="The bill's MonÉlu page; null unless the dossier has one"

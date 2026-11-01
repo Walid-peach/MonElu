@@ -38,6 +38,19 @@ export function isIOSDevice(userAgent: string, maxTouchPoints: number): boolean 
   return /Macintosh/i.test(userAgent) && maxTouchPoints > 1
 }
 
+/**
+ * Marks <html> with `data-installed` when the site runs as the installed web
+ * app, for the Tailwind `installed:` variant. Inlined in <head> by the root
+ * layout so it runs before the first paint: the phone shows the bottom tab bar
+ * inside the app and the top bar in the browser, with no flash of the other.
+ * Same test as isStandalone(), which iOS needs for its home-screen icons.
+ */
+export const INSTALLED_FLAG_SCRIPT =
+  `(function(){try{` +
+  `if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)` +
+  `document.documentElement.setAttribute('data-installed','')` +
+  `}catch(e){}})();`
+
 /** Opened as the installed web app (Android and desktop, or an iOS home-screen icon). */
 export function isStandalone(): boolean {
   if (typeof window === 'undefined') return false

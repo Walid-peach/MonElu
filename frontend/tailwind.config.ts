@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import plugin from 'tailwindcss/plugin'
 
 /**
  * Font role contract:
@@ -46,6 +47,13 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // `installed:` styles the site when it runs as the installed web app. The
+    // root layout sets `data-installed` on <html> before the first paint
+    // (INSTALLED_FLAG_SCRIPT), so the phone chrome never flashes the wrong bar.
+    plugin(({ addVariant }) => {
+      addVariant('installed', 'html[data-installed] &')
+    }),
+  ],
 }
 export default config

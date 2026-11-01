@@ -64,8 +64,9 @@ const tabClass = (active: boolean) =>
   }`
 
 /**
- * The phone tab bar (below `md`): the iPhone app's four tabs (ADR-041) with
- * Quiz raised in the centre, plus a Menu button. Explorer and Menu open the
+ * The installed web app's tab bar (below `md`, `installed:` only; the phone
+ * browser gets MobileTopBar instead): the iPhone app's four tabs (ADR-041)
+ * with Quiz raised in the centre, plus a Menu button. Explorer and Menu open the
  * two halves of `MobileMenu` rather than routes of their own.
  */
 export function BottomNav() {
@@ -103,7 +104,7 @@ export function BottomNav() {
       <nav
         data-print-hide
         aria-label="Navigation principale"
-        className="md:hidden fixed inset-x-3 z-50 bottom-[calc(0.75rem+env(safe-area-inset-bottom))]"
+        className="hidden installed:block md:!hidden fixed inset-x-3 z-50 bottom-[calc(0.75rem+env(safe-area-inset-bottom))]"
       >
         <div className="flex h-[68px] items-center gap-1 rounded-3xl border border-[color:var(--dp-border)] bg-white px-2 shadow-[0_10px_30px_rgba(13,31,60,0.16)] dark:bg-[color:var(--dp-card-bg)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
           <Link href="/" onClick={close} aria-current={homeActive ? 'page' : undefined} className={tabClass(homeActive)}>
