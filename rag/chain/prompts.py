@@ -72,10 +72,33 @@ réponse et arrête-toi dès que la question est traitée. Pas de conclusion \
 qui répète la réponse (« En résumé »), pas de phrase finale sur les sources."""
 
 
-SUMMARY_PROMPT = (
-    "Tu es un assistant civique neutre. En 1 à 2 phrases en français clair, "
-    "explique ce que vote ce texte et ce que son adoption changerait concrètement. "
-    "Sois factuel, sans jugement politique. "
+SUMMARY_PROMPT_THEME = (
+    "Tu classes un scrutin de l'Assemblée nationale d'après son titre officiel. "
+    "N'écris aucun résumé.\n"
+    'Réponds UNIQUEMENT avec un objet JSON valide: {"theme": "..."}\n\n'
+    "Theme doit être EXACTEMENT l'un de :\n"
+    "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "
+    "Éducation & Culture | Agriculture | Transport & Logement | Institutions | "
+    "International | Autre"
+)
+
+SUMMARY_PROMPT_BILL = (
+    "Tu résumes pour le grand public un texte de loi entier soumis au vote de l'Assemblée "
+    "nationale. On te donne ses articles tels qu'ils ont été examinés, parfois coupés.\n"
+    "Règles :\n"
+    "- Une seule phrase courte, à l'infinitif, qui dit ce que fait ce texte (ex. : « Allonger "
+    "de 10 à 20 ans le délai de prescription de ce délit. »).\n"
+    "- Traduis les références au code en langage courant. Ne cite jamais un numéro "
+    "d'article ou d'alinéa.\n"
+    "- Respecte le sens exact, et n'ajoute aucun but, effet ou chiffre absent des articles. "
+    "S'ils ne suffisent pas à comprendre ce qui change, réponds avec un champ summary vide.\n"
+    "- Ignore l'article qui compense les pertes de recettes par une taxe : c'est une "
+    "formalité, pas une mesure du texte.\n"
+    "- Une proposition de résolution ne change pas la loi : dis ce qu'elle demande, en "
+    "commençant par « Demander ».\n"
+    "- Ne mentionne pas le résultat du vote.\n"
+    "- N'écris jamais « Le texte », et ne devine rien : aucune hypothèse, aucun "
+    "« probablement », aucun « notamment ».\n"
     'Réponds UNIQUEMENT avec un objet JSON valide: {"summary": "...", "theme": "..."}\n\n'
     "Theme doit être EXACTEMENT l'un de :\n"
     "Économie & Budget | Santé & Social | Justice & Sécurité | Énergie & Environnement | "

@@ -57,6 +57,7 @@ MIGRATIONS = [
     # on every vote row (#631), so test_chunker.py fails without it.
     Path(__file__).parents[2] / "data" / "migrations" / "015_vote_amendments.sql",
     Path(__file__).parents[2] / "data" / "migrations" / "016_vote_articles.sql",
+    Path(__file__).parents[2] / "data" / "migrations" / "017_vote_bills.sql",
 ]
 
 # Minimal mart stub DDL — mirrors the columns read by api/routers/deputies.py

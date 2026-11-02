@@ -291,7 +291,8 @@ class TestGeneration:
         assert "v.scrutin_kind = 'article' AND art.vote_id IS NOT NULL" in SQL_PENDING
 
     def test_articles_go_before_the_amendment_backlog(self):
-        assert SQL_PENDING_ROWS.index("'article' DESC") < SQL_PENDING_ROWS.index("v.voted_at DESC")
+        order = SQL_PENDING_ROWS[SQL_PENDING_ROWS.index("ORDER BY") :]
+        assert order.index("'amendement'") < order.index("v.voted_at DESC")
 
 
 class TestChunker:

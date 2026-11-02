@@ -92,6 +92,34 @@ MAX_DISPOSITIF_CHARS = 1500
 MAX_EXPOSE_CHARS = 800
 MAX_ARTICLE_CHARS = 2500
 
+# What a motion decides is set by the Constitution and the Règlement, so its
+# sentence is written here, from the type and the result alone (#645, ADR-046).
+MOTION_SENTENCES = (
+    (
+        re.compile(r"motion de censure", re.IGNORECASE),
+        {
+            "adopté": "Motion de censure adoptée : le Gouvernement doit remettre sa démission.",
+            "rejeté": "Motion de censure rejetée : le Gouvernement reste en place.",
+        },
+    ),
+    (
+        re.compile(r"motion de rejet", re.IGNORECASE),
+        {
+            "adopté": "Motion de rejet préalable adoptée : le texte est rejeté sans débat "
+            "à ce stade de son examen.",
+            "rejeté": "Motion de rejet préalable rejetée : l'Assemblée poursuit l'examen du texte.",
+        },
+    ),
+    (
+        re.compile(r"renvoi en commission", re.IGNORECASE),
+        {
+            "adopté": "Motion de renvoi en commission adoptée : le texte retourne en commission.",
+            "rejeté": "Motion de renvoi en commission rejetée : l'Assemblée poursuit "
+            "l'examen du texte.",
+        },
+    ),
+)
+
 # Wording that means the model is guessing at content it was not given (#630, #633).
 GUESS_PATTERNS = re.compile(
     r"probablement|vraisemblablement|sans doute|certaines dispositions|notamment en\b"
@@ -122,6 +150,24 @@ def amendment_user_message(vote: dict) -> str:
     return message
 
 
+def motion_summary(title: str, result: str | None) -> str | None:
+    """The fixed sentence for a motion, None for a type or result with no certain one."""
+    for pattern, sentences in MOTION_SENTENCES:
+        if pattern.search(title):
+            return sentences.get(result)
+    return None
+
+
+def is_resolution(title: str) -> bool:
+    return "proposition de résolution" in title.lower()
+
+
+def bill_user_message(vote: dict) -> str:
+    """The articles of the bill voted, as examined, under the kind of text they form."""
+    kind = "Proposition de résolution" if is_resolution(vote["vote_title"]) else "Texte de loi"
+    return f"Type : {kind}\n{vote['bill_text']}"
+
+
 def article_user_message(vote: dict) -> str:
     """The official text of the article voted, under its own heading."""
     return f"{vote['article_label']}\n{vote['article_text'][:MAX_ARTICLE_CHARS]}"
@@ -149,6 +195,14 @@ def rejection_reason(summary: str, title: str) -> str | None:
     if restates_title(summary, title):
         return "restates_title"
     return None
+
+
+def bill_rejection_reason(summary: str, title: str) -> str | None:
+    """As rejection_reason, and a resolution can only ask: it changes no law (#645)."""
+    reason = rejection_reason(summary, title)
+    if reason is None and is_resolution(title) and not summary.startswith("Demander"):
+        return "resolution_effect"
+    return reason
 
 
 def agenda_rejection_reason(summary: str) -> str | None:
@@ -190,6 +244,20 @@ def call_groq(
                 log.warning("Groq error: %s", exc)
                 return None
     return None
+
+
+def parse_theme(raw: str) -> str | None:
+    """Parse a theme-only reply. Returns the theme or None on failure."""
+    match = re.search(r"\{[^{}]+\}", raw, re.DOTALL)
+    if not match:
+        return None
+    try:
+        theme = json.loads(match.group()).get("theme", "").strip()
+    except (json.JSONDecodeError, AttributeError):
+        return None
+    if not theme:
+        return None
+    return theme if theme in VALID_THEMES else "Autre"
 
 
 def parse_response(raw: str) -> tuple[str, str] | None:
