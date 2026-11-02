@@ -1928,6 +1928,7 @@ A vote on a CMP text therefore reads the last deposited or committee text, the s
 What a motion decides does not depend on the bill.
 A type or result with no certain sentence stores none and counts as refused.
 5. **Every other vote shows its title.** Suspensions, requests to extend the sitting, déclarations and budget parts get no summary.
+A resolution changes no law, so its summary must start with "Demander" or it is refused.
 6. **A title may still give a theme.** A vote with no source gets a theme-only call, because theme pages and the feed depend on it. A theme is a classification, not a claim about content.
 7. **The RAG index takes a summary only with `summary_basis` `official_text` or `procedure`,** for every vote kind.
 8. **The ADR-043 rules apply unchanged:** a refused summary stays empty and is not retried. Old summaries are cleared and replaced in one run by `backfill_bill_text.yml`.

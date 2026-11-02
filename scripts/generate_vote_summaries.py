@@ -36,6 +36,7 @@ try:
         OFFICIAL_TEXT_MAX_TOKENS,
         amendment_user_message,
         article_user_message,
+        bill_rejection_reason,
         bill_user_message,
         call_groq,
         motion_summary,
@@ -52,6 +53,7 @@ except ImportError:  # running as a plain file: python scripts/generate_vote_sum
         OFFICIAL_TEXT_MAX_TOKENS,
         amendment_user_message,
         article_user_message,
+        bill_rejection_reason,
         bill_user_message,
         call_groq,
         motion_summary,
@@ -201,7 +203,8 @@ def process_batch(
                 continue
 
             summary, theme = parsed
-            reason = rejection_reason(summary, title)
+            refuse = rejection_reason if vote.get("bill_text") is None else bill_rejection_reason
+            reason = refuse(summary, title)
             seen = stats.setdefault("seen_summaries", {})
             source = source_key(source_text)
             if reason is None and duplicate_of_other_source(summary, source, seen):

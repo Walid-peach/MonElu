@@ -163,7 +163,7 @@ class TestGeneration:
         reply = '{"summary": "Allonger à vingt ans la prescription.", "theme": "Autre"}'
         client, written, stats = run_batch(vote(bill_text=BODY), reply)
         user = client.chat.completions.create.call_args.kwargs["messages"][1]["content"]
-        assert user == BODY
+        assert user == f"Type : Texte de loi\n{BODY}"
         assert written[0][:3] == ("Allonger à vingt ans la prescription.", "Autre", "official_text")
         assert stats["generated"] == 1
 
@@ -171,6 +171,22 @@ class TestGeneration:
         reply = '{"summary": "Le texte renforce probablement la justice.", "theme": "Autre"}'
         _, written, _ = run_batch(vote(bill_text=BODY), reply)
         assert written[0][0] is None and written[0][2] == "rejected"
+
+    def test_a_resolution_is_named_as_one_and_can_only_ask(self):
+        title = "la proposition de résolution sur la commande publique."
+        reply = '{"summary": "Autoriser les acheteurs publics à choisir.", "theme": "Autre"}'
+        client, written, stats = run_batch(vote(vote_title=title, bill_text=BODY), reply)
+        user = client.chat.completions.create.call_args.kwargs["messages"][1]["content"]
+        assert user.startswith("Type : Proposition de résolution\n")
+        assert written[0][0] is None and stats["rejected"] == {"resolution_effect": 1}
+
+    def test_a_resolution_summary_that_asks_is_kept(self):
+        title = "la proposition de résolution sur la commande publique."
+        reply = (
+            '{"summary": "Demander au Gouvernement de privilégier l\'emploi.", "theme": "Autre"}'
+        )
+        _, written, _ = run_batch(vote(vote_title=title, bill_text=BODY), reply)
+        assert written[0][2] == "official_text"
 
     def test_no_source_asks_only_for_a_theme(self):
         client, written, _ = run_batch(vote(), '{"theme": "Justice & Sécurité"}')

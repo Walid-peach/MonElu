@@ -158,9 +158,14 @@ def motion_summary(title: str, result: str | None) -> str | None:
     return None
 
 
+def is_resolution(title: str) -> bool:
+    return "proposition de résolution" in title.lower()
+
+
 def bill_user_message(vote: dict) -> str:
-    """The articles of the bill voted, as examined."""
-    return vote["bill_text"]
+    """The articles of the bill voted, as examined, under the kind of text they form."""
+    kind = "Proposition de résolution" if is_resolution(vote["vote_title"]) else "Texte de loi"
+    return f"Type : {kind}\n{vote['bill_text']}"
 
 
 def article_user_message(vote: dict) -> str:
@@ -190,6 +195,14 @@ def rejection_reason(summary: str, title: str) -> str | None:
     if restates_title(summary, title):
         return "restates_title"
     return None
+
+
+def bill_rejection_reason(summary: str, title: str) -> str | None:
+    """As rejection_reason, and a resolution can only ask: it changes no law (#645)."""
+    reason = rejection_reason(summary, title)
+    if reason is None and is_resolution(title) and not summary.startswith("Demander"):
+        return "resolution_effect"
+    return reason
 
 
 def agenda_rejection_reason(summary: str) -> str | None:

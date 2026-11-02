@@ -124,6 +124,7 @@ class TestIngestScriptsUseConnectWithRetry:
         "ingest_dossiers.py",
         "ingest_amendments.py",
         "ingest_articles.py",
+        "ingest_bills.py",
     ]
 
     @pytest.mark.parametrize("module", INGEST_MODULES)
