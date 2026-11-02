@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { SearchResult, VerifyResult } from '@/lib/api'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { MonEluLogo } from '@/components/MonEluLogo'
 import { VerdictCard } from '@/components/VerdictCard'
 import { AsyncStatus } from '@/components/ui/AsyncStatus'
 import { mdToHtml, mapSource, CONFIDENCE_META, CONFIDENCE_EXPLANATION } from '@/lib/chatFormat'
@@ -628,12 +629,9 @@ function ChatInner() {
             // Top-aligned below md: centred in a scroll area shorter than
             // itself, the heading started out scrolled above the fold.
             <div className="justify-start px-4 py-6 md:justify-center md:px-8 md:py-12" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100%' }}>
-              <svg width="56" height="40" viewBox="0 0 30 22" fill="none" style={{ marginBottom: 18 }}>
-                <path d="M2 19 A13 13 0 0 1 28 19" stroke={dk ? 'rgba(255,255,255,0.85)' : '#1B2B50'} strokeWidth="2.2" strokeLinecap="round"/>
-                <path d="M6 19 A9 9 0 0 1 24 19" stroke="#9CA3AF" strokeWidth="2.2" strokeLinecap="round"/>
-                <path d="M10 19 A5 5 0 0 1 20 19" stroke="#D93025" strokeWidth="2.2" strokeLinecap="round"/>
-                <circle cx="15" cy="19" r="2.3" fill={dk ? 'rgba(255,255,255,0.85)' : '#1B2B50'}/>
-              </svg>
+              <div aria-hidden="true" style={{ marginBottom: 18 }}>
+                <MonEluLogo size={56} hideWordmark />
+              </div>
               {mode === 'verify' ? (
                 <>
                   <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 24, fontWeight: 800, color: txt1, margin: '0 0 10px', textAlign: 'center', letterSpacing: '-0.02em' }}>
@@ -993,13 +991,8 @@ function ChatInner() {
 
 function AiAvatar() {
   return (
-    <div style={{ width: 36, height: 36, borderRadius: 999, background: '#1B2B50', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-      <svg width="22" height="16" viewBox="0 0 30 22" fill="none">
-        <path d="M2 19 A13 13 0 0 1 28 19" stroke="#fff" strokeWidth="2.6" strokeLinecap="round"/>
-        <path d="M6 19 A9 9 0 0 1 24 19" stroke="rgba(255,255,255,0.45)" strokeWidth="2.6" strokeLinecap="round"/>
-        <path d="M10 19 A5 5 0 0 1 20 19" stroke="#D93025" strokeWidth="2.6" strokeLinecap="round"/>
-        <circle cx="15" cy="19" r="2" fill="#fff"/>
-      </svg>
+    <div aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>
+      <MonEluLogo size={36} hideWordmark />
     </div>
   )
 }
