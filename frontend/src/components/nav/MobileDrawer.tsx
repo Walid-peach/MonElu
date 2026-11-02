@@ -213,9 +213,9 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
               onClick={() => { recordInstallEvent('menu_entry_tap'); onClose() }}
               className="dp-dark mt-1 flex items-center gap-3 rounded-[18px] bg-navy p-3.5 text-white"
             >
-              <span aria-hidden="true" className="flex h-11 w-11 flex-none -rotate-6 items-center justify-center rounded-xl bg-gray-off font-serif text-[22px] text-navy">
-                M<span className="text-red-civic">É</span>
-              </span>
+              <div aria-hidden="true" className="flex-none -rotate-6">
+                <MonEluLogo size={44} hideWordmark />
+              </div>
               <span className="flex flex-1 flex-col">
                 <span className="text-[15px] font-bold">Installer l&apos;application</span>
                 <span className="text-xs text-[color:var(--dp-text-secondary)]">Gratuit, sans compte</span>
