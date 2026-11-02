@@ -12,6 +12,7 @@ Usage:
     python -m scripts.generate_vote_summaries --backlog   # print the pending count
     python -m scripts.generate_vote_summaries --clear-legacy-amendments
     python -m scripts.generate_vote_summaries --clear-legacy-articles
+    python -m scripts.generate_vote_summaries --clear-title-only
 """
 
 import argparse
@@ -31,15 +32,15 @@ try:
     from scripts._summaries import (
         BATCH_SIZE,
         DECLINED_PATTERN,
-        MAX_TOKENS,
         MODEL,
         OFFICIAL_TEXT_MAX_TOKENS,
         amendment_user_message,
         article_user_message,
+        bill_user_message,
         call_groq,
-        detect_motion_type,
-        is_procedural,
+        motion_summary,
         parse_response,
+        parse_theme,
         rejection_reason,
     )
 except ImportError:  # running as a plain file: python scripts/generate_vote_summaries.py
@@ -47,15 +48,15 @@ except ImportError:  # running as a plain file: python scripts/generate_vote_sum
     from _summaries import (
         BATCH_SIZE,
         DECLINED_PATTERN,
-        MAX_TOKENS,
         MODEL,
         OFFICIAL_TEXT_MAX_TOKENS,
         amendment_user_message,
         article_user_message,
+        bill_user_message,
         call_groq,
-        detect_motion_type,
-        is_procedural,
+        motion_summary,
         parse_response,
+        parse_theme,
         rejection_reason,
     )
 
@@ -68,6 +69,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 BASIS_OFFICIAL_TEXT = "official_text"
+BASIS_PROCEDURE = "procedure"
 BASIS_REJECTED = "rejected"
 # Different texts sharing one sentence on this scale means the prompt or the
 # source has broken, not that a few amendments happen to read alike.
@@ -75,36 +77,44 @@ MIN_DUPLICATES_TO_FAIL = 5
 MAX_DUPLICATE_RATE = 0.2
 
 # An amendment or article vote is only ever summarized from its official text
-# (#630, ADR-043; #642, ADR-044): with no source row it makes no LLM call and
-# keeps its title.
+# (#630, ADR-043; #642, ADR-044), and so is a whole-text vote (#645, ADR-046):
+# with no source row it keeps its title. A motion's sentence is written by code.
+# Every vote but an amendment or article still gets a theme from its title.
 SQL_PENDING = """
 FROM votes v
 LEFT JOIN vote_amendments a ON a.vote_id = v.vote_id
 LEFT JOIN vote_articles art ON art.vote_id = v.vote_id
+LEFT JOIN vote_bills b ON b.vote_id = v.vote_id
 WHERE v.voted_at >= %(since)s
   AND (
     (v.scrutin_kind = 'amendement' AND a.vote_id IS NOT NULL AND v.summary_basis IS NULL)
     OR (v.scrutin_kind = 'article' AND art.vote_id IS NOT NULL AND v.summary_basis IS NULL)
+    OR (v.scrutin_kind IN ('ensemble', 'autre') AND b.vote_id IS NOT NULL
+        AND v.summary_basis IS NULL)
+    OR (v.scrutin_kind = 'motion' AND v.summary_basis IS NULL)
     OR (v.scrutin_kind IS DISTINCT FROM 'amendement'
-        AND v.scrutin_kind IS DISTINCT FROM 'article' AND v.summary_plain IS NULL)
+        AND v.scrutin_kind IS DISTINCT FROM 'article' AND v.theme IS NULL)
   )
 """
 
-# Articles go before the amendment backlog: there are few of them and each one
-# carries more of a law than an amendment does.
+# Everything goes before the amendment backlog: there are few of these votes and
+# each one carries more of a law than an amendment does.
 SQL_PENDING_ROWS = f"""
-SELECT v.vote_id, v.vote_title, v.result, v.scrutin_kind,
+SELECT v.vote_id, v.vote_title, v.result, v.scrutin_kind, v.theme, v.summary_basis,
        a.is_sub_amendment, a.dispositif, a.expose_sommaire,
-       art.article_label, art.article_text
+       art.article_label, art.article_text, b.bill_text
 {SQL_PENDING}
-ORDER BY v.summary_plain IS NULL DESC, v.scrutin_kind = 'article' DESC NULLS LAST, v.voted_at DESC
+ORDER BY v.summary_plain IS NULL DESC,
+         v.scrutin_kind IS NOT DISTINCT FROM 'amendement',
+         v.voted_at DESC
 """
 
 SQL_STORED_SOURCED_SUMMARIES = """
-SELECT v.summary_plain, COALESCE(a.dispositif, art.article_text) AS source
+SELECT v.summary_plain, COALESCE(a.dispositif, art.article_text, b.bill_text) AS source
 FROM votes v
 LEFT JOIN vote_amendments a ON a.vote_id = v.vote_id
 LEFT JOIN vote_articles art ON art.vote_id = v.vote_id
+LEFT JOIN vote_bills b ON b.vote_id = v.vote_id
 WHERE v.summary_basis = 'official_text'
 """
 
@@ -113,6 +123,13 @@ WHERE v.summary_basis = 'official_text'
 SQL_CLEAR_LEGACY = """
 UPDATE votes SET summary_plain = NULL
 WHERE scrutin_kind = %s AND summary_basis IS NULL AND summary_plain IS NOT NULL
+"""
+
+# The same for every other vote kind (#645). Themes stay: a title can place a vote.
+SQL_CLEAR_TITLE_ONLY = """
+UPDATE votes SET summary_plain = NULL
+WHERE scrutin_kind IS DISTINCT FROM 'amendement' AND scrutin_kind IS DISTINCT FROM 'article'
+  AND summary_basis IS NULL AND summary_plain IS NOT NULL
 """
 
 
@@ -134,57 +151,59 @@ def process_batch(
     changed_ids_out: str | None = None,
 ) -> None:
     from rag.chain.prompts import (
-        SUMMARY_PROMPT,
         SUMMARY_PROMPT_AMENDMENT,
         SUMMARY_PROMPT_ARTICLE,
-        SUMMARY_PROMPT_PROCEDURAL,
+        SUMMARY_PROMPT_BILL,
+        SUMMARY_PROMPT_THEME,
     )
 
     updates = []
     for vote in batch:
         vote_id = vote["vote_id"]
         title = vote["vote_title"]
-        result = vote["result"] or "inconnu"
-
-        is_amendment = vote.get("scrutin_kind") == "amendement"
-        is_article = vote.get("scrutin_kind") == "article"
-        from_official_text = is_amendment or is_article
-        if is_amendment:
-            system = SUMMARY_PROMPT_AMENDMENT
-            user_msg = amendment_user_message(vote)
-        elif is_article:
-            system = SUMMARY_PROMPT_ARTICLE
-            user_msg = article_user_message(vote)
-        elif is_procedural(title):
-            motion_type = detect_motion_type(title)
-            system = SUMMARY_PROMPT_PROCEDURAL
-            user_msg = (
-                f'Type de motion : {motion_type}\nTitre : "{title}"\nRésultat du vote : {result}'
-            )
+        kind = vote.get("scrutin_kind")
+        if kind == "amendement":
+            system, user_msg = SUMMARY_PROMPT_AMENDMENT, amendment_user_message(vote)
+            source_text = vote["dispositif"]
+        elif kind == "article":
+            system, user_msg = SUMMARY_PROMPT_ARTICLE, article_user_message(vote)
+            source_text = vote["article_text"]
+        elif vote.get("bill_text") and vote.get("summary_basis") is None:
+            system, user_msg = SUMMARY_PROMPT_BILL, bill_user_message(vote)
+            source_text = vote["bill_text"]
         else:
-            system = SUMMARY_PROMPT
-            user_msg = f'Titre : "{title}"\nRésultat : {result}'
+            source_text = None
 
-        max_tokens = OFFICIAL_TEXT_MAX_TOKENS if from_official_text else MAX_TOKENS
-        raw = call_groq(client, system, user_msg, max_tokens=max_tokens)
-        if raw is None:
-            stats["errors"] += 1
-            continue
+        if source_text is None:
+            summary, basis = None, vote.get("summary_basis")
+            if kind == "motion":
+                summary = motion_summary(title, vote["result"])
+                basis = BASIS_PROCEDURE if summary else BASIS_REJECTED
+            theme = vote.get("theme")
+            if theme is None:
+                raw = call_groq(client, SUMMARY_PROMPT_THEME, f'Titre : "{title}"')
+                theme = parse_theme(raw) if raw else None
+                if theme is None:
+                    stats["errors"] += 1
+                    continue
+        else:
+            raw = call_groq(client, system, user_msg, max_tokens=OFFICIAL_TEXT_MAX_TOKENS)
+            if raw is None:
+                stats["errors"] += 1
+                continue
 
-        parsed = parse_response(raw)
-        if parsed is None and from_official_text and DECLINED_PATTERN.search(raw):
-            parsed = ("", None)
-        if parsed is None:
-            log.warning("Could not parse response for %s: %r", vote_id, raw[:120])
-            stats["errors"] += 1
-            continue
+            parsed = parse_response(raw)
+            if parsed is None and DECLINED_PATTERN.search(raw):
+                parsed = ("", None)
+            if parsed is None:
+                log.warning("Could not parse response for %s: %r", vote_id, raw[:120])
+                stats["errors"] += 1
+                continue
 
-        summary, theme = parsed
-        basis = None
-        if from_official_text:
+            summary, theme = parsed
             reason = rejection_reason(summary, title)
-            source = source_key(vote["dispositif"] if is_amendment else vote["article_text"])
             seen = stats.setdefault("seen_summaries", {})
+            source = source_key(source_text)
             if reason is None and duplicate_of_other_source(summary, source, seen):
                 reason = "duplicate"
             if reason:
@@ -196,8 +215,7 @@ def process_batch(
                 basis = BASIS_OFFICIAL_TEXT
 
         if dry_run:
-            proc_flag = " [PROCEDURAL]" if is_procedural(title) else ""
-            log.info("[DRY-RUN]%s %s | theme=%s | %s", proc_flag, vote_id, theme, summary)
+            log.info("[DRY-RUN] %s | theme=%s | %s", vote_id, theme, summary)
         else:
             updates.append((summary, theme, basis, vote_id))
         if basis != BASIS_REJECTED:
@@ -207,8 +225,8 @@ def process_batch(
         with conn.cursor() as cur:
             psycopg2.extras.execute_batch(
                 cur,
-                "UPDATE votes SET summary_plain = %s, theme = %s, summary_basis = %s "
-                "WHERE vote_id = %s",
+                "UPDATE votes SET summary_plain = %s, theme = COALESCE(%s, theme), "
+                "summary_basis = %s WHERE vote_id = %s",
                 updates,
             )
         conn.commit()
@@ -298,6 +316,11 @@ def main() -> None:
         help="Clear article summaries written from a title alone, then exit (#642).",
     )
     parser.add_argument(
+        "--clear-title-only",
+        action="store_true",
+        help="Clear every other summary written from a title alone, then exit (#645).",
+    )
+    parser.add_argument(
         "--changed-ids-out",
         default=os.getenv("MONELU_CHANGED_IDS_OUT"),
         help=(
@@ -314,7 +337,8 @@ def main() -> None:
     if not database_url:
         raise EnvironmentError("DATABASE_URL is not set.")
 
-    if args.backlog or args.clear_legacy_amendments or args.clear_legacy_articles:
+    clearing = args.clear_legacy_amendments or args.clear_legacy_articles or args.clear_title_only
+    if args.backlog or clearing:
         conn = psycopg2.connect(database_url)
         with conn.cursor() as cur:
             if args.clear_legacy_amendments:
@@ -323,6 +347,9 @@ def main() -> None:
             elif args.clear_legacy_articles:
                 cur.execute(SQL_CLEAR_LEGACY, ("article",))
                 log.info("Cleared %d legacy article summaries", cur.rowcount)
+            elif args.clear_title_only:
+                cur.execute(SQL_CLEAR_TITLE_ONLY)
+                log.info("Cleared %d title-only summaries", cur.rowcount)
             else:
                 cur.execute(f"SELECT COUNT(*) {SQL_PENDING}", {"since": args.since})
                 print(cur.fetchone()[0])

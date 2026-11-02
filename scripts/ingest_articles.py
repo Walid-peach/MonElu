@@ -175,6 +175,31 @@ def read_texts(archive_bytes: bytes) -> dict[str, list[dict]]:
     return index
 
 
+def load_texts(zip_path: str | None) -> dict[str, list[dict]]:
+    """The examined texts of a local export, or of a fresh download."""
+    if zip_path:
+        with open(zip_path, "rb") as fh:
+            return read_texts(fh.read())
+    return read_texts(download_with_retry(f"{AN_BASE_URL}{DOSSIERS_ZIP_PATH}", timeout=120))
+
+
+def page_loader():
+    """A function returning a text's parsed articles, each page fetched once."""
+    pages: dict[str, dict] = {}
+
+    def load_page(uid: str) -> dict:
+        if uid not in pages:
+            try:
+                page = download_with_retry(TEXT_URL.format(uid=uid), timeout=120)
+                pages[uid] = parse_articles(page.decode("utf-8", errors="ignore"))
+            except RuntimeError as exc:  # a text the AN has not published as HTML
+                log.warning("No HTML for %s: %s", uid, exc)
+                pages[uid] = {}
+        return pages[uid]
+
+    return load_page
+
+
 def parse_articles(page: str) -> dict[str, dict]:
     """Each article of a bill's HTML by key. A joint heading ("Articles 1er et 2") has none."""
     articles: dict[str, dict] = {}
@@ -248,24 +273,8 @@ def main() -> None:
         conn.close()
         return
 
-    if args.zip_path:
-        with open(args.zip_path, "rb") as fh:
-            archive_bytes = fh.read()
-    else:
-        archive_bytes = download_with_retry(f"{AN_BASE_URL}{DOSSIERS_ZIP_PATH}", timeout=120)
-    index = read_texts(archive_bytes)
-
-    pages: dict[str, dict] = {}
-
-    def load_page(uid: str) -> dict:
-        if uid not in pages:
-            try:
-                page = download_with_retry(TEXT_URL.format(uid=uid), timeout=120)
-                pages[uid] = parse_articles(page.decode("utf-8", errors="ignore"))
-            except RuntimeError as exc:  # a text the AN has not published as HTML
-                log.warning("No HTML for %s: %s", uid, exc)
-                pages[uid] = {}
-        return pages[uid]
+    index = load_texts(args.zip_path)
+    load_page = page_loader()
 
     rows = []
     for vote in pending:

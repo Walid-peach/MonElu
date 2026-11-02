@@ -92,6 +92,34 @@ MAX_DISPOSITIF_CHARS = 1500
 MAX_EXPOSE_CHARS = 800
 MAX_ARTICLE_CHARS = 2500
 
+# What a motion decides is set by the Constitution and the Règlement, so its
+# sentence is written here, from the type and the result alone (#645, ADR-046).
+MOTION_SENTENCES = (
+    (
+        re.compile(r"motion de censure", re.IGNORECASE),
+        {
+            "adopté": "Motion de censure adoptée : le Gouvernement doit remettre sa démission.",
+            "rejeté": "Motion de censure rejetée : le Gouvernement reste en place.",
+        },
+    ),
+    (
+        re.compile(r"motion de rejet", re.IGNORECASE),
+        {
+            "adopté": "Motion de rejet préalable adoptée : le texte est rejeté sans débat "
+            "à ce stade de son examen.",
+            "rejeté": "Motion de rejet préalable rejetée : l'Assemblée poursuit l'examen du texte.",
+        },
+    ),
+    (
+        re.compile(r"renvoi en commission", re.IGNORECASE),
+        {
+            "adopté": "Motion de renvoi en commission adoptée : le texte retourne en commission.",
+            "rejeté": "Motion de renvoi en commission rejetée : l'Assemblée poursuit "
+            "l'examen du texte.",
+        },
+    ),
+)
+
 # Wording that means the model is guessing at content it was not given (#630, #633).
 GUESS_PATTERNS = re.compile(
     r"probablement|vraisemblablement|sans doute|certaines dispositions|notamment en\b"
@@ -120,6 +148,19 @@ def amendment_user_message(vote: dict) -> str:
     if expose:
         message += f"\nExposé de l'auteur : {expose[:MAX_EXPOSE_CHARS]}"
     return message
+
+
+def motion_summary(title: str, result: str | None) -> str | None:
+    """The fixed sentence for a motion, None for a type or result with no certain one."""
+    for pattern, sentences in MOTION_SENTENCES:
+        if pattern.search(title):
+            return sentences.get(result)
+    return None
+
+
+def bill_user_message(vote: dict) -> str:
+    """The articles of the bill voted, as examined."""
+    return vote["bill_text"]
 
 
 def article_user_message(vote: dict) -> str:
@@ -190,6 +231,20 @@ def call_groq(
                 log.warning("Groq error: %s", exc)
                 return None
     return None
+
+
+def parse_theme(raw: str) -> str | None:
+    """Parse a theme-only reply. Returns the theme or None on failure."""
+    match = re.search(r"\{[^{}]+\}", raw, re.DOTALL)
+    if not match:
+        return None
+    try:
+        theme = json.loads(match.group()).get("theme", "").strip()
+    except (json.JSONDecodeError, AttributeError):
+        return None
+    if not theme:
+        return None
+    return theme if theme in VALID_THEMES else "Autre"
 
 
 def parse_response(raw: str) -> tuple[str, str] | None:

@@ -133,6 +133,7 @@ Assemblée Nationale Open Data (ZIPs)
 | `summarize_backfill.yml` | Daily 07:00 UTC | Retries vote summaries (`summary_plain IS NULL`) independent of `ingest_prod.yml`'s `--since` window - the actual retry backstop (MON-221). `check_summary_yield()` exits 1 when the run attempted work and generated nothing (GH #384 - six green runs against an expired Groq key); a partial failure stays green and retries tomorrow. Its revalidation is scoped to the `summaries` family plus the vote ids it wrote (GH #353) — never the `votes` family, which carries the `health` tag the root layout reads. The `Run summarizer` step captures that exit code (`|| status=$?`) and re-raises it only after writing `generated`/`errors` to `$GITHUB_OUTPUT` - `shell: bash` runs with `-eo pipefail`, so letting the pipeline fail on its own would abort the step before the counts are parsed and the job summary would report 0/0 on exactly the runs that need them. |
 | `backfill_amendment_text.yml` | Manual, one-off (#630, ADR-043) | Attaches official text to every amendment vote and clears summaries written from a title alone; safe to re-run |
 | `backfill_article_text.yml` | Manual, one-off (#642, ADR-044) | Attaches official text to every article vote, clears summaries written from a title alone and rebuilds the marts in the same run; safe to re-run |
+| `backfill_bill_text.yml` | Manual, one-off (#645, ADR-046) | Attaches official text to every whole-text vote, clears every summary written from a title alone, writes the replacements and rebuilds the marts in the same run; safe to re-run |
 | `dbt_docs.yml` | Push to `master` touching `transform/` | Generate + deploy lineage docs to GitHub Pages |
 | `llm_contract.yml` | Weekly Mon 08:00 UTC + on changes to the LLM call sites | Runs `tests/live` against the real Groq API: asserts the configured models still exist and still satisfy the call shapes (tool call, JSON mode, token budgets). The PR gate mocks Groq and `/health` never calls it, so this is the only check that catches an upstream model decommission - the 2026-09 outage was invisible to both. Deliberately off the PR gate: a third-party outage must not block merges. |
 
@@ -184,6 +185,10 @@ It matches amendment scrutins to `Amendements.json.zip` by number, first author 
 - **`ingest_articles.py` is the only source of an article summary** (#642, ADR-044).
 It matches article scrutins by title to the deposited or committee text last published before the vote, reads the article from `/dyn/opendata/<uid>.html`, and stores it in `vote_articles`.
 A title with no matching document, an article with no heading (budget bills mark none) or a deleted article gets no row, so `generate_vote_summaries.py` makes no LLM call and the vote keeps its title.
+- **`ingest_bills.py` is the only source of a whole-text vote summary** (#645, ADR-046).
+It matches `ensemble` and bill-naming `autre` scrutins by title to the newest examined text, as for articles, and stores the articles in `vote_bills`.
+A motion needs no source: `motion_summary()` writes its sentence from the type and result, with `summary_basis = 'procedure'`.
+Any other vote keeps its title, and a vote with no source gets a theme-only LLM call, never a sentence.
 - `run_ingestion_prod.py` orchestrates the full pipeline for production runs, including `ingest_agenda.py` (MON-210) and `ingest_dossiers.py` (MON-243) as non-critical steps - an agenda- or dossier-feed failure must not block core deputies/votes/positions ingestion
 - **`ingest_dossiers.py` is the bill parcours, and it is not driven by `--since`** (MON-243, ADR-035).
 It ingests every `DLR5L17*` dossier from `Dossiers_Legislatifs.json.zip` and flattens the nested `actesLegislatifs` tree into `dossier_actes`, preserving the structure through `parent_uid`/`depth`/`ordinal` (a per-dossier pre-order counter, so `ORDER BY ordinal` replays the tree in one pass).
@@ -206,7 +211,7 @@ Unlike vote summaries there is no `summarize_backfill.yml` equivalent behind the
 - Lineage docs auto-deployed to GitHub Pages on push to `master`
 
 **`rag/`** — Phase 2 semantic search
-- Generated summaries are never evidence (#631): `chunker.py` keeps an amendment or article summary only with `summary_basis = 'official_text'` and labels every summary as a reading aid (`READING_AID_LABEL`), and `RAG_TEMPLATE` forbids citing it. `verify.py` sends the model official titles and recorded positions only, so a summary cannot reach a verdict.
+- Generated summaries are never evidence (#631): `chunker.py` keeps a summary only with `summary_basis` `official_text` or `procedure` (ADR-046) and labels every summary as a reading aid (`READING_AID_LABEL`), and `RAG_TEMPLATE` forbids citing it. `verify.py` sends the model official titles and recorded positions only, so a summary cannot reach a verdict.
 - `pipeline/chunker.py`: Five chunk strategies: `vote` (one per scrutin), `deputy` (one per député), `party` (one per parliamentary group), `global_stats` (aggregate overview), `notable_deputy` (vote-by-vote for high-profile deputies). Uses tiktoken (cl100k_base) for token counting.
 - `pipeline/embedder.py`: Batched OpenAI embedding (100 chunks/batch), stores into `document_chunks`.
 - `pipeline/index_manager.py`: `build` / `stats` / `clear` CLI. **`build` has exactly one mode** (ADR-037, MON-256): a full rebuild (~$0.006/run) that re-embeds into a `document_chunks_staging` table and swaps it in atomically (`ALTER TABLE ... RENAME`) once every step succeeds (MON-233) - `document_chunks` is never truncated up front, so a mid-run failure leaves the previous index live.
@@ -301,7 +306,7 @@ The endpoint validates the caller's `url` against that allowlist before building
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
 - `networking`, `s3`, `rds` modules are the only parts worth salvaging if an AWS migration ever happens; `ec2` does not survive that design.
 
-**`data/migrations/`** — 16 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
+**`data/migrations/`** — 17 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
 - `001_init.sql`: `deputies`, `votes`, `vote_positions`, `document_chunks`
 - All `CREATE TABLE IF NOT EXISTS` — safe to re-run
 - `migrate.py` keeps a `schema_migrations` ledger: each file is applied once and skipped on later deploys
@@ -324,6 +329,7 @@ The endpoint validates the caller's `url` against that allowlist before building
 | `vote_positions` | Per-deputy position per vote (pour/contre/abstention/nonVotant) |
 | `vote_amendments` | Official text of each voted amendment, one row per scrutin (#630, ADR-043): the only source of an amendment summary |
 | `vote_articles` | Official text of each voted article, one row per scrutin (#642, ADR-044): the only source of an article summary |
+| `vote_bills` | Official text of the bill decided by a whole-text vote, one row per scrutin (#645, ADR-046): the only source of its summary |
 | `document_chunks` | Phase 2: content + JSONB metadata + vector(1536) |
 | `api_keys` | Manually-issued public API keys (sha256 hash, label, rate_limit_multiplier) |
 | `api_key_usage` | Per-key, per-endpoint, per-day request counters for usage accounting |

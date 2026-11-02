@@ -33,8 +33,11 @@ class TestChunks:
     def test_title_only_amendment_summary_is_dropped(self):
         assert _reading_aid(vote(summary_basis=None)) is None
 
-    def test_other_vote_kinds_keep_their_summary(self):
-        row = vote(scrutin_kind="ensemble", summary_basis=None)
+    def test_title_only_summary_of_any_kind_is_dropped(self):
+        assert _reading_aid(vote(scrutin_kind="ensemble", summary_basis=None)) is None
+
+    def test_a_motion_sentence_written_by_code_is_kept(self):
+        row = vote(scrutin_kind="motion", summary_basis="procedure")
         assert _reading_aid(row) == "Rendre le Nutri-Score obligatoire."
 
     def test_summary_is_labelled_in_the_chunk(self):

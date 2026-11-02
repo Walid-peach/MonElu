@@ -260,6 +260,11 @@ def main() -> None:
             if t_articles is None:
                 soft_failures.append("Articles")
 
+            # Same reasoning for whole-text votes (#645, ADR-046).
+            t_bills = run_step("Bills", "ingest_bills.py", ["--since", args.since], critical=False)
+            if t_bills is None:
+                soft_failures.append("Bills")
+
         n_deputies = row_count(lock_conn, "deputies")
         n_votes = row_count(lock_conn, "votes")
         n_positions = row_count(lock_conn, "vote_positions")

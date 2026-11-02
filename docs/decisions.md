@@ -1905,6 +1905,40 @@ Articles go before the amendment backlog in the daily sweep, because there are f
 
 ---
 
+## ADR-046 - Whole-text vote summaries come from the articles, motions from code (#645)
+
+**Status:** Accepted, 2026-11-02.
+
+### Context
+
+ADR-043 and ADR-044 kept the title-based prompt for every other vote kind.
+Those were the 221 most visible votes in production, all with a summary written from a title and stored unchecked.
+Of the 131 `ensemble` summaries, 20 used guessing words such as "notamment".
+Suspensions de séance were summarized as the bill under debate being adopted, and an article 34-1 resolution as an entry into the Constitution.
+A guard can catch guessing words but not invented content, so checks alone could not fix this.
+
+### Decision
+
+1. **A vote deciding a whole text is summarized from its articles or not at all.** This is `ensemble`, and `autre` when the title names a bill.
+The source is the one ADR-044 uses, the examined text published before the vote, stored in `vote_bills`.
+2. **Only the newest examined text counts.** When it has no article headings or no content, the vote gets no row, because an older reading is not what was voted.
+A vote on a CMP text therefore reads the last deposited or committee text, the same limit ADR-044 accepts.
+3. **Each article gets an equal share of `MAX_BILL_CHARS`**, so a long bill is not read from its first articles alone.
+4. **A motion's sentence is written by code**, from its type and result, with `summary_basis = 'procedure'` and no LLM call.
+What a motion decides does not depend on the bill.
+A type or result with no certain sentence stores none and counts as refused.
+5. **Every other vote shows its title.** Suspensions, requests to extend the sitting, déclarations and budget parts get no summary.
+6. **A title may still give a theme.** A vote with no source gets a theme-only call, because theme pages and the feed depend on it. A theme is a classification, not a claim about content.
+7. **The RAG index takes a summary only with `summary_basis` `official_text` or `procedure`,** for every vote kind.
+8. **The ADR-043 rules apply unchanged:** a refused summary stays empty and is not retried. Old summaries are cleared and replaced in one run by `backfill_bill_text.yml`.
+
+### Consequences
+
+- 115 of the 142 votes naming a bill find their text: 105 of 131 `ensemble` and 10 of 11 `autre`, counted over the published files.
+- In a trial of 14 real bills, 12 summaries passed the guards and 2 were declined.
+- The rest keep their official title, including budget bills and texts in an older template.
+- Summaries describe the text as examined, so a change made during the sitting is not reflected.
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1937,3 +1971,4 @@ Articles go before the amendment backlog in the daily sweep, because there are f
 28. The app's Accueil feed and weekly recap are computed by the API (`GET /feed`, `GET /feed/week`) from scrutins, positions and agenda items only (ADR-042, #560) - follows stay on the phone and travel as `deputies`/`theme` query parameters (`deputy_id` kept for installed builds; at most 10 deputies, all equal, recap never summed across them - ADR-042 amendment, #582), never in the account tables; the noise rule (full cards for `ensemble`/`motion`, others only within 20 votes, the rest rolled up) lives in the router, not the app; never add a card that needs data MonÉlu does not ingest (amendment authors, interventions), and never add likes, reactions, streaks or notifications to it
 29. An amendment summary comes from `vote_amendments` or does not exist (ADR-043, #630) - never send an amendment title to the model as its source, never pick a candidate when a vote matches more than one amendment, and never remove a `rejection_reason()` guard to raise the yield
 30. An article summary comes from `vote_articles` or does not exist (ADR-044, #642) - never send an article title to the model as its source, and never fall back to an older reading when the newest examined text shows the article deleted
+31. A whole-text vote summary comes from `vote_bills` or does not exist, and a motion's sentence comes from `MOTION_SENTENCES` (ADR-046, #645) - never send any vote title to the model to write a summary; a title may only give a theme

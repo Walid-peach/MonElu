@@ -48,6 +48,7 @@ def test_the_full_table_set_is_covered():
         "public.votes",
         "public.vote_amendments",
         "public.vote_articles",
+        "public.vote_bills",
         "public.vote_positions",
         "public.document_chunks",
         "public.api_keys",
