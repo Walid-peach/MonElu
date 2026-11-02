@@ -1939,6 +1939,7 @@ A resolution changes no law, so its summary must start with "Demander" or it is 
 - In a trial of 14 real bills, 12 summaries passed the guards and 2 were declined.
 - The rest keep their official title, including budget bills and texts in an older template.
 - Summaries describe the text as examined, so a change made during the sitting is not reflected.
+- A bill prompt is large, so Groq's rate limit holds a run to about 3 votes a minute. `backfill_bill_text.yml` allows 150 minutes for this, and still rebuilds the marts if it runs out.
 
 ## Rules for future development sessions
 
