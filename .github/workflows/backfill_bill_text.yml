@@ -14,7 +14,9 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Bill text is a large prompt, so Groq's rate limit holds this to about 3 votes
+    # a minute. 300 votes took more than the 30 minutes the first run allowed.
+    timeout-minutes: 180
     permissions:
       contents: read
 
@@ -42,6 +44,10 @@ jobs:
         run: python -m scripts.generate_vote_summaries --clear-title-only
 
       - name: Write the replacements
+        # Whatever landed is committed batch by batch, and the daily sweep writes
+        # the rest, so a slow run still rebuilds the marts below.
+        continue-on-error: true
+        timeout-minutes: 150
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
