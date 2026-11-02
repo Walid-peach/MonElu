@@ -354,7 +354,7 @@ def get_deputy_votes(
                 cur.execute(
                     sql.SQL("""
                         SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
-                               v.summary_plain, raw.scrutin_kind
+                               v.summary_plain, raw.summary_basis, raw.scrutin_kind
                         FROM vote_positions vp
                         JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
                         LEFT JOIN votes raw ON raw.vote_id = vp.vote_id
@@ -666,6 +666,8 @@ def get_diverging_votes(
                 cur.execute(
                     """
                     SELECT vpa.vote_id, v.voted_at, v.vote_title, v.result, v.summary_plain,
+                           (SELECT r.summary_basis FROM votes r
+                            WHERE r.vote_id = v.vote_id) AS summary_basis,
                            vpa.position AS position_a, vpb.position AS position_b
                     FROM vote_positions vpa
                     JOIN vote_positions vpb

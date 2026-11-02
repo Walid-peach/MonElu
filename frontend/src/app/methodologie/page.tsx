@@ -239,6 +239,18 @@ export default function MethodologiePage() {
         </ul>
       </LegalSection>
 
+      <LegalSection id="resumes" title="Comment sont écrits les résumés">
+        <p style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--dp-text-secondary)', margin: 0 }}>
+          Le titre officiel de chaque scrutin vient de l&apos;Assemblée nationale. Le résumé affiché en dessous est
+          écrit par un modèle d&apos;IA à partir du texte officiel voté : l&apos;amendement, l&apos;article ou les
+          articles du texte tels qu&apos;ils ont été examinés. Il peut contenir des erreurs, et il décrit le texte
+          examiné : une modification faite en séance n&apos;y figure pas. Sans texte officiel disponible, aucun résumé
+          n&apos;est écrit et seul le titre s&apos;affiche. Une motion reçoit une phrase type, écrite sans IA selon son
+          type et son résultat. Les lignes de l&apos;agenda sont reformulées par IA à partir de l&apos;ordre du jour.
+          Seuls le scrutin officiel et les positions enregistrées font foi.
+        </p>
+      </LegalSection>
+
       <LegalSection id="code" title={faqTitle('code')}>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           L&apos;intégralité du code de transformation des données (ingestion, agrégation, API) est publique. Le

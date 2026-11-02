@@ -5,6 +5,7 @@ import { csvUrl } from '@/lib/api'
 import { anScrutinUrl } from '@/lib/an'
 import { groupSlug } from '@/lib/groups'
 import { Eyebrow, ResultBadge, SplitBar, cardClass } from '@/components/phone/kit'
+import { SummaryDisclosure } from '@/components/SummaryLabel'
 
 // The vote page's phone pieces (canvas "Vote"). The body sections the two
 // layouts share (hemicycle, deputy lookup, dissidents, related votes) stay in
@@ -20,6 +21,7 @@ export function VoteHeroMobile({
   voteTitle,
   headline,
   summary,
+  summaryBasis,
   result,
   votedAt,
   theme,
@@ -36,6 +38,7 @@ export function VoteHeroMobile({
   voteTitle: string
   headline: string
   summary: string | null
+  summaryBasis: string | null
   result: string
   votedAt: string
   theme: string | null
@@ -128,9 +131,10 @@ export function VoteHeroMobile({
       {(summary || dossierUrl) && (
         <div className="flex flex-col gap-2 px-1 text-sm leading-relaxed text-[color:var(--dp-text-secondary)]">
           {summary && (
-            <p>
-              <span className="font-semibold">Titre officiel :</span> {voteTitle}
-            </p>
+            <div>
+              <p>{summary}</p>
+              <SummaryDisclosure basis={summaryBasis} officialUrl={scrutinUrl} />
+            </div>
           )}
           {dossierUrl && (
             <a href={dossierUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[color:var(--dp-red)]">

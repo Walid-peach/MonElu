@@ -9,6 +9,7 @@ import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 import { ThemeMobile } from './ThemeMobile'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 export const dynamicParams = true
 export const revalidate = 86400
@@ -210,11 +211,6 @@ export default async function ThemePage(
                     borderBottom: i < data.votes.length - 1 ? '1px solid var(--dp-track-bg)' : 'none',
                   }}
                 >
-                  {v.summary_plain && (
-                    <div style={{ fontSize: 14.5, color: 'var(--dp-text-secondary)', marginBottom: 4 }}>
-                      {v.summary_plain}
-                    </div>
-                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'baseline', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 600, fontSize: 14, color: NAVY, flex: '1 1 380px', minWidth: 0 }}>
                       {v.vote_title}
@@ -234,6 +230,12 @@ export default async function ThemePage(
                   <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 5 }}>
                     {v.voted_at ? formatDate(v.voted_at) : ''}
                   </div>
+                  {v.summary_plain && (
+                    <div style={{ fontSize: 14, color: 'var(--dp-text-secondary)', marginTop: 4 }}>
+                      <SummaryTag basis={v.summary_basis} />
+                      {v.summary_plain}
+                    </div>
+                  )}
                 </Link>
               ))}
             </div>

@@ -110,7 +110,7 @@ def get_theme(
 
             cur.execute(
                 """
-                SELECT vote_id, voted_at, vote_title, result, summary_plain
+                SELECT vote_id, voted_at, vote_title, result, summary_plain, summary_basis
                 FROM votes
                 WHERE theme = %s
                 ORDER BY voted_at DESC NULLS LAST, vote_id DESC

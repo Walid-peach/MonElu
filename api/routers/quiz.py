@@ -277,9 +277,9 @@ def select_weekly_vote(candidates: list[dict]) -> Optional[dict]:
     return None
 
 
-def build_weekly_question(summary_plain: Optional[str], vote_title: str) -> str:
-    """Plain question derived from summary_plain, with vote_title as fallback."""
-    base = (summary_plain or vote_title).strip().rstrip(". ")
+def build_weekly_question(vote_title: str) -> str:
+    """A question on the official title: a generated summary is never the headline (#634)."""
+    base = vote_title.strip().rstrip(". ")
     return f"Auriez-vous voté pour ou contre : {base} ?"
 
 
@@ -536,7 +536,7 @@ def get_weekly(request: Request) -> QuizWeeklyQuestion:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT vote_id, vote_title, summary_plain, votes_for, votes_against,
+                SELECT vote_id, vote_title, votes_for, votes_against,
                        abstentions, result, voted_at, total_voters
                 FROM votes
                 WHERE voted_at IS NOT NULL AND voted_at < %s
@@ -553,7 +553,7 @@ def get_weekly(request: Request) -> QuizWeeklyQuestion:
         voted_at = row["voted_at"]
         result = QuizWeeklyQuestion(
             vote_id=row["vote_id"],
-            question=build_weekly_question(row.get("summary_plain"), row["vote_title"]),
+            question=build_weekly_question(row["vote_title"]),
             vote_title=row["vote_title"],
             votes_for=row["votes_for"],
             votes_against=row["votes_against"],

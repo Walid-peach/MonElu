@@ -7,6 +7,7 @@ import {
   formatSittingTime,
   isSubstantive,
 } from '@/lib/agenda'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 /**
  * The homepage "à venir" teaser (MON-213).
@@ -88,6 +89,7 @@ export function UpcomingAgenda({ agenda }: { agenda: AgendaResponse | null }) {
                     overflowWrap: 'anywhere',
                   }}
                 >
+                  {item.summary_plain?.trim() && <SummaryTag />}
                   {lead}
                 </span>
               </li>

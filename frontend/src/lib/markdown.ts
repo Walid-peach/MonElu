@@ -5,6 +5,7 @@ import { groupSlug } from '@/lib/groups'
 import { CAVEATS, calculationDefinitions } from '@/lib/llms'
 import { canonicalUrl, SITE_URL } from '@/lib/site'
 import { formatDate } from '@/lib/utils'
+import { summaryDisclosureMarkdown } from '@/lib/summaryLabel'
 
 /**
  * The Markdown twins served at `/deputes/{id}.md`, `/votes/{id}.md` and
@@ -122,7 +123,9 @@ export function buildVoteMarkdown(vote: VoteDetail): string {
   return [
     `# ${vote.vote_title}`,
     `Scrutin de l'Assemblée nationale, XVIIᵉ législature. Version texte de [${htmlUrl}](${htmlUrl}).`,
-    vote.summary_plain ? `## Résumé\n\n${vote.summary_plain}` : null,
+    vote.summary_plain
+      ? `## Résumé\n\n${vote.summary_plain}\n\n${summaryDisclosureMarkdown(vote.summary_basis)}`
+      : null,
     `## Résultat et décompte\n\n${tallies.join('\n')}`,
     inlineCaveats(),
     `[Méthodologie complète](${SITE_URL}/methodologie.md)`,

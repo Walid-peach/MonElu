@@ -170,7 +170,7 @@ export default async function Home() {
   const resultLabel = (r: string) => r === 'adopté' ? 'Adopté' : 'Rejeté'
 
   const pulseVote = {
-    title: featuredVote?.summary_plain || featuredVote?.vote_title || 'Vote solennel',
+    title: featuredVote?.vote_title || 'Vote solennel',
     result: featuredVote ? resultLabel(featuredVote.result) : 'Adopté',
     votesFor: featuredVote?.votes_for ?? 289,
     votesAgainst: featuredVote?.votes_against ?? 223,

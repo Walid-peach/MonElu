@@ -7,6 +7,7 @@ import { FollowDeputyButton } from '@/components/FollowDeputyButton'
 import { ShareButton } from '@/components/ShareButton'
 import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { Card, PhoneSection, PositionChip, ResultBadge, SplitBar, cardClass } from '@/components/phone/kit'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 const NUMBER = new Intl.NumberFormat('fr-FR')
 
@@ -186,7 +187,13 @@ export function DeputyMobile({
                   <Link href={`/votes/${v.vote_id}`} className="grid grid-cols-[64px_minmax(0,1fr)] gap-2.5 py-3">
                     <span className="pt-0.5 font-mono text-[11px] text-[color:var(--dp-text-secondary)]">{v.voted_at ? formatDate(v.voted_at) : ''}</span>
                     <span className="flex flex-col gap-1.5">
-                      <span className="text-sm leading-snug">{v.summary_plain || v.vote_title}</span>
+                      <span className="text-sm leading-snug">{v.vote_title}</span>
+                      {v.summary_plain && (
+                        <span className="text-[13px] leading-snug text-[color:var(--dp-text-secondary)]">
+                          <SummaryTag basis={v.summary_basis} />
+                          {v.summary_plain}
+                        </span>
+                      )}
                       <span className="flex flex-wrap gap-1.5">
                         <PositionChip position={v.position} />
                         {v.result && <ResultBadge result={v.result} />}

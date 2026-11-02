@@ -100,7 +100,7 @@ SQL_ACTES = f"""
 SQL_HEADLINE_SCRUTINS = """
     SELECT m.vote_id, m.voted_at, m.vote_title, v.scrutin_kind, m.result,
            m.votes_for, m.votes_against, m.abstentions, m.total_voters,
-           m.summary_plain, m.theme
+           m.summary_plain, m.theme, v.summary_basis
     FROM votes v
     JOIN analytics_marts.mart_vote_summary m ON m.vote_id = v.vote_id
     WHERE v.dossier_id = %(dossier_uid)s

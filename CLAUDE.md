@@ -255,6 +255,10 @@ The scope is derived from `changed_at`, not `ingested_at` - see the scripts sect
 `HomeSummary` (`src/components/home/HomeSummary.tsx`) is the static prose block below the cinematic: it is what a crawler or an LLM actually reads about this site, since the scroll experience itself is ~1 KB of display strings inside animated panels.
 It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` from the homepage - keep it a server component with no interactivity.
 `e2e/smoke.spec.ts` asserts both halves at 390px and 1280px.
+- **A generated summary is never the headline, and it always carries a label** (#634).
+The official title leads every surface; `SummaryTag` sits beside a summary in a list, and `SummaryDisclosure` on the vote page links to `/methodologie#resumes` and the official scrutin.
+The wording comes from `summary_basis` through `src/lib/summaryLabel.ts`, because only `official_text` may claim the official text: a motion's sentence is written by code.
+The API reads that column from raw `votes`, not from the mart, so a release never waits on a dbt run.
 - **Grey text goes through `--dp-text-secondary` / `--dp-text-muted`, never a literal** (#559).
 Tailwind's `gray-mid` is retired, and `#9CA3AF`, `#6B7280` and faint translucent white all missed WCAG AA as text.
 A surface that keeps one palette in both themes (the white popovers and the embed stay light; the footer, the chat sidebar and the `/a-propos` navy sections stay dark) carries the `dp-light` or `dp-dark` class from `globals.css`, which pins the tokens of its subtree to that palette (custom properties only: `dark:` utilities inside it still follow `<html>`).

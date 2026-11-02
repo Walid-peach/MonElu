@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/utils'
 import { positionStyle } from '@/lib/vote-position'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { ShareButton } from '@/components/ShareButton'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 const NAVY   = 'var(--dp-text)'
 const LINE   = 'var(--dp-border)'
@@ -443,7 +444,10 @@ export function ComparerClient() {
                       </div>
                       <div style={{ fontSize: 15, color: NAVY, lineHeight: 1.35 }}>{v.vote_title}</div>
                       {v.summary_plain && (
-                        <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', marginTop: 6, lineHeight: 1.4 }}>{v.summary_plain}</div>
+                        <div style={{ fontSize: 13, color: 'var(--dp-text-secondary)', marginTop: 6, lineHeight: 1.4 }}>
+                          <SummaryTag basis={v.summary_basis} />
+                          {v.summary_plain}
+                        </div>
                       )}
                     </Link>
                   ))}

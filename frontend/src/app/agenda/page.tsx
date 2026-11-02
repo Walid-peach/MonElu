@@ -16,6 +16,7 @@ import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 import { AgendaMobile } from './AgendaMobile'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 // The agenda table only changes when `ingest_agenda.py` runs, and that run
 // POSTs /api/revalidate, which invalidates this path - so the timer below is
@@ -240,6 +241,7 @@ function Row({ item, last }: { item: AgendaItem; last: boolean }) {
           overflowWrap: 'anywhere',
         }}
       >
+        {item.summary_plain?.trim() && <SummaryTag />}
         {lead}
       </div>
 

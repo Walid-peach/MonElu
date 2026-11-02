@@ -11,6 +11,7 @@ import { ContentSkeleton } from '@/components/ui/ContentSkeleton'
 import { useLoadingPhase } from '@/lib/loadingPolicy'
 import { VoteRowSkeleton } from './VoteRowSkeleton'
 import { VotesMobile } from './VotesMobile'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 const SKELETON_ROW_COUNT = 8
 
@@ -281,12 +282,18 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     <div className="order-2 sm:order-none" style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--dp-text)', lineHeight: 1.3 }}
                         className="line-clamp-2">
-                        {vote.summary_plain || vote.vote_title}
+                        {vote.vote_title}
                       </div>
+                      {vote.summary_plain && (
+                        <div style={{ fontSize: 13.5, color: 'var(--dp-text-secondary)', lineHeight: 1.4, marginTop: 4 }}
+                          className="line-clamp-2">
+                          <SummaryTag basis={vote.summary_basis} />
+                          {vote.summary_plain}
+                        </div>
+                      )}
                       <div style={{ fontSize: 12.5, color: 'var(--dp-text-muted)', marginTop: 4 }}
                         className="line-clamp-1">
                         Scrutin n°{vote.vote_id}
-                        {vote.summary_plain && ` · ${vote.vote_title}`}
                       </div>
                     </div>
 
