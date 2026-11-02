@@ -1,44 +1,31 @@
-// Generates the PWA icons from the canonical app icon (src/app/icon.svg).
+// Generate web branding from the approved native app master.
 // Run from frontend/: node scripts/generate_icons.js
-// Outputs: public/icon-192.png, public/icon-512.png, public/icon-512-maskable.png
-// (manifest icons) and src/app/apple-icon.png (iOS home-screen icon, served by
-// Next.js convention).
 const path = require('path')
-const { readFileSync } = require('fs')
+const { mkdirSync } = require('fs')
 const sharp = require('sharp')
 
 const root = path.join(__dirname, '..')
-const svg = readFileSync(path.join(root, 'src', 'app', 'icon.svg'))
-// Maskable variant: same art, scaled to ~78% and centered on a flat (unrounded)
-// navy background so it survives circular/squircle adaptive-icon masks. See
-// https://web.dev/articles/maskable-icon
-const maskableSvg = readFileSync(path.join(root, 'src', 'app', 'icon-maskable.svg'))
-
-// The source SVG is 100px; density 1024 rasterizes it well above 512px so
-// every output size is a downscale (no upscaling blur).
-const DENSITY = 1024
+const source = path.join(root, '..', 'ios/MonElu/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png')
 
 async function main() {
-  for (const size of [192, 512]) {
-    await sharp(svg, { density: DENSITY })
-      .resize(size, size)
-      .png()
-      .toFile(path.join(root, 'public', `icon-${size}.png`))
-    console.log(`public/icon-${size}.png`)
+  mkdirSync(path.join(root, 'public/brand'), { recursive: true })
+  await sharp(source).resize(160, 160).webp({ quality: 90 })
+    .toFile(path.join(root, 'public/brand/monelu-mark.webp'))
+  for (const [file, size] of [
+    ['public/icon-192.png', 192],
+    ['public/icon-512.png', 512],
+    ['src/app/apple-icon.png', 180],
+    ['src/app/icon.png', 64],
+  ]) {
+    await sharp(source).resize(size, size).png().toFile(path.join(root, file))
+    console.log(file)
   }
-  await sharp(maskableSvg, { density: DENSITY })
-    .resize(512, 512)
-    .png()
-    .toFile(path.join(root, 'public', 'icon-512-maskable.png'))
-  console.log('public/icon-512-maskable.png')
-  // iOS applies its own corner mask, so flatten onto the navy background for a
-  // full-bleed square instead of a rounded shape over transparency.
-  await sharp(svg, { density: DENSITY })
-    .resize(180, 180)
-    .flatten({ background: '#0D1F3C' })
-    .png()
-    .toFile(path.join(root, 'src', 'app', 'apple-icon.png'))
-  console.log('src/app/apple-icon.png')
+  // Extra breathing room keeps every part of the monogram inside the
+  // central safe circle when Android applies its adaptive mask.
+  const inset = await sharp(source).resize(410, 410).png().toBuffer()
+  await sharp({ create: { width: 512, height: 512, channels: 3, background: '#FFFCF5' } })
+    .composite([{ input: inset, left: 51, top: 51 }])
+    .png().toFile(path.join(root, 'public/icon-512-maskable.png'))
 }
 
 main().catch(err => {

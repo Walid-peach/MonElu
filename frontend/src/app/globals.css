@@ -99,7 +99,6 @@
   --dp-solid-text: #FFFFFF;
   /* #612: MonEluLogo variant="theme" (the nav and the menu). */
   --dp-logo-ink: theme('colors.navy.DEFAULT');
-  --dp-logo-muted: #C8C5C0;
   /* MON-163: same reasoning as --dp-active-bg, for solid accent-colored CTA
      buttons paired with hardcoded white text (e.g. "Poser une question",
      "Rechercher", the print button). --dp-accent itself is allowed to
@@ -208,7 +207,6 @@
   --dp-solid-bg: #F1F0EC;
   --dp-solid-text: #0D1F3C;
   --dp-logo-ink: #FFFFFF;
-  --dp-logo-muted: rgba(255,255,255,0.4);
 
   /* MON-197: lightened so each still clears 4.5:1 against --dp-card-bg
      (#121D30) — the originals (esp. --party-rn navy-on-navy) fell as low as
@@ -324,7 +322,6 @@
     --dp-solid-bg: theme('colors.navy.DEFAULT');
     --dp-solid-text: #FFFFFF;
     --dp-logo-ink: theme('colors.navy.DEFAULT');
-    --dp-logo-muted: #C8C5C0;
     --party-rn: #003189;
     --party-epr: #B58C2A;
     --party-lfi: #C9302A;

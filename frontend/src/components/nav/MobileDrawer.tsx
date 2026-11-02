@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import Link from 'next/link'
+import { MonEluLogo } from '@/components/MonEluLogo'
 import { usePathname } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getFollowedDeputyId } from '@/lib/mon-depute'
@@ -99,7 +100,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
       >
         <div className="flex h-[60px] flex-none items-center justify-between border-b border-[color:var(--dp-border)] pl-5 pr-2">
           <Link href="/" onClick={onClose} tabIndex={tabIndex} className="font-serif text-[23px]">
-            Mon<span className="text-red-civic">É</span>lu
+            <MonEluLogo size={36} variant="theme" />
           </Link>
           <button
             type="button"
@@ -212,9 +213,9 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
               onClick={() => { recordInstallEvent('menu_entry_tap'); onClose() }}
               className="dp-dark mt-1 flex items-center gap-3 rounded-[18px] bg-navy p-3.5 text-white"
             >
-              <span aria-hidden="true" className="flex h-11 w-11 flex-none -rotate-6 items-center justify-center rounded-xl bg-gray-off font-serif text-[22px] text-navy">
-                M<span className="text-red-civic">É</span>
-              </span>
+              <div aria-hidden="true" className="flex-none -rotate-6">
+                <MonEluLogo size={44} hideWordmark />
+              </div>
               <span className="flex flex-1 flex-col">
                 <span className="text-[15px] font-bold">Installer l&apos;application</span>
                 <span className="text-xs text-[color:var(--dp-text-secondary)]">Gratuit, sans compte</span>

@@ -1,6 +1,7 @@
 'use client'
 import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { MonEluLogo } from '@/components/MonEluLogo'
 import type { AssemblyStats, LeadVoteSummary } from './LiveAssemblyPulse'
 import type { DeputyInfo } from '@/app/page'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
@@ -132,9 +133,7 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
         {/* The top bar stays hidden until this hero scrolls past, so the hero
             carries the wordmark and ☰ (H1); the installed app has its tab bar. */}
         <div className="-mb-1 flex items-center justify-between installed:hidden">
-          <span className="font-serif text-2xl text-[color:var(--dp-text)]">
-            Mon<span className="text-[color:var(--dp-red)]">É</span>lu
-          </span>
+          <MonEluLogo size={40} variant="theme" />
           <button
             type="button"
             onClick={openMobileMenu}
@@ -148,6 +147,7 @@ export function MobileHome({ stats, leadVote, deputyInfo }: Props) {
             </svg>
           </button>
         </div>
+        <div className="hidden installed:block"><MonEluLogo size={40} variant="theme" /></div>
         <p className={`${eyebrow} text-[color:var(--dp-text-muted)]`}>Assemblée nationale · 17e législature</p>
         {/* The page's single `<h1>` (MON-270). This section is server-rendered on
             every viewport - the cinematic only ever adds `<h2>`s. */}

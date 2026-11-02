@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { MonEluLogo } from './MonEluLogo'
 import { usePathname } from 'next/navigation'
 
 const legalLinks = [
@@ -34,10 +35,8 @@ export function Footer() {
         data-print-hide
         className="dp-dark flex flex-col gap-3.5 bg-[#091629] px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-6 text-[13px] installed:pb-[calc(7rem+env(safe-area-inset-bottom))] md:hidden"
       >
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="font-serif text-[22px] text-white">
-            Mon<span className="text-red-light">É</span>lu
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link href="/" className="inline-flex min-h-11 items-center"><MonEluLogo size={32} variant="dark" /></Link>
           <span className="text-xs text-[color:var(--dp-text-secondary)]">Chaque vote, en clair.</span>
         </div>
         <nav aria-label="Pied de page" className="flex flex-wrap gap-x-4">
@@ -71,15 +70,7 @@ export function Footer() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <svg width="24" height="18" viewBox="0 0 30 22" fill="none">
-            <path d="M2 19 A13 13 0 0 1 28 19" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" opacity="0.9" />
-            <path d="M6 19 A9 9 0 0 1 24 19" stroke="#9A9A9A" strokeWidth="2.4" strokeLinecap="round" />
-            <path d="M10 19 A5 5 0 0 1 20 19" stroke="#D93025" strokeWidth="2.4" strokeLinecap="round" />
-            <circle cx="15" cy="19" r="2.3" fill="#fff" opacity="0.9" />
-          </svg>
-          <span style={{ fontWeight: 800, fontSize: '18px', color: '#fff', letterSpacing: '-0.01em' }}>
-            Mon<span style={{ color: '#D93025' }}>É</span>lu
-          </span>
+          <Link href="/" className="inline-flex min-h-11 items-center"><MonEluLogo size={36} variant="dark" /></Link>
           <span style={{ fontSize: '13px', color: 'var(--dp-text-muted)', marginLeft: '8px' }}>
             © {new Date().getFullYear()} - Données publiques Assemblée nationale
           </span>

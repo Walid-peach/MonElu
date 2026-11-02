@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { MonEluLogo } from '@/components/MonEluLogo'
 import { usePathname } from 'next/navigation'
 import { openGlobalSearch } from './GlobalSearch'
 import { MobileDrawer } from './nav/MobileDrawer'
@@ -68,7 +69,7 @@ export function MobileTopBar() {
           </svg>
         </button>
         <Link href="/" className="flex-1 font-serif text-[23px]">
-          Mon<span className="text-red-civic">É</span>lu
+          <MonEluLogo size={28} variant="theme" />
         </Link>
         <button
           type="button"

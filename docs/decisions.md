@@ -360,7 +360,7 @@ count is low.
 
 ## ADR-018 — Rebuild logo as inline SVG React component (Plan C)
 **Date:** 2026-06-09
-**Status:** Current
+**Status:** Logo superseded by ADR-045; dark-mode deferral superseded by ADR-027
 
 **Decision:** Replace the existing `MonEluLogo.tsx` (a simplified geometric placeholder — 8 rotating squares) with a new inline SVG component that faithfully renders the hemicycle arc + deputy figure + wordmark from the canonical brand asset (`docs/assets/MonElu_LOGO-SVG.png`).
 
@@ -1886,6 +1886,24 @@ Articles go before the amendment backlog in the daily sweep, because there are f
 - 548 of the 643 article votes in production find their text, a real count over the published files.
 - Budget bills and other texts published in an older template mark no article heading, so they keep their official title.
 - `summary_basis` now covers amendments and articles, and `_reading_aid()` keeps a title-only summary of either out of the RAG index.
+
+## ADR-045 — Share the approved MÉ monogram across iOS and web
+**Date:** 2026-10-31
+**Status:** Current
+
+**Decision:** Use the user-approved “Seamless fold” MÉ monogram (combination 25), with its navy ligature, equally bold connecting stroke, red accent and cream background, for the native app and website.
+
+**Reason:** The user selected this design and explicitly asked to update the website too. Preserve the approved artwork instead of approximating its geometry with a new hand-drawn SVG. This supersedes ADR-018's hemicycle-logo implementation; ADR-027's dark-mode behavior remains in force.
+
+**Impact:**
+- The tracked master is `ios/MonElu/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png` (1024 × 1024, opaque). The app target includes that asset catalog.
+- Run `node scripts/generate_icons.js` from `frontend/` to produce the compact WebP header mark, PNG browser icon, Apple touch icon and PWA icons. The maskable icon adds safe-area padding.
+- Reuse `MonEluLogo` in navigation, the mobile home brand row, the mobile top bar, both menus and both footers. Its cream icon stays identical in both themes; `variant="dark"` changes the wordmark for dark surfaces and `variant="theme"` follows the CSS theme on first paint.
+- Place the mark beside the MonÉlu name, separate from editorial page headings. Do not restore the old hemicycle logo or use the full-size raster master in the header.
+
+**Trigger to revisit:** A new approved brand design or a faithful vector master supplied for this same monogram.
+
+---
 
 ## Rules for future development sessions
 

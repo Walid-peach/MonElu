@@ -59,7 +59,7 @@ export function Nav() {
     >
       <Link href="/" className="flex items-center shrink-0">
         <MonEluLogo
-          size={32}
+          size={40}
           variant="theme"
         />
       </Link>
