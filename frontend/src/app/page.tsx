@@ -11,7 +11,7 @@ import { addDays, parisToday } from '@/lib/agenda'
 import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
-  alternates: { canonical: canonicalUrl('/') },
+  alternates: { canonical: canonicalUrl('/'), types: { 'application/rss+xml': canonicalUrl('/flux.xml') } },
 }
 
 const FALLBACK_STATS = {

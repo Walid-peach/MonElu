@@ -106,7 +106,7 @@ describe('llms.txt (MON-261)', () => {
     ['llms-full.txt', full],
   ])('%s only links pages that exist', async (_name, text) => {
     // Route handlers, not pages - they have no page.tsx to resolve to.
-    const NOT_PAGES = ['/sitemap.xml', '/llms.txt', '/llms-full.txt']
+    const NOT_PAGES = ['/sitemap.xml', '/llms.txt', '/llms-full.txt', '/flux.xml']
     // The `.md` twins (MON-271) have no page.tsx either: they are rewrites
     // onto `app/md/**/route.ts`. Resolving them through the real rewrite table
     // rather than bypassing them keeps this test's promise intact - llms.txt
