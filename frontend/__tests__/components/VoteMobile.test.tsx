@@ -78,3 +78,23 @@ describe('GroupBreakdownMobile', () => {
     expect(items[1]).not.toHaveTextContent('Participation')
   })
 })
+
+describe('the link to the bill (#371)', () => {
+  it('opens the bill page when the API gives the dossier one', () => {
+    render(<VoteHeroMobile {...hero} billUrl="/lois/DLR5L17N1" billTitle="Budget 2027" />)
+    const link = screen.getByRole('link', { name: /Ce vote fait partie du texte « Budget 2027 » - voir le parcours complet/ })
+    expect(link).toHaveAttribute('href', '/lois/DLR5L17N1')
+    expect(screen.queryByRole('link', { name: /dossier officiel/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps only the official dossier link when the bill has no page', () => {
+    render(<VoteHeroMobile {...hero} billUrl={null} />)
+    expect(screen.getByRole('link', { name: /dossier officiel/ })).toHaveAttribute('href', hero.dossierUrl)
+    expect(screen.queryByRole('link', { name: /parcours complet/ })).not.toBeInTheDocument()
+  })
+
+  it('shows neither link when the vote names no bill', () => {
+    render(<VoteHeroMobile {...hero} dossierUrl={null} billUrl={null} />)
+    expect(screen.queryByRole('link', { name: /dossier officiel|parcours complet/ })).not.toBeInTheDocument()
+  })
+})

@@ -8,7 +8,7 @@
  * `ParcoursSection` (`LoiModels.swift`): a display grouping of what the API
  * returned, in its `ordinal` order, with nothing recomputed.
  */
-import type { LoiActe, LoiDetail } from '@/lib/api'
+import type { LoiActe, LoiDetail, VoteDossierRef } from '@/lib/api'
 
 export const DOSSIER_STATUSES: ReadonlyArray<{ status: string; label: string }> = [
   { status: 'promulguee', label: 'Promulguée' },
@@ -117,4 +117,13 @@ export function collapsedVotesLabel(amendements: number, articles: number): stri
 /** Whether the bill has any headline scrutin to show yet. */
 export function hasHeadlineScrutin(loi: Pick<LoiDetail, 'parcours' | 'unattached_scrutins'>): boolean {
   return loi.unattached_scrutins.length > 0 || loi.parcours.some(a => a.scrutins.length > 0)
+}
+
+/**
+ * The internal bill page for a scrutin's or an agenda item's dossier (#371).
+ * Gated on the API's `lois_url`, which is `dossiers.has_scrutins`; the path is
+ * built here so a preview deployment stays on its own host.
+ */
+export function billPath(dossier: Pick<VoteDossierRef, 'dossier_uid' | 'lois_url'> | null | undefined): string | null {
+  return dossier?.lois_url ? `/lois/${encodeURIComponent(dossier.dossier_uid)}` : null
 }

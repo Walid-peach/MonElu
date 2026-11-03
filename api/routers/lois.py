@@ -163,6 +163,13 @@ SQL_DOSSIER_REF = """
 """
 
 
+SQL_DOSSIER_REFS = """
+    SELECT dossier_uid, titre, status, has_scrutins
+    FROM dossiers
+    WHERE dossier_uid = ANY(%(dossier_uids)s)
+"""
+
+
 def lois_url(dossier_uid: str) -> str:
     """Public bill page URL, built from the one frontend origin (MON-274)."""
     return f"{frontend_base_url()}/lois/{dossier_uid}"

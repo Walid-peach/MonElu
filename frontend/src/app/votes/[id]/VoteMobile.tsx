@@ -33,6 +33,8 @@ export function VoteHeroMobile({
   abstPct,
   majorityRequired,
   dossierUrl,
+  billUrl = null,
+  billTitle = null,
 }: {
   voteId: string
   voteTitle: string
@@ -50,6 +52,8 @@ export function VoteHeroMobile({
   abstPct: number
   majorityRequired: number | null
   dossierUrl: string | null
+  billUrl?: string | null
+  billTitle?: string | null
 }) {
   const adopted = result === 'adopté'
   const scrutinUrl = anScrutinUrl(voteId)
@@ -128,7 +132,7 @@ export function VoteHeroMobile({
         </div>
       </div>
 
-      {(summary || dossierUrl) && (
+      {(summary || dossierUrl || billUrl) && (
         <div className="flex flex-col gap-2 px-1 text-sm leading-relaxed text-[color:var(--dp-text-secondary)]">
           {summary && (
             <div>
@@ -136,7 +140,11 @@ export function VoteHeroMobile({
               <SummaryDisclosure basis={summaryBasis} officialUrl={scrutinUrl} />
             </div>
           )}
-          {dossierUrl && (
+          {billUrl ? (
+            <Link href={billUrl} className="font-semibold text-[color:var(--dp-red)]">
+              {billTitle ? `Ce vote fait partie du texte « ${billTitle} »` : 'Ce vote fait partie d\u2019un texte'} - voir le parcours complet →
+            </Link>
+          ) : dossierUrl && (
             <a href={dossierUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[color:var(--dp-red)]">
               Voir le dossier officiel →
             </a>
