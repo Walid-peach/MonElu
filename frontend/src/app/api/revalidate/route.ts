@@ -38,6 +38,8 @@ function purgeEverything(): string[] {
     ['/votes'],
     // Refreshed by `ingest_agenda.py` in the same nightly run (MON-210, MON-213).
     ['/agenda'],
+    ['/lois'],
+    ['/lois/[dossier_id]', 'layout'],
     ['/deputes'],
     // Force-dynamic, but its scorecards fetch sits in the data cache for a day.
     ['/deputes/tableau'],
