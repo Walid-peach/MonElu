@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 import { SITE_HOST } from '@/lib/site'
 
 export const runtime = 'edge'
-export const alt = 'Vérification MonÉlu — verdict sur une affirmation'
+export const alt = 'Vérification MonÉlu - verdict sur une affirmation'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -65,7 +65,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
             fontFamily: 'sans-serif',
           }}
         >
-          MonÉlu — Vérification d&apos;une affirmation
+          MonÉlu - Vérification d&apos;une affirmation
         </div>
 
         <div

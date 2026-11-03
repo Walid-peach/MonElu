@@ -5,7 +5,7 @@ import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 import { QuizClient } from './QuizClient'
 
-const TITLE = 'Quel député vote comme vous ? — MonÉlu'
+const TITLE = 'Quel député vote comme vous ? - MonÉlu'
 const DESCRIPTION =
   'Répondez à une dizaine de vrais scrutins de l’Assemblée nationale et découvrez ' +
   'quel député vote comme vous. Sans compte, rien n’est enregistré.'

@@ -638,7 +638,7 @@ function ChatInner() {
                     Vérifiez une affirmation
                   </h2>
                   <p style={{ fontSize: 15, color: txt2, textAlign: 'center', maxWidth: 440, margin: '0 0 8px', lineHeight: 1.65 }}>
-                    Collez une affirmation lue sur les réseaux sociaux — par exemple {VERIFY_EXAMPLE_CLAIM} —
+                    Collez une affirmation lue sur les réseaux sociaux, par exemple {VERIFY_EXAMPLE_CLAIM},
                     et confrontez-la aux votes réellement enregistrés à l&apos;Assemblée Nationale.
                   </p>
                   <button

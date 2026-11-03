@@ -3,7 +3,7 @@ import { api } from '@/lib/api'
 import { partyHexStatic } from '@/lib/utils'
 
 export const runtime = 'edge'
-export const alt = 'Bilan de mandat — MonÉlu'
+export const alt = 'Bilan de mandat - MonÉlu'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 

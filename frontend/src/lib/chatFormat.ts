@@ -77,4 +77,4 @@ export const CONFIDENCE_EXPLANATION =
   "pas l'auto-évaluation du modèle. " +
   'Haute confiance : plusieurs sources très proches de la question. ' +
   'Confiance moyenne : sources partiellement pertinentes. ' +
-  'Basse confiance : peu de sources vraiment pertinentes — vérifiez la réponse à la source.'
+  'Basse confiance : peu de sources vraiment pertinentes - vérifiez la réponse à la source.'

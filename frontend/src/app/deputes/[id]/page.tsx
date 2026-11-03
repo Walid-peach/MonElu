@@ -110,7 +110,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
     {
       value: nonVotant.toLocaleString('fr-FR'),
       label: 'non-votant',
-      tooltip: "Présent·e en séance sans exprimer de vote — distinct de l'abstention, qui est une position exprimée.",
+      tooltip: "Présent·e en séance sans exprimer de vote - distinct de l'abstention, qui est une position exprimée.",
     },
   ] : []
 
@@ -409,7 +409,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
                         Participation aux scrutins solennels
                         <InfoTooltip
-                          text="Les scrutins solennels sont des votes programmés sur l'ensemble d'un texte, où la présence de tous les groupes est attendue — contrairement aux scrutins d'amendements, votés en petit comité. C'est la mesure la plus proche de « présence aux votes qui comptent »."
+                          text="Les scrutins solennels sont des votes programmés sur l'ensemble d'un texte, où la présence de tous les groupes est attendue - contrairement aux scrutins d'amendements, votés en petit comité. C'est la mesure la plus proche de « présence aux votes qui comptent »."
                           href="/methodologie#presence"
                         />
                       </span>
@@ -450,7 +450,7 @@ export default async function DeputyPage({ params }: { params: Promise<{ id: str
                       <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
                         Présence par jour de vote
                         <InfoTooltip
-                          text="Une journée de séance peut contenir plusieurs dizaines de scrutins sur un même texte. Ce taux compte les journées où le·la député·e a voté au moins une fois, plutôt que chaque scrutin séparément — un meilleur indicateur de présence physique."
+                          text="Une journée de séance peut contenir plusieurs dizaines de scrutins sur un même texte. Ce taux compte les journées où le·la député·e a voté au moins une fois, plutôt que chaque scrutin séparément - un meilleur indicateur de présence physique."
                           href="/methodologie#presence"
                         />
                       </span>

@@ -41,7 +41,7 @@ export default async function ChatSharePage({ params }: { params: Promise<{ id: 
   return (
     <main className="max-w-3xl mx-auto px-4 py-10 md:py-14">
       <p className="text-xs uppercase tracking-wide text-[color:var(--dp-text-muted)] mb-4">
-        MonÉlu — réponse partagée
+        MonÉlu - réponse partagée
       </p>
       <ChatAnswerCard result={result} />
       <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">

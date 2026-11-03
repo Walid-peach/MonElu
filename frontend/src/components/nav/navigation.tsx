@@ -109,7 +109,7 @@ export const exploreSections: NavSection[] = [
   {
     title: 'Outils',
     entries: [
-      { kind: 'action', action: 'search', label: 'Rechercher', description: 'Un député, un vote, une question — ⌘K', icon: SearchIcon },
+      { kind: 'action', action: 'search', label: 'Rechercher', description: 'Un député, un vote, une question - ⌘K', icon: SearchIcon },
       { kind: 'external', href: API_DOCS_URL, label: 'API Explorer', description: 'Interroger les données en direct', icon: CodeIcon },
     ],
   },

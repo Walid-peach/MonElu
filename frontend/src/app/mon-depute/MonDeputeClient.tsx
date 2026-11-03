@@ -130,7 +130,7 @@ export function MonDeputeClient() {
           <p style={{ margin: '20px 0 0', fontSize: 14, color: 'var(--dp-text-secondary)' }}>
             Vous ne savez pas qui suivre ?{' '}
             <Link href="/quiz" style={{ color: NAVY, fontWeight: 600 }}>
-              Découvrez quel député vote comme vous →
+              Quel député vote comme vous ? →
             </Link>
           </p>
         </div>

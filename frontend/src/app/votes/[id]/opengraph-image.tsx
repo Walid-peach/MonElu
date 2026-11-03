@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 import { api } from '@/lib/api'
 
 export const runtime = 'edge'
-export const alt = 'Résultat du scrutin — MonÉlu'
+export const alt = 'Résultat du scrutin - MonÉlu'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 

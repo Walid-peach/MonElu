@@ -47,7 +47,7 @@ const sans = DM_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'MonÉlu — Suivez vos députés',
+  title: 'MonÉlu : suivez vos députés',
   // Shared with Organization.description in the JSON-LD below (MON-273) so the
   // meta description and the structured data cannot drift apart.
   description: SITE_DESCRIPTION,
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   // Safari's Smart App Banner (#597), off until the App Store ID is set.
   ...smartAppBannerMetadata(),
   openGraph: {
-    title: 'MonÉlu — Suivez vos députés',
+    title: 'MonÉlu : suivez vos députés',
     description: "Données officielles de l'Assemblée Nationale",
     url: SITE_URL,
     siteName: 'MonÉlu',
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MonÉlu — Suivez vos députés',
+    title: 'MonÉlu : suivez vos députés',
     description: "Données officielles de l'Assemblée Nationale",
   },
 }

@@ -49,7 +49,7 @@ export default async function VerificationPage({ params }: { params: Promise<{ i
   return (
     <main className="max-w-3xl mx-auto px-4 py-10 md:py-14">
       <p className="text-xs uppercase tracking-wide text-[color:var(--dp-text-muted)] mb-4">
-        Vérification MonÉlu — verdict enregistré
+        Vérification MonÉlu - verdict enregistré
       </p>
       <VerdictCard result={result} />
       {/* Below md the two actions stack as full-width targets (canvas "Verdict"). */}
