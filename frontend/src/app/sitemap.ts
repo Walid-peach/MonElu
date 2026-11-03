@@ -86,6 +86,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/votes`, changeFrequency: 'daily', priority: 0.9 },
     // The forward view (MON-213) - rewritten daily, like /votes.
     { url: `${SITE_URL}/agenda`, changeFrequency: 'daily', priority: 0.7 },
+    // Bill pages (#370); the per-bill URLs and their SEO are #372.
+    { url: `${SITE_URL}/lois`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/mon-depute`, changeFrequency: 'monthly', priority: 0.6 },
     // Installation help for the web app (#595).
     { url: `${SITE_URL}/application`, changeFrequency: 'monthly', priority: 0.4 },

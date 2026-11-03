@@ -484,6 +484,87 @@ export class ApiError extends Error {
   }
 }
 
+
+// Bill pages (#370, ADR-035): `GET /lois` and `GET /lois/{dossier_uid}`.
+export type LoiScrutin = {
+  vote_id: string
+  voted_at: string | null
+  vote_title: string | null
+  scrutin_kind: string | null
+  result: string | null
+  votes_for: number | null
+  votes_against: number | null
+  abstentions: number | null
+  total_voters?: number | null
+  summary_plain?: string | null
+  summary_basis?: string | null
+  theme?: string | null
+  acte_uid?: string | null
+}
+
+export type LoiActe = {
+  acte_uid: string
+  parent_uid: string | null
+  depth: number
+  ordinal: number
+  code_acte: string
+  libelle: string | null
+  date_acte: string | null
+  statut_label?: string | null
+  scrutins: LoiScrutin[]
+  amendement_count: number
+  article_count: number
+}
+
+export type LoiDetail = {
+  dossier_uid: string
+  titre: string | null
+  procedure_label: string | null
+  initiateur: string | null
+  status: string | null
+  status_label: string | null
+  current_stage: string | null
+  parcours_start: string | null
+  parcours_end: string | null
+  an_dossier_url: string | null
+  scrutin_coverage_start: string | null
+  parcours_predates_coverage: boolean | null
+  first_scrutin_at: string | null
+  amendement_count: number
+  article_count: number
+  parcours: LoiActe[]
+  unattached_scrutins: LoiScrutin[]
+  unattached_collapsed_count: number
+}
+
+export type LoiListItem = {
+  dossier_uid: string
+  titre: string | null
+  status: string | null
+  status_label: string | null
+  current_stage: string | null
+  parcours_start: string | null
+  parcours_end: string | null
+  last_scrutin_at: string | null
+  scrutin_count: number
+  headline_scrutin_count: number
+  theme: string | null
+  lois_url: string
+}
+
+export type LoiListResponse = {
+  total: number
+  limit: number
+  offset: number
+  items: LoiListItem[]
+}
+
+export type LoiAmendementsResponse = {
+  dossier_uid: string
+  total: number
+  items: LoiScrutin[]
+}
+
 /**
  * `.catch(nullIfMissing)` on a detail page's primary fetch: the resource is
  * genuinely absent, so the page should call `notFound()`. Anything else -
@@ -663,6 +744,20 @@ export const api = {
       apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, {
         revalidate: DAILY_REVALIDATE_SECONDS,
         tags: [DEPUTIES_TAG, MARTS_TAG, POSITIONS_TAG],
+      }),
+  },
+  lois: {
+    // A bill page reads the parcours (dossier ingestion) and its scrutins and
+    // summaries, so it rides the families that change with them.
+    list: () =>
+      apiFetch<LoiListResponse>('/lois?limit=200', {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [VOTES_TAG, VOTE_SUMMARIES_TAG, MARTS_TAG],
+      }),
+    get: (uid: string) =>
+      apiFetch<LoiDetail>(`/lois/${encodeURIComponent(uid)}`, {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [VOTES_TAG, VOTE_SUMMARIES_TAG, MARTS_TAG],
       }),
   },
   groups: {

@@ -15,6 +15,7 @@ import { join } from 'node:path'
 
 import { departmentName } from '@/lib/departments'
 import { GROUP_ENTRIES } from '@/lib/groups'
+import { DOSSIER_STAGES, DOSSIER_STATUSES } from '@/lib/lois'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { POS } from '@/lib/vote-position'
 
@@ -48,5 +49,10 @@ describe('reference data parity', () => {
     for (const { key, label } of rows) {
       expect(POS[key as keyof typeof POS].label).toBe(label)
     }
+  })
+
+  it('has the same bill statuses and reading stages as the API (#370)', () => {
+    expect(DOSSIER_STATUSES).toEqual(read('dossier_statuses.json'))
+    expect(DOSSIER_STAGES).toEqual(read('dossier_stages.json'))
   })
 })
