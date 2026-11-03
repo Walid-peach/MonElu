@@ -1,5 +1,5 @@
 import type { LoiActe } from '@/lib/api'
-import { collapsedVotesLabel, hasHeadlineScrutin, parcoursSections, stageTitle, statusLabel } from '@/lib/lois'
+import { billPath, collapsedVotesLabel, hasHeadlineScrutin, parcoursSections, stageTitle, statusLabel } from '@/lib/lois'
 
 function acte(o: Partial<LoiActe> & Pick<LoiActe, 'acte_uid' | 'depth' | 'ordinal' | 'code_acte'>): LoiActe {
   return {
@@ -59,5 +59,13 @@ describe('labels', () => {
 
   it('knows when a bill has no headline scrutin yet', () => {
     expect(hasHeadlineScrutin({ parcours, unattached_scrutins: [] })).toBe(false)
+  })
+})
+
+describe('billPath (#371)', () => {
+  it('links only a dossier the API says has a page, on the current host', () => {
+    expect(billPath({ dossier_uid: 'DLR5L17N1', lois_url: 'https://mon-elu.vercel.app/lois/DLR5L17N1' })).toBe('/lois/DLR5L17N1')
+    expect(billPath({ dossier_uid: 'DLR5L17N2', lois_url: null })).toBeNull()
+    expect(billPath(null)).toBeNull()
   })
 })

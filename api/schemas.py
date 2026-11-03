@@ -692,6 +692,18 @@ class GroupDetail(_Base):
 # ---------------------------------------------------------------------------
 
 
+class VoteDossierRef(_Base):
+    """The bill a scrutin belongs to, on GET /votes/{vote_id} (#369) and its list items (#371)."""
+
+    dossier_uid: str
+    titre: Optional[str] = None
+    status: Optional[str] = None
+    lois_url: Optional[str] = Field(
+        default=None,
+        description="MonÉlu bill page; null when the dossier has no page (no row, or no scrutin)",
+    )
+
+
 class VoteSummary(_Base):
     """Lightweight vote — used in list responses."""
 
@@ -734,6 +746,10 @@ class VoteSummary(_Base):
         ),
     )
     theme: Optional[str] = None
+    dossier_id: Optional[str] = None
+    dossier: Optional[VoteDossierRef] = Field(
+        default=None, description="The scrutin's bill; null when dossier_id is absent"
+    )
 
 
 class VotePosition(_Base):
@@ -743,18 +759,6 @@ class VotePosition(_Base):
     full_name: str
     party_short: Optional[str] = None
     position: str
-
-
-class VoteDossierRef(_Base):
-    """The bill a scrutin belongs to, embedded in GET /votes/{vote_id} (#369)."""
-
-    dossier_uid: str
-    titre: Optional[str] = None
-    status: Optional[str] = None
-    lois_url: Optional[str] = Field(
-        default=None,
-        description="MonÉlu bill page; null when the dossier has no page (no row, or no scrutin)",
-    )
 
 
 class VoteGroupParticipation(_Base):
@@ -856,10 +860,6 @@ class VoteDetail(VoteSummary):
         default=None,
         description="The scrutin's official page on assemblee-nationale.fr; null when the id "
         "is not an AN scrutin uid (#617)",
-    )
-    dossier_id: Optional[str] = None
-    dossier: Optional[VoteDossierRef] = Field(
-        default=None, description="The scrutin's bill; null when dossier_id is absent"
     )
     ingested_at: Optional[datetime] = None
     pct_pour: Optional[float] = Field(

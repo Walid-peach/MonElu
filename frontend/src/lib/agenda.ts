@@ -134,8 +134,11 @@ export function isSubstantive(
   return showsPointType(item.point_type, objet)
 }
 
-/** Where an item points: its scrutin once one exists, else the AN dossier. */
-export function agendaItemHref(item: Pick<AgendaItem, 'vote_id' | 'dossier_url'>): string | null {
+/** Where an item points: its scrutin once one exists, else its bill page (#371), else the AN dossier. */
+export function agendaItemHref(
+  item: Pick<AgendaItem, 'vote_id' | 'dossier_url' | 'dossier_id' | 'lois_url'>,
+): string | null {
   if (item.vote_id) return `/votes/${item.vote_id}`
+  if (item.dossier_id && item.lois_url) return `/lois/${encodeURIComponent(item.dossier_id)}`
   return item.dossier_url ?? null
 }

@@ -5,6 +5,7 @@ import type { LoadingPhase } from '@/lib/loadingPolicy'
 import { themeColors } from '@/lib/utils'
 import { Pill, PhonePageHeader, ResultBadge, SplitBar, cardClass } from '@/components/phone/kit'
 import { SummaryTag } from '@/components/SummaryLabel'
+import { BillLink } from '@/components/BillLink'
 
 function shortDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -124,6 +125,7 @@ export function VotesMobile({
                     <span>{v.votes_for} pour · {v.votes_against} contre</span>
                   </span>
                 </Link>
+                <BillLink vote={v} className="mt-1.5 block px-1 text-[13px] font-semibold text-[color:var(--dp-red)]" />
               </li>
             )
           })}

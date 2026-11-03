@@ -956,7 +956,7 @@
           "Votes"
         ],
         "summary": "List scrutins, with full-text search and result / theme / kind filters",
-        "description": "Recorded votes of the 17th legislature, newest first.\n\nThe entry point for anything about a bill or a vote: search here, then pass\n`vote_id` to `/votes/{vote_id}` for the per-deputy breakdown.\n\nProduction holds scrutins from **2025-07-01** onward. A question about an\nearlier vote has no answer in this dataset.\n\n`search` is Postgres full-text search over the title and the plain-French\nsummary, with French stemming - pass words, not a sentence, and expect no\nfuzzy matching on names. `result` takes the accented French values `adopté`\nor `rejeté`.\n\n`kind` keeps only scrutins of the given kinds: `ensemble` is a vote on a whole\ntext, `motion` a motion (censure, rejet préalable…), `amendement` and\n`article` the votes on one amendment or one article, which are most of the\ndossier-tagged scrutins, and `autre` everything else (including a scrutin not\nyet classified). `kind=ensemble` therefore lists the votes on whole texts.\nAn unknown value is a 422.\n\nTwo paging modes, and they do not mix. `offset` is capped at 2000; past that\nceiling, pass the `next_cursor` from the previous response as `before=`,\nwhich has no depth limit and silently overrides `offset` when set. `total` is\nthe full filtered count either way. A null `next_cursor` means the last page.\n\nEvery scrutin is a recorded vote. Much of the Assemblée's business passes by\nshow of hands and never appears here at all, so a bill's absence is not\nevidence it was not debated.",
+        "description": "Recorded votes of the 17th legislature, newest first.\n\nThe entry point for anything about a bill or a vote: search here, then pass\n`vote_id` to `/votes/{vote_id}` for the per-deputy breakdown.\n\nProduction holds scrutins from **2025-07-01** onward. A question about an\nearlier vote has no answer in this dataset.\n\n`search` is Postgres full-text search over the title and the plain-French\nsummary, with French stemming - pass words, not a sentence, and expect no\nfuzzy matching on names. `result` takes the accented French values `adopté`\nor `rejeté`.\n\n`kind` keeps only scrutins of the given kinds: `ensemble` is a vote on a whole\ntext, `motion` a motion (censure, rejet préalable…), `amendement` and\n`article` the votes on one amendment or one article, which are most of the\ndossier-tagged scrutins, and `autre` everything else (including a scrutin not\nyet classified). `kind=ensemble` therefore lists the votes on whole texts.\nAn unknown value is a 422.\n\nTwo paging modes, and they do not mix. `offset` is capped at 2000; past that\nceiling, pass the `next_cursor` from the previous response as `before=`,\nwhich has no depth limit and silently overrides `offset` when set. `total` is\nthe full filtered count either way. A null `next_cursor` means the last page.\n\nEvery scrutin is a recorded vote. Much of the Assemblée's business passes by\nshow of hands and never appears here at all, so a bill's absence is not\nevidence it was not debated.\n\nEach item carries `dossier`, the bill the AN tagged it with (only from\nMarch 2026, ADR-035): `lois_url` is MonÉlu's bill page, null when the bill\nhas none. Null when the scrutin names no bill.",
         "operationId": "listVotes",
         "parameters": [
           {
@@ -6968,6 +6968,14 @@
             "title": "Theme",
             "type": "string"
           },
+          "dossier_id": {
+            "title": "Dossier Id",
+            "type": "string"
+          },
+          "dossier": {
+            "description": "The scrutin's bill; null when dossier_id is absent",
+            "$ref": "#/components/schemas/VoteDossierRef"
+          },
           "vote_type": {
             "title": "Vote Type",
             "type": "string"
@@ -6976,14 +6984,6 @@
             "title": "An Url",
             "description": "The scrutin's official page on assemblee-nationale.fr; null when the id is not an AN scrutin uid (#617)",
             "type": "string"
-          },
-          "dossier_id": {
-            "title": "Dossier Id",
-            "type": "string"
-          },
-          "dossier": {
-            "description": "The scrutin's bill; null when dossier_id is absent",
-            "$ref": "#/components/schemas/VoteDossierRef"
           },
           "ingested_at": {
             "title": "Ingested At",
@@ -7117,7 +7117,7 @@
           "dossier_uid"
         ],
         "title": "VoteDossierRef",
-        "description": "The bill a scrutin belongs to, embedded in GET /votes/{vote_id} (#369)."
+        "description": "The bill a scrutin belongs to, on GET /votes/{vote_id} (#369) and its list items (#371)."
       },
       "VoteGroupParticipation": {
         "properties": {
@@ -7332,6 +7332,14 @@
           "theme": {
             "title": "Theme",
             "type": "string"
+          },
+          "dossier_id": {
+            "title": "Dossier Id",
+            "type": "string"
+          },
+          "dossier": {
+            "description": "The scrutin's bill; null when dossier_id is absent",
+            "$ref": "#/components/schemas/VoteDossierRef"
           }
         },
         "type": "object",

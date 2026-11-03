@@ -72,6 +72,15 @@ export type Vote = {
   summary_plain?: string | null
   summary_basis?: string | null
   theme?: string | null
+  dossier?: VoteDossierRef | null
+}
+
+/** The bill a scrutin belongs to (#369, #371); `lois_url` is set only when MonÉlu has its page. */
+export type VoteDossierRef = {
+  dossier_uid: string
+  titre: string | null
+  status: string | null
+  lois_url: string | null
 }
 
 // The turnout `GET /votes/{id}` computes (#627): every recorded position over
@@ -296,6 +305,9 @@ export type AgendaItem = {
   theme: string | null
   dossier_id: string | null
   dossier_url: string | null
+  dossier_title?: string | null
+  // The bill's MonÉlu page, null unless it has one (ADR-035, #511).
+  lois_url?: string | null
   // Set once a scrutin exists for this item's dossier: the item is settled,
   // not upcoming, and links to its MonÉlu vote page instead of the dossier.
   vote_id: string | null

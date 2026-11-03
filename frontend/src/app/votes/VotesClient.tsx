@@ -12,6 +12,7 @@ import { useLoadingPhase } from '@/lib/loadingPolicy'
 import { VoteRowSkeleton } from './VoteRowSkeleton'
 import { VotesMobile } from './VotesMobile'
 import { SummaryTag } from '@/components/SummaryLabel'
+import { BillLink } from '@/components/BillLink'
 
 const SKELETON_ROW_COUNT = 8
 
@@ -267,7 +268,8 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                 const tc = themeColors(vote.theme ?? null)
                 const adopted = vote.result === 'adopté'
                 return (
-                  <Link key={vote.vote_id} href={`/votes/${vote.vote_id}`}
+                  <div key={vote.vote_id}>
+                  <Link href={`/votes/${vote.vote_id}`}
                     className="grid grid-cols-1 sm:grid-cols-[100px_1fr_180px_260px_36px] gap-1.5 sm:gap-4 px-4 sm:px-[26px] py-4 sm:py-[18px]"
                     style={{ borderBottom: '1px solid var(--dp-track-bg)', alignItems: 'center', textDecoration: 'none', background: 'var(--dp-card-bg)', transition: 'background 0.12s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--dp-header-bg)')}
@@ -328,6 +330,9 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
                     {/* Chevron */}
                     <svg className="hidden sm:block" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dp-underline)" strokeWidth="2.2" strokeLinecap="round"><path d="m9 6 6 6-6 6"/></svg>
                   </Link>
+                  <BillLink vote={vote} className="block px-4 pb-3 sm:px-[26px] text-[13px] font-semibold"
+                    style={{ color: 'var(--dp-red)', background: 'var(--dp-card-bg)', borderBottom: '1px solid var(--dp-track-bg)', marginTop: -1 }} />
+                  </div>
                 )
               })
             )}

@@ -96,6 +96,15 @@ describe('agendaItemHref', () => {
     expect(agendaItemHref(item({ vote_id: 'VTANR5L17V1234' }))).toBe('/votes/VTANR5L17V1234')
   })
 
+  it('opens the bill page when the dossier has one and no scrutin exists yet (#371)', () => {
+    expect(agendaItemHref(item({ dossier_id: 'DLR5L17N52985', lois_url: 'https://x/lois/DLR5L17N52985' }))).toBe(
+      '/lois/DLR5L17N52985',
+    )
+    expect(
+      agendaItemHref(item({ vote_id: 'VTANR5L17V1', dossier_id: 'DLR5L17N52985', lois_url: 'https://x/lois/DLR5L17N52985' })),
+    ).toBe('/votes/VTANR5L17V1')
+  })
+
   it('falls back to the official AN dossier', () => {
     expect(agendaItemHref(item())).toContain('assemblee-nationale.fr')
   })

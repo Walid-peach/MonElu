@@ -17,6 +17,8 @@ import { GroupBreakdownMobile, VoteHeroMobile } from './VoteMobile'
 import { VoteParticipationCard } from './VoteParticipation'
 import type { VoteParticipation } from '@/lib/api'
 import { SummaryDisclosure } from '@/components/SummaryLabel'
+import { billPath } from '@/lib/lois'
+import type { VoteDossierRef } from '@/lib/api'
 
 // The 3D replay is the default view. It is client-only and loaded as its own
 // chunk after hydration, so the vote page's server HTML and first bundle stay as they were.
@@ -74,6 +76,7 @@ interface Props {
   summary: string | null
   summaryBasis: string | null
   dossierId: string | null
+  dossier: VoteDossierRef | null
   theme: string | null
   votesFor: number
   votesAgainst: number
@@ -118,7 +121,7 @@ function shortDate(dateStr: string): string {
 
 export function VoteDetailClient(props: Props) {
   const {
-    voteId, voteTitle, result, votedAt, summary, summaryBasis, dossierId, theme,
+    voteId, voteTitle, result, votedAt, summary, summaryBasis, dossierId, dossier, theme,
     votesFor, votesAgainst, abstentions, majorityRequired, participation, voteType,
     pourPct, contrePct, abstPct,
     groups, dissidents, related, apiUrl, deputyLookup, hemicycleDeputies,
@@ -175,6 +178,8 @@ export function VoteDetailClient(props: Props) {
   // Shared with the vote's JSON-LD (MON-267): the link a reader clicks and the
   // `Event.about` a crawler reads must be the same URL, guard included.
   const dossierUrl = anDossierUrl(dossierId)
+  // The internal page is gated on the API's dossier block, never on re-parsing dossier_id (#371).
+  const billUrl = billPath(dossier)
   const scrutinUrl = anScrutinUrl(voteId)
 
   return (
@@ -225,6 +230,8 @@ export function VoteDetailClient(props: Props) {
         abstPct={abstPct}
         majorityRequired={majorityRequired}
         dossierUrl={dossierUrl}
+        billUrl={billUrl}
+        billTitle={dossier?.titre ?? null}
       />
 
       {/* ── Hero ── */}
@@ -278,7 +285,12 @@ export function VoteDetailClient(props: Props) {
                 </div>
               )}
 
-              {dossierUrl && (
+              {billUrl ? (
+                <Link href={billUrl}
+                  style={{ display: 'inline-block', marginTop: 14, fontSize: 14, fontWeight: 600, color: 'var(--dp-red)', textDecoration: 'none' }}>
+                  {dossier?.titre ? `Ce vote fait partie du texte « ${dossier.titre} »` : 'Ce vote fait partie d\u2019un texte'} - voir le parcours complet →
+                </Link>
+              ) : dossierUrl && (
                 <a href={dossierUrl} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-flex', alignItems: 'center', marginTop: 14, fontSize: 14, fontWeight: 600, color: 'var(--dp-red)', textDecoration: 'none' }}>
                   Voir le dossier officiel →

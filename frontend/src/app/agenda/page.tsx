@@ -194,7 +194,7 @@ function Row({ item, last }: { item: AgendaItem; last: boolean }) {
   const { lead, official } = agendaHeadline(item)
   const href = agendaItemHref(item)
   const time = formatSittingTime(item.sitting_start)
-  const external = !item.vote_id
+  const external = !!href && !href.startsWith('/')
 
   const body = (
     <>
@@ -261,7 +261,7 @@ function Row({ item, last }: { item: AgendaItem; last: boolean }) {
 
       {href && (
         <div style={{ fontSize: 13, fontWeight: 600, color: RED, marginTop: 10 }}>
-          {item.vote_id ? 'Voir le scrutin →' : 'Dossier officiel ↗'}
+          {item.vote_id ? 'Voir le scrutin →' : external ? 'Dossier officiel ↗' : 'Parcours du texte →'}
         </div>
       )}
     </>

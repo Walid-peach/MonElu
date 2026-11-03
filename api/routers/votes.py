@@ -12,7 +12,7 @@ from api.an_links import an_scrutin_url
 from api.csv_export import csv_response
 from api.db import MART_UNAVAILABLE, get_conn
 from api.limiter import limiter, tiered_limit
-from api.routers.lois import SQL_DOSSIER_REF, lois_url
+from api.routers.lois import SQL_DOSSIER_REF, SQL_DOSSIER_REFS, lois_url
 from api.schemas import (
     VoteDetail,
     VoteDossierRef,
@@ -216,6 +216,10 @@ def list_votes(
     Every scrutin is a recorded vote. Much of the Assemblée's business passes by
     show of hands and never appears here at all, so a bill's absence is not
     evidence it was not debated.
+
+    Each item carries `dossier`, the bill the AN tagged it with (only from
+    March 2026, ADR-035): `lois_url` is MonÉlu's bill page, null when the bill
+    has none. Null when the scrutin names no bill.
     """
     # Decode before opening a connection so a bad cursor fails fast with 422.
     cursor_key = _decode_cursor(before) if before else None
@@ -299,7 +303,7 @@ def list_votes(
                     sql.SQL("""
                         SELECT vote_id, voted_at, vote_title, result,
                                votes_for, votes_against, abstentions, total_voters,
-                               summary_plain, theme,
+                               summary_plain, theme, dossier_id,
                                (SELECT r.summary_basis FROM votes r
                                 WHERE r.vote_id = m.vote_id) AS summary_basis
                         FROM analytics_marts.mart_vote_summary m {}
@@ -308,6 +312,7 @@ def list_votes(
                     page_params + [limit, effective_offset],
                 )
                 rows = cur.fetchall()
+                _attach_dossiers(cur, rows)
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
 
@@ -345,7 +350,7 @@ def latest_votes(request: Request):
                     """
                     SELECT vote_id, voted_at, vote_title, result,
                            votes_for, votes_against, abstentions, total_voters,
-                           summary_plain, theme,
+                           summary_plain, theme, dossier_id,
                            (SELECT r.summary_basis FROM votes r
                             WHERE r.vote_id = m.vote_id) AS summary_basis
                     FROM analytics_marts.mart_vote_summary m
@@ -354,6 +359,7 @@ def latest_votes(request: Request):
                     """
                 )
                 rows = cur.fetchall()
+                _attach_dossiers(cur, rows)
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
     return [VoteSummary(**r) for r in rows]
@@ -503,6 +509,18 @@ def get_vote(request: Request, vote_id: str):
         "positions": [VotePosition(**r) for r in position_rows],
     }
     return VoteDetail(**fields)
+
+
+def _attach_dossiers(cur, rows: list[dict]) -> None:
+    """Give each listed vote its bill block, in one query for the whole page (#371)."""
+    uids = sorted({r["dossier_id"] for r in rows if r.get("dossier_id")})
+    found = {}
+    if uids:
+        cur.execute(SQL_DOSSIER_REFS, {"dossier_uids": uids})
+        found = {d["dossier_uid"]: d for d in cur.fetchall()}
+    for r in rows:
+        uid = r.get("dossier_id")
+        r["dossier"] = _dossier_ref(uid, found.get(uid)) if uid else None
 
 
 def _dossier_ref(dossier_id: str, row: Optional[dict]) -> VoteDossierRef:
