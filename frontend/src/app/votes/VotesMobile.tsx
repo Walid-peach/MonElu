@@ -99,8 +99,9 @@ export function VotesMobile({
           {votes.map(v => {
             const tc = themeColors(v.theme ?? null)
             return (
-              <li key={v.vote_id}>
-                <Link href={`/votes/${v.vote_id}`} className={`${cardClass} flex flex-col gap-2.5 p-4`}>
+              // The card holds two sibling links, the vote and its bill (#371), never one inside the other.
+              <li key={v.vote_id} className={`${cardClass} overflow-hidden`}>
+                <Link href={`/votes/${v.vote_id}`} className="flex flex-col gap-2.5 p-4">
                   <span className="flex items-center justify-between gap-2">
                     <span suppressHydrationWarning className="font-mono text-xs text-[color:var(--dp-text-secondary)]">
                       {shortDate(v.voted_at)}
@@ -125,7 +126,7 @@ export function VotesMobile({
                     <span>{v.votes_for} pour · {v.votes_against} contre</span>
                   </span>
                 </Link>
-                <BillLink vote={v} className="mt-1.5 block px-1 text-[13px] font-semibold text-[color:var(--dp-red)]" />
+                <BillLink vote={v} className="block border-t border-[color:var(--dp-border)] px-4 py-2.5 text-[13px] font-semibold text-[color:var(--dp-red)]" />
               </li>
             )
           })}
