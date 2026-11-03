@@ -1,6 +1,11 @@
 import { render } from '@testing-library/react'
 import MethodologiePage from '@/app/methodologie/page'
 import AProposPage from '@/app/a-propos/page'
+
+jest.mock('@/lib/api', () => ({
+  ...jest.requireActual('@/lib/api'),
+  api: { health: () => Promise.resolve({ votes: 6618, positions: 993295 }) },
+}))
 import { METHODOLOGIE_FAQ, A_PROPOS_FAQ, type FaqItem } from '@/lib/faq'
 import { buildFaqJsonLd } from '@/lib/seo'
 
@@ -92,8 +97,8 @@ describe('/methodologie FAQ markup', () => {
 })
 
 describe('/a-propos FAQ markup', () => {
-  it('emits an FAQPage block', () => {
-    const { container } = render(<AProposPage />)
+  it('emits an FAQPage block', async () => {
+    const { container } = render(await AProposPage())
     const faq = jsonLdBlocks(container).find(block => block['@type'] === 'FAQPage')
     expect(faq).toBeDefined()
     expect(faq!.mainEntity).toHaveLength(A_PROPOS_FAQ.length)
@@ -101,8 +106,8 @@ describe('/a-propos FAQ markup', () => {
 
   it.each(A_PROPOS_FAQ.map(item => [item.id, item] as const))(
     '#%s shows both its question and its answer',
-    (_id, item) => {
-      const { container } = render(<AProposPage />)
+    async (_id, item) => {
+      const { container } = render(await AProposPage())
       expect(headingOf(container, item.id)).toBe(normalize(item.question))
       expect(visibleProse(container, item.id)).toContain(normalize(item.answer))
     }

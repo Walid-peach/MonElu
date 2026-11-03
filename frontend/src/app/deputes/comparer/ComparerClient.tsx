@@ -380,7 +380,7 @@ export function ComparerClient() {
           {/* Stat rows */}
           {noPartyForComparison ? (
             <div style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, padding: '24px 26px', color: 'var(--dp-text-secondary)', fontSize: 14 }}>
-              {deputyA.full_name} n&apos;est rattaché·e à aucun groupe politique — la comparaison par groupe n&apos;est pas disponible. Essayez la moyenne nationale, ou comparez à un autre député.
+              {deputyA.full_name} n&apos;est rattaché·e à aucun groupe politique - la comparaison par groupe n&apos;est pas disponible. Essayez la moyenne nationale, ou comparez à un autre député.
             </div>
           ) : (
             <div className="px-4 py-2.5 md:px-[26px]" style={{ background: 'var(--dp-card-bg)', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 1px 3px var(--dp-shadow-sm)' }}>

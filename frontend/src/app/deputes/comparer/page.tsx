@@ -125,17 +125,17 @@ function ComparerSummary() {
       </h2>
       <ul style={{ margin: 0, paddingLeft: 20 }}>
         <li>
-          <Link href="/deputes">Tous les députés</Link> — chercher par nom, groupe ou département
+          <Link href="/deputes">Tous les députés</Link> - chercher par nom, groupe ou département
         </li>
         <li>
-          <Link href="/deputes/tableau">Tableau des bilans</Link> — les mêmes indicateurs pour les
+          <Link href="/deputes/tableau">Tableau des bilans</Link> - les mêmes indicateurs pour les
           577 député·e·s, triables et exportables en CSV
         </li>
         <li>
-          <Link href="/votes">Tous les scrutins</Link> — le détail vote par vote
+          <Link href="/votes">Tous les scrutins</Link> - le détail vote par vote
         </li>
         <li>
-          <Link href="/methodologie">Méthodologie</Link> — comment chaque indicateur est calculé, et
+          <Link href="/methodologie">Méthodologie</Link> - comment chaque indicateur est calculé, et
           ce qu&apos;il ne dit pas
         </li>
       </ul>

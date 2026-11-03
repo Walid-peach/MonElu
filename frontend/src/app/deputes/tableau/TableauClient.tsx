@@ -113,7 +113,7 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
           </h1>
           <p style={{ margin: '14px 0 0', fontSize: 16, lineHeight: 1.6, color: 'var(--dp-text-secondary)', maxWidth: 620 }}>
             Les {initial.total} scorecards des députés sur un seul écran. Cliquez sur une colonne
-            pour trier, filtrez par nom, groupe ou département — ou emportez tout en CSV.
+            pour trier, filtrez par nom, groupe ou département - ou emportez tout en CSV.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:items-center">
@@ -248,7 +248,7 @@ export function TableauClient({ initial }: { initial: ScorecardList }) {
 
           <p style={{ margin: '14px 4px 0', fontSize: 12.5, color: 'var(--dp-text-muted)', lineHeight: 1.6 }}>
             Données : Assemblée nationale (Licence Ouverte 2.0), via MonÉlu. La « présence » mesure
-            la participation aux scrutins publics, pas la présence physique en séance — voir la{' '}
+            la participation aux scrutins publics, pas la présence physique en séance - voir la{' '}
             <Link href="/methodologie" style={{ color: 'var(--dp-text-secondary)' }}>méthodologie</Link>.
           </p>
         </div>

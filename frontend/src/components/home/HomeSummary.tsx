@@ -121,8 +121,9 @@ export function HomeSummary({ stats }: { stats: AssemblyStats }) {
 
         <p style={textStyle}>
           Toutes les données proviennent du portail open data de l&apos;Assemblée nationale et sont
-          redistribuées sous <strong>Licence Ouverte 2.0 (Etalab)</strong>, sans retraitement
-          éditorial : MonÉlu ne note pas les députés et ne prend pas position. Le calcul de chaque
+          redistribuées sous <strong>Licence Ouverte 2.0 (Etalab)</strong>. Les résumés en langage
+          clair sont écrits par IA à partir du texte officiel et signalés comme tels ; MonÉlu ne note
+          pas les députés et ne prend pas position. Le calcul de chaque
           statistique affichée est décrit sur la page{' '}
           <Link href="/methodologie" style={linkStyle}>
             méthodologie

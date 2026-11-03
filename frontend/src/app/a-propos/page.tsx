@@ -3,27 +3,40 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { JsonLd } from '@/components/JsonLd'
 import { A_PROPOS_FAQ } from '@/lib/faq'
+import { api } from '@/lib/api'
+import { EMBEDDING_MODEL, LLM_MODEL, LLM_PROVIDER } from '@/lib/aiModels'
 import { buildFaqJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
-  title: 'À propos — MonÉlu',
+  title: 'À propos - MonÉlu',
   description:
     "Comment MonÉlu collecte, transforme et publie les données de vote de l'Assemblée Nationale française.",
   alternates: { canonical: canonicalUrl('/a-propos') },
 }
 
-const heroStats = [
-  { label: 'Députés suivis en temps réel', value: '577' },
-  { label: 'Scrutins publics indexés', value: '1 200+' },
-  { label: 'Chunks RAG indexés', value: '3 741' },
-  { label: 'Mise à jour (jours ouvrés)', value: 'Quotidien' },
-]
+// One day, like every ISR interval (GH #352); the figures come from /health,
+// whose tag the post-ingestion webhook purges.
+export const revalidate = 86400
+
+function count(value: unknown): string | null {
+  return typeof value === 'number' ? value.toLocaleString('fr-FR') : null
+}
+
+/** Every figure comes from the API; a figure written here goes stale (#635). */
+function heroStats(health: Record<string, unknown> | null) {
+  return [
+    { label: 'Sièges de députés', value: '577' },
+    { label: 'Scrutins publics enregistrés', value: count(health?.votes) },
+    { label: 'Positions de vote enregistrées', value: count(health?.positions) },
+    { label: 'Mise à jour', value: 'Chaque jour ouvré' },
+  ].filter((s): s is { label: string; value: string } => s.value !== null)
+}
 
 const valeurs = [
   {
-    title: 'Transparence totale',
-    desc: "Chaque donnée est accompagnée de sa source, de sa date d'ingestion et du lien vers le document officiel.",
+    title: 'Chaque vote renvoie à sa source',
+    desc: "Chaque scrutin renvoie vers sa page officielle sur le site de l'Assemblée nationale, et chaque fiche indique la date de la dernière mise à jour.",
     icon: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   },
   {
@@ -32,8 +45,8 @@ const valeurs = [
     icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
   },
   {
-    title: 'Mise à jour continue',
-    desc: "Pipeline automatisé via GitHub Actions, actif chaque jour ouvré à 06h00 UTC. Délai d'ingestion inférieur à quelques minutes.",
+    title: 'Mise à jour chaque jour ouvré',
+    desc: "Les données de l'Assemblée sont relues chaque jour ouvré à 6 h UTC, et le site se met à jour dans la foulée.",
     icon: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
   },
   {
@@ -42,13 +55,13 @@ const valeurs = [
     icon: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M6 9v6"/><path d="M9 6h6"/><path d="m15 15 2.1 2.1"/>',
   },
   {
-    title: 'Zéro interprétation',
-    desc: "Nous ne commentons pas, n'annotons pas, n'infèrons pas. Les votes sont des votes. Les absences sont des absences.",
+    title: 'Les résumés sont signalés',
+    desc: "Les votes viennent de l'Assemblée. Les résumés sont générés par IA à partir du texte officiel et signalés comme tels ; seul le scrutin officiel fait foi.",
     icon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
   },
   {
-    title: 'Accessibilité universelle',
-    desc: "Interface citoyenne, documentation développeur, API ouverte. Un seul jeu de données, trois portes d'entrée.",
+    title: 'Trois façons de lire les données',
+    desc: "Le site, une API REST documentée et des exports CSV. Le niveau d'accessibilité du site est détaillé dans sa déclaration d'accessibilité.",
     icon: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
   },
 ]
@@ -81,7 +94,7 @@ const pipeline = [
   {
     step: '05 · UI',
     title: 'Interface',
-    desc: 'Application Next.js App Router avec RAG (Groq llama-3.3-70b) pour les questions en langage naturel.',
+    desc: `Application Next.js. Les questions en langage naturel passent par une recherche sémantique et le modèle ${LLM_MODEL} (${LLM_PROVIDER}).`,
     tags: ['Next.js', 'RAG', 'Groq'],
   },
 ]
@@ -89,58 +102,55 @@ const pipeline = [
 const techCards = [
   { cat: 'Ingestion', name: 'Python scripts', desc: "Fetch + upsert quotidien des ZIPs officiels de l'AN avec retry exponentiel." },
   { cat: 'Transformation', name: 'dbt Core', desc: 'Modèles SQL documentés, tests de qualité, lignage de données complet.' },
-  { cat: 'Recherche IA', name: 'Groq llama-3.3-70b', desc: 'Inférence RAG rapide sur le corpus législatif, temperature=0.2.' },
-  { cat: 'Embeddings', name: 'OpenAI text-embedding-3-small', desc: '3 741 chunks, 1 536 dimensions, ~0,006 $ par ré-indexation complète.' },
+  { cat: 'Recherche IA', name: `${LLM_PROVIDER} ${LLM_MODEL}`, desc: 'Répond aux questions à partir des votes retrouvés, et cite ses sources.' },
+  { cat: 'Embeddings', name: `OpenAI ${EMBEDDING_MODEL}`, desc: 'Vecteurs de 1 536 dimensions, recalculés chaque jour ouvré.' },
   { cat: 'API', name: 'FastAPI', desc: 'API asynchrone, OpenAPI 3.1, psycopg2 direct, rate-limiting slowapi.' },
   { cat: 'Hébergement', name: 'Railway + Supabase', desc: 'Déploiement automatique sur push master. Postgres 15 géré avec pgvector.' },
   { cat: 'CI/CD', name: 'GitHub Actions', desc: 'Ruff, pytest, dbt compile + test sur chaque PR. Ingestion cron quotidienne.' },
   { cat: 'Frontend', name: 'Next.js App Router', desc: 'SSR + streaming, Tailwind, Newsreader/DM Serif, déployé sur Vercel.' },
 ]
 
+// Only what an ingestion script actually reads (scripts/ingest_*.py).
 const sources = [
   {
-    name: 'Assemblée nationale — flux XML',
-    desc: 'Scrutins, positions par député, comptes rendus de séance',
-    status: 'Actif · J+0',
+    name: 'Assemblée nationale - scrutins et députés',
+    desc: 'Scrutins publics, positions de chaque député, mandats et groupes',
+    status: 'Chaque jour ouvré',
     icon: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
   },
   {
-    name: 'data.gouv.fr — open data',
-    desc: 'Données électorales, mandats, circonscriptions',
-    status: 'Actif · J+1',
+    name: 'Assemblée nationale - dossiers législatifs',
+    desc: 'Parcours des textes, amendements et articles votés',
+    status: 'Chaque jour ouvré',
     icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
   },
   {
-    name: 'Légifrance — textes officiels',
-    desc: 'Lois adoptées, Journal officiel, textes en navette',
-    status: 'Actif · J+0',
-    icon: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
-  },
-  {
-    name: "Registre des représentants d'intérêts",
-    desc: "Déclarations HATVP, conflits d'intérêts, patrimoine",
-    status: 'Actif · hebdomadaire',
-    icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    name: 'Assemblée nationale - ordre du jour',
+    desc: 'Points inscrits aux séances publiques à venir',
+    status: 'Chaque jour ouvré',
+    icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
   },
 ]
 
 const freshness = [
   { label: 'Votes en séance', cadence: 'Quotidien' },
   { label: 'Fiches députés', cadence: 'Quotidien' },
-  { label: 'Corpus RAG', cadence: 'Quotidien' },
-  { label: 'Textes de loi', cadence: 'J+1' },
-  { label: 'Données patrimoniales', cadence: 'Hebdomadaire' },
+  { label: 'Index de recherche', cadence: 'Quotidien' },
+  { label: 'Dossiers législatifs', cadence: 'Quotidien' },
+  { label: 'Ordre du jour', cadence: 'Quotidien' },
 ]
 
 const apiFeatures = [
   'Accès complet à 577 fiches de députés avec historique de votes',
-  'Tous les scrutins de la XVIIᵉ législature, filtrables par date et groupe',
+  'Les scrutins publics depuis le 1ᵉʳ juillet 2025, filtrables par thème et par résultat',
   'Ventilation des votes par groupe parlementaire',
   'Recherche sémantique en langage naturel sur le corpus législatif',
   'Rate-limiting transparent · 30 req/min global · documentation OpenAPI',
 ]
 
-export default function AProposPage() {
+export default async function AProposPage() {
+  const health = await api.health().catch(() => null)
+  const stats = heroStats(health)
   return (
     <div style={{ background: 'var(--dp-page-bg)', minHeight: '100vh' }}>
       <JsonLd data={buildFaqJsonLd(A_PROPOS_FAQ)} />
@@ -154,7 +164,7 @@ export default function AProposPage() {
               La démocratie mérite<br />des données <em>en clair</em>.
             </h1>
             <p style={{ fontSize: '18px', lineHeight: 1.65, color: 'var(--dp-text-secondary)', maxWidth: '500px', margin: '0 0 32px' }}>
-              MonÉlu ingère, transforme et sert les données de vote de l&apos;Assemblée nationale à tous les citoyens — sans jargon, sans filtre politique, sans abonnement.
+              MonÉlu publie les votes de l&apos;Assemblée nationale en clair, gratuitement et sans compte : qui a voté quoi, sur quel texte, avec quel résultat.
             </p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <Link href="/deputes" style={{ background: 'var(--dp-active-bg)', color: '#fff', padding: '13px 26px', borderRadius: '8px', fontWeight: 600, fontSize: '15px', textDecoration: 'none' }}>
@@ -176,14 +186,14 @@ export default function AProposPage() {
             <div style={{ fontWeight: 700, fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--dp-text-muted)', marginBottom: '24px' }}>
               Plateforme en chiffres
             </div>
-            {heroStats.map((s) => (
+            {stats.map((s) => (
               <div key={s.label} style={{ padding: '16px 0', borderBottom: '1px solid var(--dp-track-bg)', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '16px' }}>
                 <span style={{ fontSize: '14px', color: 'var(--dp-text-secondary)', lineHeight: 1.35 }}>{s.label}</span>
                 <span className="font-newsreader text-[28px]" style={{ fontWeight: 600, color: 'var(--dp-text)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>{s.value}</span>
               </div>
             ))}
             <div className="font-mono" style={{ paddingTop: '16px', fontSize: '11.5px', color: 'var(--dp-text-muted)' }}>
-              Mise à jour continue · flux officiel AN
+              Données ouvertes de l&apos;Assemblée nationale
             </div>
           </div>
         </div>
@@ -198,13 +208,13 @@ export default function AProposPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <p className="font-newsreader text-[26px]" style={{ fontWeight: 500, lineHeight: 1.5, color: 'var(--dp-text)', margin: 0 }}>
-              &laquo;&nbsp;Les données parlementaires existent — elles sont publiques, officielles, riches. Mais elles sont éparpillées, peu structurées, et inaccessibles au plus grand nombre.&nbsp;&raquo;
+              &laquo;&nbsp;Les votes des députés sont publics, mais répartis entre des milliers de fichiers que presque personne ne lit.&nbsp;&raquo;
             </p>
             <p style={{ fontSize: '16px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
-              MonÉlu est né de ce constat. Nous agrégeons les flux bruts de l&apos;Assemblée nationale, les transformons via un pipeline de données de production, et les restituons sous une forme lisible — pour les citoyens, les journalistes, les chercheurs et les développeurs.
+              MonÉlu est né de ce constat. Le site relit chaque jour ouvré les exports de l&apos;Assemblée nationale et les présente vote par vote, député par député, pour les citoyens, les journalistes et les chercheurs.
             </p>
             <p style={{ fontSize: '16px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: 0 }}>
-              Chaque donnée affichée est traçable jusqu&apos;à sa source officielle. Aucune interprétation, aucune inférence non documentée. Les votes sont des votes. Les absences sont des absences.
+              Chaque vote renvoie vers le scrutin officiel. Les résumés en langage clair sont écrits par IA à partir du texte voté et signalés comme tels ; la méthode de chaque indicateur est décrite sur la page Méthodologie.
             </p>
           </div>
         </div>
@@ -243,7 +253,7 @@ export default function AProposPage() {
               </h2>
             </div>
             <div className="md:text-right" style={{ fontSize: '13.5px', color: 'var(--dp-text-secondary)', maxWidth: '320px', lineHeight: 1.6 }}>
-              Code source ouvert · audit indépendant possible · aucune donnée personnelle collectée
+              Code source public · aucun compte requis pour consulter
             </div>
           </div>
 
@@ -287,7 +297,7 @@ export default function AProposPage() {
             <div className="text-red-civic font-semibold text-xs tracking-[0.18em] uppercase mb-3">Transparence des données</div>
             <h2 className="font-newsreader text-section" style={{ fontWeight: 600, color: 'var(--dp-text)', margin: '0 0 22px', letterSpacing: '-0.015em' }}>D&apos;où viennent les données&nbsp;?</h2>
             <p style={{ fontSize: '16px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: '0 0 36px' }}>
-              Toutes les informations affichées sur MonÉlu proviennent de sources publiques officielles. Nous ne produisons pas de données — nous les structurons, les enrichissons et les rendons accessibles. Chaque entrée est horodatée et traçable.
+              Les votes, les députés et les textes affichés sur MonÉlu viennent des données ouvertes de l&apos;Assemblée nationale. MonÉlu les met en forme, calcule les indicateurs décrits dans la méthodologie et ajoute des résumés signalés.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {sources.map((src) => (
@@ -340,7 +350,7 @@ export default function AProposPage() {
               Une API REST pensée pour être utilisée.
             </h2>
             <p style={{ fontSize: '16px', lineHeight: 1.7, color: 'var(--dp-text-secondary)', margin: '0 0 32px' }}>
-              Accédez à l&apos;intégralité des données MonÉlu par programme. Députés, votes, scrutins — tout est exposé, documenté, versionné.
+              Les mêmes données que le site, par programme : députés, scrutins et positions, avec une documentation OpenAPI.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
               {apiFeatures.map((af) => (

@@ -175,7 +175,7 @@ function VoteBreakdown({
                     ? agrees
                       ? 'En accord avec ' + best.full_name
                       : 'En désaccord avec ' + best.full_name
-                    : `Position non comparable — ${best.full_name} n'a pas voté pour ou contre`}
+                    : `Position non comparable - ${best.full_name} n'a pas voté pour ou contre`}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
@@ -359,7 +359,7 @@ export function QuizResultSections({
           </h2>
           <p style={{ margin: '0 0 16px', fontSize: 13.5, color: GRAY }}>
             {result.my_department.name}
-            {resolvedNom && resolvedNom !== result.my_department.name ? ` (${resolvedNom})` : ''} —
+            {resolvedNom && resolvedNom !== result.my_department.name ? ` (${resolvedNom})` : ''} -
             votre accord avec chacun de ses députés.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

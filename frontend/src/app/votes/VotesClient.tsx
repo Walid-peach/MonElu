@@ -137,7 +137,7 @@ export function VotesClient({ initial, heroStats }: { initial: VoteList; heroSta
           </h1>
 
           <p className="xl:col-start-1 xl:row-start-3" style={{ margin: '16px 0 0', fontSize: 17, lineHeight: 1.6, color: 'var(--dp-text-secondary)', maxWidth: 540 }}>
-            Retrouvez chaque scrutin public de la XVII&#7497; législature — texte voté, résultat, et ventilation par groupe.
+            Retrouvez chaque scrutin public de la XVII&#7497; législature - texte voté, résultat, et ventilation par groupe.
           </p>
 
           {/* Stats strip (below xl) */}

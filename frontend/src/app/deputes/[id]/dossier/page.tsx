@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const deputy = await api.deputies.get(id).catch(() => null)
   if (!deputy) return { alternates }
   return {
-    title: `Dossier PDF — ${deputy.full_name} - MonÉlu`,
+    title: `Dossier PDF - ${deputy.full_name} - MonÉlu`,
     alternates,
   }
 }
@@ -57,7 +57,7 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
     <div style={{ background: 'var(--dp-card-bg)', minHeight: '100vh' }}>
       <div data-print-hide style={{ padding: '20px 32px', borderBottom: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 14, color: 'var(--dp-text-secondary)' }}>
-          Aperçu du dossier imprimable — utilisez « Imprimer » et choisissez « Enregistrer en PDF » comme destination.
+          Aperçu du dossier imprimable - utilisez « Imprimer » et choisissez « Enregistrer en PDF » comme destination.
         </span>
         <PrintButton />
       </div>
@@ -157,7 +157,7 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
         {dissidentVotes && dissidentVotes.items.length > 0 && (
           <div style={{ marginBottom: 26, breakInside: 'avoid' }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Votes marquants — dissidences avec le groupe
+              Votes marquants - dissidences avec le groupe
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {dissidentVotes.items.map(v => (
@@ -183,7 +183,7 @@ export default async function DeputyDossierPage({ params }: { params: Promise<{ 
           Méthodologie : le taux de présence compte toute position enregistrée (y compris non-votant) sur les
           scrutins tenus pendant le mandat. Le taux de loyauté compare, vote par vote, la position du député à
           la position majoritaire de son groupe parlementaire actuel. Source : données officielles ouvertes de
-          l&apos;Assemblée nationale, XVII<sup>e</sup> législature. Détails complets : {SITE_URL}/methodologie —
+          l&apos;Assemblée nationale, XVII<sup>e</sup> législature. Détails complets : {SITE_URL}/methodologie -
           profil vivant : {profileUrl}
         </div>
       </div>

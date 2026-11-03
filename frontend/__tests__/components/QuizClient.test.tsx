@@ -544,7 +544,7 @@ describe('QuizClient', () => {
     await screen.findAllByText(/Vous votez à 83.3% comme Jeanne Martin/)
 
     await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
-    await screen.findByText('Échec — réessayer')
+    await screen.findByText('Échec - réessayer')
   })
 
   it('surfaces a match-call failure with a retry path', async () => {

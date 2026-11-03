@@ -85,7 +85,7 @@ function ShareResultButton({
     }
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ url, title: 'Quel député vote comme vous ? — MonÉlu' })
+        await navigator.share({ url, title: 'Quel député vote comme vous ? - MonÉlu' })
         setState('idle')
         return
       } catch (err) {
@@ -122,7 +122,7 @@ function ShareResultButton({
           : state === 'copied'
             ? 'Lien copié !'
             : state === 'error'
-              ? 'Échec — réessayer'
+              ? 'Échec - réessayer'
               : 'Partager mes résultats'}
       </button>
       <span style={{ fontSize: 12.5, lineHeight: 1.5, color: GRAY, maxWidth: 420, textAlign: 'left' }}>
@@ -281,7 +281,7 @@ export function QuizClient() {
     compareShare !== null && questionsVersion !== null && compareShare.result.version !== questionsVersion
   const effectiveCompareShare = versionMismatch ? null : compareShare
   const compareNotice = versionMismatch
-    ? 'Ce lien de comparaison correspond à une version précédente du quiz — voici le quiz actuel, sans comparaison.'
+    ? 'Ce lien de comparaison correspond à une version précédente du quiz - voici le quiz actuel, sans comparaison.'
     : null
 
   const comparison =
@@ -346,7 +346,7 @@ export function QuizClient() {
     const dept = await resolvePostalCodeToDepartment(postalInput.trim())
     setResolving(false)
     if (!dept) {
-      setPostalError('Code postal introuvable — vérifiez les 5 chiffres, ou passez cette étape.')
+      setPostalError('Code postal introuvable - vérifiez les 5 chiffres, ou passez cette étape.')
       return
     }
     setResolved(dept)
@@ -382,11 +382,11 @@ export function QuizClient() {
           </h1>
           <p className="hidden md:block" style={{ margin: '18px auto 0', maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: 'var(--dp-text-secondary)' }}>
             {focusDeputyName ? (
-              <>Répondez aux 10 scrutins et voyez votre accord avec {focusDeputyName} — et avec les 577 députés.</>
+              <>Répondez aux 10 scrutins et voyez votre accord avec {focusDeputyName} - et avec les 577 députés.</>
             ) : (
               <>
                 Une dizaine de vrais scrutins de l’Assemblée nationale, posés en français courant.
-                Répondez pour, contre ou abstention — à la fin, on compare vos réponses aux votes
+                Répondez pour, contre ou abstention - à la fin, on compare vos réponses aux votes
                 réels des 577 députés.
               </>
             )}
@@ -485,7 +485,7 @@ export function QuizClient() {
           De quel groupe vous sentez-vous le plus proche ?
         </h2>
         <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
-          Facultatif — cette réponse reste dans votre navigateur, elle n’est jamais envoyée ni
+          Facultatif - cette réponse reste dans votre navigateur, elle n’est jamais envoyée ni
           enregistrée. À la fin, on compare votre ressenti à vos votes réels.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -557,7 +557,7 @@ export function QuizClient() {
               Encore quelques réponses
             </h2>
             <p style={{ margin: '16px 0 28px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
-              Il faut au moins {MIN_ANSWERS} réponses exprimées pour un résultat significatif —
+              Il faut au moins {MIN_ANSWERS} réponses exprimées pour un résultat significatif -
               vous en avez donné {answeredCount}.
             </p>
             <button
@@ -583,7 +583,7 @@ export function QuizClient() {
             </h2>
             <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
               Donnez votre code postal pour comparer aussi vos réponses aux votes des députés de
-              votre département. Facultatif — il n’est ni envoyé à nos serveurs tel quel, ni conservé.
+              votre département. Facultatif - il n’est ni envoyé à nos serveurs tel quel, ni conservé.
             </p>
             <form
               onSubmit={e => {

@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 import { SITE_HOST } from '@/lib/site'
 
 export const runtime = 'edge'
-export const alt = 'Réponse MonÉlu — recherche sur les votes et les députés'
+export const alt = 'Réponse MonÉlu - recherche sur les votes et les députés'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -56,7 +56,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
             fontFamily: 'sans-serif',
           }}
         >
-          MonÉlu — Recherche sur les votes et les députés
+          MonÉlu - Recherche sur les votes et les députés
         </div>
 
         <div

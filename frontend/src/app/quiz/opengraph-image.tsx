@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 import { SITE_HOST } from '@/lib/site'
 
 export const runtime = 'edge'
-export const alt = 'Quel député vote comme vous ? — MonÉlu'
+export const alt = 'Quel député vote comme vous ? - MonÉlu'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -73,7 +73,7 @@ export default function OGImage() {
             marginTop: 44,
           }}
         >
-          {`${SITE_HOST}/quiz — faites le test`}
+          {`${SITE_HOST}/quiz - faites le test`}
         </div>
       </div>
     ),

@@ -624,7 +624,7 @@ export function VoteDetailClient(props: Props) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   ...(scrutinUrl ? [{ label: 'Assemblée nationale', href: scrutinUrl }] : []),
-                  { label: 'API MonÉlu — données brutes', href: `${apiUrl}/votes/${voteId}` },
+                  { label: 'API MonÉlu - données brutes', href: `${apiUrl}/votes/${voteId}` },
                 ].map(({ label, href }) => (
                   <a key={href} href={href} target="_blank" rel="noopener noreferrer"
                     style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, color: 'var(--dp-text)', textDecoration: 'none', fontWeight: 500 }}>

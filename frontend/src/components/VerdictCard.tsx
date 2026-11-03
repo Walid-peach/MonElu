@@ -42,7 +42,7 @@ export function VerdictCard({ result }: { result: VerifyResult }) {
         </span>
         <ShareButton
           url={`/verifier/v/${result.id}`}
-          title={`${style.label} — vérification MonÉlu`}
+          title={`${style.label} - vérification MonÉlu`}
           text={result.claim}
           ariaLabel="Partager ce verdict"
         />

@@ -38,6 +38,8 @@ function purgeEverything(): string[] {
     ['/votes'],
     // Refreshed by `ingest_agenda.py` in the same nightly run (MON-210, MON-213).
     ['/agenda'],
+    // Its figures come from /health (#635).
+    ['/a-propos'],
     ['/lois'],
     ['/lois/[dossier_id]', 'layout'],
     ['/deputes'],

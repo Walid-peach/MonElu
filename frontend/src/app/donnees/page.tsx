@@ -22,7 +22,7 @@ export default function DonneesPage() {
       <LegalSection title="Exports CSV disponibles">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: '0 0 18px' }}>
           Trois exports couvrent l&apos;essentiel du besoin des journalistes et chercheurs. Ils sont
-          servis par la même API que le site — mêmes chiffres, aucun décalage. Pour explorer avant
+          servis par la même API que le site - mêmes chiffres, aucun décalage. Pour explorer avant
           de télécharger, la <Link href="/deputes/tableau" style={{ color: 'var(--dp-text)' }}>vue tableau des députés</Link>{' '}
           affiche toutes les scorecards triables sur un écran.
         </p>
@@ -63,10 +63,10 @@ export default function DonneesPage() {
 
       <LegalSection title="Format des fichiers">
         <ul style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--dp-text-secondary)', margin: 0, paddingLeft: '20px' }}>
-          <li>Encodage UTF-8 avec BOM — les accents s&apos;affichent correctement dans Excel et LibreOffice.</li>
+          <li>Encodage UTF-8 avec BOM - les accents s&apos;affichent correctement dans Excel et LibreOffice.</li>
           <li>Séparateur virgule, fins de ligne CRLF (RFC 4180). Si votre Excel (réglé en français) place tout dans une colonne, passez par « Données → À partir d&apos;un fichier texte/CSV ».</li>
           <li>Les taux (<code style={{ fontSize: '13px' }}>*_rate</code>, <code style={{ fontSize: '13px' }}>*_pct</code>) sont des ratios entre 0 et 1 ; les dates sont au format ISO 8601.</li>
-          <li><code style={{ fontSize: '13px' }}>position</code> vaut <code style={{ fontSize: '13px' }}>pour</code>, <code style={{ fontSize: '13px' }}>contre</code>, <code style={{ fontSize: '13px' }}>abstention</code> ou <code style={{ fontSize: '13px' }}>nonVotant</code> — l&apos;abstention est un acte exprimé, le non-votant était présent sans voter. Détails dans la <Link href="/methodologie" style={{ color: 'var(--dp-text)' }}>méthodologie</Link>.</li>
+          <li><code style={{ fontSize: '13px' }}>position</code> vaut <code style={{ fontSize: '13px' }}>pour</code>, <code style={{ fontSize: '13px' }}>contre</code>, <code style={{ fontSize: '13px' }}>abstention</code> ou <code style={{ fontSize: '13px' }}>nonVotant</code> - l&apos;abstention est un acte exprimé, le non-votant était présent sans voter. Détails dans la <Link href="/methodologie" style={{ color: 'var(--dp-text)' }}>méthodologie</Link>.</li>
         </ul>
       </LegalSection>
 
@@ -82,7 +82,7 @@ export default function DonneesPage() {
       <LegalSection title="Licence et attribution">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: '0 0 10px' }}>
           Les données sont réutilisables librement, y compris commercialement, sous Licence Ouverte
-          2.0 (Etalab) — la même licence que les sources officielles. La seule obligation est de
+          2.0 (Etalab) - la même licence que les sources officielles. La seule obligation est de
           mentionner la source et la date. Attribution suggérée :
         </p>
         <div style={{ background: 'var(--dp-page-bg)', border: '1px solid var(--dp-border-subtle)', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', color: 'var(--dp-text)', fontFamily: 'monospace', overflowWrap: 'anywhere' }}>
@@ -95,7 +95,7 @@ export default function DonneesPage() {
 
       <LegalSection title="Besoin de plus que du CSV ?">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
-          L&apos;API REST expose les mêmes données en JSON, avec filtres et pagination — documentation
+          L&apos;API REST expose les mêmes données en JSON, avec filtres et pagination - documentation
           sur la page <Link href="/developpeurs" style={{ color: 'var(--dp-text)' }}>développeurs</Link>. Les exports CSV sont soumis
           au même rate-limiting que le reste de l&apos;API ; pour un usage intensif, demandez une clé
           d&apos;API via la page <Link href="/contact" style={{ color: 'var(--dp-text)' }}>contact</Link>.

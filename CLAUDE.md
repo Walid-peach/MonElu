@@ -259,6 +259,7 @@ It is also the only place linking every `/groupes/[slug]` and `/themes/[slug]` f
 The official title leads every surface; `SummaryTag` sits beside a summary in a list, and `SummaryDisclosure` on the vote page links to `/methodologie#resumes` and the official scrutin.
 The wording comes from `summary_basis` through `src/lib/summaryLabel.ts`, because only `official_text` may claim the official text: a motion's sentence is written by code.
 The API reads that column from raw `votes`, not from the mart, so a release never waits on a dbt run.
+- **Visible copy follows [`docs/writing-guide.md`](docs/writing-guide.md)** (#635): every claim checkable, every changing figure from the API, no em dash in a sentence or title, models named through `src/lib/aiModels.ts`. `__tests__/app/visible-copy.test.ts` fails on a visible em dash and on a figure À propos writes in place of `/health`.
 - **Grey text goes through `--dp-text-secondary` / `--dp-text-muted`, never a literal** (#559).
 Tailwind's `gray-mid` is retired, and `#9CA3AF`, `#6B7280` and faint translucent white all missed WCAG AA as text.
 A surface that keeps one palette in both themes (the white popovers and the embed stay light; the footer, the chat sidebar and the `/a-propos` navy sections stay dark) carries the `dp-light` or `dp-dark` class from `globals.css`, which pins the tokens of its subtree to that palette (custom properties only: `dark:` utilities inside it still follow `<html>`).

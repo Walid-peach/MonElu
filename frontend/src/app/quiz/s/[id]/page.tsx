@@ -32,7 +32,7 @@ export async function generateMetadata({
   const alternates = { canonical: canonicalUrl(`/quiz/s/${id}`) }
   const share = await api.quiz.getShare(id).catch(() => null)
   if (!share) return { alternates, robots: SNAPSHOT_ROBOTS }
-  const title = `${hookTitle(share)} — MonÉlu`
+  const title = `${hookTitle(share)} - MonÉlu`
   const description =
     'Une dizaine de vrais scrutins de l’Assemblée nationale, comparés aux votes réels ' +
     'des 577 députés. Faites le test sur MonÉlu.'
@@ -64,7 +64,7 @@ export default async function QuizSharePage({ params }: { params: Promise<{ id: 
             margin: '0 0 16px',
           }}
         >
-          MonÉlu — résultat partagé
+          MonÉlu - résultat partagé
         </p>
         <QuizResultCard result={share.result} />
         {/* The card is the hero; the full sections stay below it so the
@@ -92,7 +92,7 @@ export default async function QuizSharePage({ params }: { params: Promise<{ id: 
           >
             {share.result.answers
               ? 'Faites le test et comparez-vous'
-              : 'Faites le test — quel député vote comme vous ?'}
+              : 'Faites le test - quel député vote comme vous ?'}
           </Link>
         </div>
       </main>
