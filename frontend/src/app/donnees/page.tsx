@@ -61,6 +61,15 @@ export default function DonneesPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Pages des textes de loi">
+        <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
+          Chaque texte voté en scrutin public a sa page sur <Link href="/lois" style={{ color: 'var(--dp-red)' }}>/lois</Link>,
+          avec son parcours et ses votes. Les mêmes données sont servies par l&apos;API :{' '}
+          <code style={{ fontSize: '13px' }}>GET /lois</code> pour la liste,{' '}
+          <code style={{ fontSize: '13px' }}>GET /lois/{'{dossier_uid}'}</code> pour un texte.
+        </p>
+      </LegalSection>
+
       <LegalSection title="Format des fichiers">
         <ul style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--dp-text-secondary)', margin: 0, paddingLeft: '20px' }}>
           <li>Encodage UTF-8 avec BOM - les accents s&apos;affichent correctement dans Excel et LibreOffice.</li>

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next'
-import { api, type Deputy, type Vote } from '@/lib/api'
+import { api, type Deputy, type LoiListItem, type Vote } from '@/lib/api'
 import { departmentCode } from '@/lib/departments'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { GROUP_ENTRIES } from '@/lib/groups'
@@ -26,6 +26,27 @@ function toVoteUrl(v: Vote): MetadataRoute.Sitemap[number] {
     changeFrequency: 'monthly',
     priority: 0.6,
   }
+}
+
+function toLoiUrl(l: LoiListItem): MetadataRoute.Sitemap[number] {
+  const updated = l.last_scrutin_at ?? l.parcours_end
+  return {
+    url: `${SITE_URL}/lois/${l.dossier_uid}`,
+    ...(updated ? { lastModified: new Date(updated) } : {}),
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }
+}
+
+/**
+ * Bill pages (#372, ADR-035). `GET /lois` lists only dossiers with a page
+ * (`has_scrutins`), about 75 of them, so one request covers them all. A failure
+ * drops these entries rather than failing the build: the static `/lois` entry
+ * still leads a crawler to them.
+ */
+async function loiUrls(): Promise<MetadataRoute.Sitemap> {
+  const data = await api.lois.list().catch(() => null)
+  return data ? data.items.map(toLoiUrl) : []
 }
 
 async function deputyAndDepartmentUrls(): Promise<MetadataRoute.Sitemap> {
@@ -120,10 +141,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/accessibilite`, changeFrequency: 'yearly', priority: 0.2 },
   ]
 
-  const [deputiesAndDepartments, votes] = await Promise.all([
+  const [deputiesAndDepartments, votes, lois] = await Promise.all([
     deputyAndDepartmentUrls(),
     voteUrls(),
+    loiUrls(),
   ])
 
-  return [...staticUrls, ...deputiesAndDepartments, ...votes]
+  return [...staticUrls, ...deputiesAndDepartments, ...votes, ...lois]
 }

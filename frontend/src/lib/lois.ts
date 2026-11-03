@@ -127,3 +127,25 @@ export function hasHeadlineScrutin(loi: Pick<LoiDetail, 'parcours' | 'unattached
 export function billPath(dossier: Pick<VoteDossierRef, 'dossier_uid' | 'lois_url'> | null | undefined): string | null {
   return dossier?.lois_url ? `/lois/${encodeURIComponent(dossier.dossier_uid)}` : null
 }
+
+/** Cut a long bill title at a word boundary: one ran to 543 characters (#372). */
+export function shortTitle(titre: string | null | undefined, max: number): string {
+  const text = titre?.trim() || 'Texte de loi'
+  if (text.length <= max) return text
+  const cut = text.slice(0, max - 1)
+  return `${cut.slice(0, cut.lastIndexOf(' ') > max / 2 ? cut.lastIndexOf(' ') : cut.length)}…`
+}
+
+/** A title and description that answer "où en est cette loi ?" in the search snippet (#372). */
+export function loiMetadataText(
+  loi: Pick<LoiDetail, 'titre' | 'status' | 'status_label'>,
+): { title: string; description: string } {
+  const name = shortTitle(loi.titre, 70)
+  const status = statusLabel(loi.status)
+  const title = status ? `${name} : ${status.toLowerCase()} - MonÉlu` : `${name} - MonÉlu`
+  const decision = loi.status_label ? ` Dernière décision : « ${loi.status_label} ».` : ''
+  const description =
+    `Où en est « ${shortTitle(loi.titre, 110)} » ? ${status ? `${status}.` : ''}${decision} ` +
+    "Son parcours à l'Assemblée et au Sénat, et le vote de chaque député."
+  return { title, description: description.replace(/\s+/g, ' ').trim() }
+}
