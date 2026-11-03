@@ -53,6 +53,14 @@ export default function DonneesPage() {
         </div>
       </LegalSection>
 
+      <LegalSection title="Flux RSS des scrutins">
+        <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
+          Les 50 derniers scrutins publics, avec leur résultat et un lien vers chaque fiche, sont publiés en RSS à
+          l&apos;adresse <a href="/flux.xml" style={{ color: 'var(--dp-red)' }}>/flux.xml</a>. Le flux se met à jour
+          chaque jour ouvré, après l&apos;ingestion des données.
+        </p>
+      </LegalSection>
+
       <LegalSection title="Format des fichiers">
         <ul style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--dp-text-secondary)', margin: 0, paddingLeft: '20px' }}>
           <li>Encodage UTF-8 avec BOM — les accents s&apos;affichent correctement dans Excel et LibreOffice.</li>

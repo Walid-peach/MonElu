@@ -65,6 +65,8 @@ function purgeEverything(): string[] {
     ['/groupes/[slug]', 'layout'],
     ['/themes/[slug]', 'layout'],
     ['/sitemap.xml'],
+    // The RSS feed (#424); 'layout' because a route handler's page id ends in `/route`.
+    ['/flux.xml', 'layout'],
   ]
   for (const [path, scope] of paths) {
     if (scope) revalidatePath(path, scope)

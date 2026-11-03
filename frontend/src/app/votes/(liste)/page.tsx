@@ -13,7 +13,7 @@ import { canonicalUrl } from '@/lib/site'
 // Route groups do not appear in the URL: this is still /votes.
 
 export const metadata: Metadata = {
-  alternates: { canonical: canonicalUrl('/votes') },
+  alternates: { canonical: canonicalUrl('/votes'), types: { 'application/rss+xml': canonicalUrl('/flux.xml') } },
 }
 
 export const revalidate = 86400

@@ -83,6 +83,7 @@ function machineReadable(): string {
   return `## Surfaces lisibles par une machine
 
 - [Plan du site](${SITE_URL}/sitemap.xml) : toutes les URL indexables.
+- [Flux RSS des derniers scrutins](${SITE_URL}/flux.xml) : les 50 votes les plus récents, mis à jour chaque jour ouvré.
 - Jumeau Markdown de chaque fiche : ajoutez \`.md\` à l'URL d'une fiche député ou d'un scrutin (ex. \`/deputes/{id}.md\`, \`/votes/{id}.md\`) pour le contenu seul, sans mise en page - définitions et mises en garde incluses. [/methodologie.md](${SITE_URL}/methodologie.md) réunit toutes les définitions de calcul.
 - [Spécification OpenAPI](${API_BASE}/openapi.json) de l'API REST publique, et sa [documentation interactive](${API_BASE}/docs).
 - CSV - scorecard de tous les députés : \`GET ${API_BASE}/deputies/scorecard.csv\`
