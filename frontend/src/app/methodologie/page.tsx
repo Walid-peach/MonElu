@@ -205,7 +205,7 @@ export default function MethodologiePage() {
       <LegalSection id="lois" title="Les pages des textes de loi">
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           Chaque texte qui a fait l&apos;objet d&apos;au moins un scrutin public a sa page sur{' '}
-          <Link href="/lois">/lois</Link>. Son parcours, du dépôt à la promulgation, vient de l&apos;export{' '}
+          <Link href="/lois" style={{ color: 'var(--dp-text)', textDecoration: 'underline' }}>/lois</Link>. Son parcours, du dépôt à la promulgation, vient de l&apos;export{' '}
           <em>Dossiers législatifs</em> de l&apos;Assemblée nationale et il est complet : chaque lecture, chaque
           commission et chaque décision y figurent, y compris au Sénat.
         </p>
