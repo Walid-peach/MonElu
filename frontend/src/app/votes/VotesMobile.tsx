@@ -4,6 +4,7 @@ import type { Vote } from '@/lib/api'
 import type { LoadingPhase } from '@/lib/loadingPolicy'
 import { themeColors } from '@/lib/utils'
 import { Pill, PhonePageHeader, ResultBadge, SplitBar, cardClass } from '@/components/phone/kit'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 function shortDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -109,7 +110,13 @@ export function VotesMobile({
                       </span>
                     )}
                   </span>
-                  <span className="line-clamp-3 text-base font-semibold leading-snug">{v.summary_plain || v.vote_title}</span>
+                  <span className="line-clamp-3 text-base font-semibold leading-snug">{v.vote_title}</span>
+                  {v.summary_plain && (
+                    <span className="line-clamp-3 text-sm leading-snug text-[color:var(--dp-text-secondary)]">
+                      <SummaryTag basis={v.summary_basis} />
+                      {v.summary_plain}
+                    </span>
+                  )}
                   <span className="text-xs text-[color:var(--dp-text-secondary)]">Scrutin n°{v.vote_id}</span>
                   <SplitBar pour={v.votes_for} contre={v.votes_against} abstention={v.abstentions} height={8} />
                   <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[color:var(--dp-text-secondary)]">

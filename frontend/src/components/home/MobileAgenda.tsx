@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { AgendaItem, AgendaResponse } from '@/lib/api'
 import { agendaHeadline, agendaItemHref, formatSittingTime, showsPointType } from '@/lib/agenda'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 /** Sitting days offered as tabs: enough for a week, never a scrolling strip. */
 export const MOBILE_AGENDA_DAYS = 5
@@ -44,7 +45,10 @@ export function AgendaItemCard({ item }: { item: AgendaItem }) {
           )}
         </span>
       )}
-      <span className="line-clamp-3 font-newsreader text-[17px] leading-snug text-[color:var(--dp-text)]">{lead}</span>
+      <span className="line-clamp-3 font-newsreader text-[17px] leading-snug text-[color:var(--dp-text)]">
+        {item.summary_plain?.trim() && <SummaryTag />}
+        {lead}
+      </span>
     </>
   )
   const cardClass =

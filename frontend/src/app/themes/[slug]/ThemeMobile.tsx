@@ -3,6 +3,7 @@ import type { ThemeDetail, ThemeVoteItem } from '@/lib/api'
 import { partyHex, normalizePartyShort, formatDate, themeColors } from '@/lib/utils'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { PhonePageHeader, PhoneSection, ResultBadge, StatTile, cardClass } from '@/components/phone/kit'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 /** Votes listed before the rest fold behind "Voir les N autres". */
 export const THEME_VOTES_SHOWN = 10
@@ -114,7 +115,13 @@ function VoteList({ votes }: { votes: ThemeVoteItem[] }) {
       {votes.map(v => (
         <li key={v.vote_id}>
           <Link href={`/votes/${v.vote_id}`} className={`${cardClass} flex flex-col gap-2 p-4`}>
-            <span className="text-[15px] font-semibold leading-snug">{v.summary_plain || v.vote_title}</span>
+            <span className="text-[15px] font-semibold leading-snug">{v.vote_title}</span>
+            {v.summary_plain && (
+              <span className="text-[13px] leading-snug text-[color:var(--dp-text-secondary)]">
+                <SummaryTag basis={v.summary_basis} />
+                {v.summary_plain}
+              </span>
+            )}
             <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[color:var(--dp-text-secondary)]">
               {v.result && <ResultBadge result={v.result} />}
               {v.voted_at && <span>{formatDate(v.voted_at)}</span>}

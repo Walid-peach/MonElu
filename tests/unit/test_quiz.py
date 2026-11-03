@@ -222,13 +222,8 @@ def test_week_start_is_the_monday_of_the_iso_week():
         assert week_start(monday + _dt.timedelta(days=offset)) == monday
 
 
-def test_build_weekly_question_uses_summary_plain():
-    q = build_weekly_question("Ce texte prévoit une réforme.", "Titre officiel du scrutin")
-    assert q == "Auriez-vous voté pour ou contre : Ce texte prévoit une réforme ?"
-
-
-def test_build_weekly_question_falls_back_to_title():
-    q = build_weekly_question(None, "l'ensemble du projet de loi X")
+def test_build_weekly_question_uses_the_official_title():
+    q = build_weekly_question("l'ensemble du projet de loi X.")
     assert q == "Auriez-vous voté pour ou contre : l'ensemble du projet de loi X ?"
 
 

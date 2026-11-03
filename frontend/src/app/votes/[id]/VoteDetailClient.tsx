@@ -16,6 +16,7 @@ import type { HemicycleDeputy } from '@/lib/hemicycle'
 import { GroupBreakdownMobile, VoteHeroMobile } from './VoteMobile'
 import { VoteParticipationCard } from './VoteParticipation'
 import type { VoteParticipation } from '@/lib/api'
+import { SummaryDisclosure } from '@/components/SummaryLabel'
 
 // The 3D replay is the default view. It is client-only and loaded as its own
 // chunk after hydration, so the vote page's server HTML and first bundle stay as they were.
@@ -71,6 +72,7 @@ interface Props {
   result: string
   votedAt: string
   summary: string | null
+  summaryBasis: string | null
   dossierId: string | null
   theme: string | null
   votesFor: number
@@ -116,7 +118,7 @@ function shortDate(dateStr: string): string {
 
 export function VoteDetailClient(props: Props) {
   const {
-    voteId, voteTitle, result, votedAt, summary, dossierId, theme,
+    voteId, voteTitle, result, votedAt, summary, summaryBasis, dossierId, theme,
     votesFor, votesAgainst, abstentions, majorityRequired, participation, voteType,
     pourPct, contrePct, abstPct,
     groups, dissidents, related, apiUrl, deputyLookup, hemicycleDeputies,
@@ -169,7 +171,7 @@ export function VoteDetailClient(props: Props) {
   }, [])
 
   const adopted = result === 'adopté'
-  const headline = summary || voteTitle
+  const headline = voteTitle
   // Shared with the vote's JSON-LD (MON-267): the link a reader clicks and the
   // `Event.about` a crawler reads must be the same URL, guard included.
   const dossierUrl = anDossierUrl(dossierId)
@@ -211,6 +213,7 @@ export function VoteDetailClient(props: Props) {
         voteTitle={voteTitle}
         headline={headline}
         summary={summary}
+        summaryBasis={summaryBasis}
         result={result}
         votedAt={votedAt}
         theme={theme}
@@ -269,9 +272,10 @@ export function VoteDetailClient(props: Props) {
               </div>
 
               {summary && (
-                <p style={{ margin: '22px 0 0', fontSize: 15, lineHeight: 1.6, color: 'var(--dp-text-muted)', maxWidth: 600 }}>
-                  <span style={{ fontWeight: 600 }}>Titre officiel :</span> {voteTitle}
-                </p>
+                <div style={{ marginTop: 22, maxWidth: 600 }}>
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>{summary}</p>
+                  <SummaryDisclosure basis={summaryBasis} officialUrl={scrutinUrl} />
+                </div>
               )}
 
               {dossierUrl && (

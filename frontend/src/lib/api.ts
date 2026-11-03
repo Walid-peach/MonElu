@@ -70,6 +70,7 @@ export type Vote = {
   abstentions: number
   total_voters: number
   summary_plain?: string | null
+  summary_basis?: string | null
   theme?: string | null
 }
 
@@ -144,6 +145,7 @@ export type DivergingVoteItem = {
   vote_title: string
   result: string | null
   summary_plain: string | null
+  summary_basis?: string | null
   position_a: string
   position_b: string
 }
@@ -162,6 +164,7 @@ export type DeputyVoteItem = {
   result: string | null
   position: string
   summary_plain: string | null
+  summary_basis?: string | null
 }
 
 export type DeputyVotesResponse = {
@@ -246,6 +249,7 @@ export type ThemeVoteItem = {
   vote_title: string
   result: string | null
   summary_plain: string | null
+  summary_basis?: string | null
 }
 
 export type ThemePartyPosition = {

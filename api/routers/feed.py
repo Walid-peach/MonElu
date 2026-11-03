@@ -67,7 +67,7 @@ Tab = Literal["pour_vous", "assemblee"]
 SQL_WEEK_SCRUTINS = """
     SELECT v.vote_id, v.voted_at, v.vote_title, v.result,
            v.votes_for, v.votes_against, v.abstentions,
-           v.summary_plain, v.theme, v.scrutin_kind, v.dossier_id,
+           v.summary_plain, v.summary_basis, v.theme, v.scrutin_kind, v.dossier_id,
            d.has_scrutins,
            COALESCE(
                (SELECT jsonb_object_agg(vp.deputy_id, vp.position)
@@ -174,6 +174,7 @@ def to_scrutin(row: dict, deputy_ids: list[str], *, closest: bool = False) -> Fe
         scrutin_kind=kind_of(row),
         title=row["vote_title"],
         summary_plain=row.get("summary_plain"),
+        summary_basis=row.get("summary_basis"),
         theme=theme,
         theme_slug=SLUGS_BY_NAME.get(theme) if theme else None,
         result=row.get("result"),
@@ -372,6 +373,7 @@ def _agenda_rows(cur, today: date) -> list[AgendaItem]:
             objet=row["objet"],
             point_type=row["point_type"],
             summary_plain=row["summary_plain"],
+            summary_basis=row.get("summary_basis"),
             theme=row["theme"],
             dossier_id=row["dossier_id"],
             dossier_title=row["dossier_title"],

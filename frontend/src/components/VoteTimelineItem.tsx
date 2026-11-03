@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { DeputyVoteItem } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { positionStyle } from '@/lib/vote-position'
+import { SummaryTag } from '@/components/SummaryLabel'
 
 const NAVY = 'var(--dp-text)'
 
@@ -45,13 +46,14 @@ export function VoteTimelineItem({ vote: v, dotBorderColor }: Props) {
 
       <Link href={`/votes/${v.vote_id}`} style={{ textDecoration: 'none' }}>
         <div className="font-newsreader text-[21px]" style={{ color: NAVY, marginTop: 8, lineHeight: 1.3, cursor: 'pointer' }}>
-          {v.summary_plain || v.vote_title}
+          {v.vote_title}
         </div>
       </Link>
 
       {v.summary_plain && (
-        <div style={{ fontSize: 14.5, color: 'var(--dp-text-secondary)', lineHeight: 1.55, marginTop: 5, maxWidth: 680, fontStyle: 'italic' }}>
-          {v.vote_title}
+        <div style={{ fontSize: 14.5, color: 'var(--dp-text-secondary)', lineHeight: 1.55, marginTop: 5, maxWidth: 680 }}>
+          <SummaryTag basis={v.summary_basis} />
+          {v.summary_plain}
         </div>
       )}
     </div>

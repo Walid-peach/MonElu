@@ -12,6 +12,7 @@ const hero = {
   voteTitle: "L'ensemble du projet de loi de finances pour 2027",
   headline: 'Le budget 2027',
   summary: 'Le budget 2027',
+  summaryBasis: 'official_text',
   result: 'rejeté',
   votedAt: '2026-10-20T00:00:00Z',
   theme: 'Économie & Budget',
@@ -37,12 +38,13 @@ describe('VoteHeroMobile', () => {
     expect(screen.getByText(/^86\s%$/)).toBeInTheDocument()
     expect(screen.getByText(/Majorité requise : 751 voix/)).toBeInTheDocument()
     expect(screen.queryByText(/289/)).not.toBeInTheDocument()
-    expect(screen.getByText(/Titre officiel/).parentElement).toHaveTextContent(hero.voteTitle)
+    expect(screen.getByText(/Résumé généré par IA à partir du texte officiel/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Méthode' })).toHaveAttribute('href', '/methodologie#resumes')
     expect(screen.getByRole('link', { name: /dossier officiel/ })).toHaveAttribute('href', hero.dossierUrl)
   })
 
-  it('leaves out the official title line when the headline already is the title', () => {
-    render(<VoteHeroMobile {...hero} summary={null} headline={hero.voteTitle} dossierUrl={null} />)
+  it('shows no disclosure when the vote has no summary', () => {
+    render(<VoteHeroMobile {...hero} summary={null} summaryBasis={null} headline={hero.voteTitle} dossierUrl={null} />)
     expect(screen.queryByText(/Titre officiel/)).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /dossier officiel/ })).not.toBeInTheDocument()
   })

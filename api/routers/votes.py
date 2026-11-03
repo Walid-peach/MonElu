@@ -299,8 +299,10 @@ def list_votes(
                     sql.SQL("""
                         SELECT vote_id, voted_at, vote_title, result,
                                votes_for, votes_against, abstentions, total_voters,
-                               summary_plain, theme
-                        FROM analytics_marts.mart_vote_summary {}
+                               summary_plain, theme,
+                               (SELECT r.summary_basis FROM votes r
+                                WHERE r.vote_id = m.vote_id) AS summary_basis
+                        FROM analytics_marts.mart_vote_summary m {}
                         ORDER BY voted_at DESC NULLS LAST, vote_id DESC LIMIT %s OFFSET %s
                     """).format(where),
                     page_params + [limit, effective_offset],
@@ -343,8 +345,10 @@ def latest_votes(request: Request):
                     """
                     SELECT vote_id, voted_at, vote_title, result,
                            votes_for, votes_against, abstentions, total_voters,
-                           summary_plain, theme
-                    FROM analytics_marts.mart_vote_summary
+                           summary_plain, theme,
+                           (SELECT r.summary_basis FROM votes r
+                            WHERE r.vote_id = m.vote_id) AS summary_basis
+                    FROM analytics_marts.mart_vote_summary m
                     ORDER BY voted_at DESC NULLS LAST
                     LIMIT 10
                     """
@@ -445,7 +449,9 @@ def get_vote(request: Request, vote_id: str):
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT * FROM analytics_marts.mart_vote_summary WHERE vote_id = %s",
+                    "SELECT m.*, (SELECT r.summary_basis FROM votes r WHERE r.vote_id = m.vote_id) "
+                    "AS summary_basis FROM analytics_marts.mart_vote_summary m "
+                    "WHERE m.vote_id = %s",
                     (vote_id,),
                 )
                 vote = cur.fetchone()
