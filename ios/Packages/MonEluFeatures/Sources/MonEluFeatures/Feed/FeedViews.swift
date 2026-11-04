@@ -124,19 +124,19 @@ struct FeedScrutinCardView: View {
                 header
                 NavigationLink(value: AppRoute.vote(id: card.id)) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(card.summary ?? card.title.capitalizingFirstLetter)
+                        // The official title leads; a summary follows with its label (#634).
+                        Text(card.title.capitalizingFirstLetter)
                             .font(Typography.heading(.title3))
                             .headingLineSpacing()
                             .foregroundStyle(Palette.textPrimary)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
-                        if card.summary != nil {
-                            Text(card.title.capitalizingFirstLetter)
-                                .font(.subheadline)
-                                .foregroundStyle(Palette.textSecondary)
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
-                                .fixedSize(horizontal: false, vertical: typeSize.isAccessibilitySize)
+                        if let summary = card.summary, !summary.isEmpty {
+                            LabeledSummary(
+                                summary: summary, basis: card.summaryBasis,
+                                lineLimit: typeSize.isAccessibilitySize ? nil : 3
+                            )
+                            .fixedSize(horizontal: false, vertical: typeSize.isAccessibilitySize)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

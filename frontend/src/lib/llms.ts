@@ -31,6 +31,11 @@ const REPO = 'https://github.com/Walid-peach/MonElu'
  * a better citation than the HTML page it mirrors, which buries them behind a
  * tooltip.
  */
+/** How a vote summary is labelled (#634); `summaryLabel.ts` and the app read the same texts. */
+export const SUMMARY_OFFICIAL_TEXT_CAVEAT =
+  'Résumé généré par IA à partir du texte officiel. Peut contenir des erreurs ; seul le scrutin officiel fait foi.'
+export const SUMMARY_PROCEDURE_CAVEAT = 'Phrase type écrite sans IA, selon le type et le résultat de la motion.'
+
 export const CAVEATS = [
   '`nonVotant` n\'est pas `abstention`. Un non-votant était présent dans l\'hémicycle sans exprimer de vote ; une abstention est une position exprimée. Les pourcentages pour/contre/abstention se calculent sur les seules positions exprimées.',
   'Le taux de présence compte le `nonVotant` comme présent, et son dénominateur est limité aux scrutins tenus pendant le mandat du député - un député élu en cours de législature n\'est pas pénalisé pour les votes antérieurs.',
@@ -40,6 +45,8 @@ export const CAVEATS = [
   'Le résultat d\'un scrutin (adopté / rejeté) est repris tel quel de l\'Assemblée nationale, jamais recalculé.',
   'Le compteur « députés suivis » dépasse 577 : il dénombre toutes les personnes ayant siégé depuis le début de la législature, remplacements compris.',
   'Les résumés en langage clair et les réponses de l\'assistant sont générés par un LLM. Ce sont des aides à la lecture, pas des sources - le scrutin d\'origine fait foi.',
+  SUMMARY_OFFICIAL_TEXT_CAVEAT,
+  SUMMARY_PROCEDURE_CAVEAT,
   'L\'Assemblée ne rattache ses scrutins au texte qu\'ils concernent que depuis le **26 mars 2026** : les étapes antérieures du parcours d\'un texte n\'affichent aucun vote, ce qui ne veut pas dire qu\'il n\'y en a pas eu.',
   'La participation à un scrutin compte des votes, pas des présences : un député peut être dans l\'hémicycle sans voter, ou voter par délégation sans y être (chacun en porte une au plus). Le `nonVotant` compte comme participant, et le total est rapporté aux 577 sièges, sièges vacants compris.',
 ]

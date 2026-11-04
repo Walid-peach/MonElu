@@ -77,7 +77,10 @@ def test_caveats_match_the_websites_llms_txt():
     ).read_text(encoding="utf-8")
     start = source.index("export const CAVEATS = [")
     block = source[start : source.index("\n]", start)]
-    web = [text.replace("\\'", "'") for text in re.findall(r"'((?:[^'\\]|\\.)*)'", block)]
+    # A caveat other code also reads is a named constant (#634); resolve it in place.
+    named = dict(re.findall(r"export const (\w+) =\s*'((?:[^'\\]|\\.)*)'", source))
+    items = re.findall(r"'((?:[^'\\]|\\.)*)'|^\s*(\w+),$", block, re.MULTILINE)
+    web = [(text or named[name]).replace("\\'", "'") for text, name in items]
 
     assert len(web) == len(cfg.CAVEATS), "CAVEATS in llms.ts changed length or shape"
     assert web == [text for _, text in cfg.CAVEATS]

@@ -219,15 +219,22 @@ struct AgendaEntryRow: View {
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                     }
-                    Text(headline.lead)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Palette.textPrimary)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
+                    Group {
+                        if entry.leadIsSummary {
+                            Text(SummaryLabel.tag(nil)).foregroundColor(Palette.textSecondary) + Text(" · ")
+                                + Text(headline.lead)
+                        } else {
+                            Text(headline.lead)
+                        }
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.textPrimary)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
                     if let detail = headline.detail {
-                        Text(detail)
-                            .font(.footnote)
-                            .foregroundStyle(Palette.textSecondary)
-                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
+                        LabeledSummary(
+                            summary: detail, basis: nil, font: .footnote,
+                            lineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 3
+                        )
                     }
                     if entry.theme != nil || entry.result != nil {
                         HStack(spacing: 8) {

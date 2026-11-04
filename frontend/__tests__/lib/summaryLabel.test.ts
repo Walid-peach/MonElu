@@ -4,7 +4,7 @@ describe('summary labels (#634)', () => {
   it('claims the official text only for a summary built from it', () => {
     expect(summaryDisclosure('official_text')).toContain('à partir du texte officiel')
     expect(summaryDisclosure(null)).not.toContain('texte officiel')
-    expect(summaryDisclosure('procedure')).not.toContain('IA')
+    expect(summaryDisclosure('procedure')).toContain('sans IA')
   })
 
   it('does not call a sentence written by code an AI summary', () => {

@@ -99,6 +99,12 @@ public struct AgendaEntry: Hashable, Sendable, Identifiable {
         return (lead, summary.isEmpty || summary == lead ? nil : summary)
     }
 
+    /// Whether the headline's lead is the generated one-liner, so it carries a label (#634).
+    var leadIsSummary: Bool {
+        let summary = summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !summary.isEmpty && headline.lead == summary && headline.detail == nil
+    }
+
     /// The point type, unless it would repeat the headline ("Questions au
     /// Gouvernement" twice): `showsPointType` on the website.
     var pointTypeLabel: String? {
