@@ -1,5 +1,5 @@
 import type { LoiActe } from '@/lib/api'
-import { billPath, collapsedVotesLabel, hasHeadlineScrutin, parcoursSections, stageTitle, statusLabel } from '@/lib/lois'
+import { billPath, collapsedVotesLabel, loiMetadataText, shortTitle, hasHeadlineScrutin, parcoursSections, stageTitle, statusLabel } from '@/lib/lois'
 
 function acte(o: Partial<LoiActe> & Pick<LoiActe, 'acte_uid' | 'depth' | 'ordinal' | 'code_acte'>): LoiActe {
   return {
@@ -67,5 +67,26 @@ describe('billPath (#371)', () => {
     expect(billPath({ dossier_uid: 'DLR5L17N1', lois_url: 'https://mon-elu.vercel.app/lois/DLR5L17N1' })).toBe('/lois/DLR5L17N1')
     expect(billPath({ dossier_uid: 'DLR5L17N2', lois_url: null })).toBeNull()
     expect(billPath(null)).toBeNull()
+  })
+})
+
+describe('bill page metadata (#372)', () => {
+  it('names the bill and its status in the title and the description', () => {
+    const { title, description } = loiMetadataText({ titre: 'Fin de vie', status: 'promulguee', status_label: 'adoptée' })
+    expect(title).toBe('Fin de vie : promulguée - MonÉlu')
+    expect(description).toContain('« Fin de vie »')
+    expect(description).toContain('Promulguée.')
+    expect(description).toContain('« adoptée »')
+  })
+
+  it('survives a missing title and an unknown status', () => {
+    expect(loiMetadataText({ titre: null, status: null, status_label: null }).title).toBe('Texte de loi - MonÉlu')
+  })
+
+  it('cuts the longest title in the corpus at a word', () => {
+    const long = 'mot '.repeat(140).trim()
+    const cut = shortTitle(long, 120)
+    expect(cut.length).toBeLessThanOrEqual(120)
+    expect(cut.endsWith('mot…')).toBe(true)
   })
 })

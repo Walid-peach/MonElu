@@ -202,6 +202,22 @@ export default function MethodologiePage() {
         </p>
       </LegalSection>
 
+      <LegalSection id="lois" title="Les pages des textes de loi">
+        <p style={{ ...textStyle, marginBottom: '10px' }}>
+          Chaque texte qui a fait l&apos;objet d&apos;au moins un scrutin public a sa page sur{' '}
+          <Link href="/lois" style={{ color: 'var(--dp-text)', textDecoration: 'underline' }}>/lois</Link>. Son parcours, du dépôt à la promulgation, vient de l&apos;export{' '}
+          <em>Dossiers législatifs</em> de l&apos;Assemblée nationale et il est complet : chaque lecture, chaque
+          commission et chaque décision y figurent, y compris au Sénat.
+        </p>
+        <p style={textStyle}>
+          Les votes, en revanche, ne sont reliés à leur texte que depuis le <strong>26 mars 2026</strong> :
+          l&apos;Assemblée ne publiait pas ce lien avant cette date. Pour un texte plus ancien, les premières
+          étapes du parcours s&apos;affichent sans vote, ce qui ne veut pas dire qu&apos;aucun vote n&apos;a eu lieu.
+          Le statut affiché (« Promulguée », « En navette parlementaire »…) est déduit de la dernière décision
+          officielle, citée telle quelle sur chaque page.
+        </p>
+      </LegalSection>
+
       <LegalSection id="horizon" title={faqTitle('horizon')}>
         <p style={{ ...textStyle, marginBottom: '10px' }}>
           La base de production couvre les scrutins depuis le <strong>1er juillet 2025</strong> (limite de

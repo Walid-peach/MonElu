@@ -6,6 +6,7 @@ import type { LoiDetail } from '@/lib/api'
 import {
   collapsedVotesLabel,
   hasHeadlineScrutin,
+  loiMetadataText,
   parcoursSections,
   stageTitle,
   statusLabel,
@@ -26,12 +27,14 @@ export async function generateMetadata(
   const alternates = { canonical: canonicalUrl(`/lois/${dossier_id}`) }
   const loi = await api.lois.get(dossier_id).catch(() => null)
   if (!loi) return { alternates }
-  const title = `${loi.titre ?? 'Texte de loi'} - MonÉlu`
-  const status = statusLabel(loi.status)
-  const description =
-    `Où en est ce texte ? ${status ? `${status}. ` : ''}` +
-    'Son parcours à l\'Assemblée et au Sénat, et les votes des députés.'
-  return { title, description, alternates, openGraph: { title, description } }
+  const { title, description } = loiMetadataText(loi)
+  return {
+    title,
+    description,
+    alternates,
+    openGraph: { title, description },
+    twitter: { card: 'summary_large_image', title, description },
+  }
 }
 
 function StatusHeader({ loi }: { loi: LoiDetail }) {
