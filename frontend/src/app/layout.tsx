@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
-import { DM_Serif_Display, DM_Sans, Newsreader } from 'next/font/google'
+import localFont from 'next/font/local'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import './fonts/fonts.css'
 import './globals.css'
 import { Nav } from '@/components/Nav'
 import { GlobalSearch } from '@/components/GlobalSearch'
@@ -22,27 +23,64 @@ import { THEME_INIT_SCRIPT } from '@/lib/theme'
 import { INSTALL_PROMPT_CAPTURE_SCRIPT, INSTALLED_FLAG_SCRIPT } from '@/lib/installState'
 import { smartAppBannerMetadata } from '@/lib/appStore'
 
-const serif = DM_Serif_Display({
-  subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
+// Self-hosted: next/font/google downloaded these from Google Fonts on
+// every `next build`, and a failed fetch failed the build. The files and
+// @font-face rules are the ones it used to fetch. The latin subset is declared
+// here so next/font preloads it; the other subsets and the metric-matched
+// fallback faces live in ./fonts/fonts.css.
+//
+// next/font only accepts literal options, so the latin unicode-range is
+// repeated in each call rather than shared through a constant.
+const serif = localFont({
+  src: [
+    { path: './fonts/dm-serif-display-latin-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/dm-serif-display-latin-italic.woff2', weight: '400', style: 'italic' },
+  ],
+  declarations: [
+    { prop: 'font-family', value: "'DM Serif Display'" },
+    { prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' },
+  ],
   variable: '--font-serif',
   display: 'swap',
+  adjustFontFallback: false,
+  fallback: ["'DM Serif Display Fallback'"],
 })
 
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  style: ['normal', 'italic'],
+const newsreader = localFont({
+  src: [
+    { path: './fonts/newsreader-latin-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/newsreader-latin-normal.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/newsreader-latin-normal.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/newsreader-latin-normal.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/newsreader-latin-italic.woff2', weight: '400', style: 'italic' },
+    { path: './fonts/newsreader-latin-italic.woff2', weight: '500', style: 'italic' },
+    { path: './fonts/newsreader-latin-italic.woff2', weight: '600', style: 'italic' },
+    { path: './fonts/newsreader-latin-italic.woff2', weight: '700', style: 'italic' },
+  ],
+  declarations: [
+    { prop: 'font-family', value: "'Newsreader'" },
+    { prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' },
+  ],
   variable: '--font-newsreader',
   display: 'swap',
+  adjustFontFallback: false,
+  fallback: ["'Newsreader Fallback'"],
 })
 
-const sans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const sans = localFont({
+  src: [
+    { path: './fonts/dm-sans-latin-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/dm-sans-latin-normal.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/dm-sans-latin-normal.woff2', weight: '600', style: 'normal' },
+  ],
+  declarations: [
+    { prop: 'font-family', value: "'DM Sans'" },
+    { prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' },
+  ],
   variable: '--font-sans',
   display: 'swap',
+  adjustFontFallback: false,
+  fallback: ["'DM Sans Fallback'"],
 })
 
 export const metadata: Metadata = {
