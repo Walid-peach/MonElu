@@ -42,7 +42,8 @@ extension VoteItem {
         self.init(
             id: vote.voteId, title: vote.voteTitle, date: vote.votedAt,
             result: vote.result, summary: vote.summaryPlain, theme: vote.theme,
-            votesFor: vote.votesFor, votesAgainst: vote.votesAgainst, abstentions: vote.abstentions
+            votesFor: vote.votesFor, votesAgainst: vote.votesAgainst, abstentions: vote.abstentions,
+            summaryBasis: vote.summaryBasis
         )
     }
 }
@@ -52,7 +53,8 @@ extension VoteDetail {
         self.init(
             item: VoteItem(
                 id: vote.voteId, title: vote.voteTitle, date: vote.votedAt,
-                result: vote.result, summary: vote.summaryPlain, theme: vote.theme
+                result: vote.result, summary: vote.summaryPlain, theme: vote.theme,
+                summaryBasis: vote.summaryBasis
             ),
             votesFor: vote.votesFor,
             votesAgainst: vote.votesAgainst,

@@ -1,3 +1,4 @@
+import { SUMMARY_OFFICIAL_TEXT_CAVEAT, SUMMARY_PROCEDURE_CAVEAT } from '@/lib/llms'
 import { canonicalUrl } from '@/lib/site'
 
 /** What a stored summary was built from (`votes.summary_basis`, ADR-046). */
@@ -16,10 +17,8 @@ export function summaryTag(basis?: string | null): string {
  * sentence is written by code, and an agenda line comes from the order paper.
  */
 export function summaryDisclosure(basis?: string | null): string {
-  if (basis === 'procedure') return 'Phrase type écrite selon le résultat de la motion.'
-  if (basis === 'official_text') {
-    return 'Résumé généré par IA à partir du texte officiel. Peut contenir des erreurs.'
-  }
+  if (basis === 'procedure') return SUMMARY_PROCEDURE_CAVEAT
+  if (basis === 'official_text') return SUMMARY_OFFICIAL_TEXT_CAVEAT
   return 'Résumé généré par IA. Peut contenir des erreurs.'
 }
 

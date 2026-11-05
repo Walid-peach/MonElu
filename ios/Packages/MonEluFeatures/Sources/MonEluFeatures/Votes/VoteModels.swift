@@ -8,6 +8,9 @@ public struct VoteItem: Identifiable, Hashable, Sendable {
     /// `adopté` or `rejeté`, exactly as the API states it.
     public let result: String?
     public let summary: String?
+    /// What `summary` was built from (`official_text`, `procedure`), which
+    /// decides its label (#634).
+    public let summaryBasis: String?
     public let theme: String?
     /// The counts the list returns, for its split bar; nil where the
     /// response carries none.
@@ -17,13 +20,14 @@ public struct VoteItem: Identifiable, Hashable, Sendable {
 
     public init(
         id: String, title: String, date: Date?, result: String?, summary: String?, theme: String?,
-        votesFor: Int? = nil, votesAgainst: Int? = nil, abstentions: Int? = nil
+        votesFor: Int? = nil, votesAgainst: Int? = nil, abstentions: Int? = nil, summaryBasis: String? = nil
     ) {
         self.id = id
         self.title = title
         self.date = date
         self.result = result
         self.summary = summary
+        self.summaryBasis = summaryBasis
         self.theme = theme
         self.votesFor = votesFor
         self.votesAgainst = votesAgainst

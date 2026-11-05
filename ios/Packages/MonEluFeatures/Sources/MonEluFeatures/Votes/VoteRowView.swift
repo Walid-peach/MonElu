@@ -24,10 +24,7 @@ struct VoteRowView: View {
                 .foregroundStyle(Palette.textPrimary)
                 .lineLimit(3)
             if let summary = vote.summary, !summary.isEmpty {
-                Text(summary)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.textSecondary)
-                    .lineLimit(2)
+                LabeledSummary(summary: summary, basis: vote.summaryBasis, lineLimit: 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

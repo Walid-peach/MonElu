@@ -70,7 +70,7 @@ struct VoteDetailContent: View {
                                 .font(.body)
                                 .foregroundStyle(Palette.textPrimary)
                                 .fixedSize(horizontal: false, vertical: true)
-                            CaveatNote(id: "llm_generated", in: configuration)
+                            CaveatNote(id: SummaryLabel.caveatID(vote.item.summaryBasis), in: configuration)
                         }
                     }
                 }

@@ -61,6 +61,8 @@ public struct FeedScrutinCard: Hashable, Sendable, Identifiable {
     public let kind: String
     public let title: String
     public let summary: String?
+    /// What `summary` was built from, which decides its label (#634).
+    public let summaryBasis: String?
     public let theme: String?
     public let result: String?
     public let votesFor: Int?
@@ -78,13 +80,14 @@ public struct FeedScrutinCard: Hashable, Sendable, Identifiable {
     public init(
         id: String, date: Date?, kind: String, title: String, summary: String?, theme: String?, result: String?,
         votesFor: Int?, votesAgainst: Int?, abstentions: Int?, isClosest: Bool, positions: [FeedDeputyPosition],
-        officialURL: URL?, loiID: String?
+        officialURL: URL?, loiID: String?, summaryBasis: String? = nil
     ) {
         self.id = id
         self.date = date
         self.kind = kind
         self.title = title
         self.summary = summary
+        self.summaryBasis = summaryBasis
         self.theme = theme
         self.result = result
         self.votesFor = votesFor
@@ -287,7 +290,8 @@ extension FeedScrutinCard {
             isClosest: scrutin.closest ?? false,
             positions: (scrutin.positions ?? []).map { FeedDeputyPosition(deputyID: $0.deputyId, position: $0.position) },
             officialURL: URL(string: scrutin.anUrl),
-            loiID: scrutin.loisUrl == nil ? nil : scrutin.dossierId
+            loiID: scrutin.loisUrl == nil ? nil : scrutin.dossierId,
+            summaryBasis: scrutin.summaryBasis
         )
     }
 }

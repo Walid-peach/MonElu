@@ -45,7 +45,7 @@ extension ThemePage {
             votes: theme.votes.map {
                 VoteItem(
                     id: $0.voteId, title: $0.voteTitle, date: $0.votedAt, result: $0.result,
-                    summary: $0.summaryPlain, theme: theme.name
+                    summary: $0.summaryPlain, theme: theme.name, summaryBasis: $0.summaryBasis
                 )
             }
         )

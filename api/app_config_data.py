@@ -100,6 +100,15 @@ CAVEATS: list[tuple[str, str]] = [
         "fait foi.",
     ),
     (
+        "summary_official_text",
+        "Résumé généré par IA à partir du texte officiel. Peut contenir des erreurs ; "
+        "seul le scrutin officiel fait foi.",
+    ),
+    (
+        "summary_procedure",
+        "Phrase type écrite sans IA, selon le type et le résultat de la motion.",
+    ),
+    (
         "bill_coverage",
         "L'Assemblée ne rattache ses scrutins au texte qu'ils concernent que depuis le "
         "**26 mars 2026** : les étapes antérieures du parcours d'un texte n'affichent "
