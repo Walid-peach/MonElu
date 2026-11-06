@@ -57,7 +57,7 @@ struct Pill: View {
         Text(text)
             .font(.caption.weight(.semibold))
             .foregroundStyle(foreground)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, Spacing.xs)
             .padding(.vertical, 3)
             .background(background, in: Capsule())
     }
@@ -74,8 +74,8 @@ struct QuestionBubble: View {
             .font(.body)
             .foregroundStyle(Palette.onIdentity)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
             .background(
                 UnevenRoundedRectangle(
                     topLeadingRadius: 18, bottomLeadingRadius: 18, bottomTrailingRadius: 4, topTrailingRadius: 18,
@@ -119,15 +119,15 @@ struct AnswerCard: View {
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
+                            .padding(Spacing.s)
                             .foregroundStyle(Palette.positiveText)
-                            .background(Palette.positiveBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .background(Palette.positiveBackground, in: Radius.shape(Radius.card))
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("ask.verify-nudge")
                 }
+                // Spacing, not a rule, sets the footer apart from the answer.
                 VStack(alignment: .leading, spacing: 6) {
-                    Divider().overlay(Palette.border)
                     confidence
                     actions
                 }
@@ -140,8 +140,8 @@ struct AnswerCard: View {
     @ViewBuilder private var confidence: some View {
         if let label = AskLabels.confidence(answer.confidence) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { confidencePill(label); confidenceNote }
-                VStack(alignment: .leading, spacing: 4) { confidencePill(label); confidenceNote }
+                HStack(spacing: Spacing.xs) { confidencePill(label); confidenceNote }
+                VStack(alignment: .leading, spacing: Spacing.xxs) { confidencePill(label); confidenceNote }
             }
             .padding(.top, 6)
         }
@@ -166,7 +166,7 @@ struct AnswerCard: View {
     }
 
     private var actions: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
             switch feedback {
             case .sent:
                 Text("Merci pour votre retour !")
@@ -209,7 +209,7 @@ struct SourcesSection: View {
     let sources: [ChatSource]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("Sources")
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(Palette.textPrimary)
@@ -265,9 +265,8 @@ private struct SourceRow: View {
                     .accessibilityHidden(true)
             }
         }
-        .padding(10)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+        .padding(Spacing.s)
+        .surface()
         .accessibilityElement(children: .combine)
     }
 }
@@ -279,7 +278,7 @@ struct VerdictCard: View {
 
     var body: some View {
         Card {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spacing.s) {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 10) { badge; checkedLine }
                     VStack(alignment: .leading, spacing: 6) { badge; checkedLine }
@@ -325,7 +324,7 @@ struct VerdictCard: View {
                             .foregroundStyle(Palette.textPrimary)
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                Radius.shape(Radius.card)
                                     .strokeBorder(Palette.border, lineWidth: 1)
                             )
                     }
@@ -341,7 +340,7 @@ struct VerdictCard: View {
         Label(AskLabels.verdict(verdict.verdict), systemImage: icon)
             .font(.subheadline.weight(.bold))
             .foregroundStyle(foreground)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, Spacing.s)
             .padding(.vertical, 6)
             .background(background, in: Capsule())
             .fixedSize(horizontal: false, vertical: true)
@@ -410,9 +409,9 @@ private struct CitationRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+        .padding(.horizontal, Spacing.s)
+        .padding(.vertical, Spacing.s)
+        .overlay(Radius.shape(Radius.card).strokeBorder(Palette.border, lineWidth: 1))
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
@@ -485,7 +484,7 @@ private struct FailureLine: View {
     let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             Label(text, systemImage: "exclamationmark.triangle")
                 .font(.subheadline)
                 .foregroundStyle(Palette.textSecondary)
@@ -524,13 +523,13 @@ struct AskIntro: View {
                     .font(.footnote)
                     .foregroundStyle(Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(12)
+                    .padding(Spacing.s)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        Radius.shape(Radius.card)
                             .strokeBorder(Palette.border, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     )
-                    .padding(.top, 4)
+                    .padding(.top, Spacing.xxs)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

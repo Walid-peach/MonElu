@@ -16,7 +16,7 @@ struct PostalCodePickerContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text("Trouvez votre député")
                     .font(Typography.heading(.title))
                     .foregroundStyle(Palette.textPrimary)
@@ -44,7 +44,7 @@ struct PostalCodePickerContent: View {
                 CaveatNote(
                     "Il sert seulement à trouver votre département auprès de geo.api.gouv.fr ; il n'est ni conservé ni envoyé à MonÉlu."
                 )
-                .padding(.top, 4)
+                .padding(.top, Spacing.xxs)
             }
             status
         }
@@ -65,11 +65,11 @@ struct PostalCodePickerContent: View {
             .textContentType(.postalCode)
             .font(.title2.monospacedDigit())
             .tracking(3)
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Spacing.m)
             .frame(minHeight: 50)
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(Palette.cardBackground, in: Radius.shape(Radius.card))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.textPrimary, lineWidth: 2)
+                Radius.shape(Radius.card).strokeBorder(Palette.textPrimary, lineWidth: 2)
             )
             .frame(minWidth: 140)
             .focused($fieldFocused)
@@ -80,13 +80,8 @@ struct PostalCodePickerContent: View {
     private var searchButton: some View {
         Button(action: submit) {
             Text("Rechercher")
-                .font(.body.weight(.semibold))
-                .padding(.horizontal, 18)
-                .frame(minHeight: 50)
-                .foregroundStyle(Palette.onAccent)
-                .background(Palette.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PrimaryButtonStyle(fullWidth: false))
             .disabled(search == .searching)
             .accessibilityIdentifier("postal.search")
     }
@@ -142,7 +137,7 @@ struct DepartmentResults: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .top, spacing: Spacing.xs) {
                 Image(systemName: "mappin.and.ellipse")
                     .font(.title3)
                     .foregroundStyle(Palette.accent)
@@ -169,15 +164,14 @@ struct DepartmentResults: View {
             if !entry.deputies.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(Array(Self.bySeat(entry.deputies).enumerated()), id: \.element.id) { index, deputy in
-                        if index > 0 { Divider().overlay(Palette.border) }
+                        if index > 0 { CardRowDivider() }
                         PickerDeputyRow(deputy: deputy, isSelected: deputy.id == selection?.id) {
                             onSelect(deputy)
                         }
                     }
                 }
-                .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+                .clipShape(Radius.shape(Radius.card))
+                .surface()
             }
         }
     }
@@ -228,7 +222,7 @@ struct PickerDeputyRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.s) {
                 DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(deputy.name)
@@ -253,8 +247,8 @@ struct PickerDeputyRow: View {
                         .accessibilityHidden(true)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
             .frame(minHeight: 44)
             .background(isSelected ? Palette.trackBackground : .clear)
             .contentShape(Rectangle())
@@ -280,22 +274,19 @@ struct FollowSelectionBar: View {
         VStack(spacing: 0) {
             Button(action: action) {
                 Text("Suivre \(deputy.name)")
-                    .font(.body.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .padding(.horizontal, 18)
-                    .foregroundStyle(Palette.onAccent)
-                    .background(Palette.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.monEluPrimary)
             .accessibilityIdentifier("picker.follow")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Palette.pageBackground.opacity(0.94))
-        .overlay(alignment: .top) { Divider().overlay(Palette.border) }
+        .padding(.horizontal, Spacing.gutter)
+        .padding(.vertical, Spacing.s)
+        // A blur tinted with the page colour: the list scrolls behind it
+        // softened, so the bar needs no rule (#629). The system `.bar` alone
+        // is a neutral grey that clashes with the cream and navy pages.
+        // Two shape styles rather than a view, so both reach under the
+        // floating tab bar into the safe area, as the plain fill did.
+        .background(Palette.pageBackground.opacity(0.8))
+        .background(.ultraThinMaterial)
         .accessibilityElement(children: .contain)
     }
 }

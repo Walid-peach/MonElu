@@ -69,7 +69,7 @@ struct DepartmentsList: View {
 
     private func row(_ department: DepartmentRef) -> some View {
         NavigationLink(value: AppRoute.department(code: department.code)) {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.s) {
                 Text(department.code)
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(Palette.textSecondary)

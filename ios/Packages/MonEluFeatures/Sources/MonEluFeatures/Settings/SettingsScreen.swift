@@ -146,7 +146,7 @@ struct SettingsContent: View {
     }
 
     private func row(_ title: String, value: String?, chevron: Bool) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
             ViewThatFits(in: .horizontal) {
                 HStack {
                     Text(title).foregroundStyle(Palette.textPrimary)

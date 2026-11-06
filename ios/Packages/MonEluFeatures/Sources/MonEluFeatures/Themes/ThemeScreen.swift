@@ -20,7 +20,7 @@ public struct ThemeScreen: View {
             if let theme {
                 ScrollView {
                     ThemeContent(theme: theme, configuration: configuration)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, Spacing.m)
                 }
             }
         }
@@ -35,7 +35,7 @@ struct ThemeContent: View {
     let configuration: AppConfiguration
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             header
             if let vote = theme.mostDivided {
                 VStack(alignment: .leading, spacing: 10) {
@@ -45,7 +45,7 @@ struct ThemeContent: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Spacing.m)
             }
             if !theme.partyPositions.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -53,7 +53,7 @@ struct ThemeContent: View {
                     Card {
                         VStack(spacing: 0) {
                             ForEach(Array(theme.byPourRate.enumerated()), id: \.element.id) { index, position in
-                                if index > 0 { Divider().overlay(Palette.border) }
+                                if index > 0 { CardRowDivider() }
                                 PartyPourRow(position: position)
                             }
                         }
@@ -63,34 +63,33 @@ struct ThemeContent: View {
                         .foregroundStyle(Palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Spacing.m)
             }
             if !theme.votes.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     SectionHeader("Derniers scrutins")
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, Spacing.m)
                     VStack(spacing: 0) {
                         ForEach(Array(theme.votes.enumerated()), id: \.element.id) { index, vote in
-                            if index > 0 { Divider().overlay(Palette.border) }
+                            if index > 0 { CardRowDivider() }
                             NavigationLink(value: AppRoute.vote(id: vote.id)) {
-                                HStack(spacing: 8) {
+                                HStack(spacing: Spacing.xs) {
                                     VoteRowView(vote: vote)
                                     Image(systemName: "chevron.right")
                                         .font(.footnote.weight(.semibold))
                                         .foregroundStyle(Palette.textSecondary)
                                         .accessibilityHidden(true)
                                 }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
+                                .padding(.horizontal, Spacing.m)
+                                .padding(.vertical, Spacing.xs)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("theme.vote")
                         }
                     }
-                    .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
-                    .padding(.horizontal, 16)
+                    .surface()
+                    .padding(.horizontal, Spacing.m)
                 }
             }
         }
@@ -115,9 +114,9 @@ struct ThemeContent: View {
                     StatTile(value: MonEluFormat.percent(rate, decimals: 1), label: "adoptés")
                 }
             }
-            .padding(.top, 4)
+            .padding(.top, Spacing.xxs)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.m)
     }
 
     /// "scrutins depuis le 1 juillet 2025": the data horizon from `GET /app/config`.
@@ -133,10 +132,10 @@ struct DividedThemeVote: View {
     let vote: ThemeDividedVote
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             let bar = VoteSplitBar(pour: vote.votesFor, contre: vote.votesAgainst, abstention: 0)
             // The result first, as the design's meta line reads (#527).
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                 if let result = vote.result { VoteResultBadge(result: result) }
                 Text([vote.date.map(MonEluFormat.day), "\(MonEluFormat.count(vote.votesFor)) pour, \(MonEluFormat.count(vote.votesAgainst)) contre"]
                     .compactMap { $0 }.joined(separator: " · "))
@@ -185,7 +184,7 @@ struct PartyPourRow: View {
                 .foregroundStyle(Palette.textPrimary)
                 .frame(minWidth: dynamicTypeSize.isAccessibilitySize ? nil : 48, alignment: .trailing)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(position.short ?? "Non inscrits") : \(rate) de pour")
     }

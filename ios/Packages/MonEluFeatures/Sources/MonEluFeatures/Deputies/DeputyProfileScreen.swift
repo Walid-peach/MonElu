@@ -43,7 +43,7 @@ public struct DeputyProfileScreen: View {
                         { store.follow(id) }
                     }
                 )
-                .padding(16)
+                .padding(Spacing.m)
             }
         }
         .navigationTitle("Député")
@@ -63,7 +63,7 @@ struct DeputyProfileContent: View {
     var onFollow: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             DeputyHeader(profile: page.profile)
             DeputyActions(
                 deputyID: page.profile.deputy.id, isFollowed: isFollowed, atFollowCap: atFollowCap, onFollow: onFollow
@@ -92,7 +92,7 @@ struct DeputyActions: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             buttons
             if atFollowCap && onFollow != nil {
                 Text("Vous suivez déjà \(FollowedDeputies.cap) députés : retirez-en un sur l'Accueil pour suivre celui-ci.")
@@ -116,10 +116,10 @@ struct DeputyActions: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .background(
                             isFollowed ? Palette.cardBackground : Palette.accent,
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            in: Radius.shape(Radius.card)
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            Radius.shape(Radius.card)
                                 .strokeBorder(isFollowed ? Palette.border : Palette.accent, lineWidth: 1)
                         )
                 }
@@ -133,8 +133,7 @@ struct DeputyActions: View {
                     .font(.headline)
                     .foregroundStyle(Palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 44)
-                    .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+                    .surface()
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("deputy.compare")

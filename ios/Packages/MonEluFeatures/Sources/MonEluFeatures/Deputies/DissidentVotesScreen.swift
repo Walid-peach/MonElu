@@ -66,7 +66,7 @@ struct DissidentVoteRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
                 if let result = vote.result {
                     VoteResultBadge(result: result)
                 }
@@ -88,7 +88,7 @@ struct DissidentVoteRow: View {
                 position("Son groupe", vote.majorityPosition)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.xxs)
         .accessibilityElement(children: .combine)
     }
 

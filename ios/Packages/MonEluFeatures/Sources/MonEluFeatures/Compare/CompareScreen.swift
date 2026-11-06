@@ -57,7 +57,7 @@ private struct CompareLoadedView: View {
         ) { page in
             ScrollView {
                 CompareContent(page: page, choose: choose)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, Spacing.m)
             }
         }
     }
@@ -69,8 +69,8 @@ struct CompareContent: View {
     let choose: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            HStack(alignment: .top, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
+            HStack(alignment: .top, spacing: Spacing.xs) {
                 CompareIdentity(side: page.first)
                 Text("et")
                     .font(Typography.headingItalic(.title3))
@@ -82,7 +82,7 @@ struct CompareContent: View {
                     ChooseDeputyButton(action: choose)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.m)
             if let other = page.other {
                 Button("Changer de député", action: choose)
                     .font(.subheadline.weight(.semibold))
@@ -91,7 +91,7 @@ struct CompareContent: View {
                     .accessibilityIdentifier("compare.change")
                 if let a = page.first.scorecard, let b = other.scorecard {
                     Card { MirroredScorecards(a: a, b: b) }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, Spacing.m)
                 }
                 if let diverging = page.diverging {
                     DivergingSection(diverging: diverging, a: page.first.profile.deputy, b: other.profile.deputy)
@@ -137,7 +137,7 @@ struct ChooseDeputyButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: Spacing.xs) {
                 Image(systemName: "person.crop.circle.badge.plus")
                     .font(.system(.largeTitle))
                     .foregroundStyle(Palette.accent)
@@ -148,8 +148,7 @@ struct ChooseDeputyButton: View {
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity, minHeight: 120)
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+            .surface()
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("compare.choose")
@@ -167,28 +166,28 @@ struct MirroredScorecards: View {
             // The profile's precision per figure (#529): whole numbers for the
             // two participation rates, a tenth for the share of "pour".
             row("Scrutins solennels", a.solennelParticipationRate, b.solennelParticipationRate, decimals: 0)
-            Divider().overlay(Palette.border)
+            CardRowDivider()
             row("Jours de vote", a.votingDaysRate, b.votingDaysRate, decimals: 0)
             if let forA = a.votesForRate, let forB = b.votesForRate {
-                Divider().overlay(Palette.border)
+                CardRowDivider()
                 row("Votes « pour » parmi ses positions", forA, forB, decimals: 1)
             }
         }
     }
 
     private func row(_ label: String, _ left: Double, _ right: Double, decimals: Int) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Spacing.xs) {
             Text(label)
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: Spacing.s) {
                 RateBar(rate: left, color: Palette.textPrimary, leading: false, decimals: decimals)
                 RateBar(rate: right, color: Palette.accent, leading: true, decimals: decimals)
             }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, Spacing.s)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             "\(label) : \(MonEluFormat.percent(left, decimals: decimals)) et \(MonEluFormat.percent(right, decimals: decimals))"
@@ -234,25 +233,24 @@ struct DivergingSection: View {
                 "Où ils ont voté différemment",
                 subtitle: "\(MonEluFormat.count(diverging.total)) scrutin\(diverging.total > 1 ? "s" : "") au total"
             )
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.m)
             if diverging.items.isEmpty {
                 Text("Ils ont toujours pris la même position.")
                     .font(.subheadline)
                     .foregroundStyle(Palette.textSecondary)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Spacing.m)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(diverging.items.enumerated()), id: \.element.id) { index, vote in
-                        if index > 0 { Divider().overlay(Palette.border) }
+                        if index > 0 { CardRowDivider() }
                         NavigationLink(value: AppRoute.vote(id: vote.id)) {
                             DivergingVoteRow(vote: vote, a: a, b: b)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
-                .padding(.horizontal, 16)
+                .surface()
+                .padding(.horizontal, Spacing.m)
             }
         }
     }
@@ -266,7 +264,7 @@ struct DivergingVoteRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
                 if let result = vote.result {
                     VoteResultBadge(result: result)
                 }
@@ -286,8 +284,8 @@ struct DivergingVoteRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.s)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }

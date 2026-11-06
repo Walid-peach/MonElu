@@ -24,7 +24,7 @@ public struct DepartmentScreen: View {
             if let department {
                 ScrollView {
                     DepartmentContent(department: department)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, Spacing.m)
                 }
             }
         }
@@ -38,7 +38,7 @@ struct DepartmentContent: View {
     let department: DepartmentPage
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("DÉPARTEMENT \(department.code)")
                     .font(.caption.weight(.bold))
@@ -54,14 +54,14 @@ struct DepartmentContent: View {
                     .foregroundStyle(Palette.textSecondary)
                 if !department.composition.isEmpty {
                     Card { CompositionView(composition: department.composition) }
-                        .padding(.top, 4)
+                        .padding(.top, Spacing.xxs)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.m)
             if !department.deputies.isEmpty {
                 section("Ses députés") {
                     ForEach(Array(department.deputies.enumerated()), id: \.element.id) { index, deputy in
-                        if index > 0 { Divider().overlay(Palette.border) }
+                        if index > 0 { CardRowDivider() }
                         DepartmentDeputyRow(deputy: deputy)
                     }
                 }
@@ -69,7 +69,7 @@ struct DepartmentContent: View {
             if !department.splitVotes.isEmpty {
                 section("Quand ils ont voté différemment") {
                     ForEach(Array(department.splitVotes.enumerated()), id: \.element.id) { index, vote in
-                        if index > 0 { Divider().overlay(Palette.border) }
+                        if index > 0 { CardRowDivider() }
                         NavigationLink(value: AppRoute.vote(id: vote.id)) {
                             DividedVoteRow(vote: vote, scope: "Dans le département")
                         }
@@ -86,10 +86,9 @@ struct DepartmentContent: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title)
             VStack(spacing: 0) { rows() }
-                .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+                .surface()
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.m)
     }
 }
 
@@ -143,7 +142,7 @@ struct DepartmentDeputyRow: View {
 
     var body: some View {
         NavigationLink(value: AppRoute.deputy(id: deputy.deputy.id)) {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.s) {
                 if let seat = deputy.seatLabel {
                     Text(seat)
                         .font(.footnote.monospacedDigit())
@@ -151,11 +150,11 @@ struct DepartmentDeputyRow: View {
                         .frame(minWidth: 28, alignment: .leading)
                 }
                 DeputyPortrait(name: deputy.deputy.name, url: deputy.deputy.photoURL, size: 40)
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(deputy.deputy.name)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Palette.textPrimary)
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spacing.xs) {
                         if let short = deputy.deputy.groupShort {
                             PartyChip(short: short)
                         }
@@ -173,8 +172,8 @@ struct DepartmentDeputyRow: View {
                     .foregroundStyle(Palette.textSecondary)
                     .accessibilityHidden(true)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

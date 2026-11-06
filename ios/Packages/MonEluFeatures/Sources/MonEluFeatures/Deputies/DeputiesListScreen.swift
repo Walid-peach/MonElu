@@ -153,7 +153,7 @@ struct DeputiesList: View {
                 }
             }
             if let loadMoreFailure {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(
                         loadMoreFailure == .offline
                             ? "Hors connexion : la suite n'a pas pu être chargée."
@@ -207,7 +207,7 @@ struct ExplorerDeputyRow: View {
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.s) {
             // At large text the portrait and the chip leave the name a sliver,
             // so the chip moves under it and the portrait goes.
             if !typeSize.isAccessibilitySize {

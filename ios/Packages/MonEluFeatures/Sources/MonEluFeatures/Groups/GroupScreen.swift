@@ -25,7 +25,7 @@ public struct GroupScreen: View {
             if let group {
                 ScrollView {
                     GroupContent(group: group, configuration: configuration)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, Spacing.m)
                 }
             }
         }
@@ -41,7 +41,7 @@ struct GroupContent: View {
     @State var query = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             header
             if !group.mostDissident.isEmpty {
                 section("Les plus souvent en désaccord avec le groupe") {
@@ -94,14 +94,14 @@ struct GroupContent: View {
                 CaveatNote(id: "presence_rate", in: configuration)
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.m)
     }
 
     private var members: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader("Les \(MonEluFormat.count(group.memberCount)) membres")
-                .padding(.horizontal, 16)
-            HStack(spacing: 8) {
+                .padding(.horizontal, Spacing.m)
+            HStack(spacing: Spacing.xs) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Palette.textSecondary)
                     .accessibilityHidden(true)
@@ -109,22 +109,22 @@ struct GroupContent: View {
                     .autocorrectionDisabled()
                     .foregroundStyle(Palette.textPrimary)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, Spacing.s)
             .frame(minHeight: 44)
-            .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .padding(.horizontal, 16)
+            .background(Palette.trackBackground, in: Radius.shape(Radius.card))
+            .padding(.horizontal, Spacing.m)
             let matches = group.members(matching: query)
             if matches.isEmpty {
                 Text("Aucun membre ne correspond à cette recherche.")
                     .font(.subheadline)
                     .foregroundStyle(Palette.textSecondary)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Spacing.m)
             } else {
                 rows(matches) { member in
                     NavigationLink(value: AppRoute.deputy(id: member.deputy.id)) {
                         DeputyRowView(deputy: member.deputy, showsGroup: false)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, Spacing.m)
+                            .padding(.vertical, Spacing.xs)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -137,7 +137,7 @@ struct GroupContent: View {
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Spacing.m)
             content()
         }
     }
@@ -148,13 +148,12 @@ struct GroupContent: View {
     ) -> some View {
         LazyVStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                if index > 0 { Divider().overlay(Palette.border) }
+                if index > 0 { CardRowDivider() }
                 row(item)
             }
         }
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
-        .padding(.horizontal, 16)
+        .surface()
+        .padding(.horizontal, Spacing.m)
     }
 }
 
@@ -164,7 +163,7 @@ struct DissidentMemberRow: View {
 
     var body: some View {
         NavigationLink(value: AppRoute.deputy(id: member.deputy.id)) {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.s) {
                 DeputyPortrait(name: member.deputy.name, url: member.deputy.photoURL, size: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(member.deputy.name)
@@ -186,8 +185,8 @@ struct DissidentMemberRow: View {
                         .accessibilityLabel("\(MonEluFormat.percent(rate, decimals: 1)) de votes contre le groupe")
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -203,9 +202,9 @@ struct DividedVoteRow: View {
     var scope = "Dans le groupe"
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.xs) {
             VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.xs) {
                     if let result = vote.result {
                         VoteResultBadge(result: result)
                     }
@@ -232,8 +231,8 @@ struct DividedVoteRow: View {
                 .foregroundStyle(Palette.textSecondary)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.s)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }

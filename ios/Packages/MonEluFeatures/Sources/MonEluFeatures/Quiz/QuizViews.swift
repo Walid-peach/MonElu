@@ -12,8 +12,8 @@ struct QuizIntroView: View {
     let onStart: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
+            VStack(alignment: .leading, spacing: Spacing.s) {
                 hero
                 CaveatNote(
                     "Sans compte. Vos réponses restent sur votre téléphone : rien n'est enregistré tant que vous ne partagez pas vos résultats."
@@ -27,9 +27,9 @@ struct QuizIntroView: View {
                             Text(theme)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(Palette.textPrimary)
-                                .padding(.horizontal, 8)
+                                .padding(.horizontal, Spacing.xs)
                                 .padding(.vertical, 3)
-                                .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                .background(Palette.trackBackground, in: Radius.shape(Radius.small))
                         }
                     }
                 }
@@ -38,7 +38,7 @@ struct QuizIntroView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     SectionHeader("Déjà commencé ?")
                     Button(action: resume.onResume) {
-                        HStack(spacing: 12) {
+                        HStack(spacing: Spacing.s) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Reprendre les questions")
                                     .font(.body.weight(.semibold))
@@ -54,10 +54,9 @@ struct QuizIntroView: View {
                                 .foregroundStyle(Palette.textMuted)
                                 .accessibilityHidden(true)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+                        .padding(.horizontal, Spacing.m)
+                        .padding(.vertical, Spacing.s)
+                        .surface()
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -85,20 +84,16 @@ struct QuizIntroView: View {
                 .fixedSize(horizontal: false, vertical: true)
             Button(action: onStart) {
                 Text("Commencer")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .foregroundStyle(Palette.onAccent)
-                    .background(Palette.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .buttonStyle(.plain)
-            .padding(.top, 8)
+            .buttonStyle(.monEluPrimary)
+            .padding(.top, Spacing.xs)
             .accessibilityIdentifier("quiz.start")
         }
         .foregroundStyle(Palette.onIdentity)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 22)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.identityBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Palette.identityBackground, in: Radius.shape(Radius.large))
     }
 
     /// The questions' themes, each once, in deck order.
@@ -138,8 +133,8 @@ struct QuizResultHeader: View {
     let result: QuizResult
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text("Vos résultats")
                     .font(Typography.heading(.title))
                     .foregroundStyle(Palette.textPrimary)
@@ -192,17 +187,17 @@ struct QuizPosterCard: View {
             }
         }
         .foregroundStyle(Palette.onIdentity)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 20)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.identityBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Palette.identityBackground, in: Radius.shape(Radius.large))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("quiz.poster")
     }
 
     @ViewBuilder private func themes(_ title: String, _ names: [String], dot: Color, label: Color) -> some View {
         if !names.isEmpty {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 HStack(spacing: 6) {
                     Circle().fill(dot).frame(width: 8, height: 8).accessibilityHidden(true)
                     Text(title.uppercased())
@@ -230,13 +225,13 @@ struct QuizResultContent: View {
     let result: QuizResult
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             if !result.topMatches.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     SectionHeader("Les députés qui votent comme vous")
                     QuizRows {
                         ForEach(Array(result.topMatches.enumerated()), id: \.element.id) { index, match in
-                            if index > 0 { Divider().overlay(Palette.border) }
+                            if index > 0 { CardRowDivider() }
                             QuizDeputyRow(match: match, rank: index + 1)
                         }
                     }
@@ -246,7 +241,7 @@ struct QuizResultContent: View {
                 VStack(alignment: .leading, spacing: 10) {
                     SectionHeader("Les groupes")
                     Card {
-                        VStack(spacing: 12) {
+                        VStack(spacing: Spacing.s) {
                             ForEach(result.groups) { QuizGroupRow(group: $0) }
                         }
                     }
@@ -270,8 +265,7 @@ struct QuizRows<Content: View>: View {
 
     var body: some View {
         VStack(spacing: 0) { content }
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+            .surface()
     }
 }
 
@@ -286,7 +280,7 @@ struct QuizDeputyRow: View {
             if typeSize.isAccessibilitySize {
                 // At large text the name needs the row's width: the rank and
                 // the percentage go on their own line under it.
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(match.deputy.name)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Palette.textPrimary)
@@ -299,8 +293,8 @@ struct QuizDeputyRow: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.horizontal, Spacing.m)
+                .padding(.vertical, Spacing.s)
                 .contentShape(Rectangle())
             } else {
                 row
@@ -311,7 +305,7 @@ struct QuizDeputyRow: View {
     }
 
     private var row: some View {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.s) {
                 if let rank {
                     Text("\(rank)")
                         .font(.subheadline.weight(.semibold).monospacedDigit())
@@ -334,8 +328,8 @@ struct QuizDeputyRow: View {
                     .foregroundStyle(Palette.textPrimary)
                     .fixedSize()
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
             .contentShape(Rectangle())
     }
 
@@ -392,7 +386,7 @@ struct QuizShareSection: View {
 
     var body: some View {
         Card {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spacing.s) {
                 Toggle(isOn: $includeAnswers) {
                     Text(includeAnswers
                         ? "Vos réponses seront aussi incluses et visibles par quiconque ouvre le lien, pour permettre à un ami de se comparer à vous. Votre carte gardera le bloc « vous votez pour »."
@@ -410,12 +404,8 @@ struct QuizShareSection: View {
                         isSharing ? "Création du lien…" : failed ? "Échec, réessayer" : "Partager mes résultats",
                         systemImage: "square.and.arrow.up"
                     )
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 46)
-                    .foregroundStyle(Palette.onAccent)
-                    .background(Palette.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.monEluPrimary)
                 .disabled(isSharing)
                 .accessibilityIdentifier("quiz.share")
                 Text("Le lien créé est public.")

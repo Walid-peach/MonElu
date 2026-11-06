@@ -84,7 +84,7 @@ struct ChatMarkdownView: View {
     let text: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.s) {
             ForEach(Array(MarkdownBlock.parse(text).enumerated()), id: \.offset) { _, block in
                 view(for: block)
             }
@@ -105,7 +105,7 @@ struct ChatMarkdownView: View {
         case .numbered(let items):
             list(items.enumerated().map { ("\($0.offset + 1).", $0.element) })
         case .table(let header, let rows):
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                     Card {
                         VStack(alignment: .leading, spacing: 6) {
@@ -129,7 +129,7 @@ struct ChatMarkdownView: View {
     private func list(_ items: [(String, String)]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                     Text(item.0)
                         .foregroundStyle(Palette.textSecondary)
                         .accessibilityHidden(true)

@@ -8,7 +8,7 @@ struct DeputyRowView: View {
     var showsGroup = true
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.s) {
             DeputyPortrait(name: deputy.name, url: deputy.photoURL)
             VStack(alignment: .leading, spacing: 3) {
                 Text(deputy.name)
@@ -27,7 +27,7 @@ struct DeputyRowView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.xxs)
         .accessibilityElement(children: .combine)
     }
 }

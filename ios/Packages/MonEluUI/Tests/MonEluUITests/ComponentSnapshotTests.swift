@@ -179,6 +179,34 @@ struct ComponentSnapshotTests {
         check(HemicycleChart(deputies: deputies), variant)
     }
 
+    /// A short label, one long enough to wrap at an accessibility size, a
+    /// disabled one, and the compact one that sits beside a field.
+    @Test(arguments: variants)
+    func primaryButton(_ variant: Variant) {
+        check(VStack(spacing: Spacing.s) {
+            Button("Commencer le quiz") {}
+            Button("Suivre Marie-Christine Dalloz-Verdier") {}
+            Button("Création du lien…") {}.disabled(true)
+            Button("Rechercher") {}.buttonStyle(PrimaryButtonStyle(fullWidth: false))
+        }
+        .buttonStyle(.monEluPrimary), variant)
+    }
+
+    /// Three rows of a card, separated the way every row list in the app is.
+    @Test(arguments: variants)
+    func cardRowDivider(_ variant: Variant) {
+        check(Card(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(["Tous les départements", "Groupes politiques", "Thèmes"].enumerated()), id: \.offset) { index, title in
+                    if index > 0 { CardRowDivider() }
+                    Text(title)
+                        .foregroundStyle(Palette.textPrimary)
+                        .padding(Spacing.m)
+                }
+            }
+        }, variant)
+    }
+
     private func check<V: View>(_ view: V, _ variant: Variant, testName: String = #function) {
         let framed = view
             .padding(16)

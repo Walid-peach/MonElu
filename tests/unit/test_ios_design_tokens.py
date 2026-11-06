@@ -392,3 +392,44 @@ def test_text_tokens_reach_aa_contrast():
                     if ratio < 4.5:
                         failures.append(f"{appearance}: {text} on {background} is {ratio:.2f}:1")
     assert failures == []
+
+
+# Corner radii are tokens, like colours (#629): `Radius` in Geometry.swift is
+# the one place a radius is a number, and it holds three values at most.
+GEOMETRY = UI / "Geometry.swift"
+LITERAL_RADIUS = re.compile(r"cornerRadius:\s*-?[\d.]")
+RADIUS_TOKEN = re.compile(r"public static let (\w+): CGFloat = ([\d.]+)")
+
+
+def test_components_use_no_literal_radius():
+    offenders = [
+        f"{path.name}:{number}: {line.strip()}"
+        for root in SWIFT_UI_SOURCES
+        for path in root.rglob("*.swift")
+        if path != GEOMETRY
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if LITERAL_RADIUS.search(line)
+    ]
+    assert offenders == []
+
+
+def test_literal_radius_pattern_catches_the_usual_forms():
+    for line in [
+        "RoundedRectangle(cornerRadius: 14, style: .continuous)",
+        ".clipShape(RoundedRectangle(cornerRadius:8))",
+        "RoundedRectangle(cornerRadius: 12.5)",
+    ]:
+        assert LITERAL_RADIUS.search(line), line
+    for line in [
+        "RoundedRectangle(cornerRadius: radius, style: .continuous)",
+        "Radius.shape(Radius.card)",
+        ".surface(radius: Radius.large)",
+    ]:
+        assert not LITERAL_RADIUS.search(line), line
+
+
+def test_at_most_three_radius_tokens():
+    source = GEOMETRY.read_text(encoding="utf-8")
+    radius_block = source.split("public enum Radius", 1)[1].split("\n}\n", 1)[0]
+    values = {value for _, value in RADIUS_TOKEN.findall(radius_block)}
+    assert 1 <= len(values) <= 3, sorted(values)
