@@ -28,7 +28,7 @@ public struct VoteDetailScreen: View {
                 VoteDetailContent(
                     vote: vote, configuration: configuration, followedDeputyIDs: followedDeputies?.deputyIDs ?? []
                 )
-                    .padding(16)
+                    .padding(Spacing.m)
             }
         }
         .navigationTitle("Scrutin")
@@ -52,7 +52,7 @@ struct VoteDetailContent: View {
     var followedDeputyIDs: [String] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             header
             ResultCard(vote: vote)
             if let turnout = vote.turnout {
@@ -96,7 +96,7 @@ struct VoteDetailContent: View {
                     Card {
                         VStack(spacing: 0) {
                             ForEach(Array(vote.positionsByGroup.enumerated()), id: \.element.id) { index, group in
-                                if index > 0 { Divider().overlay(Palette.border) }
+                                if index > 0 { CardRowDivider() }
                                 GroupPositionsRow(group: group, turnout: vote.turnout(of: group))
                             }
                         }
@@ -114,7 +114,7 @@ struct VoteDetailContent: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                 if let theme = vote.item.theme {
                     ThemeTag(name: theme)
                 }
@@ -170,9 +170,9 @@ struct ThemeTag: View {
         let label = Text(name)
             .font(.caption.weight(.semibold))
             .foregroundStyle(Palette.textPrimary)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, Spacing.xs)
             .padding(.vertical, 3)
-            .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .background(Palette.trackBackground, in: Radius.shape(Radius.small))
             .fixedSize()
         if let slug = ReferenceData.themeSlug(named: name) {
             NavigationLink(value: AppRoute.theme(slug: slug)) { label }
@@ -263,14 +263,14 @@ struct TurnoutCard: View {
 
     var body: some View {
         Card {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spacing.s) {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         rate
                         Spacer(minLength: 8)
                         badge
                     }
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
                         rate
                         badge
                     }
@@ -317,7 +317,7 @@ struct TurnoutCard: View {
             Text(comparison.label)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(comparison.foreground)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, Spacing.xs)
                 .padding(.vertical, 3)
                 .background(comparison.background, in: Capsule())
                 .fixedSize(horizontal: false, vertical: true)
@@ -420,7 +420,7 @@ struct FollowedPositionsCard: View {
                     .font(.footnote)
                     .foregroundStyle(Palette.textSecondary)
                 ForEach(positions, id: \.deputyID) { position in
-                    HStack(spacing: 12) {
+                    HStack(spacing: Spacing.s) {
                         Text(position.name)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Palette.textPrimary)
@@ -471,7 +471,7 @@ struct GroupPositionsRow: View {
         let layout = dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
             : AnyLayout(HStackLayout(alignment: .center, spacing: 10))
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
             layout {
                 PartyChip(group.group, short: group.group)
                     .frame(width: dynamicTypeSize.isAccessibilitySize ? nil : 76, alignment: .leading)
@@ -488,7 +488,7 @@ struct GroupPositionsRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             ["\(group.group) : \(bar.accessibilityText)", turnoutLine].compactMap { $0 }.joined(separator: ". ")
@@ -529,7 +529,7 @@ struct LoiCard: View {
 
     private func card(link: Bool) -> some View {
         Card {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 if let status = vote.dossierStatus {
                     LoiStatusBadge(status: status)
                 }
@@ -539,7 +539,7 @@ struct LoiCard: View {
                     .foregroundStyle(Palette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if link {
-                    HStack(spacing: 4) {
+                    HStack(spacing: Spacing.xxs) {
                         Text("Voir le parcours du texte")
                         Image(systemName: "chevron.right").accessibilityHidden(true)
                     }

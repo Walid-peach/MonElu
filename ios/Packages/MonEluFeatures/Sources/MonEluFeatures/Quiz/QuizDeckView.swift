@@ -13,9 +13,9 @@ struct QuizCardView: View {
             Text(question.theme)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Palette.textPrimary)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, Spacing.xs)
                 .padding(.vertical, 3)
-                .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .background(Palette.trackBackground, in: Radius.shape(Radius.small))
             Text(question.question)
                 .font(Typography.heading(.title))
                 .foregroundStyle(Palette.textPrimary)
@@ -32,7 +32,7 @@ struct QuizCardView: View {
                     Spacer(minLength: 8)
                     Text("Glissez ou touchez")
                     Spacer(minLength: 8)
-                    HStack(spacing: 4) {
+                    HStack(spacing: Spacing.xxs) {
                         Text("Pour")
                         Image(systemName: "chevron.right")
                     }
@@ -43,10 +43,9 @@ struct QuizCardView: View {
             .foregroundStyle(Palette.textSecondary)
             .accessibilityHidden(true)
         }
-        .padding(22)
+        .padding(Spacing.l)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+        .surface(radius: Radius.large)
     }
 }
 
@@ -83,9 +82,9 @@ struct QuizRevealView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(12)
+        .padding(Spacing.s)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Palette.trackBackground, in: Radius.shape(Radius.card))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("quiz.reveal")
         // An answer given through a VoiceOver action moves straight to the
@@ -161,7 +160,7 @@ struct QuizDeckView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: Spacing.xs) {
             // Always laid out, so the progress keeps its width from question 1.
             Button(action: onBack) {
                 Image(systemName: "chevron.left")
@@ -219,9 +218,9 @@ struct QuizDeckView: View {
     }
 
     private func ghost(inset: CGFloat, drop: CGFloat, opacity: Double) -> some View {
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
+        Radius.shape(Radius.large)
             .fill(Palette.cardBackground)
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+            .overlay(Radius.shape(Radius.large).strokeBorder(Palette.border, lineWidth: 1))
             .padding(.horizontal, inset)
             .offset(y: drop)
             .opacity(opacity)
@@ -256,12 +255,12 @@ struct QuizDeckView: View {
             Text(VotePositionBadge.label(position.rawValue))
                 .font(.body.weight(.semibold))
                 .fixedSize()
-                .padding(.horizontal, 8)
+                .padding(.horizontal, Spacing.xs)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .foregroundStyle(foreground)
-                .background(background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(background, in: Radius.shape(Radius.card))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    Radius.shape(Radius.card)
                         .strokeBorder(position == .abstention ? Palette.border : .clear, lineWidth: 1)
                 )
         }
@@ -276,8 +275,8 @@ struct QuizDeckView: View {
             .font(.title.weight(.heavy))
             .foregroundStyle(foreground)
             .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(foreground, lineWidth: 3))
+            .padding(.vertical, Spacing.xxs)
+            .overlay(Radius.shape(Radius.small).strokeBorder(foreground, lineWidth: 3))
             .rotationEffect(.degrees(angle))
             .padding(18)
             .opacity(Double(min(max(opacity, 0), 1)))

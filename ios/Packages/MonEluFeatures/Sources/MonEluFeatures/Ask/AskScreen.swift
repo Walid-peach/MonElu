@@ -49,8 +49,8 @@ public struct AskScreen: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.horizontal, Spacing.m)
+                .padding(.vertical, Spacing.xs)
                 .accessibilityIdentifier("ask.mode")
             }
             thread
@@ -78,7 +78,7 @@ public struct AskScreen: View {
                     onShare: { id in Task { await model.share(id) } },
                     onFeedback: { vote, id in Task { await model.sendFeedback(vote, on: id) } }
                 )
-                .padding(16)
+                .padding(Spacing.m)
                 Color.clear.frame(height: 1).id("end")
             }
             .scrollDismissesKeyboard(.interactively)
@@ -89,15 +89,15 @@ public struct AskScreen: View {
 
     /// The composer, pinned above the tab bar.
     private var input: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        HStack(alignment: .bottom, spacing: Spacing.xs) {
             TextField(
                 model.effectiveMode == .claim ? "Collez une affirmation à vérifier…" : "Posez une question sur vos élus…",
                 text: $model.draft, axis: .vertical
             )
             .lineLimit(1...5)
             .focused($inputFocused)
-            .padding(.vertical, 10)
-            .padding(.leading, 12)
+            .padding(.vertical, Spacing.s)
+            .padding(.leading, Spacing.s)
             .accessibilityIdentifier("ask.input")
             Button {
                 inputFocused = false
@@ -115,11 +115,10 @@ public struct AskScreen: View {
             .accessibilityLabel(model.effectiveMode == .claim ? "Vérifier l'affirmation" : "Envoyer la question")
             .accessibilityIdentifier("ask.send")
         }
-        .padding(4)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(Spacing.xxs)
+        .surface(radius: Radius.large)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.xs)
         .background(Palette.pageBackground)
     }
 }

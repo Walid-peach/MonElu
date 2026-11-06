@@ -39,7 +39,7 @@ struct LoiAmendementsList: View {
                 ForEach(amendements.items) { scrutin in
                     NavigationLink(value: AppRoute.vote(id: scrutin.id)) {
                         LoiScrutinRow(scrutin: scrutin)
-                            .padding(.vertical, 4)
+                            .padding(.vertical, Spacing.xxs)
                     }
                     .listRowBackground(Palette.cardBackground)
                     .accessibilityIdentifier("loi.amendement")

@@ -121,7 +121,7 @@ struct VotesList: View {
                 }
             }
             if let loadMoreFailure {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(
                         loadMoreFailure == .offline
                             ? "Hors connexion : la suite n'a pas pu être chargée."
@@ -179,7 +179,7 @@ struct ExplorerVoteRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
                 if let result = vote.result { VoteResultBadge(result: result) }
                 if let theme = vote.theme {
                     Text(theme)
@@ -204,7 +204,7 @@ struct ExplorerVoteRow: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.xxs)
         .accessibilityElement(children: .combine)
     }
 }

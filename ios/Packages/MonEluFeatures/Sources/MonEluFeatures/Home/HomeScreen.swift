@@ -138,7 +138,7 @@ public struct HomeScreen: View {
 
     @ViewBuilder private var feedHeader: some View {
         HomeTagline()
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.m)
         FollowsRow(
             circles: circles,
             filter: Binding(get: { activeFilter }, set: { select($0) }),
@@ -150,7 +150,7 @@ public struct HomeScreen: View {
             }
         }
         .pickerStyle(.segmented)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.m)
         .accessibilityIdentifier("feed.tabs")
     }
 
@@ -184,7 +184,7 @@ public struct HomeScreen: View {
                 onSearch: { Task { await model.runSearch() } },
                 onSelect: { model.select($0) }
             )
-            .padding(16)
+            .padding(Spacing.m)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -320,12 +320,12 @@ struct FeedPageView<Header: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spacing.m) {
                 header
                 content
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Spacing.m)
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, Spacing.m)
         }
         .background(Palette.pageBackground)
     }

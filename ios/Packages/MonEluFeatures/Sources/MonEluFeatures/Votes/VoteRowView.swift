@@ -9,7 +9,7 @@ struct VoteRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
                 if let result = vote.result {
                     VoteResultBadge(result: result)
                 }
@@ -28,7 +28,7 @@ struct VoteRowView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.xxs)
     }
 }
 

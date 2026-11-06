@@ -30,7 +30,7 @@ public struct ExploreScreen: View {
         Group {
             if search.isActive {
                 ScrollView {
-                    ExploreSearchResultsView(results: search.results).padding(.vertical, 12)
+                    ExploreSearchResultsView(results: search.results).padding(.vertical, Spacing.s)
                 }
                 .scrollDismissesKeyboard(.interactively)
             } else {
@@ -38,7 +38,7 @@ public struct ExploreScreen: View {
                 // and never fails: the fixed tables (themes, départements) always show.
                 LoadStateView(loader, empty: EmptyStateView(title: "Explorer", message: "")) { hub in
                     ScrollView {
-                        ExploreContent(hub: hub).padding(.vertical, 12)
+                        ExploreContent(hub: hub).padding(.vertical, Spacing.s)
                     }
                 }
             }
@@ -68,7 +68,7 @@ struct ExploreContent: View {
     var themes: [ReferenceData.Theme] = (try? ReferenceData.themes()) ?? []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             ExploreTiles(hub: hub)
             if !themes.isEmpty {
                 section("Thèmes") {
@@ -78,13 +78,9 @@ struct ExploreContent: View {
                                 Text(theme.name)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Palette.textPrimary)
-                                    .padding(.horizontal, 12)
+                                    .padding(.horizontal, Spacing.s)
                                     .frame(minHeight: 44)
-                                    .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .strokeBorder(Palette.border, lineWidth: 1)
-                                    )
+                                    .surface()
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("explore.theme")
@@ -101,7 +97,7 @@ struct ExploreContent: View {
                         ExploreRow(route: .department(code: mine.code), id: "explore.my-department") {
                             Label("\(mine.name) · votre département", systemImage: "mappin.and.ellipse")
                         }
-                        Divider().overlay(Palette.border)
+                        CardRowDivider()
                     }
                     ExploreRow(route: .departments, id: "explore.departments") {
                         Text("Tous les départements")
@@ -118,7 +114,7 @@ struct ExploreContent: View {
             SectionHeader(title)
             content()
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.m)
     }
 }
 
@@ -146,12 +142,12 @@ struct ExploreTiles: View {
             )
             tile("Agenda", "Cette semaine", "calendar", .agenda(), id: "explore.agenda")
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.m)
     }
 
     private func tile(_ title: String, _ detail: String, _ icon: String, _ route: AppRoute, id: String) -> some View {
         NavigationLink(value: route) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spacing.s) {
                 Image(systemName: icon)
                     .font(.title3)
                     .foregroundStyle(Palette.accent)
@@ -167,10 +163,9 @@ struct ExploreTiles: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(14)
+            .padding(Spacing.m)
             .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+            .surface()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -203,9 +198,9 @@ struct ExploreGroupsSection: View {
             ExploreRows {
                 let shown = showsAll ? groups : Array(groups.prefix(Self.collapsedCount))
                 ForEach(Array(shown.enumerated()), id: \.element.id) { index, group in
-                    if index > 0 { Divider().overlay(Palette.border) }
+                    if index > 0 { CardRowDivider() }
                     ExploreRow(route: .group(slug: group.slug), id: "explore.group") {
-                        HStack(spacing: 12) {
+                        HStack(spacing: Spacing.s) {
                             PartyChip(group.short ?? group.name, short: group.short)
                                 .frame(width: chipWidth, alignment: .leading)
                             Text(group.name)
@@ -219,7 +214,7 @@ struct ExploreGroupsSection: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.m)
     }
 }
 
@@ -229,8 +224,7 @@ struct ExploreRows<Content: View>: View {
 
     var body: some View {
         VStack(spacing: 0) { content }
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+            .surface()
     }
 }
 
@@ -242,7 +236,7 @@ struct ExploreRow<Label: View>: View {
 
     var body: some View {
         NavigationLink(value: route) {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.s) {
                 label
                     .font(.body)
                     .foregroundStyle(Palette.textPrimary)
@@ -253,8 +247,8 @@ struct ExploreRow<Label: View>: View {
                     .foregroundStyle(Palette.textMuted)
                     .accessibilityHidden(true)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }

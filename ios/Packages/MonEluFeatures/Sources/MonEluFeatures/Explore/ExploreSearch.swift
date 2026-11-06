@@ -112,12 +112,12 @@ struct ExploreSearchResultsView: View {
     let results: ExploreSearchResults?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             if let results, !results.isEmpty {
                 if !results.deputies.isEmpty {
                     section("Députés") {
                         ForEach(Array(results.deputies.enumerated()), id: \.element.id) { index, deputy in
-                            if index > 0 { Divider().overlay(Palette.border) }
+                            if index > 0 { CardRowDivider() }
                             link(.deputy(id: deputy.id), id: "explore.result.deputy") {
                                 ExplorerDeputyRow(deputy: deputy)
                             }
@@ -127,7 +127,7 @@ struct ExploreSearchResultsView: View {
                 if !results.votes.isEmpty {
                     section("Votes") {
                         ForEach(Array(results.votes.enumerated()), id: \.element.id) { index, vote in
-                            if index > 0 { Divider().overlay(Palette.border) }
+                            if index > 0 { CardRowDivider() }
                             link(.vote(id: vote.id), id: "explore.result.vote") {
                                 ExplorerVoteRow(vote: vote)
                             }
@@ -137,7 +137,7 @@ struct ExploreSearchResultsView: View {
                 if !results.lois.isEmpty {
                     section("Textes") {
                         ForEach(Array(results.lois.enumerated()), id: \.element.id) { index, loi in
-                            if index > 0 { Divider().overlay(Palette.border) }
+                            if index > 0 { CardRowDivider() }
                             link(.loi(id: loi.id), id: "explore.result.loi") {
                                 Text(loi.title ?? loi.id)
                                     .font(.subheadline)
@@ -151,7 +151,7 @@ struct ExploreSearchResultsView: View {
                 if !results.departments.isEmpty {
                     section("Départements") {
                         ForEach(Array(results.departments.enumerated()), id: \.element.id) { index, department in
-                            if index > 0 { Divider().overlay(Palette.border) }
+                            if index > 0 { CardRowDivider() }
                             link(.department(code: department.code), id: "explore.result.department") {
                                 Text("\(department.name) (\(department.code))")
                                     .font(.body)
@@ -183,20 +183,20 @@ struct ExploreSearchResultsView: View {
             SectionHeader(title)
             ExploreRows { content() }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.m)
     }
 
     private func link<Label: View>(_ route: AppRoute, id: String, @ViewBuilder label: () -> Label) -> some View {
         NavigationLink(value: route) {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.s) {
                 label().frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Palette.textMuted)
                     .accessibilityHidden(true)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
@@ -209,7 +209,7 @@ struct ExploreSearchResultsView: View {
             .font(.subheadline)
             .foregroundStyle(Palette.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.horizontal, Spacing.m)
+            .padding(.top, Spacing.xs)
     }
 }

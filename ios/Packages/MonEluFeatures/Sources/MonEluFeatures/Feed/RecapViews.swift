@@ -54,7 +54,7 @@ struct FeedRecapCard: View {
 
     var body: some View {
         Button(action: onOpen) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spacing.s) {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline) { eyebrow; Spacer(minLength: 8); span }
                     VStack(alignment: .leading, spacing: 2) { eyebrow; span }
@@ -89,9 +89,9 @@ struct FeedRecapCard: View {
             }
             .foregroundStyle(Palette.onIdentity)
             .multilineTextAlignment(.leading)
-            .padding(18)
+            .padding(Spacing.m)
             .frame(maxWidth: .infinity, maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
-            .background(Palette.identityBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Palette.identityBackground, in: Radius.shape(Radius.large))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -162,7 +162,7 @@ struct FindDeputyCard: View {
                     .font(.title2)
                     .foregroundStyle(Palette.accent)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text("Trouvez votre député")
                         .font(Typography.heading(.title3))
                         .foregroundStyle(Palette.textPrimary)
@@ -177,9 +177,8 @@ struct FindDeputyCard: View {
                     .foregroundStyle(Palette.textMuted)
                     .accessibilityHidden(true)
             }
-            .padding(16)
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+            .padding(Spacing.m)
+            .surface()
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -208,9 +207,9 @@ struct NoSittingNote: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(12)
+        .padding(Spacing.s)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Palette.trackBackground, in: Radius.shape(Radius.card))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("feed.no-sitting")
     }

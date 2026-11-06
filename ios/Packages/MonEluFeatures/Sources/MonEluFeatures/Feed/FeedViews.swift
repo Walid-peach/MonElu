@@ -28,7 +28,7 @@ struct FeedContent: View {
     @Environment(\.appConfiguration) private var configuration
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.s) {
             if page.noSitting {
                 NoSittingNote(weekStart: page.weekStart, weekEnd: page.weekEnd)
             }
@@ -57,11 +57,11 @@ struct FeedContent: View {
                     FeedRollupView(rollup: rollup, name: rollup.deputyID.flatMap { names.name(of: $0) })
                 }
             }
-            VStack(spacing: 12) {
+            VStack(spacing: Spacing.s) {
                 if configuration.features.chat { HomeInvitation.ask }
                 HomeInvitation.quiz
             }
-            .padding(.top, 8)
+            .padding(.top, Spacing.xs)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("feed.\(tab.rawValue)")
@@ -94,7 +94,7 @@ struct FeedEmptyNote: View {
         .font(.subheadline)
         .foregroundStyle(Palette.textSecondary)
         .fixedSize(horizontal: false, vertical: true)
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
     }
 
     var message: String {
@@ -232,9 +232,9 @@ struct FeedScrutinCardView: View {
                     .foregroundStyle(Palette.textSecondary)
             }
         }
-        .padding(10)
+        .padding(Spacing.s)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.pageBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Palette.pageBackground, in: Radius.shape(Radius.card))
         .accessibilityElement(children: .combine)
     }
 
@@ -270,7 +270,7 @@ struct FeedScrutinCardView: View {
 
     private var scrutinLink: some View {
         NavigationLink(value: AppRoute.vote(id: card.id)) {
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.xxs) {
                 Text("Voir le scrutin")
                 Image(systemName: "arrow.right").accessibilityHidden(true)
             }
@@ -287,7 +287,7 @@ struct FeedScrutinCardView: View {
     @ViewBuilder private var loiLink: some View {
         if let loiID = card.loiID {
             NavigationLink(value: AppRoute.loi(id: loiID)) {
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxs) {
                     Text("Voir la loi")
                     Image(systemName: "arrow.right").accessibilityHidden(true)
                 }
@@ -304,7 +304,7 @@ struct FeedScrutinCardView: View {
     @ViewBuilder private var sourceLink: some View {
         if let url = card.officialURL {
             Link(destination: url) {
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxs) {
                     Text("Source officielle")
                     Image(systemName: "arrow.up.right").accessibilityHidden(true)
                 }
@@ -324,7 +324,7 @@ struct FeedRollupView: View {
     var name: String?
 
     var body: some View {
-        let content = VStack(alignment: .leading, spacing: 4) {
+        let content = VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(headline)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Palette.textPrimary)
@@ -337,9 +337,9 @@ struct FeedRollupView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(Spacing.m)
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            Radius.shape(Radius.card)
                 .strokeBorder(Palette.border, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
         )
         if let deputyID = rollup.deputyID {

@@ -27,7 +27,7 @@ public struct LoiScreen: View {
             if let page {
                 ScrollView {
                     LoiContent(page: page, configuration: configuration, today: .now)
-                        .padding(16)
+                        .padding(Spacing.m)
                 }
             }
         }
@@ -145,9 +145,9 @@ struct LoiStatusBadge: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(foreground)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, Spacing.xs)
             .padding(.vertical, 3)
-            .background(background, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .background(background, in: Radius.shape(Radius.small))
     }
 }
 
@@ -177,7 +177,7 @@ struct StageStripView: View {
             : AnyLayout(HStackLayout(alignment: .top, spacing: 4))
         layout {
             ForEach(strip.steps) { step in
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Capsule(style: .circular)
                         .fill(color(step.state))
                         .frame(height: 6)
@@ -220,7 +220,7 @@ struct NextSittingCard: View {
     let sitting: LoiNextSitting
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.s) {
             Image(systemName: "calendar")
                 .font(.title3)
                 .accessibilityHidden(true)
@@ -239,9 +239,9 @@ struct NextSittingCard: View {
                 .accessibilityHidden(true)
         }
         .foregroundStyle(Palette.onIdentity)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Palette.identityBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.s)
+        .background(Palette.identityBackground, in: Radius.shape(Radius.card))
         .accessibilityElement(children: .combine)
     }
 }
@@ -254,7 +254,7 @@ struct ParcoursSectionView: View {
 
     var body: some View {
         Card {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spacing.s) {
                 if let stage = section.stage {
                     StageTitle(text: stage.label ?? stage.code)
                 }
@@ -321,12 +321,12 @@ struct ActeRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Spacing.s) {
             VStack(spacing: 0) {
                 Circle()
                     .fill(dotColor)
                     .frame(width: 10, height: 10)
-                    .padding(.top, 4)
+                    .padding(.top, Spacing.xxs)
                 if connectsBelow {
                     // Through the row and the 12-point gap to the next dot.
                     Rectangle()
@@ -338,7 +338,7 @@ struct ActeRow: View {
             }
             .frame(width: 10)
             .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(dateText)
                     .font(.caption)
                     .foregroundStyle(Palette.textSecondary)
@@ -353,7 +353,7 @@ struct ActeRow: View {
                         .foregroundStyle(Palette.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                ForEach(acte.scrutins) { LoiScrutinLink(scrutin: $0).padding(.top, 4) }
+                ForEach(acte.scrutins) { LoiScrutinLink(scrutin: $0).padding(.top, Spacing.xxs) }
                 if let collapsed = acte.collapsedVotesLabel {
                     NavigationLink(value: AppRoute.loiAmendements(id: loiID, acteID: acte.id)) {
                         HStack {
@@ -406,12 +406,8 @@ struct LoiScrutinLink: View {
     var body: some View {
         NavigationLink(value: AppRoute.vote(id: scrutin.id)) {
             LoiScrutinRow(scrutin: scrutin)
-                .padding(12)
-                .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Palette.border, lineWidth: 1)
-                )
+                .padding(Spacing.s)
+                .surface()
         }
         .buttonStyle(.plain)
     }
@@ -423,7 +419,7 @@ struct LoiScrutinRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xs) {
                 if let result = scrutin.result {
                     VoteResultBadge(result: result)
                 }

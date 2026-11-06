@@ -108,7 +108,7 @@ struct FollowsRow: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: Spacing.s) {
                 ForEach(circles) { circle in
                     let selected = filter == circle.filter
                     Button {
@@ -138,7 +138,7 @@ struct FollowsRow: View {
                 .accessibilityLabel("Suivre un député ou un thème")
                 .accessibilityIdentifier("follows.add")
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.m)
             // As tall as its labels at every text size, rather than clipped to
             // the scroll view's first measured height.
             .fixedSize(horizontal: false, vertical: true)
@@ -229,7 +229,7 @@ struct FollowsSheet: View {
             List {
                 Section {
                     ForEach(deputies) { deputy in
-                        HStack(spacing: 12) {
+                        HStack(spacing: Spacing.s) {
                             DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 36)
                             Text(deputy.name)
                                 .foregroundStyle(Palette.textPrimary)

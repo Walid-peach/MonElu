@@ -37,7 +37,7 @@ struct ConstituencyLink: View {
             .fixedSize(horizontal: false, vertical: true)
         if let code = ReferenceData.departmentCode(named: department) {
             NavigationLink(value: AppRoute.department(code: code)) {
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxs) {
                     label
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
@@ -63,7 +63,7 @@ struct DeputyHeader: View {
     private var deputy: DeputyItem { profile.deputy }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Spacing.xs) {
             DeputyPortrait(name: deputy.name, url: deputy.photoURL, size: 96)
             Text(deputy.name)
                 .font(Typography.heading(.title))
@@ -112,7 +112,7 @@ struct DeputyScorecardSection: View {
     let configuration: AppConfiguration
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             VStack(alignment: .leading, spacing: 10) {
                 SectionHeader("Activité en séance")
                 StatTileGrid {
@@ -225,7 +225,7 @@ struct DeputyAlignmentSection: View {
                     CaveatNote(id: "group_alignment", in: configuration)
                     if alignment.dissidentVotes > 0 {
                         NavigationLink(value: AppRoute.dissidentVotes(deputyID: deputyID)) {
-                            HStack(spacing: 4) {
+                            HStack(spacing: Spacing.xxs) {
                                 Text("Voir ses votes divergents")
                                 Image(systemName: "chevron.right").accessibilityHidden(true)
                             }

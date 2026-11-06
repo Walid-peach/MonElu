@@ -39,7 +39,7 @@ public struct QuizScreen: View {
                     questions: questions,
                     resume: model.canResume ? (model.answers.count, { model.continueDeck() }) : nil
                 ) { model.start() }
-                    .padding(16)
+                    .padding(Spacing.m)
             }
         case .questions:
             if let question = model.current {
@@ -49,12 +49,12 @@ public struct QuizScreen: View {
                     onAnswer: { model.answer($0) }, onSkip: { model.skip() }, onBack: { model.back() },
                     onQuit: { model.quit() }
                 )
-                .padding(16)
+                .padding(Spacing.m)
             }
         case .notEnough:
             ScrollView {
                 QuizNotEnoughView(answered: model.answers.count) { model.resume() }
-                    .padding(16)
+                    .padding(Spacing.m)
             }
         case .result:
             if let result = model.result {
@@ -63,7 +63,7 @@ public struct QuizScreen: View {
                     empty: EmptyStateView(title: "Aucun résultat", message: "Le résultat n'a pas pu être calculé.")
                 ) { result in
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
+                        VStack(alignment: .leading, spacing: Spacing.l) {
                             QuizResultHeader(result: result)
                             QuizShareSection(
                                 includeAnswers: $model.includeAnswers, hasLink: model.hasShareLink,
@@ -77,7 +77,7 @@ public struct QuizScreen: View {
                                 .frame(maxWidth: .infinity, minHeight: 44)
                                 .accessibilityIdentifier("quiz.restart")
                         }
-                        .padding(16)
+                        .padding(Spacing.m)
                     }
                 }
             }

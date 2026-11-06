@@ -24,7 +24,7 @@ struct HomeVoteRow: View {
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.s) {
             VStack(alignment: .leading, spacing: 6) {
                 let layout = typeSize.isAccessibilitySize
                     ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
@@ -51,8 +51,8 @@ struct HomeVoteRow: View {
                 .foregroundStyle(Palette.textMuted)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.s)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
@@ -83,7 +83,7 @@ struct HomeVoteList<Item: Identifiable, Row: View>: View {
         Card(padding: 0) {
             VStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 { Divider().overlay(Palette.border).padding(.leading, 16) }
+                    if index > 0 { CardRowDivider() }
                     row(item)
                 }
             }
@@ -114,10 +114,9 @@ struct HomeAgendaCard: View {
                     .foregroundStyle(Palette.textSecondary)
             }
         }
-        .padding(14)
+        .padding(Spacing.m)
         .frame(maxWidth: .infinity, minHeight: 130, alignment: .topLeading)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+        .surface()
         .accessibilityElement(children: .combine)
     }
 }
@@ -157,7 +156,7 @@ struct HomeInvitation: View {
                         .font(.title2)
                         .accessibilityHidden(true)
                 }
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(title)
                         .font(Typography.heading(.headline))
                         .foregroundStyle(Palette.textPrimary)
@@ -172,8 +171,8 @@ struct HomeInvitation: View {
                     .accessibilityHidden(true)
             }
             .foregroundStyle(Palette.textPrimary)
-            .padding(16)
-            .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(Spacing.m)
+            .background(Palette.trackBackground, in: Radius.shape(Radius.card))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

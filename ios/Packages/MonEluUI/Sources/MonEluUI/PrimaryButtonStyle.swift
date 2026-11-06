@@ -1,13 +1,20 @@
 import SwiftUI
 
-/// The app's one call-to-action style (#629): white text on the accent, full
-/// width, `Radius.card`, 50 pt tall at the default text size. The label wraps rather than
-/// truncates at large text sizes.
+/// The app's one call-to-action style (#629): white text on the accent,
+/// `Radius.card`, 50 pt tall at the default text size, full width unless the
+/// button sits beside a field. The label wraps rather than truncates at large
+/// text sizes.
 ///
 /// Use it as `.buttonStyle(.monEluPrimary)`, never by styling a plain button
 /// with the accent by hand.
 public struct PrimaryButtonStyle: ButtonStyle {
-    public init() {}
+    private let fullWidth: Bool
+
+    /// `fullWidth: false` sizes the button to its label, for a button beside
+    /// a field ("Rechercher").
+    public init(fullWidth: Bool = true) {
+        self.fullWidth = fullWidth
+    }
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -20,7 +27,7 @@ public struct PrimaryButtonStyle: ButtonStyle {
             // measures the label at its one-line ideal height and lets a
             // wrapped label overflow the button.
             .padding(.vertical, 15)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: fullWidth ? .infinity : nil)
             .foregroundStyle(Palette.onAccent)
             .background(Palette.accent, in: Radius.shape(Radius.card))
             .contentShape(Radius.shape(Radius.card))

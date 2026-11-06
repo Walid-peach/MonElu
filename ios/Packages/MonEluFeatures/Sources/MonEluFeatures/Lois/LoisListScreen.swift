@@ -17,7 +17,7 @@ public struct LoisListScreen: View {
             empty: EmptyStateView(title: "Aucun texte", message: "Aucun texte n'a encore de scrutin enregistré.")
         ) { list in
             ScrollView {
-                LoisList(list: list).padding(16)
+                LoisList(list: list).padding(Spacing.m)
             }
         }
         .background(Palette.pageBackground)
@@ -33,14 +33,14 @@ struct LoisList: View {
     @Environment(\.appConfiguration) private var configuration
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.s) {
             Text("\(MonEluFormat.count(list.total)) texte\(list.total > 1 ? "s" : "") avec au moins un scrutin")
                 .font(.subheadline)
                 .foregroundStyle(Palette.textSecondary)
             CaveatNote(id: "bill_coverage", in: configuration)
             VStack(spacing: 0) {
                 ForEach(Array(list.items.enumerated()), id: \.element.id) { index, loi in
-                    if index > 0 { Divider().overlay(Palette.border) }
+                    if index > 0 { CardRowDivider() }
                     NavigationLink(value: AppRoute.loi(id: loi.id)) {
                         LoiListRow(loi: loi)
                     }
@@ -48,8 +48,7 @@ struct LoisList: View {
                     .accessibilityIdentifier("loi.row")
                 }
             }
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+            .surface()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -60,7 +59,7 @@ struct LoiListRow: View {
     let loi: LoiListItem
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.s) {
             VStack(alignment: .leading, spacing: 6) {
                 if let status = loi.status { LoiStatusBadge(status: status) }
                 Text(loi.title ?? "Texte sans titre")
@@ -81,8 +80,8 @@ struct LoiListRow: View {
                 .foregroundStyle(Palette.textMuted)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.s)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }

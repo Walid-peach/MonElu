@@ -56,8 +56,8 @@ public struct AgendaScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
                 AgendaWeekSwitcher(window: model.window) { model.move(by: $0) }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+            .padding(.horizontal, Spacing.m)
+            .padding(.bottom, Spacing.xs)
             LoadStateView(
                 model.loader,
                 empty: EmptyStateView(
@@ -68,7 +68,7 @@ public struct AgendaScreen: View {
             ) { week in
                 ScrollView {
                     AgendaWeekContent(week: week, theme: $model.theme)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, Spacing.xs)
                 }
             }
             // A new week is a new loader; its identity starts the load.
@@ -87,7 +87,7 @@ struct AgendaWeekSwitcher: View {
     let move: (Int) -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xxs) {
             button("chevron.left", label: "Semaine précédente", by: -1)
             VStack(spacing: 2) {
                 Text(MonEluFormat.span(from: window.from, to: window.to))
@@ -103,10 +103,9 @@ struct AgendaWeekSwitcher: View {
             .accessibilityElement(children: .combine)
             button("chevron.right", label: "Semaine suivante", by: 1)
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 4)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+        .padding(.horizontal, Spacing.xxs)
+        .padding(.vertical, Spacing.xxs)
+        .surface()
     }
 
     private func button(_ image: String, label: String, by weeks: Int) -> some View {
@@ -132,7 +131,7 @@ struct AgendaWeekContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Spacing.m) {
             if week.themes.count > 1 {
                 FilterChipRow(
                     [FilterChip(id: "", title: "Tout", isSelected: activeTheme == nil)]
@@ -142,21 +141,20 @@ struct AgendaWeekContent: View {
                 }
             }
             ForEach(week.filtered(theme: activeTheme)) { day in
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(MonEluFormat.weekday(day.date))
                         .font(Typography.heading(.title3))
                         .foregroundStyle(Palette.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     VStack(spacing: 0) {
                         ForEach(Array(day.items.enumerated()), id: \.element.id) { index, entry in
-                            if index > 0 { Divider().overlay(Palette.border) }
+                            if index > 0 { CardRowDivider() }
                             AgendaEntryLink(entry: entry)
                         }
                     }
-                    .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+                    .surface()
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Spacing.m)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -207,13 +205,13 @@ struct AgendaEntryRow: View {
         let layout = dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
             : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: Spacing.xs) {
             layout {
                 Text(MonEluFormat.time(entry.start))
                     .font(.subheadline.weight(.bold).monospacedDigit())
                     .foregroundStyle(Palette.textPrimary)
                     .frame(minWidth: dynamicTypeSize.isAccessibilitySize ? nil : 52, alignment: .leading)
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     if let pointType = entry.pointTypeLabel {
                         Text(pointType)
                             .font(.caption)
@@ -237,14 +235,14 @@ struct AgendaEntryRow: View {
                         )
                     }
                     if entry.theme != nil || entry.result != nil {
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.xs) {
                             if let theme = entry.theme {
                                 Text(theme)
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(Palette.textPrimary)
-                                    .padding(.horizontal, 8)
+                                    .padding(.horizontal, Spacing.xs)
                                     .padding(.vertical, 3)
-                                    .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                    .background(Palette.trackBackground, in: Radius.shape(Radius.small))
                             }
                             if let result = entry.result {
                                 VoteResultBadge(result: result)
@@ -263,8 +261,8 @@ struct AgendaEntryRow: View {
                     .accessibilityHidden(true)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.s)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
