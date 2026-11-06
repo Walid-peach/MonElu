@@ -20,8 +20,6 @@ struct HomeSnapshotTests {
         let empty = FeedPage(weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, entries: [])
         let view = NavigationStack {
             FeedPageView(state: .loaded(FeedScreen(page: empty)), tab: .pourVous, followsNothing: true) {
-                HomeTagline()
-                    .padding(.horizontal, 16)
                 FollowsRow(circles: [], filter: .constant(.all), onAdd: {})
                 Picker("Fil", selection: .constant(FeedTab.pourVous)) {
                     ForEach(FeedTab.allCases, id: \.self) { Text($0.title).tag($0) }

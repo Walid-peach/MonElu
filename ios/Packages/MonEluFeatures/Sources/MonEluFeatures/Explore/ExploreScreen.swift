@@ -27,7 +27,10 @@ public struct ExploreScreen: View {
     }
 
     public var body: some View {
-        Group {
+        // A ZStack, not a Group: a Group hands its modifiers to each branch,
+        // which rebuilt the search field, and dropped its focus, the moment
+        // the results replaced the contents.
+        ZStack {
             if search.isActive {
                 ScrollView {
                     ExploreSearchResultsView(results: search.results).padding(.vertical, Spacing.s)
@@ -43,13 +46,17 @@ public struct ExploreScreen: View {
                 }
             }
         }
+        // Always shown, as the design opens Explorer on it (#521), and pinned
+        // over the page. Explorer has no navigation bar (#657), and the
+        // system `.searchable` field lives in that bar, so the field is ours.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            ExploreSearchField(query: Bindable(search).query)
+                .padding(.horizontal, Spacing.gutter)
+                .padding(.top, Spacing.xs)
+                .padding(.bottom, Spacing.xs)
+                .background(Palette.pageBackground)
+        }
         .background(Palette.pageBackground)
-        // Always shown, as the design opens Explorer on it (#521).
-        .searchable(
-            text: Bindable(search).query,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Vote, député, texte, commune"
-        )
         .task(id: search.query) { await search.run() }
         .onAppear {
             // Followed or unfollowed since the hub loaded: its département row is stale.
@@ -57,8 +64,51 @@ public struct ExploreScreen: View {
                 Task { await loader.refresh() }
             }
         }
-        .navigationTitle("Explorer")
+        // Opens on the search field, with no title or bar above it (#657).
+        .tabRootTitle("Explorer")
         .accessibilityIdentifier("screen.explore")
+    }
+}
+
+/// Explorer's search field: a vote, a deputy, a bill or a commune (#521).
+struct ExploreSearchField: View {
+    @Binding var query: String
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: Spacing.xs) {
+            Image(systemName: "magnifyingglass")
+                .font(.body.weight(.medium))
+                .foregroundStyle(Palette.textSecondary)
+                .accessibilityHidden(true)
+            TextField("Rechercher", text: $query, prompt: Text("Vote, député, texte, commune"))
+                .font(.body)
+                .foregroundStyle(Palette.textPrimary)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .focused($focused)
+                .accessibilityAddTraits(.isSearchField)
+                .accessibilityIdentifier("explore.search")
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                    focused = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Palette.textSecondary)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Effacer la recherche")
+                .accessibilityIdentifier("explore.search.clear")
+            }
+        }
+        .padding(.leading, Spacing.s)
+        .padding(.trailing, query.isEmpty ? Spacing.s : 0)
+        .frame(minHeight: 48)
+        .background(Palette.trackBackground, in: Capsule())
+        .contentShape(Capsule())
+        .onTapGesture { focused = true }
     }
 }
 
