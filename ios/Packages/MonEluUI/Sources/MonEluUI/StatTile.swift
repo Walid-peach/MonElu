@@ -34,12 +34,8 @@ public struct StatTile: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(12)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Palette.border, lineWidth: 1)
-        )
+        .padding(Spacing.s)
+        .surface()
         .accessibilityElement(children: .combine)
     }
 }

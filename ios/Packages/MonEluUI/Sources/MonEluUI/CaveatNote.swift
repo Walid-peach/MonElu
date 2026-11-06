@@ -31,10 +31,10 @@ public struct CaveatNote: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .font(.footnote)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.s)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.trackBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .surface(Palette.trackBackground, bordered: false)
     }
 
     /// Inline Markdown rendered; plain text if it does not parse. Shared by

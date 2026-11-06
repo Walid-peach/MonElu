@@ -103,10 +103,15 @@ The work is tracked under epic #429, one phase epic at a time.
 - Text that can grow with Dynamic Type must wrap, not truncate.
 - A Newsreader title that can run over several lines (a scrutin, a bill, a group) takes `.headingLineSpacing()`, so its lines do not touch (#519).
 - Navigation titles are styled once at launch by `NavigationBarStyle.apply()` (Newsreader large titles, `textPrimary`), and the tab bar and every control take `Palette.accent` through `.tint` on `RootTabView`; never restyle a bar per screen or replace the system bar (#516).
+- Geometry comes from `Geometry.swift` (`MonEluUI`, #629), as colours come from `Palette`.
+  A corner radius is `Radius.small` (6: tags, chips, pills), `Radius.card` (12: cards, nested tiles, buttons, inputs) or `Radius.large` (20: the quiz deck card, the Ask composer, identity panels), drawn with `Radius.shape(_:)`; a capsule or circle stays a shape.
+  `tests/unit/test_ios_design_tokens.py` fails on a `cornerRadius:` literal outside `Geometry.swift` and on a fourth radius.
+  Page gutters, card padding and the gaps between cards and rows come from `Spacing` (4, 8, 12, 16, 24; `Spacing.gutter`, `Spacing.cardPadding`); a control's own optical adjustment may use another value.
+  A card-like surface is `Card` or `.surface(_:radius:bordered:)`, never its own fill plus a `Palette.border` stroke; an accent call to action is `.buttonStyle(.monEluPrimary)`; the line between two rows of a card is `CardRowDivider`, and nothing else draws one.
 - Cards are 12 pt radius (`Card`); a screen built on `List(.insetGrouped)` (Votes, Députés, Départements, Réglages) keeps the system's own corner radius rather than imitating 12 (#516).
   The system list brings sections, swipe actions, VoiceOver rotors and cell reuse for hundreds of rows, and its radius follows the platform as iOS changes it; a hand-built `LazyVStack` in a `Card` would give those up for a few points of radius.
 - A scrutin's date in a list row is `MonEluFormat.listDay` ("21 juil.", the year only when it is not the current one), relative to `@Environment(\.today)`, which snapshot tests pin; a page's own header keeps the long date.
-- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
+- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, `PrimaryButtonStyle`, `CardRowDivider`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
   A new component gets the same four snapshots.
   A missing reference is recorded and the test fails once: look at the new image, commit it, re-run.
   A changed reference is a visual change: re-record by deleting the old image, and say so in the PR.

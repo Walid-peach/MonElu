@@ -7,7 +7,7 @@ public struct Card<Content: View>: View {
 
     /// `padding` is the inner margin; a list of rows passes 0 and pads each
     /// row itself, so its dividers run under the whole row.
-    public init(padding: CGFloat = 16, @ViewBuilder content: () -> Content) {
+    public init(padding: CGFloat = Spacing.cardPadding, @ViewBuilder content: () -> Content) {
         self.padding = padding
         self.content = content()
     }
@@ -16,10 +16,6 @@ public struct Card<Content: View>: View {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Palette.border, lineWidth: 1)
-            )
+            .surface()
     }
 }

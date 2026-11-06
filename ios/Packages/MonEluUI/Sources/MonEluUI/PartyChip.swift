@@ -27,6 +27,6 @@ public struct PartyChip: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(colors.background, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .background(colors.background, in: Radius.shape(Radius.small))
     }
 }
