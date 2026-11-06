@@ -17,6 +17,18 @@ public struct PrimaryButtonStyle: ButtonStyle {
     }
 
     public func makeBody(configuration: Configuration) -> some View {
+        PrimaryButtonBody(configuration: configuration, fullWidth: fullWidth)
+    }
+}
+
+/// A view, so it can read `isEnabled`: a custom style gets no dimming for a
+/// disabled button, which `.plain` used to give ("Rechercher" while searching).
+private struct PrimaryButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    let fullWidth: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
         configuration.label
             .font(.body.weight(.semibold))
             .multilineTextAlignment(.center)
@@ -31,7 +43,7 @@ public struct PrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Palette.onAccent)
             .background(Palette.accent, in: Radius.shape(Radius.card))
             .contentShape(Radius.shape(Radius.card))
-            .opacity(configuration.isPressed ? 0.8 : 1)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.5)
     }
 }
 

@@ -179,12 +179,15 @@ struct ComponentSnapshotTests {
         check(HemicycleChart(deputies: deputies), variant)
     }
 
-    /// A short label and one long enough to wrap at an accessibility size.
+    /// A short label, one long enough to wrap at an accessibility size, a
+    /// disabled one, and the compact one that sits beside a field.
     @Test(arguments: variants)
     func primaryButton(_ variant: Variant) {
         check(VStack(spacing: Spacing.s) {
             Button("Commencer le quiz") {}
             Button("Suivre Marie-Christine Dalloz-Verdier") {}
+            Button("Création du lien…") {}.disabled(true)
+            Button("Rechercher") {}.buttonStyle(PrimaryButtonStyle(fullWidth: false))
         }
         .buttonStyle(.monEluPrimary), variant)
     }
