@@ -280,9 +280,13 @@ struct FollowSelectionBar: View {
         }
         .padding(.horizontal, Spacing.gutter)
         .padding(.vertical, Spacing.s)
-        // The system bar material, as a toolbar has: the list scrolls behind
-        // it blurred, so it needs neither a near-opaque fill nor a rule (#629).
-        .background(.bar)
+        // A blur tinted with the page colour: the list scrolls behind it
+        // softened, so the bar needs no rule (#629). The system `.bar` alone
+        // is a neutral grey that clashes with the cream and navy pages.
+        // Two shape styles rather than a view, so both reach under the
+        // floating tab bar into the safe area, as the plain fill did.
+        .background(Palette.pageBackground.opacity(0.8))
+        .background(.ultraThinMaterial)
         .accessibilityElement(children: .contain)
     }
 }
