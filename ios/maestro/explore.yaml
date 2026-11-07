@@ -74,3 +74,16 @@ appId: ${APP_ID}
     visible:
       id: "department.page"
     timeout: 20000
+
+# Clearing the search brings the contents back, with the keyboard closed.
+- tapOn: "Explorer"
+- extendedWaitUntil:
+    visible: "Effacer la recherche"
+    timeout: 10000
+- tapOn: "Effacer la recherche"
+- extendedWaitUntil:
+    visible: "Tous les scrutins"
+    timeout: 20000
+- assertNotVisible: "Gironde \\(33\\)"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-search-cleared

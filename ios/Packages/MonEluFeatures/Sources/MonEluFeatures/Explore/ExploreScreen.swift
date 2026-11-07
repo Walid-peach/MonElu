@@ -77,21 +77,28 @@ struct ExploreSearchField: View {
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
-            Image(systemName: "magnifyingglass")
-                .font(.body.weight(.medium))
-                .foregroundStyle(Palette.textSecondary)
-                .accessibilityHidden(true)
-            TextField("Rechercher", text: $query, prompt: Text("Vote, député, texte, commune"))
-                .font(.body)
-                .foregroundStyle(Palette.textPrimary)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                // The search runs as the query changes; the key only closes
-                // the keyboard over the results, as the system field did.
-                .onSubmit { focused = false }
-                .focused($focused)
-                .accessibilityAddTraits(.isSearchField)
-                .accessibilityIdentifier("explore.search")
+            // A tap on the icon or anywhere along the field focuses it. The
+            // clear button sits outside this stack, so its tap only clears.
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "magnifyingglass")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Palette.textSecondary)
+                    .accessibilityHidden(true)
+                TextField("Rechercher", text: $query, prompt: Text("Vote, député, texte, commune"))
+                    .font(.body)
+                    .foregroundStyle(Palette.textPrimary)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                    // The search runs as the query changes; the key only closes
+                    // the keyboard over the results, as the system field did.
+                    .onSubmit { focused = false }
+                    .focused($focused)
+                    .accessibilityAddTraits(.isSearchField)
+                    .accessibilityIdentifier("explore.search")
+            }
+            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { focused = true }
             if !query.isEmpty {
                 Button {
                     query = ""
@@ -108,10 +115,7 @@ struct ExploreSearchField: View {
         }
         .padding(.leading, Spacing.s)
         .padding(.trailing, query.isEmpty ? Spacing.s : 0)
-        .frame(minHeight: 48)
         .background(Palette.trackBackground, in: Capsule())
-        .contentShape(Capsule())
-        .onTapGesture { focused = true }
     }
 }
 
