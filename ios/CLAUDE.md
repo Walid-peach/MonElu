@@ -103,6 +103,10 @@ The work is tracked under epic #429, one phase epic at a time.
 - Text that can grow with Dynamic Type must wrap, not truncate.
 - A Newsreader title that can run over several lines (a scrutin, a bill, a group) takes `.headingLineSpacing()`, so its lines do not touch (#519).
 - Navigation titles are styled once at launch by `NavigationBarStyle.apply()` (Newsreader large titles, `textPrimary`), and the tab bar and every control take `Palette.accent` through `.tint` on `RootTabView`; never restyle a bar per screen or replace the system bar (#516).
+- A tab root (Accueil, Explorer, Quiz, Demander) shows no title: the tab bar already names it, so it opens on its content (#657).
+  It sets its title with `.tabRootTitle(_:showsBar:)` (`MonEluUI`), which keeps it for the back button of pushed screens and hides the bar; `showsBar: true` keeps the bar, untitled, for a root with toolbar buttons (Accueil).
+  The first content sits `Spacing.xs` under the bar or the status bar. Pushed screens keep their own bar and title.
+  Explorer's search field is its own (`ExploreSearchField`), pinned in a top inset, because the system `.searchable` field lives in the hidden bar.
 - Geometry comes from `Geometry.swift` (`MonEluUI`, #629), as colours come from `Palette`.
   A corner radius is `Radius.small` (6: tags, chips, pills), `Radius.card` (12: cards, nested tiles, buttons, inputs) or `Radius.large` (20: the quiz deck card, the Ask composer, identity panels), drawn with `Radius.shape(_:)`; a capsule or circle stays a shape.
   `tests/unit/test_ios_design_tokens.py` fails on a `cornerRadius:` literal outside `Geometry.swift` and on a fourth radius.

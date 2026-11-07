@@ -57,10 +57,11 @@ appId: ${APP_ID}
 # day's data, so only the département is asserted.
 # Back at the contents page, still scrolled down; the field stays pinned.
 - tapOn: "Explorer"
+# By its label: the screen's own id masks the field's.
 - extendedWaitUntil:
-    visible: "Vote, député, texte, commune"
+    visible: "Rechercher"
     timeout: 10000
-- tapOn: "Vote, député, texte, commune"
+- tapOn: "Rechercher"
 - inputText: "Gironde"
 - extendedWaitUntil:
     visible: "Gironde \\(33\\)"
@@ -73,3 +74,16 @@ appId: ${APP_ID}
     visible:
       id: "department.page"
     timeout: 20000
+
+# Clearing the search brings the contents back, with the keyboard closed.
+- tapOn: "Explorer"
+- extendedWaitUntil:
+    visible: "Effacer la recherche"
+    timeout: 10000
+- tapOn: "Effacer la recherche"
+- extendedWaitUntil:
+    visible: "Tous les scrutins"
+    timeout: 20000
+- assertNotVisible: "Gironde \\(33\\)"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-search-cleared

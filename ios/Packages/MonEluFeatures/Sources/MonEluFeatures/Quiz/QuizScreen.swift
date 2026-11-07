@@ -18,18 +18,16 @@ public struct QuizScreen: View {
         ) { questions in
             content(questions)
         }
-        // The deck and the results carry their own heading ("Vos résultats"),
-        // so only the intro shows the large title (#530).
-        .navigationTitle(showsLargeTitle ? "Quiz" : "")
-        .navigationBarTitleDisplayMode(showsLargeTitle ? .automatic : .inline)
+        // Every phase opens on its content: the intro on its panel, the deck
+        // on its card and the results on their « Vos résultats » heading
+        // (#530, #657).
+        .tabRootTitle("Quiz")
         .accessibilityIdentifier("screen.quiz")
         .sheet(item: $model.sharedLink) { link in
             ActivitySheet(url: link.url)
                 .presentationDetents([.medium, .large])
         }
     }
-
-    private var showsLargeTitle: Bool { model.phase == .intro || model.phase == .notEnough }
 
     @ViewBuilder private func content(_ questions: [QuizQuestion]) -> some View {
         switch model.phase {
@@ -39,7 +37,7 @@ public struct QuizScreen: View {
                     questions: questions,
                     resume: model.canResume ? (model.answers.count, { model.continueDeck() }) : nil
                 ) { model.start() }
-                    .padding(Spacing.m)
+                    .tabRootPadding()
             }
         case .questions:
             if let question = model.current {
@@ -49,12 +47,12 @@ public struct QuizScreen: View {
                     onAnswer: { model.answer($0) }, onSkip: { model.skip() }, onBack: { model.back() },
                     onQuit: { model.quit() }
                 )
-                .padding(Spacing.m)
+                .tabRootPadding()
             }
         case .notEnough:
             ScrollView {
                 QuizNotEnoughView(answered: model.answers.count) { model.resume() }
-                    .padding(Spacing.m)
+                    .tabRootPadding()
             }
         case .result:
             if let result = model.result {
@@ -77,10 +75,19 @@ public struct QuizScreen: View {
                                 .frame(maxWidth: .infinity, minHeight: 44)
                                 .accessibilityIdentifier("quiz.restart")
                         }
-                        .padding(Spacing.m)
+                        .tabRootPadding()
                     }
                 }
             }
         }
+    }
+}
+
+private extension View {
+    /// The page margins, with the content just under the status bar (#657).
+    func tabRootPadding() -> some View {
+        padding(.horizontal, Spacing.m)
+            .padding(.top, Spacing.xs)
+            .padding(.bottom, Spacing.m)
     }
 }

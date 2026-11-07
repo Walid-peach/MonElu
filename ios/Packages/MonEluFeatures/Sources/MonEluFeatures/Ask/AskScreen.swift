@@ -24,7 +24,8 @@ public struct AskScreen: View {
             }
         }
         .background(Palette.pageBackground)
-        .navigationTitle("Demander")
+        // Opens on the mode and the conversation (#657).
+        .tabRootTitle("Demander")
         .accessibilityIdentifier("screen.ask")
         .onAppear { model.features = configuration.features }
         .onChange(of: configuration.features) { model.features = $1 }

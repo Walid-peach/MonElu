@@ -62,7 +62,8 @@ public struct HomeScreen: View {
             }
         }
         .background(Palette.pageBackground)
-        .navigationTitle("Accueil")
+        // The bar stays for agenda, réglages and options, without a title (#657).
+        .tabRootTitle("Accueil", showsBar: true)
         .toolbar { toolbar }
         .sheet(isPresented: $showsFollows) { followsSheet }
         // A deputy followed or unfollowed on another screen, such as their
@@ -137,8 +138,6 @@ public struct HomeScreen: View {
     }
 
     @ViewBuilder private var feedHeader: some View {
-        HomeTagline()
-            .padding(.horizontal, Spacing.m)
         FollowsRow(
             circles: circles,
             filter: Binding(get: { activeFilter }, set: { select($0) }),
@@ -325,6 +324,8 @@ struct FeedPageView<Header: View>: View {
                 content
                     .padding(.horizontal, Spacing.m)
             }
+            // The follows row sits just under the bar (#657).
+            .padding(.top, Spacing.xs)
             .padding(.bottom, Spacing.m)
         }
         .background(Palette.pageBackground)

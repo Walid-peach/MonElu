@@ -101,6 +101,23 @@ struct ExploreSearchSnapshotTests {
         )
     }
 
+    /// The field Explorer opens on (#657): empty with its prompt, then with a
+    /// query and its clear button.
+    @Test(arguments: Variant.all)
+    func exploreSearchField(_ variant: Variant) {
+        checkSnapshot(
+            VStack(spacing: Spacing.s) {
+                ExploreSearchField(query: .constant(""))
+                ExploreSearchField(query: .constant("Gironde"))
+            }
+            .padding(Spacing.m)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .background(Palette.pageBackground),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 360 : 160
+        )
+    }
+
     @Test(arguments: Variant.all)
     func exploreSearchNoResult(_ variant: Variant) {
         checkSnapshot(

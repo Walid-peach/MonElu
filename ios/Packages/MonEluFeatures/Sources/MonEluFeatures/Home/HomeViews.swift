@@ -5,16 +5,6 @@ import SwiftUI
 // Accueil's pieces shared with the feed and the profile (#477, #565), each
 // taking plain models so they are snapshot-tested without a network.
 
-/// The line under the title, on every state of the home.
-struct HomeTagline: View {
-    var body: some View {
-        Text("Le Parlement, près de vous.")
-            .font(.subheadline)
-            .foregroundStyle(Palette.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
 /// One scrutin: how it ended, when, what it was, and the deputy's position,
 /// which is theirs and not the result. The title says what was voted ("L'ensemble
 /// du projet de loi…", "L'amendement n° 12…"), so the row has no separate scope line.
