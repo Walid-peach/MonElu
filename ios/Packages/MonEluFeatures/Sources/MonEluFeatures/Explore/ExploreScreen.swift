@@ -86,6 +86,9 @@ struct ExploreSearchField: View {
                 .foregroundStyle(Palette.textPrimary)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
+                // The search runs as the query changes; the key only closes
+                // the keyboard over the results, as the system field did.
+                .onSubmit { focused = false }
                 .focused($focused)
                 .accessibilityAddTraits(.isSearchField)
                 .accessibilityIdentifier("explore.search")
