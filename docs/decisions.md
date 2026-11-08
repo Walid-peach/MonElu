@@ -1941,6 +1941,58 @@ A resolution changes no law, so its summary must start with "Demander" or it is 
 - Summaries describe the text as examined, so a change made during the sitting is not reflected.
 - A bill prompt is large, so Groq's rate limit holds a run to about 3 votes a minute. `backfill_bill_text.yml` allows 150 minutes for this, and still rebuilds the marts if it runs out.
 
+## ADR-047 - A voter's circonscription comes from their address, matched against bundled boundaries (#660)
+
+**Status:** Accepted, 2026-11-08.
+
+### Context
+
+The website and the app find a deputy from a postal code, through geo.api.gouv.fr, and stop at the department.
+A visitor in Paris or the Nord then picks their deputy from a list of 18 or 21, and most people do not know their circonscription number.
+A postal code cannot go further on its own: large cities are split between circonscriptions, and one postal code can cover communes in different circonscriptions, sometimes in different departments.
+`frontend/src/lib/postal.ts` keeps the department of the first commune returned, so a postal code that crosses a department border can show the wrong one.
+ADR-040 records that no commune-to-circonscription data exists in this repository.
+Every election feature that is per seat (last result, candidates, programmes) needs the exact circonscription first.
+
+No official, precise boundary file exists.
+The most used one on data.gouv.fr, "Contours géographiques des circonscriptions législatives" (Licence Ouverte 2.0, last updated June 2024), is published by an individual.
+It joins polling-station contours derived from INSEE to a polling-station-to-circonscription list derived from Ministère de l'Intérieur data, then simplifies the result with Mapshaper.
+INSEE publishes an official file, which that dataset describes as less precise.
+
+### Decision
+
+1. **The boundaries are reference data, not ingested data.** They follow the 2010 redistricting and change only by law.
+A script writes `data/reference/circonscriptions.geojson` from the chosen source, and a test fails when it does not hold exactly one shape per seat matching `deputies` (department code plus circonscription number), as `test_reference_data.py` does for the other maps.
+The file records its source, version and licence.
+2. **The API matches a point to a seat in memory**, with `shapely`, from that file loaded at startup.
+There is no PostGIS, no migration and no database storage, so the free-tier size limit is not touched and the local Docker image is unchanged.
+3. **One endpoint, `POST /circonscriptions/locate`, takes `{lat, lon}`** and returns the department, the circonscription number and its sitting deputy, or says the seat is vacant (`mandate_end`, #621).
+It is a POST so a precise location never sits in a URL, a server log or a cache.
+The coordinates are neither stored nor logged, and the handler logs nothing about the request beyond its outcome.
+4. **The address becomes coordinates on the visitor's device**, through api-adresse.data.gouv.fr (the Base Adresse Nationale), never through MonÉlu.
+The address itself never reaches MonÉlu, only the point.
+Visible copy that today says a postal code is "ni conservé ni envoyé à MonÉlu" must be rewritten to say exactly what is sent and that nothing is kept.
+5. **A point near a boundary is reported as uncertain, never guessed.** The file is simplified, so near an edge it can be wrong.
+When a point is within `BOUNDARY_TOLERANCE_M` of another seat, the response lists both seats and the page asks the visitor to choose, pointing to the circonscription printed on their voter card and to the official "Interroger sa situation électorale" service.
+The tolerance is set from a measurement (see Consequences), not chosen by hand.
+6. **The postal code stays as the fallback**, unchanged in what it does: postal code, then department, then the list of that department's deputies.
+When the communes behind a postal code sit in several departments, both departments are offered instead of the first one.
+The `/deputes` search box keeps its role as a list filter.
+7. **The 11 circonscriptions for French people abroad are chosen by country**, from the table in the Code électoral, never from an address.
+Overseas departments and collectivities use the address flow when the boundary file covers them, and the department list otherwise.
+
+### Consequences
+
+- Before release, the matcher is measured: for a sample of Base Adresse Nationale addresses in communes that lie entirely inside one circonscription, the share that lands on that seat, and how far the misses are from a boundary.
+The tolerance in point 5 comes from that distance, and the issue records the numbers.
+- The repository carries a boundary file of a few megabytes.
+- `shapely` becomes an API dependency, exact-pinned like the other geometry-sensitive packages.
+- Election features that are per seat (the last result, the candidates, their programmes) build on the circonscription this returns rather than on a department.
+- Accounts can store the circonscription that was found rather than asking for it (#416).
+- A redistricting is a new file and a re-export, and the drift test is what reports it.
+
+**Trigger to revisit:** an official, precise boundary file or an official address-to-circonscription service; a redistricting; or the measured accuracy falling short of what a "your deputy" answer needs.
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -1974,3 +2026,4 @@ A resolution changes no law, so its summary must start with "Demander" or it is 
 29. An amendment summary comes from `vote_amendments` or does not exist (ADR-043, #630) - never send an amendment title to the model as its source, never pick a candidate when a vote matches more than one amendment, and never remove a `rejection_reason()` guard to raise the yield
 30. An article summary comes from `vote_articles` or does not exist (ADR-044, #642) - never send an article title to the model as its source, and never fall back to an older reading when the newest examined text shows the article deleted
 31. A whole-text vote summary comes from `vote_bills` or does not exist, and a motion's sentence comes from `MOTION_SENTENCES` (ADR-046, #645) - never send any vote title to the model to write a summary; a title may only give a theme
+32. A voter's circonscription comes from `POST /circonscriptions/locate` over the bundled boundary file (ADR-047) - never send the address to MonÉlu (the device geocodes it), never put coordinates in a URL, never store or log them, and never pick one seat when a point is within the boundary tolerance of another
