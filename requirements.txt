@@ -22,3 +22,6 @@ groq>=0.11.0
 tiktoken==0.7.0
 pgvector==0.3.2
 numpy>=1.26.0
+# Circonscription lookup (ADR-047): point-in-polygon over data/geo/circonscriptions.geojson.
+# Exact pin: a GEOS or predicate change moves which seat a boundary point lands in.
+shapely==2.2.0
