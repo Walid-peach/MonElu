@@ -14,9 +14,11 @@ public struct DepartmentDeputies: Hashable, Sendable, Identifiable {
     }
 }
 
-/// Accueil's postal-code picker (#463, #477, #585): the search that finds the
-/// deputies of a département and adds the chosen one to those followed on
-/// the device. `followedID` is the deputy it last chose or the first followed.
+/// Accueil's picker (#463, #477, #585, ADR-047): the address search that finds
+/// the one deputy of the user's circonscription, the postal-code search that
+/// finds the deputies of a département, and the list of the seats abroad. The
+/// chosen deputy is added to those followed on the device. `followedID` is the
+/// deputy it last chose or the first followed.
 @MainActor
 @Observable
 public final class MonDeputeModel {
@@ -31,8 +33,27 @@ public final class MonDeputeModel {
         case found([DepartmentDeputies])
     }
 
+    /// The address search (ADR-047): suggestions from the Base Adresse
+    /// Nationale, then the seat of the one the user picks.
+    public enum AddressSearch: Equatable, Sendable {
+        case idle
+        case suggestions([AddressSuggestion])
+        /// The suggestion service failed; the postal code still works.
+        case suggestionsUnavailable
+        case locating
+        /// `address` is the label the user picked.
+        case located(SeatLookup, address: String)
+        /// The point is in no circonscription the API covers.
+        case notFound(address: String)
+        case failed(LoadFailure)
+        case loadingAbroad
+        case abroad([LocatedSeat])
+    }
+
     public var postalCode = ""
     public private(set) var search: Search = .idle
+    public var address = ""
+    public private(set) var addressSearch: AddressSearch = .idle
     public private(set) var followedID: String?
     /// True while the user picks a deputy to add over the feed.
     public private(set) var isChanging = false
@@ -43,14 +64,27 @@ public final class MonDeputeModel {
 
     private let deputies: any DeputiesService
     private let postalCodes: any PostalCodeService
+    private let addresses: any AddressService
+    private let circonscriptions: any CirconscriptionService
     private let store: any FollowedDeputyStore
     private var searchID = 0
+    private var addressID = 0
+    /// The label of the suggestion picked, so filling the field with it does
+    /// not ask for suggestions again.
+    private var pickedAddress: String?
+    private var lastQueriedAddress: String?
 
     public var showsPicker: Bool { followedID == nil || isChanging }
 
-    public init(deputies: any DeputiesService, postalCodes: any PostalCodeService, store: any FollowedDeputyStore) {
+    public init(
+        deputies: any DeputiesService, postalCodes: any PostalCodeService,
+        addresses: any AddressService, circonscriptions: any CirconscriptionService,
+        store: any FollowedDeputyStore
+    ) {
         self.deputies = deputies
         self.postalCodes = postalCodes
+        self.addresses = addresses
+        self.circonscriptions = circonscriptions
         self.store = store
         followedID = store.deputyID
     }
@@ -65,6 +99,7 @@ public final class MonDeputeModel {
         searchID += 1
         let id = searchID
         selection = nil
+        resetAddressSearch()
         search = .searching
         let result: Search
         do {
@@ -80,6 +115,85 @@ public final class MonDeputeModel {
         // A newer search started while this one ran.
         guard id == searchID else { return }
         search = result
+    }
+
+    /// Asks for suggestions for `address`. The view calls it as the user types
+    /// (debounced); the address goes to the Base Adresse Nationale only.
+    public func suggestAddresses() async {
+        let query = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Nothing new to ask: the label just picked, or the text last asked
+        // about (the view's task runs again when the screen reappears).
+        guard query != pickedAddress, query != lastQueriedAddress else { return }
+        guard query.count >= LiveAddressService.minimumQueryLength else {
+            if case .suggestions = addressSearch { addressSearch = .idle }
+            return
+        }
+        lastQueriedAddress = query
+        addressID += 1
+        let id = addressID
+        let next: AddressSearch
+        do {
+            next = .suggestions(try await addresses.suggestions(for: query))
+        } catch let error where LoadFailure.isCancellation(error) {
+            // The next keystroke cancelled this request: not a failure.
+            if lastQueriedAddress == query { lastQueriedAddress = nil }
+            return
+        } catch {
+            next = .suggestionsUnavailable
+        }
+        guard id == addressID else { return }
+        // The user is typing a new address: what was found for the old one,
+        // and the deputy picked from it, no longer apply.
+        pickedAddress = nil
+        selection = nil
+        addressSearch = next
+    }
+
+    /// Finds the seat of a suggestion. Only its point goes to MonÉlu.
+    public func pick(_ suggestion: AddressSuggestion) async {
+        addressID += 1
+        let id = addressID
+        pickedAddress = suggestion.label
+        address = suggestion.label
+        selection = nil
+        resetPostalSearch()
+        addressSearch = .locating
+        let next: AddressSearch
+        do {
+            if let lookup = try await circonscriptions.locate(
+                latitude: suggestion.latitude, longitude: suggestion.longitude
+            ) {
+                next = .located(lookup, address: suggestion.label)
+            } else {
+                next = .notFound(address: suggestion.label)
+            }
+        } catch {
+            next = .failed(LoadFailure(error))
+        }
+        guard id == addressID else { return }
+        addressSearch = next
+        if selection == nil, case .located(let lookup, _) = next, !lookup.uncertain,
+           let deputy = lookup.seats.first?.deputy {
+            // One sure seat: its deputy is the obvious choice; "Suivre" still confirms.
+            selection = deputy
+        }
+    }
+
+    /// Lists the 11 seats for French people abroad, by region.
+    public func showAbroad() async {
+        addressID += 1
+        let id = addressID
+        selection = nil
+        resetPostalSearch()
+        addressSearch = .loadingAbroad
+        let next: AddressSearch
+        do {
+            next = .abroad(try await circonscriptions.abroad())
+        } catch {
+            next = .failed(LoadFailure(error))
+        }
+        guard id == addressID else { return }
+        addressSearch = next
     }
 
     /// Marks `deputy` as the one to follow; "Suivre" confirms it.
@@ -141,10 +255,24 @@ public final class MonDeputeModel {
     }
 
     private func resetSearch() {
-        searchID += 1
         selection = nil
+        resetPostalSearch()
         postalCode = ""
+        resetAddressSearch()
+    }
+
+    /// The two searches never show at once: starting one clears the other.
+    private func resetPostalSearch() {
+        searchID += 1
         search = .idle
+    }
+
+    private func resetAddressSearch() {
+        addressID += 1
+        address = ""
+        pickedAddress = nil
+        lastQueriedAddress = nil
+        addressSearch = .idle
     }
 
     private func deputies(of departments: [PostalDepartment]) async throws -> [DepartmentDeputies] {

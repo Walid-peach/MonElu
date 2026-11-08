@@ -20,6 +20,47 @@ final class StubPostalCodes: PostalCodeService, @unchecked Sendable {
     }
 }
 
+final class StubAddresses: AddressService, @unchecked Sendable {
+    private let lock = NSLock()
+    private let result: Result<[AddressSuggestion], any Error>
+    private(set) var queries: [String] = []
+
+    init(_ result: Result<[AddressSuggestion], any Error>) { self.result = result }
+
+    func suggestions(for query: String) async throws -> [AddressSuggestion] {
+        try lock.withLock {
+            queries.append(query)
+            return try result.get()
+        }
+    }
+}
+
+final class StubCirconscriptions: CirconscriptionService, @unchecked Sendable {
+    private let lock = NSLock()
+    private let lookup: Result<SeatLookup?, any Error>
+    private let abroadSeats: Result<[LocatedSeat], any Error>
+    private(set) var points: [[Double]] = []
+
+    init(lookup: Result<SeatLookup?, any Error> = .success(nil), abroad: [LocatedSeat] = []) {
+        self.lookup = lookup
+        abroadSeats = .success(abroad)
+    }
+
+    init(abroadFailure: any Error) {
+        lookup = .success(nil)
+        abroadSeats = .failure(abroadFailure)
+    }
+
+    func locate(latitude: Double, longitude: Double) async throws -> SeatLookup? {
+        try lock.withLock {
+            points.append([latitude, longitude])
+            return try lookup.get()
+        }
+    }
+
+    func abroad() async throws -> [LocatedSeat] { try abroadSeats.get() }
+}
+
 /// A `DeputiesService` with a fixed profile, recent votes and rosters, that
 /// records every `since` it is asked for.
 final class MonDeputeDeputies: DeputiesService, @unchecked Sendable {
@@ -110,9 +151,14 @@ struct MonDeputeModelTests {
     func model(
         postal: StubPostalCodes = StubPostalCodes(.success([])),
         deputies: MonDeputeDeputies = MonDeputeDeputies(),
+        addresses: StubAddresses = StubAddresses(.success([])),
+        circonscriptions: StubCirconscriptions = StubCirconscriptions(),
         defaults: UserDefaults = freshDefaults()
     ) -> MonDeputeModel {
-        MonDeputeModel(deputies: deputies, postalCodes: postal, store: UserDefaultsFollowedDeputyStore(defaults: defaults))
+        MonDeputeModel(
+            deputies: deputies, postalCodes: postal, addresses: addresses, circonscriptions: circonscriptions,
+            store: UserDefaultsFollowedDeputyStore(defaults: defaults)
+        )
     }
 
     @Test func firstLaunchShowsThePicker() {
@@ -278,7 +324,10 @@ struct MonDeputeModelTests {
     /// (#576): the profile and Accueil share one store, as in `AppServices`.
     @Test func aFollowFromAnotherScreenReachesTheModel() {
         let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
+        let model = MonDeputeModel(
+            deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])),
+            addresses: StubAddresses(.success([])), circonscriptions: StubCirconscriptions(), store: store
+        )
         #expect(model.showsPicker)
         store.follow("PA2")
         model.syncWithStore()
@@ -288,7 +337,10 @@ struct MonDeputeModelTests {
 
     @Test func anUnfollowFromAnotherScreenReachesTheModel() {
         let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
+        let model = MonDeputeModel(
+            deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])),
+            addresses: StubAddresses(.success([])), circonscriptions: StubCirconscriptions(), store: store
+        )
         model.choose(deputy("PA1"))
         model.startChange()
         store.unfollow("PA1")
@@ -300,7 +352,10 @@ struct MonDeputeModelTests {
     /// A deputy followed elsewhere leaves the one this model chose in place.
     @Test func aFollowElsewhereKeepsTheChosenDeputy() {
         let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
-        let model = MonDeputeModel(deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])), store: store)
+        let model = MonDeputeModel(
+            deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])),
+            addresses: StubAddresses(.success([])), circonscriptions: StubCirconscriptions(), store: store
+        )
         model.choose(deputy("PA1"))
         store.follow("PA2")
         model.syncWithStore()
@@ -384,5 +439,232 @@ struct LiveMonDeputeServiceTests {
     @Test func anUnknownDeputyIsNotFoundRatherThanAServerError() async throws {
         let service = LiveDeputiesService(client: stubClient(Data("{\"detail\":\"Deputy not found\"}".utf8), status: .notFound))
         await #expect(throws: DeputyNotFound(id: "PA0")) { try await service.profile(id: "PA0") }
+    }
+}
+
+@MainActor
+struct MonDeputeAddressTests {
+    static let lille = AddressSuggestion(
+        label: "1 Rue Nationale 59000 Lille", context: "59, Nord", latitude: 50.6366, longitude: 3.0596
+    )
+    static let deputy = DeputyItem(
+        id: "PA1", name: "Une Députée", group: nil, groupShort: "EPR",
+        department: "Nord", circonscription: "1", photoURL: nil
+    )
+
+    func model(_ addresses: StubAddresses, _ circonscriptions: StubCirconscriptions) -> MonDeputeModel {
+        MonDeputeModel(
+            deputies: MonDeputeDeputies(), postalCodes: StubPostalCodes(.success([])),
+            addresses: addresses, circonscriptions: circonscriptions,
+            store: UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        )
+    }
+
+    @Test func shortTextAsksForNothing() async {
+        let addresses = StubAddresses(.success([Self.lille]))
+        let model = model(addresses, StubCirconscriptions())
+        model.address = "1 "
+        await model.suggestAddresses()
+        #expect(addresses.queries.isEmpty)
+        #expect(model.addressSearch == .idle)
+    }
+
+    @Test func typingShowsSuggestions() async {
+        let addresses = StubAddresses(.success([Self.lille]))
+        let model = model(addresses, StubCirconscriptions())
+        model.address = "1 rue nationale"
+        await model.suggestAddresses()
+        #expect(addresses.queries == ["1 rue nationale"])
+        #expect(model.addressSearch == .suggestions([Self.lille]))
+    }
+
+    /// The next keystroke cancels the request in flight; URLSession reports
+    /// that as URLError(.cancelled), which is not a failure to show.
+    @Test func aCancelledSuggestionRequestShowsNothing() async {
+        let model = model(StubAddresses(.failure(URLError(.cancelled))), StubCirconscriptions())
+        model.address = "1 rue nationale"
+        await model.suggestAddresses()
+        #expect(model.addressSearch == .idle)
+    }
+
+    @Test func theSameTextIsNotAskedTwice() async {
+        let addresses = StubAddresses(.success([Self.lille]))
+        let model = model(addresses, StubCirconscriptions())
+        model.address = "1 rue nationale"
+        await model.suggestAddresses()
+        await model.suggestAddresses()
+        #expect(addresses.queries == ["1 rue nationale"])
+    }
+
+    @Test func typingAfterAResultDropsItsSelection() async {
+        let lookup = SeatLookup(uncertain: false, seats: [
+            LocatedSeat(departmentCode: "59", circonscription: 1, label: "Nord, 1re circonscription", deputy: Self.deputy),
+        ])
+        let model = model(StubAddresses(.success([])), StubCirconscriptions(lookup: .success(lookup)))
+        await model.pick(Self.lille)
+        #expect(model.selection == Self.deputy)
+        model.address = "3 rue de la paix"
+        await model.suggestAddresses()
+        #expect(model.selection == nil)
+        #expect(model.addressSearch == .suggestions([]))
+    }
+
+    @Test func aPostalSearchClearsTheAddressSearchAndTheOtherWayRound() async {
+        let lookup = SeatLookup(uncertain: false, seats: [
+            LocatedSeat(departmentCode: "59", circonscription: 1, label: "Nord, 1re circonscription", deputy: Self.deputy),
+        ])
+        let model = model(StubAddresses(.success([])), StubCirconscriptions(lookup: .success(lookup)))
+        await model.pick(Self.lille)
+        model.postalCode = "59000"
+        await model.runSearch()
+        #expect(model.addressSearch == .idle)
+        #expect(model.address.isEmpty)
+        await model.pick(Self.lille)
+        #expect(model.search == .idle)
+    }
+
+    @Test func aFailedAbroadListIsAFailure() async {
+        let model = model(StubAddresses(.success([])), StubCirconscriptions(abroadFailure: URLError(.badServerResponse)))
+        await model.showAbroad()
+        #expect(model.addressSearch == .failed(.server))
+    }
+
+    @Test func aFailedSuggestionSaysSoAndLeavesThePostalCode() async {
+        let model = model(StubAddresses(.failure(URLError(.badServerResponse))), StubCirconscriptions())
+        model.address = "1 rue nationale"
+        await model.suggestAddresses()
+        #expect(model.addressSearch == .suggestionsUnavailable)
+    }
+
+    /// Only the point goes to the locator; one sure seat preselects its deputy.
+    @Test func pickingSendsOnlyThePointAndPreselectsTheDeputy() async {
+        let lookup = SeatLookup(uncertain: false, seats: [
+            LocatedSeat(departmentCode: "59", circonscription: 1, label: "Nord, 1re circonscription", deputy: Self.deputy),
+        ])
+        let circonscriptions = StubCirconscriptions(lookup: .success(lookup))
+        let addresses = StubAddresses(.success([Self.lille]))
+        let model = model(addresses, circonscriptions)
+        await model.pick(Self.lille)
+        #expect(circonscriptions.points == [[50.6366, 3.0596]])
+        #expect(model.addressSearch == .located(lookup, address: Self.lille.label))
+        #expect(model.selection == Self.deputy)
+        // Filling the field with the picked label does not ask for suggestions again.
+        await model.suggestAddresses()
+        #expect(addresses.queries.isEmpty)
+    }
+
+    @Test func nearABoundaryNothingIsPreselected() async {
+        let lookup = SeatLookup(uncertain: true, seats: [
+            LocatedSeat(departmentCode: "59", circonscription: 1, label: "Nord, 1re circonscription", deputy: Self.deputy),
+            LocatedSeat(departmentCode: "59", circonscription: 4, label: "Nord, 4e circonscription", deputy: nil),
+        ])
+        let model = model(StubAddresses(.success([])), StubCirconscriptions(lookup: .success(lookup)))
+        await model.pick(Self.lille)
+        #expect(model.selection == nil)
+        #expect(model.addressSearch == .located(lookup, address: Self.lille.label))
+    }
+
+    @Test func aPointInNoSeatIsNotFound() async {
+        let model = model(StubAddresses(.success([])), StubCirconscriptions(lookup: .success(nil)))
+        await model.pick(Self.lille)
+        #expect(model.addressSearch == .notFound(address: Self.lille.label))
+    }
+
+    @Test func aFailedLookupIsAFailure() async {
+        let model = model(StubAddresses(.success([])), StubCirconscriptions(lookup: .failure(URLError(.notConnectedToInternet))))
+        await model.pick(Self.lille)
+        #expect(model.addressSearch == .failed(.offline))
+    }
+
+    @Test func abroadListsTheSeats() async {
+        let seat = LocatedSeat(
+            departmentCode: "99", circonscription: 4, label: "Français établis hors de France, 4e circonscription",
+            deputy: Self.deputy, region: "Benelux"
+        )
+        let model = model(StubAddresses(.success([])), StubCirconscriptions(abroad: [seat]))
+        await model.showAbroad()
+        #expect(model.addressSearch == .abroad([seat]))
+    }
+
+    @Test func followingResetsTheAddressSearch() async {
+        let lookup = SeatLookup(uncertain: false, seats: [
+            LocatedSeat(departmentCode: "59", circonscription: 1, label: "Nord, 1re circonscription", deputy: Self.deputy),
+        ])
+        let model = model(StubAddresses(.success([])), StubCirconscriptions(lookup: .success(lookup)))
+        await model.pick(Self.lille)
+        model.followSelection()
+        #expect(model.followedID == "PA1")
+        #expect(model.address.isEmpty)
+        #expect(model.addressSearch == .idle)
+    }
+}
+
+struct AddressServiceTests {
+    /// The address goes to the national geocoder and nowhere else, and nothing
+    /// about the request is kept on disk (ADR-047 §4).
+    @Test func theAddressGoesOnlyToTheGeocoderWithNoCache() {
+        let url = LiveAddressService.url(for: "8 bd du port amiens")
+        #expect(url.host == "data.geopf.fr")
+        #expect(url.path == "/geocodage/search")
+        #expect(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first?.value == "8 bd du port amiens")
+        let configuration = LiveAddressService().session.configuration
+        #expect(configuration.urlCache == nil)
+        #expect(configuration.requestCachePolicy == .reloadIgnoringLocalCacheData)
+    }
+
+    /// A street's or a town's point is its middle: in a split city it would
+    /// name the wrong seat with confidence (ADR-047 §5), so only house numbers
+    /// and lieux-dits are suggested.
+    @Test func readsOnlyPreciseLabelledPointsFromTheResponse() throws {
+        let json = """
+        {"type":"FeatureCollection","features":[
+          {"type":"Feature","geometry":{"type":"Point","coordinates":[2.290084,49.897442]},
+           "properties":{"label":"8 Boulevard du Port 80000 Amiens","context":"80, Somme, Hauts-de-France","type":"housenumber"}},
+          {"type":"Feature","geometry":{"type":"Point","coordinates":[2.29,49.89]},
+           "properties":{"label":"Boulevard du Port 80000 Amiens","type":"street"}},
+          {"type":"Feature","geometry":{"type":"Point","coordinates":[2.30,49.89]},
+           "properties":{"label":"Amiens","type":"municipality"}},
+          {"type":"Feature","geometry":{"type":"Point","coordinates":[2.0]},"properties":{"label":"Broken","type":"housenumber"}},
+          {"type":"Feature","geometry":{"type":"Point","coordinates":[2.0,48.0]},"properties":{"type":"housenumber"}}
+        ]}
+        """
+        let suggestions = try LiveAddressService.suggestions(from: Data(json.utf8))
+        #expect(suggestions == [
+            AddressSuggestion(
+                label: "8 Boulevard du Port 80000 Amiens", context: "80, Somme, Hauts-de-France",
+                latitude: 49.897442, longitude: 2.290084
+            ),
+        ])
+    }
+}
+
+struct LiveCirconscriptionServiceTests {
+    /// A point in no seat is a 404 the spec does not list; the client reports
+    /// it as undocumented, and the service turns it into nil.
+    @Test func aPointInNoSeatIsNil() async throws {
+        let service = LiveCirconscriptionService(
+            client: stubClient(Data("{\"detail\":\"none\"}".utf8), status: .notFound)
+        )
+        #expect(try await service.locate(latitude: 46, longitude: -5) == nil)
+    }
+
+    @Test func mapsTheSeatsAndTheirDeputies() async throws {
+        let json = """
+        {"uncertain":true,"seats":[
+          {"department_code":"59","department_name":"Nord","circonscription":1,
+           "label":"Nord, 1re circonscription","vacant":false,
+           "deputy":{"deputy_id":"PA1","full_name":"Une Députée","party":"Ensemble pour la République",
+                     "party_short":"EPR","department":"Nord","circonscription":"1","photo_url":null}},
+          {"department_code":"59","department_name":"Nord","circonscription":4,
+           "label":"Nord, 4e circonscription","vacant":true}
+        ]}
+        """
+        let lookup = try await LiveCirconscriptionService(client: stubClient(Data(json.utf8)))
+            .locate(latitude: 50.63, longitude: 3.06)
+        #expect(lookup?.uncertain == true)
+        #expect(lookup?.seats.map(\.id) == ["59-1", "59-4"])
+        #expect(lookup?.seats.first?.deputy?.groupShort == "EPR")
+        #expect(lookup?.seats.last?.vacant == true)
+        #expect(lookup?.seats.last?.deputy == nil)
     }
 }

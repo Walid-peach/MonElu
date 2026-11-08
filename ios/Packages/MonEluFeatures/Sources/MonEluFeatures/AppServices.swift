@@ -15,6 +15,9 @@ public struct AppServices: Sendable {
     public let ask: any AskService
     public let quiz: any QuizService
     public let postalCodes: any PostalCodeService
+    /// Address suggestions (Base Adresse Nationale) and the seat of a point (ADR-047).
+    public let addresses: any AddressService
+    public let circonscriptions: any CirconscriptionService
     /// The followed deputy, on the device only (ADR-040 §6).
     public let followedDeputy: any FollowedDeputyStore
     /// Accueil's feed (ADR-042).
@@ -34,6 +37,8 @@ public struct AppServices: Sendable {
         ask = LiveAskService(client: client)
         quiz = LiveQuizService(client: client)
         postalCodes = LivePostalCodeService()
+        addresses = LiveAddressService()
+        circonscriptions = LiveCirconscriptionService(client: client)
         followedDeputy = UserDefaultsFollowedDeputyStore()
         feed = LiveFeedService(client: client)
         followedThemes = UserDefaultsFollowedThemesStore()
@@ -46,7 +51,9 @@ public struct AppServices: Sendable {
         ask: any AskService, quiz: any QuizService,
         postalCodes: any PostalCodeService, followedDeputy: any FollowedDeputyStore,
         feed: any FeedService = UnavailableFeedService(),
-        followedThemes: any FollowedThemesStore = EphemeralFollowedThemesStore()
+        followedThemes: any FollowedThemesStore = EphemeralFollowedThemesStore(),
+        addresses: any AddressService = UnavailableAddressService(),
+        circonscriptions: any CirconscriptionService = UnavailableCirconscriptionService()
     ) {
         self.votes = votes
         self.deputies = deputies
@@ -59,6 +66,8 @@ public struct AppServices: Sendable {
         self.ask = ask
         self.quiz = quiz
         self.postalCodes = postalCodes
+        self.addresses = addresses
+        self.circonscriptions = circonscriptions
         self.followedDeputy = followedDeputy
         self.feed = feed
         self.followedThemes = followedThemes
@@ -75,6 +84,29 @@ public struct UnavailableFeedService: FeedService {
     }
 
     public func week(deputyIDs: [String]) async throws -> FeedWeek {
+        throw URLError(.notConnectedToInternet)
+    }
+}
+
+/// An `AddressService` that always fails: the default for callers of the
+/// injecting initializer that do not exercise the address search.
+public struct UnavailableAddressService: AddressService {
+    public init() {}
+
+    public func suggestions(for query: String) async throws -> [AddressSuggestion] {
+        throw URLError(.notConnectedToInternet)
+    }
+}
+
+/// A `CirconscriptionService` that always fails, for the same callers.
+public struct UnavailableCirconscriptionService: CirconscriptionService {
+    public init() {}
+
+    public func locate(latitude: Double, longitude: Double) async throws -> SeatLookup? {
+        throw URLError(.notConnectedToInternet)
+    }
+
+    public func abroad() async throws -> [LocatedSeat] {
         throw URLError(.notConnectedToInternet)
     }
 }
