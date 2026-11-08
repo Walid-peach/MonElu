@@ -116,6 +116,16 @@ it('lists the seats abroad by region', async () => {
   expect(mockLocate).not.toHaveBeenCalled()
 })
 
+it('asks for a house number when the geocoder has nothing precise', async () => {
+  const user = userEvent.setup()
+  mockSearch.mockResolvedValue([])
+  render(<FindMyDeputy actionLabel="Suivre ce député" onChoose={jest.fn()} />)
+
+  await user.type(screen.getByLabelText('Votre adresse'), 'amiens')
+  expect(await screen.findByText(/Indiquez le numéro, la rue et la commune/)).toBeInTheDocument()
+  expect(mockLocate).not.toHaveBeenCalled()
+})
+
 it('can be driven from the keyboard', async () => {
   const user = userEvent.setup()
   mockLocate.mockResolvedValue({ uncertain: false, seats: [seat(1, 'Une Députée')] })

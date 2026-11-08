@@ -41,6 +41,8 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   const [suggestFailed, setSuggestFailed] = useState(false)
+  // The geocoder answered, but with no house number or lieu-dit to locate.
+  const [noPreciseMatch, setNoPreciseMatch] = useState(false)
   const [locating, setLocating] = useState(false)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const picked = useRef<string | null>(null)
@@ -53,6 +55,7 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
       searchAddresses(q, controller.signal)
         .then(found => {
           setSuggestions(found)
+          setNoPreciseMatch(found.length === 0)
           setSuggestFailed(false)
           setOpen(true)
           setActive(-1)
@@ -69,6 +72,7 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
 
   async function pick(suggestion: AddressSuggestion) {
     picked.current = suggestion.label
+    setNoPreciseMatch(false)
     setQuery(suggestion.label)
     setOpen(false)
     setSuggestions([])
@@ -137,6 +141,7 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
           onChange={e => {
             picked.current = null
             setQuery(e.target.value)
+            if (e.target.value.trim().length < MIN_ADDRESS_QUERY_LENGTH) setNoPreciseMatch(false)
           }}
           onKeyDown={onKeyDown}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -175,6 +180,11 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
         Votre adresse est envoyée à la Base Adresse Nationale, un service public, pour trouver ses
         coordonnées. MonÉlu ne reçoit que ces coordonnées et ne les conserve pas.
       </p>
+      {noPreciseMatch && !suggestFailed && (
+        <p className="m-0 text-sm text-[color:var(--dp-text-secondary)]">
+          Indiquez le numéro, la rue et la commune, par exemple « 8 boulevard du Port, Amiens ».
+        </p>
+      )}
       {suggestFailed && (
         <p role="alert" className="m-0 text-sm text-[color:var(--dp-red)]">
           Les suggestions d&apos;adresse sont indisponibles pour le moment. Cherchez par code postal ou

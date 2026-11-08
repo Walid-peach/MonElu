@@ -16,7 +16,7 @@ describe('searchAddresses', () => {
       features: [
         {
           geometry: { type: 'Point', coordinates: [2.290084, 49.897442] },
-          properties: { label: '8 Boulevard du Port 80000 Amiens', context: '80, Somme, Hauts-de-France' },
+          properties: { label: '8 Boulevard du Port 80000 Amiens', context: '80, Somme, Hauts-de-France', type: 'housenumber' },
         },
       ],
     })
@@ -39,11 +39,22 @@ describe('searchAddresses', () => {
   it('drops features without a point or a label', async () => {
     mockFetch(200, {
       features: [
-        { geometry: { type: 'Point' }, properties: { label: 'No coordinates' } },
-        { geometry: { type: 'Point', coordinates: [2, 48] }, properties: {} },
+        { geometry: { type: 'Point' }, properties: { label: 'No coordinates', type: 'housenumber' } },
+        { geometry: { type: 'Point', coordinates: [2, 48] }, properties: { type: 'housenumber' } },
       ],
     })
     expect(await searchAddresses('rue de la paix')).toEqual([])
+  })
+
+  it('keeps only house numbers and lieux-dits: a street or a town is not where someone lives', async () => {
+    mockFetch(200, {
+      features: [
+        { geometry: { type: 'Point', coordinates: [2.29, 49.89] }, properties: { label: 'Boulevard du Port 80000 Amiens', type: 'street' } },
+        { geometry: { type: 'Point', coordinates: [2.3, 49.89] }, properties: { label: 'Amiens', type: 'municipality' } },
+        { geometry: { type: 'Point', coordinates: [5.1, 45.2] }, properties: { label: 'Le Bourg 38000 X', type: 'locality' } },
+      ],
+    })
+    expect((await searchAddresses('amiens')).map(s => s.label)).toEqual(['Le Bourg 38000 X'])
   })
 
   it('throws on an HTTP error so the caller can say suggestions are unavailable', async () => {

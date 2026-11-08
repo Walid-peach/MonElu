@@ -9,6 +9,14 @@ export const GEOCODER_URL = 'https://data.geopf.fr/geocodage/search'
 
 export const MIN_ADDRESS_QUERY_LENGTH = 3
 
+/**
+ * Result types precise enough to stand for where someone lives: an address
+ * with a house number, or a lieu-dit. A street's or a town's point is its
+ * middle, which in a city split between seats would name the wrong one with
+ * confidence (ADR-047 §5), so those are left out.
+ */
+export const PRECISE_TYPES = new Set(['housenumber', 'locality'])
+
 export type AddressSuggestion = {
   /** "8 Boulevard du Port 80000 Amiens" */
   label: string
@@ -20,7 +28,7 @@ export type AddressSuggestion = {
 
 type GeocoderFeature = {
   geometry?: { type?: string; coordinates?: [number, number] }
-  properties?: { label?: string; context?: string }
+  properties?: { label?: string; context?: string; type?: string }
 }
 
 export async function searchAddresses(
@@ -37,6 +45,7 @@ export async function searchAddresses(
     const coords = feature.geometry?.coordinates
     const label = feature.properties?.label
     if (feature.geometry?.type !== 'Point' || !coords || !label) return []
+    if (!PRECISE_TYPES.has(feature.properties?.type ?? '')) return []
     const [lon, lat] = coords
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return []
     return [{ label, context: feature.properties?.context ?? '', lat, lon }]
