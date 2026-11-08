@@ -306,7 +306,8 @@ function SeatCard({
       {seat.deputy ? (
         <>
           <DeputyAvatar name={seat.deputy.full_name} photoUrl={seat.deputy.photo_url} decorative />
-          <div className="min-w-0 flex-1">
+          {/* On a phone the button takes its own line, so the name is not squeezed. */}
+          <div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto">
             <div className="font-semibold text-[color:var(--dp-text)]">{seat.deputy.full_name}</div>
             <div className="text-sm text-[color:var(--dp-text-secondary)]">{caption}</div>
             {seat.deputy.party && (
@@ -317,7 +318,7 @@ function SeatCard({
             type="button"
             onClick={() => onChoose(seat)}
             disabled={busy}
-            className="shrink-0 rounded-lg bg-red-civic px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="w-full shrink-0 rounded-lg bg-red-civic px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
           >
             {actionLabel}
           </button>
