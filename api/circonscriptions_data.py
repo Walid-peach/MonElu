@@ -55,6 +55,14 @@ BOUNDARY_SOURCE = {
 
 TOTAL_SEATS = 577
 
+# A point within this distance of a second seat is answered with both (ADR-047 §5).
+# Measured by scripts/measure_circonscription_accuracy.py over 3.8 million addresses
+# (#661): with no tolerance 0.080 % get one wrong seat; at 50 m 0.011 % do and 1.1 % are
+# asked to choose; at 100 m 0.010 % and 2.1 %; at 500 m 0.012 % and 11.6 %. Beyond 50 m
+# the wrong answers left are mostly not boundary errors, so a wider net only asks more
+# people to choose.
+BOUNDARY_TOLERANCE_M = 50
+
 # Seats the boundary file has no shape for (ADR-047 §7): the 11 seats abroad, and the
 # overseas collectivités the source does not cover. Their visitors use the list of the
 # department's seats instead.

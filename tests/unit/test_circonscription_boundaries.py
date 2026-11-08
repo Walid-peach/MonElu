@@ -17,6 +17,7 @@ from api.circonscriptions_data import (
     ABROAD_SEAT_REGIONS,
     BOUNDARY_FILE,
     BOUNDARY_SOURCE,
+    BOUNDARY_TOLERANCE_M,
     SEATS_WITHOUT_SHAPE,
     TOTAL_SEATS,
     seat_key_from_source,
@@ -78,6 +79,12 @@ def test_shapes_are_valid_and_do_not_overlap(seats):
         overlap = geoms[i].intersection(geoms[j]).area
         smaller = min(geoms[i].area, geoms[j].area)
         assert overlap <= MAX_OVERLAP_SHARE * smaller, (keys[i], keys[j])
+
+
+def test_boundary_tolerance_is_the_measured_one():
+    """Set from scripts/measure_circonscription_accuracy.py (#661); change it only with
+    a new measurement recorded in ADR-047."""
+    assert BOUNDARY_TOLERANCE_M == 50
 
 
 def test_every_seat_abroad_has_a_region():

@@ -1989,6 +1989,9 @@ Overseas departments and collectivities use the address flow when the boundary f
 
 - Before release, the matcher is measured: for a sample of Base Adresse Nationale addresses in communes that lie entirely inside one circonscription, the share that lands on that seat, and how far the misses are from a boundary.
 The tolerance in point 5 comes from that distance, and the issue records the numbers.
+- Measured in #661 over 3.8 million addresses in 12 départements: the p20 variant puts 99.81 % in the right seat, the p10 variant 99.71 % and INSEE's file 99.20 %, so p20 is the source.
+With `BOUNDARY_TOLERANCE_M` at 50 m, 0.011 % of addresses get one wrong seat and 1.1 % are asked to choose; 100 m only brings the first to 0.010 % and doubles the second.
+Communes split between seats (Paris, Marseille, Lyon) cannot be checked this way, because the address data does not say which polling station an address votes in.
 - The repository carries a boundary file of a few megabytes.
 - `shapely` becomes an API dependency, exact-pinned like the other geometry-sensitive packages.
 - Election features that are per seat (the last result, the candidates, their programmes) build on the circonscription this returns rather than on a department.
