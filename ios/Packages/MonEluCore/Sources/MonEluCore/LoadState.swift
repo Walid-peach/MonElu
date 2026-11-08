@@ -31,7 +31,7 @@ public enum LoadFailure: Equatable, Sendable {
     /// view left the screen, or its tab went behind another) rather than
     /// because it failed. Nothing went wrong, so `Loader` shows no failure
     /// for it (#579).
-    static func isCancellation(_ error: any Error) -> Bool {
+    public static func isCancellation(_ error: any Error) -> Bool {
         if Task.isCancelled { return true }
         var current: any Error = error
         while true {

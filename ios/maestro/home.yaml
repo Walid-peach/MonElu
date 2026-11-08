@@ -43,7 +43,25 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}1c-picker
 
-# Four digits are refused before anything is sent.
+# The address finds the one seat (ADR-047): suggestions from the Base Adresse
+# Nationale, then the seat and its deputy, preselected. Amiens is split
+# between two seats, so this is the case a postal code cannot settle.
+# By its label: the picker's own accessibility id masks the ids inside it.
+- tapOn: "Votre adresse"
+- inputText: "8 boulevard du port amiens"
+- extendedWaitUntil:
+    visible: ".*8 Boulevard du Port 80000 Amiens.*"
+    timeout: 20000
+- tapOn: ".*8 Boulevard du Port 80000 Amiens.*"
+- extendedWaitUntil:
+    visible: "Somme, 2e circonscription"
+    timeout: 20000
+- assertVisible: "Suivre .*"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1d-address-found
+
+# Four digits are refused before anything is sent; starting a postal search
+# clears the address result.
 - tapOn: "Code postal"
 - inputText: "3300"
 - tapOn: "Rechercher"

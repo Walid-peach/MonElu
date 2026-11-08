@@ -25,9 +25,13 @@ public struct HomeScreen: View {
 
     public init(
         deputies: any DeputiesService, postalCodes: any PostalCodeService,
+        addresses: any AddressService, circonscriptions: any CirconscriptionService,
         feed: any FeedService, store: any FollowedDeputyStore, themesStore: any FollowedThemesStore
     ) {
-        _model = State(initialValue: MonDeputeModel(deputies: deputies, postalCodes: postalCodes, store: store))
+        _model = State(initialValue: MonDeputeModel(
+            deputies: deputies, postalCodes: postalCodes,
+            addresses: addresses, circonscriptions: circonscriptions, store: store
+        ))
         _followed = State(initialValue: FollowedDeputiesModel(service: deputies, store: store))
         _themeSlugs = State(initialValue: themesStore.themeSlugs)
         _tab = State(initialValue: HomeTabDefault.tab(
@@ -176,13 +180,22 @@ public struct HomeScreen: View {
     private var picker: some View {
         ScrollView {
             PostalCodePickerContent(
+                address: $model.address,
+                addressSearch: model.addressSearch,
                 postalCode: $model.postalCode,
                 search: model.search,
                 notice: model.notice,
                 selection: model.selection,
+                onPickAddress: { suggestion in Task { await model.pick(suggestion) } },
+                onAbroad: { Task { await model.showAbroad() } },
                 onSearch: { Task { await model.runSearch() } },
                 onSelect: { model.select($0) }
             )
+            // Suggestions follow the typing, a beat after the last key.
+            .task(id: model.address) {
+                guard (try? await Task.sleep(for: .milliseconds(250))) != nil else { return }
+                await model.suggestAddresses()
+            }
             .padding(Spacing.m)
         }
         .scrollDismissesKeyboard(.interactively)

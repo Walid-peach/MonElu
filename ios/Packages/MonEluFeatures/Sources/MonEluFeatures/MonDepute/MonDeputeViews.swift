@@ -2,14 +2,19 @@ import MonEluCore
 import MonEluUI
 import SwiftUI
 
-/// The postal-code picker (design A, Trouver son député). Separate from the
-/// screen so it can be snapshot-tested without a network. A tap selects a
-/// deputy; `FollowSelectionBar`, pinned under the results, follows them.
+/// The picker (design A, Trouver son député): the address first (ADR-047),
+/// then the postal code. Separate from the screen so it can be
+/// snapshot-tested without a network. A tap selects a deputy;
+/// `FollowSelectionBar`, pinned under the results, follows them.
 struct PostalCodePickerContent: View {
+    @Binding var address: String
+    let addressSearch: MonDeputeModel.AddressSearch
     @Binding var postalCode: String
     let search: MonDeputeModel.Search
     let notice: String?
     var selection: DeputyItem?
+    let onPickAddress: (AddressSuggestion) -> Void
+    let onAbroad: () -> Void
     let onSearch: () -> Void
     let onSelect: (DeputyItem) -> Void
     @FocusState private var fieldFocused: Bool
@@ -35,10 +40,15 @@ struct PostalCodePickerContent: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            AddressSearchSection(
+                address: $address, search: addressSearch, selection: selection,
+                onPick: onPickAddress, onAbroad: onAbroad, onSelect: onSelect
+            )
             VStack(alignment: .leading, spacing: 6) {
-                Text("Code postal")
+                Text("Ou par code postal, pour la liste des députés du département")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityHidden(true)
                 field
                 CaveatNote(
@@ -125,6 +135,209 @@ struct PostalCodePickerContent: View {
             .font(.subheadline)
             .foregroundStyle(Palette.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// The address search (ADR-047): the field, its suggestions, then the seat
+/// found, every seat near a boundary, or the 11 seats abroad.
+struct AddressSearchSection: View {
+    @Binding var address: String
+    let search: MonDeputeModel.AddressSearch
+    let selection: DeputyItem?
+    let onPick: (AddressSuggestion) -> Void
+    let onAbroad: () -> Void
+    let onSelect: (DeputyItem) -> Void
+    /// The keyboard goes away once an address is picked, so the result and
+    /// the pinned "Suivre" are not hidden under it.
+    @FocusState private var fieldFocused: Bool
+
+    /// The official check of one's polling station and circonscription.
+    static let situationElectorale = URL(
+        string: "https://www.service-public.gouv.fr/particuliers/vosdroits/services-en-ligne-et-formulaires/ISE"
+    )!
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Votre adresse")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Palette.textSecondary)
+                    .accessibilityHidden(true)
+                // Vertical so a long address wraps at large text sizes.
+                TextField("Ex. 8 boulevard du Port, Amiens", text: $address, axis: .vertical)
+                    .lineLimit(1...4)
+                    .textContentType(.fullStreetAddress)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .focused($fieldFocused)
+                    .onSubmit { fieldFocused = false }
+                    .font(.body)
+                    .padding(.horizontal, Spacing.m)
+                    .padding(.vertical, Spacing.s)
+                    .frame(minHeight: 50)
+                    .background(Palette.cardBackground, in: Radius.shape(Radius.card))
+                    .overlay(Radius.shape(Radius.card).strokeBorder(Palette.textPrimary, lineWidth: 2))
+                    .accessibilityLabel("Votre adresse")
+                    .accessibilityIdentifier("address.field")
+                CaveatNote(
+                    "Votre adresse est envoyée à la Base Adresse Nationale, un service public, pour trouver ses coordonnées. MonÉlu ne reçoit que ces coordonnées et ne les conserve pas."
+                )
+                .padding(.top, Spacing.xxs)
+            }
+            result
+            Button("J'habite à l'étranger") {
+                fieldFocused = false
+                onAbroad()
+            }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Palette.accent)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("address.abroad")
+        }
+    }
+
+    @ViewBuilder private var result: some View {
+        switch search {
+        case .idle:
+            EmptyView()
+        case .suggestions(let suggestions):
+            if suggestions.isEmpty {
+                message(
+                    "Indiquez le numéro, la rue et la commune, par exemple « 8 boulevard du Port, Amiens ».",
+                    systemImage: "mappin.slash"
+                )
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(suggestions.enumerated()), id: \.element.id) { index, suggestion in
+                        if index > 0 { CardRowDivider() }
+                        Button {
+                            fieldFocused = false
+                            onPick(suggestion)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(suggestion.label)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Palette.textPrimary)
+                                if !suggestion.context.isEmpty {
+                                    Text(suggestion.context)
+                                        .font(.footnote)
+                                        .foregroundStyle(Palette.textSecondary)
+                                }
+                            }
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .padding(.horizontal, Spacing.m)
+                            .padding(.vertical, Spacing.xs)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("address.suggestion")
+                    }
+                }
+                .clipShape(Radius.shape(Radius.card))
+                .surface()
+            }
+        case .suggestionsUnavailable:
+            message(
+                "Les suggestions d'adresse sont indisponibles pour le moment. Cherchez par code postal ci-dessous.",
+                systemImage: "exclamationmark.triangle"
+            )
+        case .locating, .loadingAbroad:
+            ProgressView()
+                .tint(Palette.accent)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(search == .locating ? "Recherche de votre circonscription" : "Chargement")
+        case .located(let lookup, let address):
+            VStack(alignment: .leading, spacing: Spacing.s) {
+                if lookup.uncertain {
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text(
+                            "« \(address) » est tout près de la limite entre \(lookup.seats.count) circonscriptions, et notre carte n'est pas assez précise pour trancher. Votre circonscription est indiquée sur votre carte électorale."
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        Link("Interroger sa situation électorale", destination: Self.situationElectorale)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Palette.accent)
+                    }
+                }
+                SeatResults(seats: lookup.seats, selection: selection, onSelect: onSelect)
+            }
+        case .notFound(let address):
+            message(
+                "Nous n'avons pas trouvé de circonscription pour « \(address) ». Pour la Nouvelle-Calédonie, la Polynésie française, Wallis-et-Futuna, Saint-Barthélemy et Saint-Martin, cherchez par code postal.",
+                systemImage: "mappin.slash"
+            )
+        case .failed(let failure):
+            message(
+                failure == .offline
+                    ? "Hors connexion : la recherche n'a pas pu aboutir."
+                    : "La recherche n'a pas pu aboutir. Réessayez dans un instant.",
+                systemImage: failure == .offline ? "wifi.slash" : "exclamationmark.triangle"
+            )
+        case .abroad(let seats):
+            VStack(alignment: .leading, spacing: Spacing.s) {
+                Text(
+                    "Les Français établis hors de France élisent \(seats.count) députés, chacun pour une région du monde. En cas de doute sur la vôtre, votre consulat vous l'indique."
+                )
+                .font(.subheadline)
+                .foregroundStyle(Palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                SeatResults(seats: seats, selection: selection, onSelect: onSelect)
+            }
+        }
+    }
+
+    private func message(_ text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.subheadline)
+            .foregroundStyle(Palette.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// The seats an address or the abroad list found, each with its deputy, or
+/// saying it is vacant.
+struct SeatResults: View {
+    let seats: [LocatedSeat]
+    let selection: DeputyItem?
+    let onSelect: (DeputyItem) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(seats.enumerated()), id: \.element.id) { index, seat in
+                if index > 0 { CardRowDivider() }
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(seat.region ?? seat.label)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Palette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Spacing.m)
+                        .padding(.top, Spacing.s)
+                    if !seat.vacant, let deputy = seat.deputy {
+                        PickerDeputyRow(deputy: deputy, isSelected: deputy.id == selection?.id) {
+                            onSelect(deputy)
+                        }
+                    } else {
+                        Text("Ce siège est vacant : aucun député ne le représente jusqu'à une élection partielle.")
+                            .font(.subheadline)
+                            .foregroundStyle(Palette.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Spacing.m)
+                            .padding(.vertical, Spacing.s)
+                    }
+                }
+                .accessibilityElement(children: .contain)
+            }
+        }
+        .clipShape(Radius.shape(Radius.card))
+        .surface()
+        .accessibilityIdentifier("address.results")
     }
 }
 

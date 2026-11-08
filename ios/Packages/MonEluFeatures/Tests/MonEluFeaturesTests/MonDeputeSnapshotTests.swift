@@ -6,20 +6,110 @@ import SnapshotTesting
 import SwiftUI
 import Testing
 
-/// The postal-code picker in light and dark, at the default and an
-/// accessibility text size (#463), in each of its states. Accueil's home is in
-/// `HomeSnapshotTests`.
+/// The picker in light and dark, at the default and an accessibility text
+/// size (#463, ADR-047), in each of its states: the address search first,
+/// then the postal code. Accueil's home is in `HomeSnapshotTests`.
 @MainActor
 @Suite(.snapshots(record: .missing))
 struct MonDeputeSnapshotTests {
     func picker(
-        _ search: MonDeputeModel.Search, code: String = "", notice: String? = nil, selection: DeputyItem? = nil
+        _ search: MonDeputeModel.Search = .idle, code: String = "", notice: String? = nil,
+        selection: DeputyItem? = nil, address: String = "", addressSearch: MonDeputeModel.AddressSearch = .idle
     ) -> some View {
         PostalCodePickerContent(
+            address: .constant(address), addressSearch: addressSearch,
             postalCode: .constant(code), search: search, notice: notice, selection: selection,
-            onSearch: {}, onSelect: { _ in }
+            onPickAddress: { _ in }, onAbroad: {}, onSearch: {}, onSelect: { _ in }
         )
         .padding(16)
+    }
+
+    static func deputy(_ id: String, _ name: String, _ short: String, _ department: String, _ seat: String) -> DeputyItem {
+        DeputyItem(
+            id: id, name: name, group: nil, groupShort: short,
+            department: department, circonscription: seat, photoURL: nil
+        )
+    }
+
+    /// Suggestions as the Base Adresse Nationale returned them for "1 rue nationale lille".
+    @Test(arguments: Variant.all)
+    func addressSuggestions(_ variant: Variant) {
+        let suggestions = [
+            AddressSuggestion(label: "1 Rue Nationale 59000 Lille", context: "59, Nord, Hauts-de-France", latitude: 50.6366, longitude: 3.0596),
+            AddressSuggestion(label: "1 Rue Nationale 59800 Lille", context: "59, Nord, Hauts-de-France", latitude: 50.6368, longitude: 3.0590),
+        ]
+        checkSnapshot(
+            picker(address: "1 rue nationale lille", addressSearch: .suggestions(suggestions)),
+            variant
+        )
+    }
+
+    /// One sure seat: its deputy is selected and "Suivre" is pinned under it.
+    @Test(arguments: Variant.all)
+    func addressLocated(_ variant: Variant) {
+        let deputy = Self.deputy("PA1", "Une Députée du Nord", "EPR", "Nord", "1")
+        let lookup = SeatLookup(uncertain: false, seats: [
+            LocatedSeat(departmentCode: "59", circonscription: 1, label: "Nord, 1re circonscription", deputy: deputy),
+        ])
+        checkSnapshot(
+            ScrollView {
+                picker(
+                    selection: deputy, address: "1 Rue Nationale 59000 Lille",
+                    addressSearch: .located(lookup, address: "1 Rue Nationale 59000 Lille")
+                )
+            }
+            .background(Palette.pageBackground)
+            .safeAreaInset(edge: .bottom, spacing: 0) { FollowSelectionBar(deputy: deputy) {} },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2200 : 900
+        )
+    }
+
+    /// Near a boundary: both seats, the voter-card hint and the official check;
+    /// the second seat is vacant.
+    @Test(arguments: Variant.all)
+    func addressUncertain(_ variant: Variant) {
+        let lookup = SeatLookup(uncertain: true, seats: [
+            LocatedSeat(
+                departmentCode: "59", circonscription: 1, label: "Nord, 1re circonscription",
+                deputy: Self.deputy("PA1", "Une Députée du Nord", "EPR", "Nord", "1")
+            ),
+            LocatedSeat(departmentCode: "59", circonscription: 4, label: "Nord, 4e circonscription", deputy: nil),
+        ])
+        checkSnapshot(
+            ScrollView {
+                picker(
+                    address: "2 Place du Général de Gaulle 59000 Lille",
+                    addressSearch: .located(lookup, address: "2 Place du Général de Gaulle 59000 Lille")
+                )
+            }
+            .background(Palette.pageBackground),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2400 : 1000
+        )
+    }
+
+    /// The seats abroad, by region (two of the eleven, to keep the image small).
+    @Test(arguments: Variant.all)
+    func addressAbroad(_ variant: Variant) {
+        let seats = [
+            LocatedSeat(
+                departmentCode: "99", circonscription: 4, label: "Français établis hors de France, 4e circonscription",
+                deputy: Self.deputy("PA4", "Un Député du Benelux", "EPR", "Français établis hors de France", "4"),
+                region: "Benelux"
+            ),
+            LocatedSeat(
+                departmentCode: "99", circonscription: 6, label: "Français établis hors de France, 6e circonscription",
+                deputy: Self.deputy("PA6", "Une Députée de Suisse", "DEM", "Français établis hors de France", "6"),
+                region: "Suisse et Liechtenstein"
+            ),
+        ]
+        checkSnapshot(
+            ScrollView { picker(addressSearch: .abroad(seats)) }
+                .background(Palette.pageBackground),
+            variant,
+            height: variant.size.isAccessibilityCategory ? 2400 : 1000
+        )
     }
 
     /// First launch, here after a followed deputy disappeared from the data.
@@ -85,7 +175,7 @@ struct MonDeputeSnapshotTests {
                     .safeAreaInset(edge: .bottom, spacing: 0) { FollowSelectionBar(deputy: selected) {} }
             },
             variant,
-            height: variant.size.isAccessibilityCategory ? 2200 : 900
+            height: variant.size.isAccessibilityCategory ? 2800 : 1100
         )
     }
 }

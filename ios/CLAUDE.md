@@ -84,6 +84,7 @@ The work is tracked under epic #429, one phase epic at a time.
   Accueil reconciles in `onAppear`, not `onChange`: it stays alive behind the other tabs, where a load would only start to be cancelled (#579).
   The appearance chosen in Réglages is the one other preference there (`AppearancePreference`, `@AppStorage`), applied by `LaunchGate` as the windows' `overrideUserInterfaceStyle`.
   The postal code is never stored, and goes only to geo.api.gouv.fr through an ephemeral session (`LivePostalCodeService`), never the shared one whose cache writes URLs to disk.
+  The address is never stored either: it goes only to the Base Adresse Nationale's geocoder (data.geopf.fr) through an ephemeral session (`LiveAddressService`), which suggests only house numbers and lieux-dits, and only the chosen point goes to MonÉlu, in `POST /circonscriptions/locate` (ADR-047).
 - `verify`, `shareAnswer`, `submitChatFeedback` and `shareResult` each store a row in production (a verdict, a public share snapshot, feedback).
   Tests use responses written from the schema for them, and no Maestro flow calls them; `search`, `getQuestions` and `match` store nothing and may be recorded and called.
 - A gesture is never the only way to act: the quiz deck's swipes have buttons and VoiceOver actions that answer the same way, and Reduce Motion drops the fly-off animation.
