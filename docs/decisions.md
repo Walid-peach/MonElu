@@ -1974,12 +1974,13 @@ The coordinates are neither stored nor logged, and the handler logs nothing abou
 The address itself never reaches MonÉlu, only the point.
 Visible copy that today says a postal code is "ni conservé ni envoyé à MonÉlu" must be rewritten to say exactly what is sent and that nothing is kept.
 5. **A point near a boundary is reported as uncertain, never guessed.** The file is simplified, so near an edge it can be wrong.
-When a point is within `BOUNDARY_TOLERANCE_M` of another seat, the response lists both seats and the page asks the visitor to choose, pointing to the circonscription printed on their voter card and to the official "Interroger sa situation électorale" service.
+When a point is within `BOUNDARY_TOLERANCE_M` of another seat, the response lists every such seat; a point inside no seat (a coastline the simplification moved) gets the seats within that tolerance, and nothing beyond it and the page asks the visitor to choose, pointing to the circonscription printed on their voter card and to the official "Interroger sa situation électorale" service.
 The tolerance is set from a measurement (see Consequences), not chosen by hand.
 6. **The postal code stays as the fallback**, unchanged in what it does: postal code, then department, then the list of that department's deputies.
 When the communes behind a postal code sit in several departments, both departments are offered instead of the first one.
 The `/deputes` search box keeps its role as a list filter.
 7. **The 11 circonscriptions for French people abroad are chosen from a list**, each seat described by its region ("Canada et États-Unis", "Benelux"...), never from an address.
+`GET /circonscriptions/abroad` serves that list with each seat's sitting deputy.
 A country-to-seat table would be better, but its only authority is tableau n° 1 ter of the Code électoral, and the copies that can be read automatically disagree with each other (Bhoutan and Corée du Nord are in none of them).
 It is added only once it is taken from that official text.
 Overseas departments and collectivities use the address flow when the boundary file covers them, and the department list otherwise: the Base Adresse Nationale does not cover Nouvelle-Calédonie, Polynésie française or Wallis-et-Futuna, and the boundary file has no shape for them or for Saint-Barthélemy et Saint-Martin.
