@@ -1962,9 +1962,10 @@ INSEE publishes an official file, which that dataset describes as less precise.
 ### Decision
 
 1. **The boundaries are reference data, not ingested data.** They follow the 2010 redistricting and change only by law.
-A script writes `data/reference/circonscriptions.geojson` from the chosen source, and a test fails when it does not hold exactly one shape per seat matching `deputies` (department code plus circonscription number), as `test_reference_data.py` does for the other maps.
+A script writes `data/geo/circonscriptions.geojson` from the chosen source, and a test fails when it does not hold exactly one shape per seat it covers, keyed like `deputies` (department code plus circonscription number).
 The file records its source, version and licence.
-2. **The API matches a point to a seat in memory**, with `shapely`, from that file loaded at startup.
+It sits outside `data/reference/` on purpose: the iPhone app bundles that whole folder (ADR-041 §4), and a file of several megabytes the app never reads does not belong in it.
+2. **The API matches a point to a seat in memory**, with `shapely`, from that file loaded on first use.
 There is no PostGIS, no migration and no database storage, so the free-tier size limit is not touched and the local Docker image is unchanged.
 3. **One endpoint, `POST /circonscriptions/locate`, takes `{lat, lon}`** and returns the department, the circonscription number and its sitting deputy, or says the seat is vacant (`mandate_end`, #621).
 It is a POST so a precise location never sits in a URL, a server log or a cache.
