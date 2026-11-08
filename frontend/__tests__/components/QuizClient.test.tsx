@@ -15,11 +15,20 @@ jest.mock('@/lib/api', () => ({
     deputies: {
       get: jest.fn(),
     },
+    circonscriptions: {
+      locate: jest.fn(),
+      abroad: jest.fn(),
+    },
   },
 }))
 
 jest.mock('@/lib/postal', () => ({
-  resolvePostalCodeToDepartment: jest.fn(),
+  resolvePostalCodeToDepartments: jest.fn(),
+}))
+
+jest.mock('@/lib/address', () => ({
+  MIN_ADDRESS_QUERY_LENGTH: 3,
+  searchAddresses: jest.fn(),
 }))
 
 // MON-186: the swipe deck animates via framer-motion, whose rAF-driven
@@ -82,7 +91,8 @@ jest.mock('next/navigation', () => ({
 }))
 
 import { api } from '@/lib/api'
-import { resolvePostalCodeToDepartment } from '@/lib/postal'
+import { resolvePostalCodeToDepartments } from '@/lib/postal'
+import { searchAddresses } from '@/lib/address'
 import { track } from '@vercel/analytics/react'
 
 const mockTrack = track as jest.Mock
@@ -92,7 +102,9 @@ const mockMatch = api.quiz.match as jest.Mock
 const mockShare = api.quiz.share as jest.Mock
 const mockDeputyGet = api.deputies.get as jest.Mock
 const mockGetShare = api.quiz.getShare as jest.Mock
-const mockResolve = resolvePostalCodeToDepartment as jest.Mock
+const mockResolve = resolvePostalCodeToDepartments as jest.Mock
+const mockSearchAddresses = searchAddresses as jest.Mock
+const mockLocate = api.circonscriptions.locate as jest.Mock
 
 const QUESTIONS: QuizQuestionsResponse = {
   version: '2026-Q3-test',
@@ -333,7 +345,7 @@ describe('QuizClient', () => {
 
   it('resolves the postal code to a department and passes it to the match call', async () => {
     const user = userEvent.setup()
-    mockResolve.mockResolvedValue({ code: '33', nom: 'Gironde' })
+    mockResolve.mockResolvedValue([{ code: '33', nom: 'Gironde' }])
     mockMatch.mockResolvedValue(MATCH_WITH_DEPT)
     render(<QuizClient />)
 
@@ -352,7 +364,7 @@ describe('QuizClient', () => {
 
   it('rejects an unknown postal code with a message and no match call', async () => {
     const user = userEvent.setup()
-    mockResolve.mockResolvedValue(null)
+    mockResolve.mockResolvedValue([])
     render(<QuizClient />)
 
     await answerAllQuestions(user)
@@ -362,6 +374,62 @@ describe('QuizClient', () => {
 
     await screen.findByText(/Code postal introuvable/)
     expect(mockMatch).not.toHaveBeenCalled()
+  })
+
+  it('asks which department when a postal code covers several', async () => {
+    const user = userEvent.setup()
+    mockResolve.mockResolvedValue([
+      { code: '33', nom: 'Gironde' },
+      { code: '24', nom: 'Dordogne' },
+    ])
+    mockMatch.mockResolvedValue(MATCH_WITH_DEPT)
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await skipGroupStep(user)
+    await user.type(screen.getByLabelText('Code postal'), '33220')
+    await user.click(screen.getByRole('button', { name: 'Voir mes résultats' }))
+
+    await screen.findByText(/couvre plusieurs départements/)
+    expect(mockMatch).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Dordogne' }))
+    await screen.findByText('Les députés de votre département')
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), '24', undefined)
+  })
+
+  it('compares with the deputy found from the address', async () => {
+    const user = userEvent.setup()
+    mockSearchAddresses.mockResolvedValue([
+      { label: '1 Place de la Comédie 33000 Bordeaux', context: '33, Gironde', lat: 44.84, lon: -0.57 },
+    ])
+    mockLocate.mockResolvedValue({
+      uncertain: false,
+      seats: [
+        {
+          department_code: '33',
+          department_name: 'Gironde',
+          circonscription: 1,
+          label: 'Gironde, 1re circonscription',
+          vacant: false,
+          deputy: {
+            deputy_id: 'PA33', full_name: 'Marie Bordeaux', party: null, party_short: null,
+            department: 'Gironde', circonscription: '1', photo_url: null,
+          },
+        },
+      ],
+    })
+    mockMatch.mockResolvedValue(MATCH_WITH_DEPT)
+    render(<QuizClient />)
+
+    await answerAllQuestions(user)
+    await skipGroupStep(user)
+    await user.type(screen.getByLabelText('Votre adresse'), '1 place de la comédie')
+    await user.click(await screen.findByText('1 Place de la Comédie 33000 Bordeaux'))
+    expect(mockLocate).toHaveBeenCalledWith({ lat: 44.84, lon: -0.57 })
+    await user.click(await screen.findByRole('button', { name: 'Comparer avec ce député' }))
+
+    await screen.findByText('Les députés de votre département')
+    expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), '33', 'PA33')
   })
 
   it('requires at least 3 expressed answers before computing', async () => {
@@ -461,7 +529,7 @@ describe('QuizClient', () => {
 
   it('shares results by creating a snapshot and copying the URL', async () => {
     const user = userEvent.setup()
-    mockResolve.mockResolvedValue({ code: '33', nom: 'Gironde' })
+    mockResolve.mockResolvedValue([{ code: '33', nom: 'Gironde' }])
     mockMatch.mockResolvedValue(MATCH_WITH_DEPT)
     mockShare.mockResolvedValue({
       id: 'abc',

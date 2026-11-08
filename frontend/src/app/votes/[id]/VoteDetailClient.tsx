@@ -7,7 +7,7 @@ import { ReportErrorButton } from '@/components/ReportErrorButton'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { getInitials, partyHex } from '@/lib/utils'
 import { groupSlug } from '@/lib/groups'
-import { resolvePostalCode } from '@/lib/postal'
+import { resolvePostalCodeToNames } from '@/lib/postal'
 import { csvUrl } from '@/lib/api'
 import { anDossierUrl, anScrutinUrl } from '@/lib/an'
 import dynamic from 'next/dynamic'
@@ -134,31 +134,32 @@ export function VoteDetailClient(props: Props) {
   // ── "Comment a voté votre député ?" lookup ──
   const [lookupQuery, setLookupQuery] = useState('')
   const [selected, setSelected] = useState<DeputyLookupEntry | null>(null)
-  const [postalResult, setPostalResult] = useState<{ code: string; department: string | null } | null>(null)
+  const [postalResult, setPostalResult] = useState<{ code: string; departments: string[] } | null>(null)
 
   useEffect(() => {
     const q = lookupQuery.trim()
     if (!/^\d{5}$/.test(q)) return
     let cancelled = false
-    resolvePostalCode(q).then(department => {
-      if (!cancelled) setPostalResult({ code: q, department })
+    resolvePostalCodeToNames(q).then(departments => {
+      if (!cancelled) setPostalResult({ code: q, departments })
     })
     return () => { cancelled = true }
   }, [lookupQuery])
 
   const postalMatch = postalResult?.code === lookupQuery.trim() ? postalResult : null
-  const resolvedDept = postalMatch?.department ?? null
+  // A postal code can cover several departments (ADR-047 §6): suggest from each.
+  const resolvedDepts = postalMatch?.departments.length ? postalMatch.departments : null
 
   const suggestions = useMemo(() => {
-    if (resolvedDept) {
-      return deputyLookup.filter(d => d.department === resolvedDept).slice(0, 6)
+    if (resolvedDepts) {
+      return deputyLookup.filter(d => resolvedDepts.includes(d.department ?? '')).slice(0, 6)
     }
     const q = lookupQuery.trim().toLowerCase()
     if (!q || q.length < 2) return []
     return deputyLookup
       .filter(d => d.full_name.toLowerCase().includes(q))
       .slice(0, 6)
-  }, [lookupQuery, deputyLookup, resolvedDept])
+  }, [lookupQuery, deputyLookup, resolvedDepts])
 
   const heroRef = useCallback((el: HTMLDivElement | null) => {
     if (obsRef.current) { obsRef.current.disconnect(); obsRef.current = null }

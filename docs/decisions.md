@@ -1970,7 +1970,7 @@ There is no PostGIS, no migration and no database storage, so the free-tier size
 3. **One endpoint, `POST /circonscriptions/locate`, takes `{lat, lon}`** and returns the department, the circonscription number and its sitting deputy, or says the seat is vacant (`mandate_end`, #621).
 It is a POST so a precise location never sits in a URL, a server log or a cache.
 The coordinates are neither stored nor logged, and the handler logs nothing about the request beyond its outcome.
-4. **The address becomes coordinates on the visitor's device**, through api-adresse.data.gouv.fr (the Base Adresse Nationale), never through MonÉlu.
+4. **The address becomes coordinates on the visitor's device**, through the Base Adresse Nationale's geocoder (`data.geopf.fr/geocodage`, IGN's Géoplateforme, which took over api-adresse.data.gouv.fr), never through MonÉlu.
 The address itself never reaches MonÉlu, only the point.
 Visible copy that today says a postal code is "ni conservé ni envoyé à MonÉlu" must be rewritten to say exactly what is sent and that nothing is kept.
 5. **A point near a boundary is reported as uncertain, never guessed.** The file is simplified, so near an edge it can be wrong.

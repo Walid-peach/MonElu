@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Deputy } from '@/lib/api'
 import { getInitials, partyHex, partyShort } from '@/lib/utils'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
-import { resolvePostalCode } from '@/lib/postal'
+import { resolvePostalCodeToNames } from '@/lib/postal'
 import { departmentCode, departmentLabel } from '@/lib/departments'
 import { DeputiesMobile } from './DeputiesMobile'
 
@@ -32,19 +32,21 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     return () => clearTimeout(t)
   }, [search])
 
-  const [postalResult, setPostalResult] = useState<{ code: string; department: string | null } | null>(null)
+  const [postalResult, setPostalResult] = useState<{ code: string; departments: string[] } | null>(null)
   useEffect(() => {
     if (!/^\d{5}$/.test(debouncedSearch)) return
     let cancelled = false
-    resolvePostalCode(debouncedSearch).then(department => {
-      if (!cancelled) setPostalResult({ code: debouncedSearch, department })
+    resolvePostalCodeToNames(debouncedSearch).then(departments => {
+      if (!cancelled) setPostalResult({ code: debouncedSearch, departments })
     })
     return () => { cancelled = true }
   }, [debouncedSearch])
 
   const postalMatch = postalResult?.code === debouncedSearch ? postalResult : null
-  const resolvedDepartment = postalMatch?.department ?? ''
-  const postalNotFound = postalMatch !== null && postalMatch.department === null
+  // A postal code can cover several departments (ADR-047 §6): list them all.
+  const postalDepartments = useMemo(() => postalMatch?.departments ?? [], [postalMatch])
+  const resolvedDepartment = postalDepartments.length === 1 ? postalDepartments[0] : ''
+  const postalNotFound = postalMatch !== null && postalDepartments.length === 0
   // Department page cross-link (MON-107) — shown when the search resolves to
   // a department, whether via a postal code or a typed name/code.
   const matchedDeptCode = departmentCode(resolvedDepartment || debouncedSearch)
@@ -61,7 +63,10 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
 
   const filtered = useMemo(() => {
     const q = (resolvedDepartment || debouncedSearch).toLowerCase()
-    const items = q
+    const several = postalDepartments.length > 1 ? postalDepartments : null
+    const items = several
+      ? initial.items.filter(d => several.some(name => d.department === name))
+      : q
       ? initial.items.filter(d =>
           d.full_name.toLowerCase().includes(q) ||
           // Match the label users see ("Polynésie française (987)"), not just
@@ -76,7 +81,7 @@ export function DeputiesClient({ initial }: { initial: DeputyList }) {
     if (sort === 'region') return items.sort((a, b) => (departmentLabel(a.department) ?? '').localeCompare(departmentLabel(b.department) ?? '', 'fr'))
     if (sort === 'parti')  return items.sort((a, b) => (a.party ?? '').localeCompare(b.party ?? '', 'fr'))
     return items
-  }, [initial.items, debouncedSearch, resolvedDepartment, sort])
+  }, [initial.items, debouncedSearch, resolvedDepartment, postalDepartments, sort])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)

@@ -55,6 +55,17 @@ export default function ConfidentialitePage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Trouver son député à partir de son adresse">
+        <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
+          Quand vous tapez votre adresse sur « Mon député » ou dans le quiz, votre navigateur l&apos;envoie
+          directement à la Base Adresse Nationale (service public de l&apos;IGN), qui propose des adresses et
+          leurs coordonnées. MonÉlu ne reçoit que les coordonnées de l&apos;adresse que vous choisissez, pour
+          trouver votre circonscription : elles ne sont ni conservées, ni journalisées, ni placées dans une
+          adresse web. Un code postal, lui, est envoyé au service public de découpage administratif de l&apos;État
+          pour trouver votre département, et n&apos;est pas transmis à MonÉlu.
+        </p>
+      </LegalSection>
+
       <LegalSection title="Assistant de recherche (RAG)">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
           Les questions que vous posez à l&apos;assistant sont envoyées à notre API, qui interroge un modèle de
