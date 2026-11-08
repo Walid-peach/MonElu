@@ -5,6 +5,7 @@ import { FindMyDeputy, SITUATION_ELECTORALE_URL } from '@/components/FindMyDeput
 import type { Seat } from '@/lib/api'
 
 jest.mock('@/lib/api', () => ({
+  ApiError: jest.requireActual('@/lib/api').ApiError,
   api: { circonscriptions: { locate: jest.fn(), abroad: jest.fn() } },
 }))
 jest.mock('@/lib/address', () => ({
@@ -12,7 +13,7 @@ jest.mock('@/lib/address', () => ({
   searchAddresses: jest.fn(),
 }))
 
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { searchAddresses } from '@/lib/address'
 
 const mockLocate = api.circonscriptions.locate as jest.Mock
@@ -54,7 +55,7 @@ it('sends only the coordinates of the chosen address and offers its deputy', asy
   render(<FindMyDeputy actionLabel="Suivre ce député" onChoose={onChoose} />)
 
   await pickAddress(user)
-  expect(mockLocate).toHaveBeenCalledWith({ lat: 50.63, lon: 3.06 })
+  expect(mockLocate).toHaveBeenCalledWith({ lat: 50.63, lon: 3.06 }, expect.any(AbortSignal))
   expect(await screen.findByText('Une Députée')).toBeInTheDocument()
   expect(screen.getByText('Nord, 1re circonscription')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Suivre ce député' }))
@@ -87,7 +88,7 @@ it('says a seat is vacant and offers no action for it', async () => {
 
 it('explains a point in no circonscription', async () => {
   const user = userEvent.setup()
-  mockLocate.mockRejectedValue(new Error('API error: 404'))
+  mockLocate.mockRejectedValue(new ApiError(404, '/circonscriptions/locate'))
   render(<FindMyDeputy actionLabel="Suivre ce député" onChoose={jest.fn()} />)
 
   await pickAddress(user)
@@ -96,7 +97,7 @@ it('explains a point in no circonscription', async () => {
 
 it('reports a failed lookup', async () => {
   const user = userEvent.setup()
-  mockLocate.mockRejectedValue(new Error('API error: 500'))
+  mockLocate.mockRejectedValue(new ApiError(500, '/circonscriptions/locate'))
   render(<FindMyDeputy actionLabel="Suivre ce député" onChoose={jest.fn()} />)
 
   await pickAddress(user)
@@ -136,5 +137,53 @@ it('can be driven from the keyboard', async () => {
   await user.type(input, '1 rue nationale')
   await screen.findByRole('option', { name: /1 Rue Nationale/ })
   await user.keyboard('{ArrowDown}{Enter}')
-  expect(mockLocate).toHaveBeenCalledWith({ lat: 50.63, lon: 3.06 })
+  expect(mockLocate).toHaveBeenCalledWith({ lat: 50.63, lon: 3.06 }, expect.any(AbortSignal))
+})
+
+it('Enter with nothing highlighted takes the first suggestion', async () => {
+  const user = userEvent.setup()
+  mockLocate.mockResolvedValue({ uncertain: false, seats: [seat(1, 'Une Députée')] })
+  mockSearch.mockResolvedValue([ADDRESS])
+  render(<FindMyDeputy actionLabel="Suivre ce député" onChoose={jest.fn()} />)
+
+  await user.type(screen.getByRole('combobox'), '1 rue nationale')
+  await screen.findByRole('option', { name: /1 Rue Nationale/ })
+  await user.keyboard('{Enter}')
+  expect(mockLocate).toHaveBeenCalledTimes(1)
+})
+
+it('clearing the field closes the list', async () => {
+  const user = userEvent.setup()
+  mockSearch.mockResolvedValue([ADDRESS])
+  render(<FindMyDeputy actionLabel="Suivre ce député" onChoose={jest.fn()} />)
+
+  const input = screen.getByRole('combobox')
+  await user.type(input, '1 rue nationale')
+  await screen.findByRole('option', { name: /1 Rue Nationale/ })
+  await user.clear(input)
+  expect(screen.queryByRole('option')).not.toBeInTheDocument()
+})
+
+it('an older lookup never replaces a newer result', async () => {
+  const user = userEvent.setup()
+  let resolveFirst: (value: unknown) => void = () => {}
+  mockLocate
+    .mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve }))
+    .mockResolvedValueOnce({ uncertain: false, seats: [seat(2, 'La Seconde')] })
+  const other = { ...ADDRESS, label: '2 Rue Nationale 59000 Lille', lat: 50.64 }
+  mockSearch.mockResolvedValueOnce([ADDRESS]).mockResolvedValueOnce([other])
+  render(<FindMyDeputy actionLabel="Suivre ce député" onChoose={jest.fn()} />)
+
+  const input = screen.getByRole('combobox')
+  await user.type(input, '1 rue nationale')
+  await user.click(await screen.findByText(ADDRESS.label))
+  await user.clear(input)
+  await user.type(input, '2 rue nationale')
+  await user.click(await screen.findByText(other.label))
+  expect(await screen.findByText('La Seconde')).toBeInTheDocument()
+
+  resolveFirst({ uncertain: false, seats: [seat(1, 'La Première')] })
+  await new Promise(r => setTimeout(r, 0))
+  expect(screen.queryByText('La Première')).not.toBeInTheDocument()
+  expect(screen.getByText('La Seconde')).toBeInTheDocument()
 })

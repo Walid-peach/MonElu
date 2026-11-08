@@ -7,7 +7,7 @@
 // with the deputy the visitor chooses (follow them, compare quiz answers...).
 import { useEffect, useId, useRef, useState, KeyboardEvent } from 'react'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import type { AbroadSeat, LocateResponse, Seat } from '@/lib/api'
 import { searchAddresses, MIN_ADDRESS_QUERY_LENGTH } from '@/lib/address'
 import type { AddressSuggestion } from '@/lib/address'
@@ -46,6 +46,17 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
   const [locating, setLocating] = useState(false)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const picked = useRef<string | null>(null)
+  // The lookup in flight (an address or the list abroad): a newer one aborts it,
+  // so an older answer never replaces a newer result.
+  const lookup = useRef<AbortController | null>(null)
+
+  function startLookup(): AbortSignal {
+    lookup.current?.abort()
+    lookup.current = new AbortController()
+    return lookup.current.signal
+  }
+
+  useEffect(() => () => lookup.current?.abort(), [])
 
   useEffect(() => {
     const q = query.trim()
@@ -71,6 +82,7 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
   }, [query])
 
   async function pick(suggestion: AddressSuggestion) {
+    const signal = startLookup()
     picked.current = suggestion.label
     setNoPreciseMatch(false)
     setQuery(suggestion.label)
@@ -79,41 +91,62 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
     setLocating(true)
     setOutcome(null)
     try {
-      const response = await api.circonscriptions.locate({ lat: suggestion.lat, lon: suggestion.lon })
+      const response = await api.circonscriptions.locate({ lat: suggestion.lat, lon: suggestion.lon }, signal)
+      if (signal.aborted) return
       setOutcome({ kind: 'located', address: suggestion.label, response })
     } catch (err) {
+      if (signal.aborted) return
       setOutcome(
-        (err as Error).message.endsWith('404')
+        err instanceof ApiError && err.status === 404
           ? { kind: 'not_found', address: suggestion.label }
           : { kind: 'error' }
       )
     } finally {
-      setLocating(false)
+      if (!signal.aborted) setLocating(false)
     }
   }
 
   async function showAbroad() {
+    const signal = startLookup()
     setOpen(false)
+    setLocating(false)
     setOutcome({ kind: 'abroad', seats: null, failed: false })
     try {
       const seats = await api.circonscriptions.abroad()
-      setOutcome({ kind: 'abroad', seats, failed: false })
+      if (!signal.aborted) setOutcome({ kind: 'abroad', seats, failed: false })
     } catch {
-      setOutcome({ kind: 'abroad', seats: null, failed: true })
+      if (!signal.aborted) setOutcome({ kind: 'abroad', seats: null, failed: true })
     }
   }
 
+  function clearSuggestions() {
+    setSuggestions([])
+    setOpen(false)
+    setActive(-1)
+    setSuggestFailed(false)
+    setNoPreciseMatch(false)
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (!open || suggestions.length === 0) return
+    if (suggestions.length === 0) return
+    if (!open) {
+      // After Escape, the arrow keys bring the list back.
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        setOpen(true)
+      }
+      return
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       setActive(i => (i + 1) % suggestions.length)
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActive(i => (i <= 0 ? suggestions.length - 1 : i - 1))
-    } else if (e.key === 'Enter' && active >= 0) {
+    } else if (e.key === 'Enter') {
+      // Enter with nothing highlighted takes the first suggestion.
       e.preventDefault()
-      pick(suggestions[active]!)
+      pick(suggestions[active >= 0 ? active : 0]!)
     } else if (e.key === 'Escape') {
       setOpen(false)
     }
@@ -132,7 +165,7 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
           type="text"
           role="combobox"
           aria-expanded={showList}
-          aria-controls={listId}
+          aria-controls={showList ? listId : undefined}
           aria-autocomplete="list"
           aria-activedescendant={showList && active >= 0 ? `${listId}-${active}` : undefined}
           aria-describedby={helpId}
@@ -141,7 +174,7 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
           onChange={e => {
             picked.current = null
             setQuery(e.target.value)
-            if (e.target.value.trim().length < MIN_ADDRESS_QUERY_LENGTH) setNoPreciseMatch(false)
+            if (e.target.value.trim().length < MIN_ADDRESS_QUERY_LENGTH) clearSuggestions()
           }}
           onKeyDown={onKeyDown}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -165,7 +198,7 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
                   e.preventDefault()
                   pick(s)
                 }}
-                className={`cursor-pointer px-4 py-3 text-sm ${i === active ? 'bg-[color:var(--dp-track-bg)]' : ''}`}
+                className={`cursor-pointer border-l-4 px-4 py-3 text-sm ${i === active ? 'border-[color:var(--dp-red)] bg-[color:var(--dp-track-bg)]' : 'border-transparent'}`}
               >
                 <span className="block font-medium text-[color:var(--dp-text)]">{s.label}</span>
                 {s.context && (
@@ -180,9 +213,15 @@ export function FindMyDeputy({ actionLabel, onChoose, busy = false }: Props) {
         Votre adresse est envoyée à la Base Adresse Nationale, un service public, pour trouver ses
         coordonnées. MonÉlu ne reçoit que ces coordonnées et ne les conserve pas.
       </p>
+      {/* What typing produced, for screen readers: the list itself is not announced. */}
+      <p role="status" className="sr-only">
+        {showList ? `${suggestions.length} adresse${suggestions.length > 1 ? 's' : ''} proposée${suggestions.length > 1 ? 's' : ''}` : ''}
+      </p>
       {noPreciseMatch && !suggestFailed && (
-        <p className="m-0 text-sm text-[color:var(--dp-text-secondary)]">
-          Indiquez le numéro, la rue et la commune, par exemple « 8 boulevard du Port, Amiens ».
+        <p role="status" className="m-0 text-sm text-[color:var(--dp-text-secondary)]">
+          Indiquez le numéro, la rue et la commune, par exemple « 8 boulevard du Port, Amiens ». Pour la
+          Nouvelle-Calédonie, la Polynésie française et Wallis-et-Futuna, choisissez votre député dans la{' '}
+          <Link href="/deputes" className="font-semibold text-[color:var(--dp-text)] underline">liste des députés</Link>.
         </p>
       )}
       {suggestFailed && (

@@ -704,7 +704,7 @@ async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Pr
     body: JSON.stringify(body),
     signal,
   })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  if (!res.ok) throw new ApiError(res.status, path)
   return res.json()
 }
 

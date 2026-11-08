@@ -43,6 +43,9 @@ export function MonDeputeClient() {
   const [checkedStorage, setCheckedStorage] = useState(false)
   const [data, setData] = useState<DashboardData | null>(null)
   const [notFound, setNotFound] = useState(false)
+  // Bumped when the visitor picks a deputy, so the dashboard loads again even
+  // when it is the same id as a load that failed.
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -81,7 +84,7 @@ export function MonDeputeClient() {
       setLastSeenAt(deputyId, new Date().toISOString())
     })
     return () => { cancelled = true }
-  }, [deputyId])
+  }, [deputyId, reloadKey])
 
   const loading = !checkedStorage || (deputyId !== null && !data && !notFound)
 
@@ -129,6 +132,7 @@ export function MonDeputeClient() {
               setNotFound(false)
               setData(null)
               setDeputyId(seat.deputy.deputy_id)
+              setReloadKey(k => k + 1)
             }}
           />
           <div style={{ textAlign: 'left', marginTop: 28 }}>

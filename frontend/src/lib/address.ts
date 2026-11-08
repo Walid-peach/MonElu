@@ -9,6 +9,8 @@ export const GEOCODER_URL = 'https://data.geopf.fr/geocodage/search'
 
 export const MIN_ADDRESS_QUERY_LENGTH = 3
 
+export const MAX_SUGGESTIONS = 5
+
 /**
  * Result types precise enough to stand for where someone lives: an address
  * with a house number, or a lieu-dit. A street's or a town's point is its
@@ -37,7 +39,9 @@ export async function searchAddresses(
 ): Promise<AddressSuggestion[]> {
   const q = query.trim()
   if (q.length < MIN_ADDRESS_QUERY_LENGTH) return []
-  const params = new URLSearchParams({ q, limit: '5', autocomplete: '1' })
+  // Ask for more than are shown: streets and towns are dropped afterwards, and
+  // they must not crowd out the house numbers further down.
+  const params = new URLSearchParams({ q, limit: '15', autocomplete: '1' })
   const res = await fetch(`${GEOCODER_URL}?${params}`, { signal })
   if (!res.ok) throw new Error(`Geocoder error: ${res.status}`)
   const body: { features?: GeocoderFeature[] } = await res.json()
@@ -49,5 +53,5 @@ export async function searchAddresses(
     const [lon, lat] = coords
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return []
     return [{ label, context: feature.properties?.context ?? '', lat, lon }]
-  })
+  }).slice(0, MAX_SUGGESTIONS)
 }

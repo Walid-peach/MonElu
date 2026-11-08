@@ -604,12 +604,17 @@ export function QuizClient() {
               actionLabel="Comparer avec ce député"
               busy={matching}
               onChoose={seat => {
-                if (seat.deputy) submit(seat.department_code, seat.deputy.deputy_id)
+                if (!seat.deputy) return
+                // The department the results show, and that a share carries.
+                setPostalChoices(null)
+                setResolved({ code: seat.department_code, nom: seat.department_name })
+                submit(seat.department_code, seat.deputy.deputy_id)
               }}
             />
             <p style={{ margin: '28px 0 10px', fontSize: 15, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
               Ou donnez seulement votre code postal, pour comparer vos réponses aux députés de votre
-              département. Il n’est ni envoyé à nos serveurs tel quel, ni conservé.
+              département. Seul le département est envoyé à MonÉlu, et il n’est conservé que si vous
+              partagez votre résultat.
             </p>
             <form
               onSubmit={e => {

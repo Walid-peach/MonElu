@@ -28,6 +28,8 @@ describe('searchAddresses', () => {
     expect(url.startsWith(`${GEOCODER_URL}?`)).toBe(true)
     expect(GEOCODER_URL).toBe('https://data.geopf.fr/geocodage/search')
     expect(new URL(url).searchParams.get('q')).toBe('8 bd du port amiens')
+    // More are asked for than are shown, since streets and towns are dropped.
+    expect(new URL(url).searchParams.get('limit')).toBe('15')
   })
 
   it('does not call the geocoder for fewer than three characters', async () => {

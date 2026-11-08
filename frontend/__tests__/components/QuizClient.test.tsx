@@ -5,6 +5,7 @@ import { QuizClient } from '@/app/quiz/QuizClient'
 import type { QuizMatchResponse, QuizQuestionsResponse } from '@/lib/api'
 
 jest.mock('@/lib/api', () => ({
+  ApiError: jest.requireActual('@/lib/api').ApiError,
   api: {
     quiz: {
       questions: jest.fn(),
@@ -425,11 +426,21 @@ describe('QuizClient', () => {
     await skipGroupStep(user)
     await user.type(screen.getByLabelText('Votre adresse'), '1 place de la comédie')
     await user.click(await screen.findByText('1 Place de la Comédie 33000 Bordeaux'))
-    expect(mockLocate).toHaveBeenCalledWith({ lat: 44.84, lon: -0.57 })
+    expect(mockLocate).toHaveBeenCalledWith({ lat: 44.84, lon: -0.57 }, expect.any(AbortSignal))
     await user.click(await screen.findByRole('button', { name: 'Comparer avec ce député' }))
 
     await screen.findByText('Les députés de votre département')
     expect(mockMatch).toHaveBeenCalledWith(expect.any(Array), '33', 'PA33')
+
+    // A share carries the department the address found.
+    mockShare.mockResolvedValue({ share_id: 'abc', share_url: 'https://mon-elu.vercel.app/quiz/s/abc' })
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: jest.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    })
+    await user.click(screen.getByRole('button', { name: 'Partager mes résultats' }))
+    await screen.findByText('Lien copié !')
+    expect(mockShare.mock.calls[0][1]).toBe('33')
   })
 
   it('requires at least 3 expressed answers before computing', async () => {
