@@ -508,6 +508,78 @@ class DepartmentDetail(_Base):
 
 
 # ---------------------------------------------------------------------------
+# Circonscriptions (ADR-047, #662)
+# ---------------------------------------------------------------------------
+
+
+class LocateRequest(BaseModel):
+    """A point, as WGS84 degrees. Never an address: the client geocodes it itself."""
+
+    model_config = ConfigDict(json_schema_extra={"example": {"lat": 48.8566, "lon": 2.3522}})
+
+    lat: float = Field(ge=-90, le=90, description="Latitude in degrees (WGS84)")
+    lon: float = Field(ge=-180, le=180, description="Longitude in degrees (WGS84)")
+
+
+_SEAT_EXAMPLE = {
+    "department_code": "94",
+    "department_name": "Val-de-Marne",
+    "circonscription": 10,
+    "label": "Val-de-Marne, 10e circonscription",
+    "vacant": False,
+    "deputy": DeputySummary.model_config["json_schema_extra"]["example"],
+}
+
+
+class Seat(_Base):
+    """One circonscription and the deputy sitting for it now."""
+
+    model_config = ConfigDict(json_schema_extra={"example": _SEAT_EXAMPLE})
+
+    department_code: str
+    department_name: str
+    circonscription: int
+    label: str = Field(description="How the seat is named in French, ready to show")
+    vacant: bool = Field(
+        description="True when no deputy sits for the seat today (until a by-election)"
+    )
+    deputy: Optional[DeputySummary] = Field(
+        default=None, description="The sitting deputy; absent when the seat is vacant"
+    )
+
+
+class LocateResponse(_Base):
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"uncertain": False, "seats": [_SEAT_EXAMPLE]}}
+    )
+
+    uncertain: bool = Field(
+        description="True when the point is near a boundary and `seats` lists every seat "
+        "it may belong to: ask the visitor to choose rather than picking one"
+    )
+    seats: list[Seat]
+
+
+class AbroadSeat(Seat):
+    """A seat for French people living abroad, described by its region."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                **_SEAT_EXAMPLE,
+                "department_code": "99",
+                "department_name": "Français établis hors de France",
+                "circonscription": 4,
+                "label": "Français établis hors de France, 4e circonscription",
+                "region": "Benelux",
+            }
+        }
+    )
+
+    region: str
+
+
+# ---------------------------------------------------------------------------
 # Themes (MON-106)
 # ---------------------------------------------------------------------------
 

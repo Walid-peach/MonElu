@@ -608,6 +608,74 @@
         }
       }
     },
+    "/circonscriptions/locate": {
+      "post": {
+        "tags": [
+          "Circonscriptions"
+        ],
+        "summary": "The circonscription a point is in, and its sitting deputy",
+        "description": "Which circonscription a point (WGS84 `lat`/`lon`) is in, and who sits for it.\n\nSend coordinates, never an address: geocode the address on the device, for\nexample with the Base Adresse Nationale (https://api-adresse.data.gouv.fr).\nThe point is not stored or logged, and this is a POST so it never appears in\na URL.\n\nThe boundaries are a simplified, unofficial file (data.gouv.fr, Licence\nOuverte 2.0, built from polling-station contours), so near an edge it can be\nwrong. When the point is within 50 metres of a second seat, `uncertain` is\ntrue and `seats` lists every seat it may be in, nearest first: ask the\nvisitor to choose (the circonscription is printed on the voter card) rather\nthan picking one. Measured over 3.8 million addresses, 98.8 % get one sure\nseat, 1.1 % get several, and 0.011 % get one wrong seat.\n\n`vacant` is true, with no `deputy`, while a seat waits for a by-election.\n\nNot covered: the 11 seats for French people abroad (see\n`GET /circonscriptions/abroad`) and Saint-Barthélemy et Saint-Martin,\nWallis-et-Futuna, Polynésie française and Nouvelle-Calédonie (use\n`GET /departments/{code}`). A point in no seat and not within 50 metres of\none (at sea, outside France) is a 404. Paris, Marseille and Lyon are\nanswered like everywhere else, but the measurement above could not check\nthem, because the address data does not say where an address votes.",
+        "operationId": "locateCirconscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/circonscriptions/abroad": {
+      "get": {
+        "tags": [
+          "Circonscriptions"
+        ],
+        "summary": "The 11 seats for French people abroad, by region",
+        "description": "The 11 circonscriptions of Français établis hors de France, in order, each\nwith its region in words and its sitting deputy.\n\nThey cannot be found from an address. The region labels are the usual\ndescriptions of each seat (\"Benelux\", \"Canada et États-Unis\"), not the legal\nlist of countries, which is tableau n° 1 ter of the Code électoral: a visitor\nunsure of their seat should check it with their consulate.",
+        "operationId": "listAbroadCirconscriptions",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AbroadSeat"
+                  },
+                  "type": "array",
+                  "title": "Response Listabroadcirconscriptions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/groups": {
       "get": {
         "tags": [
@@ -2597,6 +2665,68 @@
   },
   "components": {
     "schemas": {
+      "AbroadSeat": {
+        "properties": {
+          "department_code": {
+            "type": "string",
+            "title": "Department Code"
+          },
+          "department_name": {
+            "type": "string",
+            "title": "Department Name"
+          },
+          "circonscription": {
+            "type": "integer",
+            "title": "Circonscription"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "How the seat is named in French, ready to show"
+          },
+          "vacant": {
+            "type": "boolean",
+            "title": "Vacant",
+            "description": "True when no deputy sits for the seat today (until a by-election)"
+          },
+          "deputy": {
+            "description": "The sitting deputy; absent when the seat is vacant",
+            "$ref": "#/components/schemas/DeputySummary"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department_code",
+          "department_name",
+          "circonscription",
+          "label",
+          "vacant",
+          "region"
+        ],
+        "title": "AbroadSeat",
+        "description": "A seat for French people living abroad, described by its region.",
+        "example": {
+          "circonscription": 4,
+          "department_code": "99",
+          "department_name": "Français établis hors de France",
+          "deputy": {
+            "circonscription": "10",
+            "department": "Val-de-Marne",
+            "deputy_id": "PA720892",
+            "full_name": "Mathilde Panot",
+            "party": "La France insoumise - Nouveau Front Populaire",
+            "party_short": "LFI",
+            "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720892.jpg"
+          },
+          "label": "Français établis hors de France, 4e circonscription",
+          "region": "Benelux",
+          "vacant": false
+        }
+      },
       "AccountBookmark": {
         "properties": {
           "vote_id": {
@@ -4146,6 +4276,54 @@
           "avg_voting_days_rate": 0.5553
         }
       },
+      "DeputySummary": {
+        "properties": {
+          "deputy_id": {
+            "type": "string",
+            "title": "Deputy Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "party": {
+            "title": "Party",
+            "type": "string"
+          },
+          "party_short": {
+            "title": "Party Short",
+            "type": "string"
+          },
+          "department": {
+            "title": "Department",
+            "type": "string"
+          },
+          "circonscription": {
+            "title": "Circonscription",
+            "type": "string"
+          },
+          "photo_url": {
+            "title": "Photo Url",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deputy_id",
+          "full_name"
+        ],
+        "title": "DeputySummary",
+        "description": "Lightweight deputy — used in list responses.",
+        "example": {
+          "circonscription": "10",
+          "department": "Val-de-Marne",
+          "deputy_id": "PA720892",
+          "full_name": "Mathilde Panot",
+          "party": "La France insoumise - Nouveau Front Populaire",
+          "party_short": "LFI",
+          "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720892.jpg"
+        }
+      },
       "DeputyVoteItem": {
         "properties": {
           "vote_id": {
@@ -5315,6 +5493,78 @@
         "type": "object",
         "title": "InstallEventResponse"
       },
+      "LocateRequest": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat",
+            "description": "Latitude in degrees (WGS84)"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon",
+            "description": "Longitude in degrees (WGS84)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "LocateRequest",
+        "description": "A point, as WGS84 degrees. Never an address: the client geocodes it itself.",
+        "example": {
+          "lat": 48.8566,
+          "lon": 2.3522
+        }
+      },
+      "LocateResponse": {
+        "properties": {
+          "uncertain": {
+            "type": "boolean",
+            "title": "Uncertain",
+            "description": "True when the point is near a boundary and `seats` lists every seat it may belong to: ask the visitor to choose rather than picking one"
+          },
+          "seats": {
+            "items": {
+              "$ref": "#/components/schemas/Seat"
+            },
+            "type": "array",
+            "title": "Seats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uncertain",
+          "seats"
+        ],
+        "title": "LocateResponse",
+        "example": {
+          "seats": [
+            {
+              "circonscription": 10,
+              "department_code": "94",
+              "department_name": "Val-de-Marne",
+              "deputy": {
+                "circonscription": "10",
+                "department": "Val-de-Marne",
+                "deputy_id": "PA720892",
+                "full_name": "Mathilde Panot",
+                "party": "La France insoumise - Nouveau Front Populaire",
+                "party_short": "LFI",
+                "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720892.jpg"
+              },
+              "label": "Val-de-Marne, 10e circonscription",
+              "vacant": false
+            }
+          ],
+          "uncertain": false
+        }
+      },
       "LoiActe": {
         "properties": {
           "acte_uid": {
@@ -6476,6 +6726,62 @@
         ],
         "title": "SearchResponse"
       },
+      "Seat": {
+        "properties": {
+          "department_code": {
+            "type": "string",
+            "title": "Department Code"
+          },
+          "department_name": {
+            "type": "string",
+            "title": "Department Name"
+          },
+          "circonscription": {
+            "type": "integer",
+            "title": "Circonscription"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "How the seat is named in French, ready to show"
+          },
+          "vacant": {
+            "type": "boolean",
+            "title": "Vacant",
+            "description": "True when no deputy sits for the seat today (until a by-election)"
+          },
+          "deputy": {
+            "description": "The sitting deputy; absent when the seat is vacant",
+            "$ref": "#/components/schemas/DeputySummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department_code",
+          "department_name",
+          "circonscription",
+          "label",
+          "vacant"
+        ],
+        "title": "Seat",
+        "description": "One circonscription and the deputy sitting for it now.",
+        "example": {
+          "circonscription": 10,
+          "department_code": "94",
+          "department_name": "Val-de-Marne",
+          "deputy": {
+            "circonscription": "10",
+            "department": "Val-de-Marne",
+            "deputy_id": "PA720892",
+            "full_name": "Mathilde Panot",
+            "party": "La France insoumise - Nouveau Front Populaire",
+            "party_short": "LFI",
+            "photo_url": "https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/720892.jpg"
+          },
+          "label": "Val-de-Marne, 10e circonscription",
+          "vacant": false
+        }
+      },
       "ShareRequest": {
         "properties": {
           "question": {
@@ -7391,6 +7697,10 @@
     {
       "name": "Departments",
       "description": "Deputies by département, with local aggregates and split votes."
+    },
+    {
+      "name": "Circonscriptions",
+      "description": "Which circonscription a point is in, and its sitting deputy. Send coordinates the client geocoded itself, never an address; near a boundary every possible seat is returned rather than a guess."
     },
     {
       "name": "Themes",

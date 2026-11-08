@@ -84,6 +84,8 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | GET | `/lois/{dossier_uid}` | 30 | One bill's acte parcours with headline scrutins attached and amendment counts per acte (#369) |
 | GET | `/lois/{dossier_uid}/amendements` | 30 | A bill's amendment and article scrutins on demand, optional `acte_uid` filter (#369) |
 | GET | `/departments/{code}` | 30 | Department page data - deputies, aggregates, split votes (MON-107) |
+| POST | `/circonscriptions/locate` | 30 | The circonscription a point (`lat`/`lon`) is in, with its sitting deputy; every possible seat near a boundary (ADR-047) |
+| GET | `/circonscriptions/abroad` | 30 | The 11 seats for French people abroad, by region, with their deputies (ADR-047) |
 | GET | `/groups` | 30 | Every parliamentary group with its current seat count, largest first |
 | GET | `/groups/{slug}` | 30 | Parliamentary group page data - members, dissidence, divided votes (ADR-026) |
 | GET | `/themes/{slug}` | 30 | Theme hub - per-theme stats, party positioning, vote list (MON-106) |
@@ -302,6 +304,7 @@ A full dbt project (`transform/`) sits between raw ingestion and the FastAPI lay
 | `GET /groups/{slug}` | `mart_deputy_scorecard` + `mart_party_alignment` + raw `vote_positions` |
 | `GET /departments/{code}` | Raw tables, plus the marts for the highlight rates on a dedicated connection - falls back to raw-only when the marts are absent |
 | `GET /themes/{slug}` | Raw tables only - no mart dependency |
+| `POST /circonscriptions/locate` · `GET /circonscriptions/abroad` | `data/geo/circonscriptions.geojson` in memory + raw `deputies` |
 | Landing page latest votes | `analytics_marts.mart_vote_summary` |
 
 ### Production deployment
@@ -459,6 +462,7 @@ design.
 | `routers/deputies.py` | Deputy list, profile, scorecard, alignment, dissident/diverging votes, CSV exports |
 | `routers/votes.py` | Vote list, latest, detail, positions CSV |
 | `routers/departments.py` | `GET /departments/{code}` - department page data (MON-107) |
+| `routers/circonscriptions.py` | `POST /circonscriptions/locate`, `GET /circonscriptions/abroad` - find a seat from a point (ADR-047) |
 | `routers/groups.py` | `GET /groups` - the groups and their seat counts; `GET /groups/{slug}` - parliamentary group page data (ADR-026) |
 | `routers/themes.py` | `GET /themes/{slug}` - theme hub pages (MON-106) |
 | `routers/search.py` | `POST /search/` - RAG query, plus chat share snapshots (ADR-024) |
