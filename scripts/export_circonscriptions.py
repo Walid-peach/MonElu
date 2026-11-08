@@ -78,11 +78,22 @@ def build(source: dict) -> dict:
 
 
 def write(collection: dict, out: pathlib.Path) -> None:
+    """A valid GeoJSON FeatureCollection with exactly one feature per line.
+
+    The API reads it a line at a time (`iter_features`), so loading never holds every
+    coordinate of the file as Python objects at once, and a redistricting shows up in
+    a diff as the seats that changed.
+    """
+    header = {k: v for k, v in collection.items() if k != "features"}
+    opening = json.dumps(header, ensure_ascii=False, separators=(",", ":"))[:-1]
+    lines = [opening + ',"features":[']
+    features = collection["features"]
+    for i, feature in enumerate(features):
+        line = json.dumps(feature, ensure_ascii=False, separators=(",", ":"))
+        lines.append(line + ("," if i < len(features) - 1 else ""))
+    lines.append("]}")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(
-        json.dumps(collection, ensure_ascii=False, separators=(",", ":")) + "\n",
-        encoding="utf-8",
-    )
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:

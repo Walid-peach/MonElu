@@ -11,6 +11,8 @@ letter codes (ZA for Guadeloupe ...) and writes circonscriptions as "0104" or "Z
 
 from __future__ import annotations
 
+import json
+from collections.abc import Iterator
 from pathlib import Path
 
 # Ministère de l'Intérieur letter codes for the overseas départements and collectivités.
@@ -91,3 +93,17 @@ ABROAD_SEAT_REGIONS: dict[int, str] = {
     10: "Afrique centrale, orientale et australe, Proche et Moyen-Orient",
     11: "Europe de l'Est, Asie et Océanie",
 }
+
+
+def iter_features(path: Path = BOUNDARY_FILE) -> Iterator[dict]:
+    """The features of the boundary file, one at a time.
+
+    `scripts/export_circonscriptions.py` writes one feature per line, so this never
+    parses the whole file at once: loading it that way kept about 130 MB of parsed
+    coordinates in the API process, a line at a time keeps about 18 MB.
+    """
+    with path.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip().rstrip(",")
+            if line.startswith('{"type":"Feature"'):
+                yield json.loads(line)

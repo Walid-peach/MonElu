@@ -41,10 +41,25 @@ def _traces_sample_rate() -> float:
         return 0.1
 
 
+# Request bodies that must never leave the API, even inside an error report:
+# POST /circonscriptions/locate carries a precise location (ADR-047 §3).
+_SENTRY_BODYLESS_PATHS = ("/circonscriptions/locate",)
+
+
+def _drop_private_request_bodies(event, _hint):
+    request = event.get("request") or {}
+    url = request.get("url") or ""
+    if any(url.split("?", 1)[0].endswith(path) for path in _SENTRY_BODYLESS_PATHS):
+        request.pop("data", None)
+    return event
+
+
 sentry_sdk.init(
     dsn=os.getenv("SENTRY_DSN"),
     environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
     traces_sample_rate=_traces_sample_rate(),
+    before_send=_drop_private_request_bodies,
+    before_send_transaction=_drop_private_request_bodies,
 )
 
 # ---------------------------------------------------------------------------
@@ -184,6 +199,14 @@ OPENAPI_TAGS = [
     {
         "name": "Departments",
         "description": "Deputies by département, with local aggregates and split votes.",
+    },
+    {
+        "name": "Circonscriptions",
+        "description": (
+            "Which circonscription a point is in, and its sitting deputy. Send coordinates "
+            "the client geocoded itself, never an address; near a boundary every possible "
+            "seat is returned rather than a guess."
+        ),
     },
     {
         "name": "Themes",
@@ -392,6 +415,7 @@ from api.routers import (  # noqa: E402
     account,
     agenda,
     app_config,
+    circonscriptions,
     departments,
     deputies,
     feed,
@@ -409,6 +433,7 @@ from api.routers.verify import router as verify_router  # noqa: E402
 
 app.include_router(deputies.router, prefix="/deputies", tags=["Deputies"])
 app.include_router(departments.router, prefix="/departments", tags=["Departments"])
+app.include_router(circonscriptions.router, prefix="/circonscriptions", tags=["Circonscriptions"])
 app.include_router(groups.router, prefix="/groups", tags=["Groups"])
 app.include_router(themes.router, prefix="/themes", tags=["Themes"])
 app.include_router(quiz.router, prefix="/quiz", tags=["Quiz"])

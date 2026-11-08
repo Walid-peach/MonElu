@@ -20,10 +20,11 @@ from api.circonscriptions_data import (
     BOUNDARY_TOLERANCE_M,
     SEATS_WITHOUT_SHAPE,
     TOTAL_SEATS,
+    iter_features,
     seat_key_from_source,
 )
 from api.departments_data import DEPT_NAMES
-from scripts.export_circonscriptions import build
+from scripts.export_circonscriptions import build, write
 
 # Shapes come from simplified polygons, so neighbours overlap a little along shared
 # edges. Anything beyond this share of the smaller seat's area is a broken file.
@@ -127,3 +128,16 @@ def test_build_keeps_only_the_seat_key_and_repairs_the_geometry():
     repaired = shape(feature["geometry"])
     assert repaired.is_valid
     assert repaired.area == pytest.approx(0.5)
+
+
+def test_file_has_one_feature_per_line_and_reads_back_whole(collection):
+    streamed = list(iter_features(BOUNDARY_FILE))
+    assert streamed == collection["features"]
+
+
+def test_write_round_trips(tmp_path, collection):
+    out = tmp_path / "c.geojson"
+    sample = {**collection, "features": collection["features"][:3]}
+    write(sample, out)
+    assert json.loads(out.read_text(encoding="utf-8")) == sample
+    assert list(iter_features(out)) == sample["features"]

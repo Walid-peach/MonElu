@@ -29,6 +29,7 @@ from api.routers import (
     account,
     agenda,
     app_config,
+    circonscriptions,
     departments,
     deputies,
     feed,
@@ -54,6 +55,7 @@ README = os.path.join(ROOT, "README.md")
 ROUTER_PREFIXES = [
     ("/deputies", deputies.router),
     ("/departments", departments.router),
+    ("/circonscriptions", circonscriptions.router),
     ("/groups", groups.router),
     ("/themes", themes.router),
     ("/quiz", quiz.router),
