@@ -35,6 +35,29 @@ export type Deputy = {
   mandate_end: string | null
 }
 
+/** A seat and the deputy sitting for it now (ADR-047). */
+export type Seat = {
+  department_code: string
+  department_name: string
+  circonscription: number
+  label: string
+  vacant: boolean
+  deputy?: {
+    deputy_id: string
+    full_name: string
+    party: string | null
+    party_short: string | null
+    department: string | null
+    circonscription: string | null
+    photo_url: string | null
+  }
+}
+
+/** `uncertain`: the point is near a boundary and `seats` lists every possible seat. */
+export type LocateResponse = { uncertain: boolean; seats: Seat[] }
+
+export type AbroadSeat = Seat & { region: string }
+
 export type Scorecard = {
   deputy_id: string
   full_name: string
@@ -681,7 +704,7 @@ async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Pr
     body: JSON.stringify(body),
     signal,
   })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  if (!res.ok) throw new ApiError(res.status, path)
   return res.json()
 }
 
@@ -756,6 +779,16 @@ export const api = {
       apiFetch<DepartmentDetail>(`/departments/${encodeURIComponent(code)}`, {
         revalidate: DAILY_REVALIDATE_SECONDS,
         tags: [DEPUTIES_TAG, MARTS_TAG, POSITIONS_TAG],
+      }),
+  },
+  circonscriptions: {
+    // ADR-047: only the point goes to MonÉlu, in a POST body, never in a URL.
+    locate: (point: { lat: number; lon: number }, signal?: AbortSignal) =>
+      apiPost<LocateResponse>('/circonscriptions/locate', point, signal),
+    abroad: () =>
+      apiFetch<AbroadSeat[]>('/circonscriptions/abroad', {
+        revalidate: DAILY_REVALIDATE_SECONDS,
+        tags: [DEPUTIES_TAG],
       }),
   },
   lois: {

@@ -7,12 +7,14 @@ import type { Deputy, Scorecard, Alignment, DeputyVoteItem } from '@/lib/api'
 import { partyHex } from '@/lib/utils'
 import {
   getFollowedDeputyId,
+  setFollowedDeputyId,
   clearFollowedDeputyId,
   getLastSeenAt,
   setLastSeenAt,
 } from '@/lib/mon-depute'
 import { DeputyAvatar } from '@/components/DeputyAvatar'
 import { HeroSearch } from '@/components/HeroSearch'
+import { FindMyDeputy } from '@/components/FindMyDeputy'
 import { departmentLabel } from '@/lib/departments'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { VoteTimelineItem } from '@/components/VoteTimelineItem'
@@ -41,6 +43,9 @@ export function MonDeputeClient() {
   const [checkedStorage, setCheckedStorage] = useState(false)
   const [data, setData] = useState<DashboardData | null>(null)
   const [notFound, setNotFound] = useState(false)
+  // Bumped when the visitor picks a deputy, so the dashboard loads again even
+  // when it is the same id as a load that failed.
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -79,7 +84,7 @@ export function MonDeputeClient() {
       setLastSeenAt(deputyId, new Date().toISOString())
     })
     return () => { cancelled = true }
-  }, [deputyId])
+  }, [deputyId, reloadKey])
 
   const loading = !checkedStorage || (deputyId !== null && !data && !notFound)
 
@@ -111,12 +116,29 @@ export function MonDeputeClient() {
             Choisissez votre député
           </h1>
           <p style={{ margin: '16px 0 28px', fontSize: 16, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
-            Cherchez votre député, puis suivez-le depuis sa fiche pour retrouver ici son bilan
-            de vote, son alignement avec son groupe, et ce qui a changé depuis votre dernière visite.
+            Donnez votre adresse pour trouver le député de votre circonscription, puis suivez-le pour
+            retrouver ici son bilan de vote, son alignement avec son groupe, et ce qui a changé depuis
+            votre dernière visite.
           </p>
           {/* The installed web app opens here (manifest start_url, #594), so a
-              first visit gets the search itself rather than a link to it. */}
-          <div style={{ textAlign: 'left' }}>
+              first visit gets the search itself rather than a link to it.
+              The address finds the one deputy (ADR-047); the postal code or a
+              name stays as the fallback, and lands on a list. */}
+          <FindMyDeputy
+            actionLabel="Suivre ce député"
+            onChoose={seat => {
+              if (!seat.deputy) return
+              setFollowedDeputyId(seat.deputy.deputy_id)
+              setNotFound(false)
+              setData(null)
+              setDeputyId(seat.deputy.deputy_id)
+              setReloadKey(k => k + 1)
+            }}
+          />
+          <div style={{ textAlign: 'left', marginTop: 28 }}>
+            <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600, color: NAVY }}>
+              Ou cherchez par code postal ou par nom
+            </p>
             <HeroSearch
               id="mon-depute-search"
               placeholder="Code postal ou nom du député"

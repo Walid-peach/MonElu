@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { track } from '@vercel/analytics/react'
 import { api } from '@/lib/api'
 import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion, QuizShareResult } from '@/lib/api'
-import { resolvePostalCodeToDepartment } from '@/lib/postal'
+import { resolvePostalCodeToDepartments } from '@/lib/postal'
+import { FindMyDeputy } from '@/components/FindMyDeputy'
 import type { ResolvedDepartment } from '@/lib/postal'
 import { CANONICAL_GROUP_LABELS } from '@/lib/groups'
 import { partyHex } from '@/lib/utils'
@@ -213,6 +214,7 @@ export function QuizClient() {
   const [resolving, setResolving] = useState(false)
   const [postalError, setPostalError] = useState<string | null>(null)
   const [resolved, setResolved] = useState<ResolvedDepartment | null>(null)
+  const [postalChoices, setPostalChoices] = useState<ResolvedDepartment[] | null>(null)
 
   const [matching, setMatching] = useState(false)
   const [matchError, setMatchError] = useState(false)
@@ -317,7 +319,9 @@ export function QuizClient() {
     else setPhase('intro')
   }
 
-  async function submit(department: string | null) {
+  // `focusOverride`: the deputy found from the visitor's address (ADR-047), which
+  // takes the place of a ?deputy= focus for this one computation.
+  async function submit(department: string | null, focusOverride?: string) {
     setMatching(true)
     setMatchError(false)
     try {
@@ -328,7 +332,7 @@ export function QuizClient() {
       const res = await api.quiz.match(
         payload,
         department ?? undefined,
-        focusDeputyName ? focusDeputyId : undefined
+        focusOverride ?? (focusDeputyName ? focusDeputyId : undefined)
       )
       setResult(res)
       setPhase('results')
@@ -343,12 +347,22 @@ export function QuizClient() {
   async function confirmPostal() {
     setPostalError(null)
     setResolving(true)
-    const dept = await resolvePostalCodeToDepartment(postalInput.trim())
+    const departments = await resolvePostalCodeToDepartments(postalInput.trim())
     setResolving(false)
-    if (!dept) {
+    if (departments.length === 0) {
       setPostalError('Code postal introuvable - vérifiez les 5 chiffres, ou passez cette étape.')
       return
     }
+    if (departments.length > 1) {
+      // A postal code can cover several departments (ADR-047 §6): let the visitor say which.
+      setPostalChoices(departments)
+      return
+    }
+    await chooseDepartment(departments[0]!)
+  }
+
+  async function chooseDepartment(dept: ResolvedDepartment) {
+    setPostalChoices(null)
     setResolved(dept)
     await submit(dept.code)
   }
@@ -360,6 +374,7 @@ export function QuizClient() {
     setPredictedGroup(null)
     setPostalInput('')
     setPostalError(null)
+    setPostalChoices(null)
     setResolved(null)
     setResult(null)
     setMatchError(false)
@@ -582,8 +597,24 @@ export function QuizClient() {
               Et votre député à vous ?
             </h2>
             <p style={{ margin: '16px 0 24px', fontSize: 15.5, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
-              Donnez votre code postal pour comparer aussi vos réponses aux votes des députés de
-              votre département. Facultatif - il n’est ni envoyé à nos serveurs tel quel, ni conservé.
+              Donnez votre adresse pour comparer aussi vos réponses aux votes de votre député, et à
+              ceux des députés de votre département. Facultatif.
+            </p>
+            <FindMyDeputy
+              actionLabel="Comparer avec ce député"
+              busy={matching}
+              onChoose={seat => {
+                if (!seat.deputy) return
+                // The department the results show, and that a share carries.
+                setPostalChoices(null)
+                setResolved({ code: seat.department_code, nom: seat.department_name })
+                submit(seat.department_code, seat.deputy.deputy_id)
+              }}
+            />
+            <p style={{ margin: '28px 0 10px', fontSize: 15, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
+              Ou donnez seulement votre code postal, pour comparer vos réponses aux députés de votre
+              département. Seul le département est envoyé à MonÉlu, et il n’est conservé que si vous
+              partagez votre résultat.
             </p>
             <form
               onSubmit={e => {
@@ -598,7 +629,10 @@ export function QuizClient() {
                 maxLength={5}
                 placeholder="Code postal (ex. 33000)"
                 value={postalInput}
-                onChange={e => setPostalInput(e.target.value)}
+                onChange={e => {
+                  setPostalInput(e.target.value)
+                  setPostalChoices(null)
+                }}
                 aria-label="Code postal"
                 style={{
                   flex: '1 1 200px', padding: '12px 16px', borderRadius: 9,
@@ -619,6 +653,28 @@ export function QuizClient() {
               </button>
             </form>
             {postalError && <p style={{ marginTop: 12, fontSize: 14, color: RED }}>{postalError}</p>}
+            {postalChoices && (
+              <div style={{ marginTop: 14 }}>
+                <p style={{ margin: '0 0 10px', fontSize: 14.5, color: 'var(--dp-text-secondary)' }}>
+                  Ce code postal couvre plusieurs départements. Lequel est le vôtre ?
+                </p>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {postalChoices.map(d => (
+                    <button
+                      key={d.code}
+                      onClick={() => chooseDepartment(d)}
+                      disabled={matching}
+                      style={{
+                        background: 'var(--dp-card-bg)', color: NAVY, padding: '10px 18px', borderRadius: 9,
+                        fontWeight: 600, fontSize: 14.5, border: `1px solid ${LINE}`, cursor: 'pointer',
+                      }}
+                    >
+                      {d.nom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {matchError && (
               <p style={{ marginTop: 12, fontSize: 14, color: RED }}>
                 Le calcul a échoué. Réessayez dans un instant.
