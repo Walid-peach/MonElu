@@ -1994,8 +1994,9 @@ The tolerance in point 5 comes from that distance, and the issue records the num
 With `BOUNDARY_TOLERANCE_M` at 50 m, 0.011 % of addresses get one wrong seat and 1.1 % are asked to choose; 100 m only brings the first to 0.010 % and doubles the second.
 Communes split between seats (Paris, Marseille, Lyon) cannot be checked this way, because the address data does not say which polling station an address votes in.
 - Measured in #670 for those communes too, from Insee's extract of the electoral register (September 2022), which gives the polling station of every registered address: each address takes the seat of its station.
-Every station in Paris, Marseille and Lyon matches the polling-station list; in the other split communes 2.0 % of addresses have no matching station (communes merged since 2022) and are reported, not counted.
+Every station in Paris, Marseille and Lyon matches the polling-station list; in the other split communes 2.0 % of addresses vote at a station the list does not have (renumbered or created since 2022, since every one of those communes is in the list) and are reported, not counted.
 Over addresses Insee geocoded with a score of at least 0.9, at 50 m: communes wholly inside one seat 0.001 % one wrong seat and 0.7 % asked to choose, Paris, Marseille and Lyon 0.010 % and 8.3 %, other split communes 0.065 % and 4.1 %.
+The register finds fewer errors than #661 in communes wholly inside one seat (0.001 % against 0.011 %) because it holds residential addresses only and the score filter drops its worst points, so split communes are compared with that 0.001 %, not with #661.
 Below that score the register's own points are often in the wrong street (5.5 % land more than 250 m inside another seat under 0.6, 0.025 % at 0.9 and above), an error in the test data that a visitor's chosen suggestion does not have.
 100 m would only bring the other split communes to 0.054 % while doubling the share asked to choose, so the tolerance stays at 50 m; #671 looks for the cause of what remains there.
 - The repository carries a boundary file of a few megabytes.

@@ -13,9 +13,11 @@ from scripts.measure_circonscription_accuracy import (
     SEVERAL_RIGHT,
     SURE_RIGHT,
     SURE_WRONG,
+    UNJOINED_UNKNOWN_COMMUNE,
     Matcher,
     Sample,
     commune_group,
+    load_reu_bureaux,
     ministry_bureau_code,
     reu_sample,
 )
@@ -75,3 +77,33 @@ def test_register_rows_below_the_score_are_left_out(tmp_path):
         "geocoded with a score below 0.9": 1,
     }
     assert not unjoined
+
+
+def test_register_join_through_the_ministry_code(tmp_path):
+    addresses = tmp_path / "adresses.csv"
+    addresses.write_text(
+        "id_brut_bv_reu,geo_type,geo_score,longitude,latitude,nb_adresses,code_commune_ref\n"
+        "97401_10,housenumber,0.95,0.5,0.5,1,97401\n"  # overseas: letter code replaced
+        "33063_9,housenumber,0.95,0.5,0.5,1,33063\n"  # station missing in a split commune
+        "01999_1,housenumber,0.95,0.5,0.5,1,01999\n"  # commune not in the list at all
+        "01001_1,housenumber,0.95,nan,0.5,1,01001\n",  # unusable point
+        encoding="utf-8",
+    )
+    bureaux = tmp_path / "bv.csv"
+    bureaux.write_text(
+        "id_brut_reu,code_commune,id_brut_miom\n"
+        "97401_10,97401,ZD401_0010\n33063_9,33063,33063_0009\n"
+        "01999_1,01999,01999_0001\n01001_1,01001,01001_0001\n",
+        encoding="utf-8",
+    )
+    sample, skipped, unjoined = reu_sample(
+        addresses,
+        load_reu_bureaux(bureaux),
+        {"97401_0010": ("974", 2), "01001_0001": ("01", 1), "33063_0001": ("33", 1)},
+        {"97401": {("974", 2)}, "01001": {("01", 1)}, "33063": {("33", 1), ("33", 2)}},
+        {("974", 2): 0, ("01", 1): 1},
+        min_score=0.9,
+    )
+    assert list(sample.expected) == [0]
+    assert skipped == {"unreadable row": 1}
+    assert unjoined == {GROUP_SPLIT: 1, UNJOINED_UNKNOWN_COMMUNE: 1}

@@ -17,7 +17,8 @@ station, so communes split between seats are measured too. Insee's polling-stati
 table carries the Ministry's code for each station (`id_brut_miom`), which is the key
 of the polling-station list; for the overseas départements that code starts with the
 Ministry's letter code (ZD401_0010), so the commune code replaces it. A station with no
-match (communes merged since 2022, for instance) is counted and reported, never guessed.
+match (renumbered or created since 2022, for instance) is counted and reported, never
+guessed, and a commune the list does not know at all is counted apart.
 Only `housenumber` and `locality` addresses are kept, the result types the locator
 accepts (ADR-047 §5), and only those Insee geocoded with a `geo_score` of at least
 `--min-score` (default 0.9). The register's addresses are typed by town halls and
@@ -74,6 +75,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from api.circonscriptions_data import seat_key_from_source  # noqa: E402
+from api.routers.circonscriptions import MAX_SEAT_LATITUDE  # noqa: E402
 
 EARTH_RADIUS_M = 6_371_000
 TOLERANCES_M = (0, 50, 100, 250, 500, 1000)
@@ -89,6 +91,8 @@ GROUPS = (GROUP_WHOLE, GROUP_PLM, GROUP_SPLIT)
 # The locator's precise result types (ADR-047 §5): a street's or a town's point is its
 # middle, which the locator never matches.
 PRECISE_TYPES = {"housenumber", "locality"}
+# Unjoined register addresses whose commune is not in the polling-station list at all.
+UNJOINED_UNKNOWN_COMMUNE = "communes missing from the polling-station list"
 # Insee geocoding score below which a register address is too often misplaced (#670).
 MIN_GEO_SCORE = 0.9
 
@@ -207,7 +211,10 @@ def reu_sample(path, reu_codes, seat_of_bureau, seats_of_commune, index_of, min_
             commune = code.partition("_")[0] if code else row["code_commune_ref"]
             group = commune_group(commune, seats_of_commune)
             if seat is None:
-                unjoined[group] += 1
+                # A commune the list does not know (merged since 2022, for instance) has
+                # no seats to group it by; count it apart rather than as split.
+                known = commune in PLM_COMMUNES or commune in seats_of_commune
+                unjoined[group if known else UNJOINED_UNKNOWN_COMMUNE] += 1
                 continue
             if seat not in index_of:
                 skipped["seat without a shape"] += 1
@@ -216,6 +223,10 @@ def reu_sample(path, reu_codes, seat_of_bureau, seats_of_commune, index_of, min_
                 lon, lat = float(row["longitude"]), float(row["latitude"])
                 weight = int(float(row["nb_adresses"] or 1))
             except ValueError:
+                skipped["unreadable row"] += 1
+                continue
+            if not (math.isfinite(lon) and math.isfinite(lat)) or abs(lat) > MAX_SEAT_LATITUDE:
+                # One such point would widen the matcher's degree pre-filter to every seat.
                 skipped["unreadable row"] += 1
                 continue
             sample.add(lon, lat, index_of[seat], group, weight)
@@ -368,14 +379,16 @@ def main() -> int:
         print(f"register addresses with a known seat: {len(sample)}")
         for reason, n in sorted(skipped.items()):
             print(f"  left out, {reason}: {n}")
-        for group in GROUPS:
-            kept = sum(1 for g in sample.group if g == GROUPS.index(group))
+        kept_per_group = np.bincount(np.frombuffer(sample.group, np.int8), minlength=len(GROUPS))
+        for group, kept in zip(GROUPS, kept_per_group, strict=True):
             missing = unjoined.get(group, 0)
             if kept + missing:
                 print(
                     f"  {group}: {kept} kept, {missing} with no matching polling station "
                     f"({100 * missing / (kept + missing):.2f} %)"
                 )
+        if unjoined.get(UNJOINED_UNKNOWN_COMMUNE):
+            print(f"  {UNJOINED_UNKNOWN_COMMUNE}: {unjoined[UNJOINED_UNKNOWN_COMMUNE]} left out")
         report(sample, tree, geoms, args.tolerances, weighted=True)
     return 0
 

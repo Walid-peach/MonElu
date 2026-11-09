@@ -157,8 +157,11 @@ def locate_circonscription(request: Request, body: LocateRequest):
     wrong. When the point is within 50 metres of a second seat, `uncertain` is
     true and `seats` lists every seat it may be in, nearest first: ask the
     visitor to choose (the circonscription is printed on the voter card) rather
-    than picking one. Measured over 3.8 million addresses, 98.8 % get one sure
-    seat, 1.1 % get several, and 0.011 % get one wrong seat.
+    than picking one. Measured over 3.8 million addresses in communes wholly
+    inside one seat, 98.8 % get one sure seat, 1.1 % get several, and 0.011 %
+    get one wrong seat. In communes split between seats, measured against the
+    electoral register, 8.3 % get several and 0.010 % one wrong seat in Paris,
+    Marseille and Lyon, and 4.1 % and 0.065 % in the others.
 
     `vacant` is true, with no `deputy`, while a seat waits for a by-election.
 
@@ -166,9 +169,7 @@ def locate_circonscription(request: Request, body: LocateRequest):
     `GET /circonscriptions/abroad`) and Saint-Barthélemy et Saint-Martin,
     Wallis-et-Futuna, Polynésie française and Nouvelle-Calédonie (use
     `GET /departments/{code}`). A point in no seat and not within 50 metres of
-    one (at sea, outside France) is a 404. Paris, Marseille and Lyon are
-    answered like everywhere else, but the measurement above could not check
-    them, because the address data does not say where an address votes.
+    one (at sea, outside France) is a 404.
     """
     keys = locate_point(body.lat, body.lon)
     if not keys:
