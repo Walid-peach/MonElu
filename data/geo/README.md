@@ -17,6 +17,8 @@ The 11 seats abroad and the overseas collectivités the source does not draw (Sa
 
 The source is not official and is simplified.
 `scripts/measure_circonscription_accuracy.py` checks it against Base Adresse Nationale addresses in communes that lie wholly inside one seat, and its results set the boundary tolerance (ADR-047 §5, #661).
+It also checks communes split between seats against Insee's extract of the electoral register, where each address has the seat of its polling station (#670).
+At the 50 m tolerance, one wrong seat is 0.010 % of addresses in Paris, Marseille and Lyon and 0.065 % in the other split communes, against 0.001 % elsewhere; ADR-047 records the full figures and #671 the open question.
 
 Regenerate only when the source publishes a new version or a redistricting happens:
 
