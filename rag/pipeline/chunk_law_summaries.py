@@ -33,7 +33,8 @@ def get_top_votes(n: int = 20) -> list[dict]:
                     voted_at, votes_for, votes_against,
                     abstentions, total_voters
                 FROM votes
-                ORDER BY total_voters DESC
+                -- total_voters is nullable, and DESC puts NULLs first (#675)
+                ORDER BY total_voters DESC NULLS LAST
                 LIMIT %s
                 """,
                 (n,),

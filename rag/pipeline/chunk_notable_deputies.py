@@ -147,7 +147,7 @@ def build_chunk(deputy: dict, votes: list[dict]) -> str:
             "pour": "POUR",
             "contre": "CONTRE",
             "abstention": "ABSTENTION",
-            "nonvotant": "NON VOTANT",
+            "nonVotant": "NON VOTANT",
         }
         pos = pos_map.get(v["position"], v["position"].upper())
         lines.append(f"- {date} : {title}… → {pos} (vote {v['result']})")
