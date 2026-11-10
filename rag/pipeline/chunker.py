@@ -76,6 +76,23 @@ def _fmt_date(dt) -> str:
     return dt.strftime("%d/%m/%Y")
 
 
+def deputy_identity(name: str, dept: str, party: str, mandate_end=None) -> str:
+    """The sentence that opens every deputy chunk (#674).
+
+    A deputy whose mandate has ended is written in the past tense with the end
+    date, so a chat answer never presents a former deputy as the current one.
+    """
+    prep = dept_preposition(dept)
+    # "de l'" already ends with apostrophe - no extra space before the noun
+    sep = "" if prep.endswith("'") else " "
+    if mandate_end is None:
+        return f"{name} est député(e) {prep}{sep}{dept}, membre du parti {party}."
+    return (
+        f"{name} a été député(e) {prep}{sep}{dept} jusqu'au {_fmt_date(mandate_end)}, "
+        f"membre du parti {party}."
+    )
+
+
 def _reading_aid(row: dict) -> str | None:
     """A vote's generated summary, if it may enter the index (#631, ADR-043).
 
@@ -151,7 +168,7 @@ def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
     conn = _get_conn()
     chunks = []
     _DEPUTY_SELECT = """
-                SELECT d.deputy_id, d.full_name, d.party, d.department,
+                SELECT d.deputy_id, d.full_name, d.party, d.department, d.mandate_end,
                        COUNT(vp.vote_id) AS total_votes,
                        COUNT(vp.vote_id) FILTER (WHERE vp.position = 'pour') AS pour_count,
                        COUNT(vp.vote_id) FILTER (WHERE vp.position = 'contre') AS contre_count,
@@ -198,11 +215,8 @@ def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
         rate = float(row["presence_rate"] or 0)
         rate_pct = round(rate * 100, 1)
 
-        prep = dept_preposition(dept)
-        # "de l'" already ends with apostrophe — no extra space before the noun
-        sep = "" if prep.endswith("'") else " "
         content = (
-            f"{name} est député(e) {prep}{sep}{dept}, membre du parti {party}.\n"
+            f"{deputy_identity(name, dept, party, row['mandate_end'])}\n"
             f"Sur {total} votes enregistrés, il/elle a voté pour {pour} fois, "
             f"contre {contre} fois, abstention {abst} fois.\n"
             f"Taux de présence : {rate_pct}%."
@@ -213,6 +227,7 @@ def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
             "full_name": name,
             "party": party,
             "department": dept,
+            "mandate_end": str(row["mandate_end"]) if row["mandate_end"] else None,
         }
         chunks.append({"content": content, "metadata": metadata})
 
@@ -421,7 +436,7 @@ def chunk_notable_deputies() -> list[dict]:
                 """
                 SELECT
                     vp.deputy_id,
-                    d.full_name, d.party, d.department,
+                    d.full_name, d.party, d.department, d.mandate_end,
                     v.vote_id, v.vote_title, v.voted_at, v.result, vp.position,
                     CASE
                         WHEN v.vote_title ILIKE '%%financement de la sécurité sociale%%'
@@ -488,8 +503,6 @@ def chunk_notable_deputies() -> list[dict]:
         name = first["full_name"] or info["name"]
         party = first["party"] or "parti non renseigné"
         dept = first["department"] or "département inconnu"
-        prep = dept_preposition(dept)
-        sep = "" if prep.endswith("'") else " "
 
         vote_lines = "\n".join(
             f"- {row['vote_title']} ({_fmt_date(row['voted_at'])}) : "
@@ -497,8 +510,7 @@ def chunk_notable_deputies() -> list[dict]:
             for row in selected
         )
         content = (
-            f"{name} est député(e) {prep}{sep}{dept}, "
-            f"membre du parti {party}.\n"
+            f"{deputy_identity(name, dept, party, first['mandate_end'])}\n"
             f"{info['bio']}\n\n"
             f"Ses votes récents :\n{vote_lines}"
         )
@@ -507,6 +519,7 @@ def chunk_notable_deputies() -> list[dict]:
             "deputy_id": deputy_id,
             "full_name": name,
             "party": party,
+            "mandate_end": str(first["mandate_end"]) if first["mandate_end"] else None,
         }
         chunks.append({"content": content, "metadata": metadata})
 

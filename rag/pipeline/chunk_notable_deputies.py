@@ -14,6 +14,8 @@ from openai import OpenAI
 from pgvector.psycopg2 import register_vector
 from psycopg2 import sql
 
+from rag.pipeline.chunker import deputy_identity
+
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -39,6 +41,7 @@ def get_top_deputies(n: int = 100) -> list[dict]:
                     d.full_name,
                     d.party,
                     d.department,
+                    d.mandate_end,
                     COUNT(vp.vote_id) as total_votes,
                     COUNT(vp.vote_id) FILTER (
                         WHERE vp.position = 'pour'
@@ -117,23 +120,14 @@ def get_key_votes(deputy_id: str) -> list[dict]:
             return [dict(r) for r in cur.fetchall()]
 
 
-def dept_prep(dept: str) -> str:
-    """French preposition for department name — delegates to canonical helper."""
-    from rag.pipeline.chunker import dept_preposition
-
-    return dept_preposition(dept)
-
-
 def build_chunk(deputy: dict, votes: list[dict]) -> str:
     """Format deputy + votes as French prose chunk."""
     dept = deputy.get("department") or "département non renseigné"
     party = deputy.get("party") or "groupe non renseigné"
     presence = deputy.get("presence_pct") or 0
 
-    prep = dept_prep(dept)
-    sep = "" if prep.endswith("'") else " "
     lines = [
-        f"{deputy['full_name']} est député(e) {prep}{sep}{dept}, membre du parti {party}.",
+        deputy_identity(deputy["full_name"], dept, party, deputy.get("mandate_end")),
         f"Sur {deputy['total_votes']} votes enregistrés : "
         f"{deputy['pour']} pour, {deputy['contre']} contre, "
         f"{deputy['abstention']} abstentions.",
@@ -211,6 +205,7 @@ def build_notable_deputy_index(n: int = 100, table: str = "document_chunks") -> 
                     cur.execute(
                         """
                         SELECT d.deputy_id, d.full_name, d.party, d.department,
+                               d.mandate_end,
                                COUNT(vp.vote_id) as total_votes,
                                COUNT(vp.vote_id) FILTER (WHERE vp.position='pour') as pour,
                                COUNT(vp.vote_id) FILTER (WHERE vp.position='contre') as contre,
@@ -259,6 +254,7 @@ def build_notable_deputy_index(n: int = 100, table: str = "document_chunks") -> 
                 "full_name": full_name,
                 "party": dep.get("party"),
                 "department": dep.get("department"),
+                "mandate_end": str(dep["mandate_end"]) if dep.get("mandate_end") else None,
             }
             embed_and_store_chunk(content, metadata, client, table=table)
             stats["new"] += 1
