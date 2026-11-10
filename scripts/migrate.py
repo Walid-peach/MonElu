@@ -164,19 +164,66 @@ def _applied_migrations(conn) -> set[str]:
             return {row["filename"] for row in cur.fetchall()}
 
 
+def migration_files() -> list[str]:
+    """Every migration file, in the order they are applied."""
+    return sorted(glob.glob(os.path.join(MIGRATIONS_DIR, "*.sql")))
+
+
+def check_migration_files(files: list[str]) -> None:
+    """The static checks every run makes before touching the database.
+
+    Raises AssertionError on a duplicate numeric prefix or a table created
+    without row level security.
+    """
+    assert_unique_numeric_prefixes(files)
+    assert_rls_on_created_tables(files)
+
+
+def apply_migrations(conn, files: list[str]) -> list[str]:
+    """Apply every file the ledger does not list yet, in order, and return their names.
+
+    `conn` must not be in autocommit mode: each file and its ledger row commit in
+    one transaction, so a failed file is retried on the next run. This is the
+    function the Railway start hook runs and the one the integration tests build
+    their database with (#673), so both exercise the same chain.
+    """
+    if conn.autocommit:
+        raise ValueError("apply_migrations needs a connection outside autocommit mode")
+    applied = _applied_migrations(conn)
+    newly_applied = []
+    for migration_file in files:
+        filename = os.path.basename(migration_file)
+        if filename in applied:
+            log.info("Skipped %s (already applied)", filename)
+            continue
+        with open(migration_file) as f:
+            sql = f.read()
+        # One transaction per migration: the SQL and its ledger row
+        # commit together, so a failed file is retried next run.
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                cur.execute(
+                    "INSERT INTO schema_migrations (filename) VALUES (%s)",
+                    (filename,),
+                )
+        log.info("Applied %s", filename)
+        newly_applied.append(filename)
+    return newly_applied
+
+
 def main() -> None:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise EnvironmentError("DATABASE_URL is not set.")
 
-    migration_files = sorted(glob.glob(os.path.join(MIGRATIONS_DIR, "*.sql")))
-    if not migration_files:
+    files = migration_files()
+    if not files:
         log.error("No migration files found in %s", MIGRATIONS_DIR)
         sys.exit(1)
 
     try:
-        assert_unique_numeric_prefixes(migration_files)
-        assert_rls_on_created_tables(migration_files)
+        check_migration_files(files)
     except AssertionError as exc:
         log.error(str(exc))
         sys.exit(1)
@@ -184,35 +231,17 @@ def main() -> None:
     log.info("Connecting to database…")
     conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        applied = _applied_migrations(conn)
-
-        for migration_file in migration_files:
-            filename = os.path.basename(migration_file)
-            if filename in applied:
-                log.info("Skipped %s (already applied)", filename)
-                continue
-            with open(migration_file) as f:
-                sql = f.read()
-            try:
-                # One transaction per migration: the SQL and its ledger row
-                # commit together, so a failed file is retried next run.
-                with conn:
-                    with conn.cursor() as cur:
-                        cur.execute(sql)
-                        cur.execute(
-                            "INSERT INTO schema_migrations (filename) VALUES (%s)",
-                            (filename,),
-                        )
-            except psycopg2.Error as exc:
-                if "vector" in str(exc).lower():
-                    log.error(
-                        "pgvector extension is not available. "
-                        "Enable it on Supabase: Database → Extensions → search 'vector' → enable. "
-                        "On local Docker, use the pgvector/pgvector:pg15 image."
-                    )
-                    sys.exit(1)
-                raise
-            log.info("Applied %s", filename)
+        try:
+            apply_migrations(conn, files)
+        except psycopg2.Error as exc:
+            if "vector" in str(exc).lower():
+                log.error(
+                    "pgvector extension is not available. "
+                    "Enable it on Supabase: Database → Extensions → search 'vector' → enable. "
+                    "On local Docker, use the pgvector/pgvector:pg15 image."
+                )
+                sys.exit(1)
+            raise
         log.info("All migrations applied successfully.")
 
         # ── Table summary ────────────────────────────────────────────────────

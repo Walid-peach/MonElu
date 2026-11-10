@@ -9,12 +9,13 @@ Locally: `make start && make migrate` then run tests.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from urllib.parse import urlparse
 
 import psycopg2
 import psycopg2.extras
 import pytest
+
+from scripts import migrate
 
 # Hosts this fixture is allowed to write fixture/test data to. Anything else
 # (Supabase, or any other unrecognized remote host) is refused outright —
@@ -35,30 +36,22 @@ def _assert_safe_test_database(db_url: str) -> None:
         )
 
 
-MIGRATIONS = [
-    Path(__file__).parents[2] / "data" / "migrations" / "001_init.sql",
-    Path(__file__).parents[2] / "data" / "migrations" / "002_vote_summaries.sql",
-    Path(__file__).parents[2] / "data" / "migrations" / "003_schema_cleanup.sql",
-    Path(__file__).parents[2] / "data" / "migrations" / "009_agenda.sql",
-    # Adds `changed_at` to the four ingested tables (GH #353). Required by every
-    # upsert in scripts/, so test_change_tracking.py and test_upsert.py both
-    # fail without it.
-    Path(__file__).parents[2] / "data" / "migrations" / "011_changed_at.sql",
-    # dossiers + dossier_actes + votes.scrutin_kind (MON-243, ADR-035). Required
-    # by test_dossiers.py and by the ingest_votes upsert, which now writes
-    # scrutin_kind on every row.
-    Path(__file__).parents[2] / "data" / "migrations" / "012_dossiers.sql",
-    # The app_private account schema, the restricted role and its RLS policies
-    # (#412). test_account_rls.py is the suite that reads them.
-    Path(__file__).parents[2] / "data" / "migrations" / "013_account_schema.sql",
-    # install_event_counts (#598). test_install_events.py runs the real upsert.
-    Path(__file__).parents[2] / "data" / "migrations" / "014_install_events.sql",
-    # vote_amendments + votes.summary_basis (#630). The chunker reads summary_basis
-    # on every vote row (#631), so test_chunker.py fails without it.
-    Path(__file__).parents[2] / "data" / "migrations" / "015_vote_amendments.sql",
-    Path(__file__).parents[2] / "data" / "migrations" / "016_vote_articles.sql",
-    Path(__file__).parents[2] / "data" / "migrations" / "017_vote_bills.sql",
-]
+# The schema is built by scripts/migrate.py's own apply function (#673), not by a
+# list kept here: a hand-picked list once applied 11 of 18 files, so five tables
+# never existed in this tier and a new migration was left out unless its author
+# remembered the list. Every PR now runs the whole ledger-driven chain, in order,
+# on a bare Postgres - the same code the Railway start hook runs.
+
+
+def _migrate(db_url: str) -> None:
+    files = migrate.migration_files()
+    migrate.check_migration_files(files)
+    conn = psycopg2.connect(db_url, cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        migrate.apply_migrations(conn, files)
+    finally:
+        conn.close()
+
 
 # Minimal mart stub DDL — mirrors the columns read by api/routers/deputies.py
 # and api/routers/votes.py without running dbt.
@@ -261,13 +254,10 @@ def db_conn():
         pytest.skip("DATABASE_URL not set — skipping integration tests")
     _assert_safe_test_database(db_url)
 
+    _migrate(db_url)
+
     conn = psycopg2.connect(db_url, cursor_factory=psycopg2.extras.RealDictCursor)
     conn.autocommit = True
-
-    # Apply all migrations (idempotent — IF NOT EXISTS throughout)
-    with conn.cursor() as cur:
-        for migration in MIGRATIONS:
-            cur.execute(migration.read_text())
 
     # Create mart stubs (dbt not available in CI integration tier)
     with conn.cursor() as cur:
