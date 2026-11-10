@@ -5,6 +5,7 @@ import {
   formatSittingDay,
   formatSittingTime,
   isSubstantive,
+  landingDay,
   parisToday,
   showsPointType,
 } from '@/lib/agenda'
@@ -150,5 +151,20 @@ describe('isSubstantive', () => {
 
   it('rejects an item with nothing to say', () => {
     expect(isSubstantive(item({ objet: null, summary_plain: null }))).toBe(false)
+  })
+})
+
+describe('landingDay', () => {
+  const days = [{ sitting_date: '2026-10-27' }, { sitting_date: '2026-10-29' }]
+
+  it('opens on today when it sits, else on the next sitting day', () => {
+    expect(landingDay(days, '2026-10-27')).toBe('2026-10-27')
+    expect(landingDay(days, '2026-10-28')).toBe('2026-10-29')
+    expect(landingDay(days, '2026-10-26')).toBe('2026-10-27')
+  })
+
+  it('stays at the top when no sitting day is left or the week is empty', () => {
+    expect(landingDay(days, '2026-10-30')).toBeNull()
+    expect(landingDay([], '2026-10-28')).toBeNull()
   })
 })

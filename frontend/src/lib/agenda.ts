@@ -54,6 +54,20 @@ export function parisToday(now: Date = new Date()): string {
   return ISO_DATE.format(now)
 }
 
+/** Attribute that marks a day's section on `/agenda`, in both layouts (#679). */
+export const AGENDA_DAY_ATTR = 'data-agenda-day'
+
+/**
+ * The day `/agenda` opens on (#679): `today` when it sits, else the next
+ * sitting day, so the days already gone stay above and one scroll up reaches
+ * Monday. Null when no sitting day is left in the week, which then opens at its
+ * top. The week's `days` carry only sitting days. The iPhone app's
+ * `AgendaWeek.landingDay` is the twin.
+ */
+export function landingDay(days: ReadonlyArray<{ sitting_date: string }>, today: string): string | null {
+  return days.find(d => d.sitting_date >= today)?.sitting_date ?? null
+}
+
 /** `YYYY-MM-DD` plus `days`, staying in plain-date arithmetic (no DST drift). */
 export function addDays(isoDate: string, days: number): string {
   const shifted = new Date(`${isoDate}T00:00:00Z`)

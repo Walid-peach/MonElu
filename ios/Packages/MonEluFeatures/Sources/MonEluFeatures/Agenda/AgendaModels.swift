@@ -22,6 +22,16 @@ public struct AgendaWeek: Hashable, Sendable {
         return known + present.subtracting(known).sorted()
     }
 
+    /// The day the screen opens on (#679): today when it sits, else the next
+    /// sitting day, so the days already gone stay above and one scroll up
+    /// reaches Monday. Nil when `today` (`YYYY-MM-DD`, Paris) is outside this
+    /// week or no sitting day remains in it, and the week then opens at its top.
+    /// The website's `landingDay` in `frontend/src/lib/agenda.ts` is the twin.
+    func landingDay(today: String) -> String? {
+        guard from <= today, today <= to else { return nil }
+        return days.first { $0.date >= today }?.id
+    }
+
     /// The days with only the items of `theme`; all of them when nil.
     func filtered(theme: String?) -> [AgendaDay] {
         guard let theme else { return days }

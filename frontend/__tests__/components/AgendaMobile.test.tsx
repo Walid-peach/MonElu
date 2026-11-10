@@ -25,12 +25,22 @@ describe('AgendaMobile', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("Cette semaine dans l'hémicycle")
   })
 
-  it('shows every point of the chosen day', () => {
+  it('lists every day of the week, with every point', () => {
     render(<AgendaMobile days={days} empty={null} />)
     expect(screen.getByText('Projet de loi de finances pour 2027')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /MER 28/ }))
-    expect(screen.getByRole('button', { name: /MER 28/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getAllByText(/^Proposition de loi numéro \d$/)).toHaveLength(6)
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(2)
+  })
+
+  it('jumps to a day instead of hiding the others', () => {
+    const scrollIntoView = jest.fn()
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView
+    jest.spyOn(window.HTMLElement.prototype, 'getClientRects').mockReturnValue([{}] as unknown as DOMRectList)
+    render(<AgendaMobile days={days} empty={null} />)
+    fireEvent.click(screen.getByRole('button', { name: /MER 28/ }))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView.mock.contexts[0]).toHaveAttribute('data-agenda-day', '2026-10-28')
+    expect(screen.getByText('Projet de loi de finances pour 2027')).toBeInTheDocument()
   })
 
   it('falls back to the empty state', () => {

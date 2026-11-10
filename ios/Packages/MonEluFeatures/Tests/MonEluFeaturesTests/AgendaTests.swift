@@ -21,6 +21,20 @@ struct AgendaTests {
         #expect(MonEluFormat.time(vote.start) == "15 h")
     }
 
+    /// The week opens on today, or the next sitting day, and only the week
+    /// holding today scrolls (#679). The recorded week sits on 10-01 and 10-02.
+    @Test func theWeekOpensOnTodayOrTheNextSittingDay() async throws {
+        let week = try await Self.week()
+        #expect(week.landingDay(today: "2026-10-01") == "2026-10-01")
+        #expect(week.landingDay(today: "2026-09-28") == "2026-10-01")
+        #expect(week.landingDay(today: "2026-10-02") == "2026-10-02")
+        // Today is a Saturday and no sitting day is left in the week.
+        #expect(week.landingDay(today: "2026-10-03") == nil)
+        // Another week opens at its top.
+        #expect(week.landingDay(today: "2026-10-05") == nil)
+        #expect(week.landingDay(today: "2026-09-27") == nil)
+    }
+
     /// A point opens the bill's page in the app only when the API gives it a
     /// `lois_url` (#511); the recorded week has none, so this one adds it to
     /// the third point, whose dossier has no scrutin yet in the recording.
