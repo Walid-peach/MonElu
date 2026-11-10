@@ -15,6 +15,9 @@ final class AgendaModel {
     private let service: any AgendaService
     private let now: @Sendable () -> Date
 
+    /// Today in Paris, `YYYY-MM-DD`, the day a week holding it opens on (#679).
+    var today: String { MonEluFormat.isoDay(now()) }
+
     /// Opens on the week holding `weekOf`, or the current week when nil.
     init(service: any AgendaService, weekOf: Date? = nil, now: @escaping @Sendable () -> Date = { .now }) {
         self.service = service
@@ -66,9 +69,17 @@ public struct AgendaScreen: View {
                     systemImage: "calendar"
                 )
             ) { week in
-                ScrollView {
-                    AgendaWeekContent(week: week, theme: $model.theme)
-                        .padding(.vertical, Spacing.xs)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        AgendaWeekContent(week: week, theme: $model.theme)
+                            .padding(.vertical, Spacing.xs)
+                    }
+                    // Opens on today, the days before it one scroll up (#679).
+                    .task {
+                        guard let day = week.landingDay(today: model.today) else { return }
+                        await Task.yield()
+                        proxy.scrollTo(day, anchor: .top)
+                    }
                 }
             }
             // A new week is a new loader; its identity starts the load.
@@ -155,6 +166,7 @@ struct AgendaWeekContent: View {
                     .surface()
                 }
                 .padding(.horizontal, Spacing.m)
+                .id(day.id)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

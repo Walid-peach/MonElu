@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { api, type AgendaDay, type AgendaItem, type AgendaResponse } from '@/lib/api'
 import {
+  AGENDA_DAY_ATTR,
   LOOKAHEAD_DAYS,
   addDays,
   agendaHeadline,
@@ -16,6 +17,7 @@ import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
 import { AgendaMobile } from './AgendaMobile'
+import { ScrollToToday } from './ScrollToToday'
 import { SummaryTag } from '@/components/SummaryLabel'
 
 // The agenda table only changes when `ingest_agenda.py` runs, and that run
@@ -80,6 +82,7 @@ export default async function AgendaPage() {
   return (
     <>
     <JsonLd data={breadcrumb} />
+    <ScrollToToday days={week?.days ?? []} />
     <AgendaMobile
       days={week?.days ?? []}
       empty={<EmptyState nextDay={nextDay} unavailable={week === null} />}
@@ -161,7 +164,7 @@ export default async function AgendaPage() {
 
 function DaySection({ day }: { day: AgendaDay }) {
   return (
-    <section>
+    <section {...{ [AGENDA_DAY_ATTR]: day.sitting_date }} className="scroll-mt-24">
       <h2
         className="font-newsreader text-section-sm"
         style={{
