@@ -16,7 +16,7 @@ public struct VoteDetailScreen: View {
     public init(id: String, service: any VotesService, followedDeputies: (any FollowedDeputyStore)? = nil) {
         self.id = id
         self.followedDeputies = followedDeputies
-        _loader = State(initialValue: Loader { try await service.vote(id: id) })
+        _loader = State(initialValue: Loader(cacheKey: "vote:\(id)") { try await service.vote(id: id) })
     }
 
     public var body: some View {

@@ -6,12 +6,17 @@ acte_uid)` primary key and the `has_scrutins` recomputation are both things a
 mocked cursor cannot check.
 """
 
+import os
+from unittest.mock import patch
+
 import pytest
 
+from api.routers.lois import SQL_ACTES
 from scripts.ingest_dossiers import (
     RECOMPUTE_HAS_SCRUTINS_SQL,
     UPSERT_ACTE_SQL,
     UPSERT_DOSSIER_SQL,
+    upsert_dossiers,
 )
 
 DOSSIER_A = "IT-DOSSIER-A"
@@ -189,3 +194,38 @@ def test_acte_rows_cascade_when_a_dossier_is_deleted(db_conn, _cleanup_dossiers)
         cur.execute("DELETE FROM dossiers WHERE dossier_uid = %s", (DOSSIER_A,))
         cur.execute("SELECT COUNT(*) AS n FROM dossier_actes WHERE dossier_uid = %s", (DOSSIER_A,))
         assert cur.fetchone()["n"] == 0
+
+
+# --- The single-transaction rule (#684) ------------------------------------
+#
+# GET /lois/{uid} shows an acte when `a.last_seen_at >= d.last_seen_at`, and
+# both stamps are NOW(), the transaction's start time. That holds only because
+# upsert_dossiers() writes a dossier and its actes in one transaction: a dossier
+# committed on its own, ahead of its actes, hides its whole parcours.
+
+
+def _visible_actes(cur, dossier_uid: str) -> list[str]:
+    cur.execute(SQL_ACTES, {"dossier_uid": dossier_uid})
+    return [r["acte_uid"] for r in cur.fetchall()]
+
+
+@pytest.mark.integration
+def test_one_transaction_run_keeps_the_parcours_visible(db_conn, _cleanup_dossiers):
+    with patch("scripts.ingest_dossiers.DATABASE_URL", os.environ["DATABASE_URL"]):
+        upsert_dossiers([_dossier(DOSSIER_A)], [_acte(DOSSIER_A, "IT-ACTE-RUN", "AN1")])
+        # A second run, as the daily cron makes it: still one transaction.
+        upsert_dossiers([_dossier(DOSSIER_A)], [_acte(DOSSIER_A, "IT-ACTE-RUN", "AN1")])
+    with db_conn.cursor() as cur:
+        assert _visible_actes(cur, DOSSIER_A) == ["IT-ACTE-RUN"]
+
+
+@pytest.mark.integration
+def test_a_dossier_committed_apart_from_its_actes_hides_the_parcours(db_conn, _cleanup_dossiers):
+    """Why ingest_dossiers.py must keep a dossier and its actes in one transaction."""
+    with patch("scripts.ingest_dossiers.DATABASE_URL", os.environ["DATABASE_URL"]):
+        upsert_dossiers([_dossier(DOSSIER_A)], [_acte(DOSSIER_A, "IT-ACTE-RUN", "AN1")])
+    with db_conn.cursor() as cur:
+        # The next run's dossier write commits on its own (db_conn autocommits),
+        # and its actes never land, as when a split upsert fails half way.
+        cur.execute(UPSERT_DOSSIER_SQL, _dossier(DOSSIER_A))
+        assert _visible_actes(cur, DOSSIER_A) == []

@@ -278,7 +278,9 @@ private struct FeedLoaderView<Header: View>: View {
         onLoaded: @escaping ([String: Date]) -> Void,
         @ViewBuilder header: () -> Header
     ) {
-        _loader = State(initialValue: Loader {
+        // Keyed on the query: going back to a tab or a circle shows its feed
+        // at once and fetches it again behind.
+        _loader = State(initialValue: Loader(cacheKey: "feed:\(query)") {
             async let page = service.feed(query)
             async let week = HomeScreenRecap.recap(tab: query.tab, deputyIDs: deputyIDs, service: service)
             return FeedScreen(page: try await page, week: await week)

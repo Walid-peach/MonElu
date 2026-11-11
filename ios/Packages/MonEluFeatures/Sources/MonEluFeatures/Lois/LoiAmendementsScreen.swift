@@ -8,7 +8,7 @@ public struct LoiAmendementsScreen: View {
     @State private var loader: Loader<LoiAmendements>
 
     public init(id: String, acteID: String?, service: any LoisService) {
-        _loader = State(initialValue: Loader(isEmpty: { $0.items.isEmpty }) {
+        _loader = State(initialValue: Loader(cacheKey: "loi-amendements:\(id):\(acteID ?? "-")", isEmpty: { $0.items.isEmpty }) {
             try await service.amendements(dossierID: id, acteID: acteID)
         })
     }

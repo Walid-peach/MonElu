@@ -182,13 +182,14 @@ public struct DeputyVote: Identifiable, Hashable, Sendable {
 }
 
 /// Everything a profile shows. The scorecard and recent votes are optional:
-/// the profile still opens when only those requests fail, as on the website.
+/// the profile still opens when only those requests fail, as on the website,
+/// and it opens before they have arrived.
 public struct DeputyProfilePage: Hashable, Sendable {
     public let profile: DeputyProfile
-    public let scorecard: DeputyScorecard?
-    public let recentVotes: [DeputyVote]?
+    public var scorecard: DeputyScorecard?
+    public var recentVotes: [DeputyVote]?
     /// Nil when the alignment failed to load; the section is left out.
-    public let alignment: DeputyAlignment?
+    public var alignment: DeputyAlignment?
 
     public init(
         profile: DeputyProfile, scorecard: DeputyScorecard?, recentVotes: [DeputyVote]?, alignment: DeputyAlignment? = nil

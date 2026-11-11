@@ -9,7 +9,9 @@ public struct ThemeScreen: View {
     @Environment(\.appConfiguration) private var configuration
 
     public init(slug: String, service: any ThemesService) {
-        _loader = State(initialValue: Loader(isEmpty: { $0 == nil }) { try await service.theme(slug: slug) })
+        _loader = State(initialValue: Loader(cacheKey: "theme:\(slug)", isEmpty: { $0 == nil }) {
+            try await service.theme(slug: slug)
+        })
     }
 
     public var body: some View {

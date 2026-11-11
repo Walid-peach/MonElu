@@ -36,7 +36,9 @@ final class AgendaModel {
     }
 
     private static func loader(_ service: any AgendaService, _ window: AgendaWindow) -> Loader<AgendaWeek> {
-        Loader(isEmpty: { $0.days.isEmpty }) { try await service.week(from: window.from, to: window.to) }
+        Loader(cacheKey: "agenda:\(window.from):\(window.to)", isEmpty: { $0.days.isEmpty }) {
+            try await service.week(from: window.from, to: window.to)
+        }
     }
 }
 

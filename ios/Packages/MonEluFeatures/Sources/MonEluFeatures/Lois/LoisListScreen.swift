@@ -8,7 +8,7 @@ public struct LoisListScreen: View {
     @State private var loader: Loader<LoiList>
 
     public init(service: any LoisService) {
-        _loader = State(initialValue: Loader(isEmpty: { $0.items.isEmpty }) { try await service.lois() })
+        _loader = State(initialValue: Loader(cacheKey: "lois", isEmpty: { $0.items.isEmpty }) { try await service.lois() })
     }
 
     public var body: some View {
