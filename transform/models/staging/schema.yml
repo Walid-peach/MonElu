@@ -8,7 +8,11 @@ models:
         tests: [not_null, unique]
       - name: full_name
         tests: [not_null]
+      - name: seat_status
+        description: "sitting, unconfirmed or departed (deputy_seat_status, #682)"
+        tests: [not_null]
       - name: is_active
+        description: "seat_status = 'sitting'"
         tests: [not_null]
       - name: party
         description: >

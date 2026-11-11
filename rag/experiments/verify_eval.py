@@ -55,7 +55,7 @@ def _live_golden_claims() -> list[dict]:
                 JOIN votes v ON v.vote_id = vp.vote_id
                 WHERE vp.position IN ('pour', 'contre')
                   AND v.total_voters >= 400
-                  AND d.mandate_end IS NULL
+                  AND d.deputy_id IN (SELECT deputy_id FROM sitting_deputies)
                 ORDER BY v.voted_at DESC
                 LIMIT 1
                 """
@@ -117,7 +117,7 @@ def _mixed_record_claim() -> dict | None:
                 JOIN votes v ON v.vote_id = vp.vote_id
                 WHERE v.dossier_id IS NOT NULL
                   AND v.total_voters >= 300
-                  AND d.mandate_end IS NULL
+                  AND d.deputy_id IN (SELECT deputy_id FROM sitting_deputies)
                 GROUP BY d.full_name, v.dossier_id
                 HAVING COUNT(*) FILTER (WHERE vp.position = 'pour') >= 1
                    AND COUNT(*) FILTER (WHERE vp.position = 'contre') >= 1

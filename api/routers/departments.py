@@ -86,14 +86,14 @@ def get_department(
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Current deputies only (mandate_end IS NULL) — the page answers
+            # Sitting deputies only (the `sitting_deputies` view, #682) - the page answers
             # "who represents me now", not the historical roster.
             cur.execute(
                 """
                 SELECT deputy_id, full_name, party, party_short,
                        department, circonscription, photo_url
                 FROM deputies
-                WHERE department = ANY(%s) AND mandate_end IS NULL
+                WHERE department = ANY(%s) AND deputy_id IN (SELECT deputy_id FROM sitting_deputies)
                 -- circonscription is TEXT holding a bare number ("1", "10"):
                 -- sort numerically, not lexicographically
                 ORDER BY NULLIF(regexp_replace(circonscription, '[^0-9]', '', 'g'), '')::int

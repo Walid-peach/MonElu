@@ -36,6 +36,9 @@ router = APIRouter()
 # offset paging never repeats or skips a namesake.
 ROSTER_ORDER = sql.SQL('last_name COLLATE "fr-x-icu", first_name COLLATE "fr-x-icu", deputy_id')
 
+# The `active` filter: sitting means what migration 019's view says (#682).
+SITTING = "deputy_id IN (SELECT deputy_id FROM sitting_deputies)"
+
 # One scorecard row per deputy with party/department context — shared by the
 # JSON table endpoint and the CSV export so both always agree (MON-97).
 _SCORECARD_ROWS_SQL = """
@@ -130,9 +133,11 @@ def list_deputies(
 
     Includes deputies whose mandate has ended (`mandate_end` is set) unless
     `active=true`, which keeps today's Assemblée only (`total` is then the
-    number of seats filled). Sorted by surname, ignoring accents and case
-    ("Écrivain" among the E's, "de Courson" among the D's). `offset` is capped
-    at 2000.
+    number of seats filled). `active=false` is everyone else: deputies with a
+    `mandate_end`, and the rare deputy the Assemblée's latest roster no longer
+    lists but who has no end date yet. Sorted by surname, ignoring accents and
+    case ("Écrivain" among the E's, "de Courson" among the D's). `offset` is
+    capped at 2000.
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -149,9 +154,7 @@ def list_deputies(
                 conditions.append(sql.SQL("party = %s"))
                 params.append(party)
             if active is not None:
-                conditions.append(
-                    sql.SQL("mandate_end IS NULL" if active else "mandate_end IS NOT NULL")
-                )
+                conditions.append(sql.SQL(SITTING if active else f"NOT {SITTING}"))
 
             where = (
                 sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)

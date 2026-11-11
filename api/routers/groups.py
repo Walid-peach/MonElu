@@ -82,9 +82,10 @@ def _majority_position(pour: int, contre: int, abstention: int) -> str:
 def list_groups(request: Request):
     """The 12 groups of the Assemblée, largest first, with the slug `GET /groups/{slug}` takes.
 
-    `seat_count` counts **current** deputies only (`mandate_end` not set), so
-    the counts add up to the seats filled today, at most 577. A group with no
-    sitting member is left out, as `GET /groups/{slug}` answers 404 for it.
+    `seat_count` counts **sitting** deputies only: listed by the Assemblée's
+    latest roster and with no `mandate_end`. The counts add up to the seats
+    filled today, at most 577. A group with no sitting member is left out, as
+    `GET /groups/{slug}` answers 404 for it.
     `non-inscrits` is listed like the others but is not a group in any political
     sense: its members belong to none.
     """
@@ -94,7 +95,7 @@ def list_groups(request: Request):
                 """
                 SELECT party, COUNT(*) AS seat_count
                 FROM deputies
-                WHERE mandate_end IS NULL AND party IS NOT NULL
+                WHERE deputy_id IN (SELECT deputy_id FROM sitting_deputies) AND party IS NOT NULL
                 GROUP BY party
                 """
             )
@@ -160,14 +161,14 @@ def get_group(
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Current members only (mandate_end IS NULL) — the page answers
+            # Sitting members only (the `sitting_deputies` view, #682) - the page answers
             # "who sits in this group now", not the historical roster.
             cur.execute(
                 """
                 SELECT deputy_id, full_name, party, party_short,
                        department, circonscription, photo_url
                 FROM deputies
-                WHERE party = %s AND mandate_end IS NULL
+                WHERE party = %s AND deputy_id IN (SELECT deputy_id FROM sitting_deputies)
                 ORDER BY last_name, first_name
                 """,
                 (party,),
@@ -185,7 +186,8 @@ def get_group(
                 SELECT seat_rank FROM (
                     SELECT party, RANK() OVER (ORDER BY COUNT(*) DESC) AS seat_rank
                     FROM deputies
-                    WHERE mandate_end IS NULL AND party IS NOT NULL AND party <> %s
+                    WHERE deputy_id IN (SELECT deputy_id FROM sitting_deputies)
+                      AND party IS NOT NULL AND party <> %s
                     GROUP BY party
                 ) ranked
                 WHERE party = %s

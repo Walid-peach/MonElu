@@ -183,7 +183,7 @@ def chunk_deputies(deputy_ids: set[str] | None = None) -> list[dict]:
                            / NULLIF((
                                SELECT COUNT(*) FROM votes v
                                WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
-                                 AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                                 AND v.voted_at <= COALESCE(d.mandate_end, 'infinity')
                            ), 0),
                            1
                        ), 3) AS presence_rate
@@ -256,14 +256,14 @@ def chunk_party_summaries() -> list[dict]:
                                COUNT(vp.vote_id)::numeric / NULLIF((
                                    SELECT COUNT(*) FROM votes v
                                    WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
-                                     AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                                     AND v.voted_at <= COALESCE(d.mandate_end, 'infinity')
                                ), 0),
                                1
                            ) AS presence_rate
                     FROM deputies d
                     LEFT JOIN vote_positions vp ON d.deputy_id = vp.deputy_id
                     WHERE d.party IS NOT NULL
-                      AND d.mandate_end IS NULL
+                      AND d.deputy_id IN (SELECT deputy_id FROM sitting_deputies)
                     GROUP BY d.deputy_id
                 ),
                 party_positions AS (
@@ -335,7 +335,7 @@ def chunk_global_stats() -> list[dict]:
             cur.execute(
                 """
                 SELECT
-                  (SELECT COUNT(*) FROM deputies WHERE mandate_end IS NULL)   AS active_deputies,
+                  (SELECT COUNT(*) FROM sitting_deputies)   AS active_deputies,
                   (SELECT COUNT(*) FROM deputies)                             AS total_deputies,
                   (SELECT COUNT(*) FROM votes)                                AS total_votes,
                   (SELECT COUNT(*) FROM vote_positions)                       AS total_positions,
@@ -366,7 +366,7 @@ def chunk_global_stats() -> list[dict]:
                            / NULLIF((
                                SELECT COUNT(*) FROM votes v
                                WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
-                                 AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                                 AND v.voted_at <= COALESCE(d.mandate_end, 'infinity')
                            ), 0),
                            1
                        ), 3) AS presence_rate

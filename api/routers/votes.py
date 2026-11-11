@@ -54,7 +54,7 @@ SQL_GROUP_MEMBERS = """
 SELECT party_short, COUNT(*) AS members
 FROM deputies
 WHERE mandate_start <= %(voted_on)s
-  AND (mandate_end IS NULL OR mandate_end >= %(voted_on)s)
+  AND COALESCE(mandate_end, 'infinity') >= %(voted_on)s
 GROUP BY party_short
 """
 

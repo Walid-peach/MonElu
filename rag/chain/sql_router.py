@@ -230,9 +230,9 @@ _DEPUTY_PRESENCE_RANKING = f"""
     CROSS JOIN LATERAL (
         SELECT COUNT(*) AS window_votes FROM votes v
         WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
-          AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+          AND v.voted_at <= COALESCE(d.mandate_end, 'infinity')
     ) wv
-    WHERE d.mandate_end IS NULL
+    WHERE d.deputy_id IN (SELECT deputy_id FROM sitting_deputies)
     GROUP BY d.deputy_id, wv.window_votes
     HAVING wv.window_votes >= {_MIN_WINDOW_VOTES}
     ORDER BY presence_pct {{direction}}, d.full_name
@@ -336,7 +336,7 @@ SQL_QUERIES = {
         SELECT full_name, party, department, circonscription
         FROM deputies
         WHERE department = %(dept)s
-          AND mandate_end IS NULL
+          AND deputy_id IN (SELECT deputy_id FROM sitting_deputies)
           AND (%(circo)s IS NULL OR circonscription = %(circo)s)
         ORDER BY full_name
     """,
@@ -350,7 +350,7 @@ SQL_QUERIES = {
     """,
     "deputy_total_count": """
         SELECT
-            COUNT(*) FILTER (WHERE mandate_end IS NULL) as active,
+            COUNT(*) FILTER (WHERE deputy_id IN (SELECT deputy_id FROM sitting_deputies)) as active,
             COUNT(*) as total
         FROM deputies
     """,
@@ -369,7 +369,7 @@ SQL_QUERIES = {
         SELECT party, COUNT(*) as count
         FROM deputies
         WHERE party IS NOT NULL
-          AND mandate_end IS NULL
+          AND deputy_id IN (SELECT deputy_id FROM sitting_deputies)
         GROUP BY party
         ORDER BY count DESC
     """,
@@ -405,7 +405,7 @@ SQL_QUERIES = {
                     COUNT(vp.vote_id)::numeric / NULLIF((
                         SELECT COUNT(*) FROM votes v
                         WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
-                          AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                          AND v.voted_at <= COALESCE(d.mandate_end, 'infinity')
                     ), 0),
                     1
                 ) as presence_rate

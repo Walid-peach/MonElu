@@ -2,6 +2,11 @@ with source as (
     select * from {{ source('raw', 'deputies') }}
 ),
 
+-- Sitting is defined once, by the deputy_seat_status view (migration 019, #682).
+seat_status as (
+    select * from {{ source('raw', 'deputy_seat_status') }}
+),
+
 renamed as (
     select
         deputy_id,
@@ -16,12 +21,11 @@ renamed as (
         ingested_at::timestamp                   as ingested_at,
 
         -- derived
-        case
-            when mandate_end is null then true
-            else false
-        end                                      as is_active
+        seat_status.seat_status,
+        seat_status.seat_status = 'sitting'      as is_active
 
     from source
+    join seat_status using (deputy_id)
     where deputy_id is not null
 )
 

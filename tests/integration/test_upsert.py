@@ -10,6 +10,7 @@ import pytest
 from scripts.ingest_deputies import UPSERT_SQL as DEPUTY_UPSERT_SQL
 from scripts.ingest_positions import UPSERT_SQL as POSITION_UPSERT_SQL
 from scripts.ingest_votes import UPSERT_SQL as VOTE_UPSERT_SQL
+from tests.integration.conftest import STAMP_ROSTER_SQL
 
 
 @pytest.mark.integration
@@ -44,6 +45,7 @@ def test_deputy_upsert_updates_row(db_conn):
         cur.execute(
             DEPUTY_UPSERT_SQL, {**updated, "party": "Rassemblement National", "party_short": "RN"}
         )
+        cur.execute(STAMP_ROSTER_SQL)
 
 
 @pytest.mark.integration
@@ -77,6 +79,7 @@ def test_deputy_upsert_preserves_party_short_when_omitted(db_conn):
         cur.execute(
             DEPUTY_UPSERT_SQL, {**resolved, "party": "Rassemblement National", "party_short": "RN"}
         )
+        cur.execute(STAMP_ROSTER_SQL)
 
 
 @pytest.mark.integration
@@ -106,6 +109,7 @@ def test_deputy_upsert_single_row(db_conn):
 
         # Cleanup
         cur.execute("DELETE FROM deputies WHERE deputy_id = 'PA099'")
+        cur.execute(STAMP_ROSTER_SQL)
 
 
 @pytest.mark.integration

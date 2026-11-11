@@ -51,13 +51,14 @@ def _get_live_counts() -> dict:
     try:
         with psycopg2.connect(url) as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM deputies WHERE mandate_end IS NULL")
+                cur.execute("SELECT COUNT(*) FROM sitting_deputies")
                 active_deputies = cur.fetchone()[0]
                 cur.execute("SELECT COUNT(*) FROM votes")
                 total_votes = cur.fetchone()[0]
                 cur.execute(
                     "SELECT party, COUNT(*) AS n FROM deputies "
-                    "WHERE party IS NOT NULL AND mandate_end IS NULL "
+                    "WHERE party IS NOT NULL "
+                    "AND deputy_id IN (SELECT deputy_id FROM sitting_deputies) "
                     "GROUP BY party ORDER BY n DESC LIMIT 1"
                 )
                 row = cur.fetchone()
