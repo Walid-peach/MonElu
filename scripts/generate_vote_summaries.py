@@ -10,6 +10,8 @@ Usage:
     python -m scripts.generate_vote_summaries --dry-run   # print without writing
     python -m scripts.generate_vote_summaries --limit 100
     python -m scripts.generate_vote_summaries --backlog   # print the pending count
+    python -m scripts.generate_vote_summaries --state-counts   # votes per summary state
+    python -m scripts.generate_vote_summaries --retry-rejected   # re-queue every refusal
     python -m scripts.generate_vote_summaries --clear-legacy-amendments
     python -m scripts.generate_vote_summaries --clear-legacy-articles
     python -m scripts.generate_vote_summaries --clear-title-only
@@ -34,6 +36,7 @@ try:
         DECLINED_PATTERN,
         MODEL,
         OFFICIAL_TEXT_MAX_TOKENS,
+        SUMMARY_STATES,
         amendment_user_message,
         article_user_message,
         bill_rejection_reason,
@@ -51,6 +54,7 @@ except ImportError:  # running as a plain file: python scripts/generate_vote_sum
         DECLINED_PATTERN,
         MODEL,
         OFFICIAL_TEXT_MAX_TOKENS,
+        SUMMARY_STATES,
         amendment_user_message,
         article_user_message,
         bill_rejection_reason,
@@ -72,16 +76,25 @@ log = logging.getLogger(__name__)
 
 BASIS_OFFICIAL_TEXT = "official_text"
 BASIS_PROCEDURE = "procedure"
-BASIS_REJECTED = "rejected"
 # Different texts sharing one sentence on this scale means the prompt or the
 # source has broken, not that a few amendments happen to read alike.
 MIN_DUPLICATES_TO_FAIL = 5
 MAX_DUPLICATE_RATE = 0.2
+# A queued vote whose call has failed this many times is not a transient 429:
+# its text or the prompt needs a look, so the run says so (#681).
+MAX_SUMMARY_ATTEMPTS = 5
 
-# An amendment or article vote is only ever summarized from its official text
-# (#630, ADR-043; #642, ADR-044), and so is a whole-text vote (#645, ADR-046):
-# with no source row it keeps its title. A motion's sentence is written by code.
-# Every vote but an amendment or article still gets a theme from its title.
+# What process_batch decides for one vote. Each is one transition of
+# `votes.summary_state` (migration 018), apart from a theme, which is not a summary.
+PUBLISH = "publish"  # queued -> published
+REJECT = "reject"  # queued -> rejected
+FAIL = "fail"  # queued -> queued, summary_attempts + 1
+THEME = "theme"  # the state is untouched
+
+# A vote is pending when it is queued for a summary (#681), which the ingestion
+# scripts decide when they attach its official text (#630, ADR-043; #642,
+# ADR-044; #645, ADR-046), and ingest_votes.py for a motion. Every vote but an
+# amendment or article also gets a theme from its title, summary or not.
 SQL_PENDING = """
 FROM votes v
 LEFT JOIN vote_amendments a ON a.vote_id = v.vote_id
@@ -89,25 +102,24 @@ LEFT JOIN vote_articles art ON art.vote_id = v.vote_id
 LEFT JOIN vote_bills b ON b.vote_id = v.vote_id
 WHERE v.voted_at >= %(since)s
   AND (
-    (v.scrutin_kind = 'amendement' AND a.vote_id IS NOT NULL AND v.summary_basis IS NULL)
-    OR (v.scrutin_kind = 'article' AND art.vote_id IS NOT NULL AND v.summary_basis IS NULL)
-    OR (v.scrutin_kind IN ('ensemble', 'autre') AND b.vote_id IS NOT NULL
-        AND v.summary_basis IS NULL)
-    OR (v.scrutin_kind = 'motion' AND v.summary_basis IS NULL)
+    v.summary_state = 'queued'
     OR (v.scrutin_kind IS DISTINCT FROM 'amendement'
         AND v.scrutin_kind IS DISTINCT FROM 'article' AND v.theme IS NULL)
   )
 """
 
 # Everything goes before the amendment backlog: there are few of these votes and
-# each one carries more of a law than an amendment does.
+# each one carries more of a law than an amendment does. A vote that keeps
+# failing goes after the ones that have not, so it cannot hold the queue.
 SQL_PENDING_ROWS = f"""
-SELECT v.vote_id, v.vote_title, v.result, v.scrutin_kind, v.theme, v.summary_basis,
+SELECT v.vote_id, v.vote_title, v.result, v.scrutin_kind, v.theme,
+       v.summary_state, v.summary_attempts,
        a.is_sub_amendment, a.dispositif, a.expose_sommaire,
        art.article_label, art.article_text, b.bill_text
 {SQL_PENDING}
 ORDER BY v.summary_plain IS NULL DESC,
          v.scrutin_kind IS NOT DISTINCT FROM 'amendement',
+         v.summary_attempts,
          v.voted_at DESC
 """
 
@@ -118,6 +130,41 @@ LEFT JOIN vote_amendments a ON a.vote_id = v.vote_id
 LEFT JOIN vote_articles art ON art.vote_id = v.vote_id
 LEFT JOIN vote_bills b ON b.vote_id = v.vote_id
 WHERE v.summary_basis = 'official_text'
+"""
+
+# The transitions this script owns. Each names the state it leaves, so a vote
+# another writer moved meanwhile is left as it is. None touches `ingested_at`
+# or `changed_at`: a summary is our own text, not a new AN record (ADR-039).
+SQL_TRANSITIONS = {
+    PUBLISH: """
+UPDATE votes SET summary_plain = %(summary)s, theme = COALESCE(%(theme)s, theme),
+       summary_basis = %(basis)s, summary_state = 'published'
+WHERE vote_id = %(vote_id)s AND summary_state = 'queued'
+""",
+    REJECT: """
+UPDATE votes SET summary_plain = NULL, theme = COALESCE(%(theme)s, theme),
+       summary_state = 'rejected', summary_rejection_reason = %(reason)s
+WHERE vote_id = %(vote_id)s AND summary_state = 'queued'
+""",
+    FAIL: """
+UPDATE votes SET summary_attempts = summary_attempts + 1
+WHERE vote_id = %(vote_id)s AND summary_state = 'queued'
+""",
+    THEME: """
+UPDATE votes SET theme = %(theme)s
+WHERE vote_id = %(vote_id)s AND theme IS NULL
+""",
+}
+
+# rejected -> queued, only ever from --retry-rejected: after a prompt or model
+# change, an operator decides the old refusals deserve another call.
+SQL_RETRY_REJECTED = """
+UPDATE votes SET summary_state = 'queued', summary_rejection_reason = NULL, summary_attempts = 0
+WHERE summary_state = 'rejected'
+"""
+
+SQL_STATE_COUNTS = """
+SELECT summary_state, COUNT(*) AS votes FROM votes GROUP BY summary_state
 """
 
 # Summaries written from a title alone. Clearing them is safe to repeat: the
@@ -144,6 +191,88 @@ def duplicate_of_other_source(summary: str, source: str, seen: dict[str, str]) -
     return seen.setdefault(summary, source) != source
 
 
+def summary_source(vote: dict) -> tuple[str, str, str] | None:
+    """(system prompt, user message, source text) for a queued vote with official text."""
+    from rag.chain.prompts import (
+        SUMMARY_PROMPT_AMENDMENT,
+        SUMMARY_PROMPT_ARTICLE,
+        SUMMARY_PROMPT_BILL,
+    )
+
+    kind = vote.get("scrutin_kind")
+    if kind == "amendement" and vote.get("dispositif"):
+        return SUMMARY_PROMPT_AMENDMENT, amendment_user_message(vote), vote["dispositif"]
+    if kind == "article" and vote.get("article_text"):
+        return SUMMARY_PROMPT_ARTICLE, article_user_message(vote), vote["article_text"]
+    if vote.get("bill_text"):
+        return SUMMARY_PROMPT_BILL, bill_user_message(vote), vote["bill_text"]
+    return None
+
+
+def decide(client, vote: dict, stats: dict) -> dict | None:
+    """The one transition this vote takes, None when nothing is written.
+
+    Only a queued vote can be published, rejected or counted as failed. Any other
+    vote reaches here for its theme alone, so a rejected summary is never retried
+    by a run: that takes --retry-rejected.
+    """
+    from rag.chain.prompts import SUMMARY_PROMPT_THEME
+
+    vote_id = vote["vote_id"]
+    title = vote["vote_title"]
+    queued = vote.get("summary_state") == "queued"
+    source = summary_source(vote) if queued else None
+
+    if source is None:
+        outcome = {"transition": THEME, "summary": None, "basis": None, "reason": None}
+        if queued:
+            if vote.get("scrutin_kind") == "motion":
+                summary = motion_summary(title, vote["result"])
+                if summary:
+                    outcome.update(transition=PUBLISH, summary=summary, basis=BASIS_PROCEDURE)
+                else:
+                    outcome.update(transition=REJECT, reason="unknown_motion")
+            else:
+                # Queued with no text: its kind changed after it was queued.
+                outcome.update(transition=REJECT, reason="no_source_text")
+        theme = vote.get("theme")
+        if theme is None:
+            raw = call_groq(client, SUMMARY_PROMPT_THEME, f'Titre : "{title}"')
+            theme = parse_theme(raw) if raw else None
+            if theme is None:
+                stats["errors"] += 1
+                return {"transition": FAIL, "vote_id": vote_id} if queued else None
+        return {**outcome, "vote_id": vote_id, "theme": theme}
+
+    system, user_msg, source_text = source
+    raw = call_groq(client, system, user_msg, max_tokens=OFFICIAL_TEXT_MAX_TOKENS)
+    parsed = None if raw is None else parse_response(raw)
+    if raw is not None and parsed is None and DECLINED_PATTERN.search(raw):
+        parsed = ("", None)
+    if parsed is None:
+        if raw is not None:
+            log.warning("Could not parse response for %s: %r", vote_id, raw[:120])
+        stats["errors"] += 1
+        return {"transition": FAIL, "vote_id": vote_id}
+
+    summary, theme = parsed
+    refuse = rejection_reason if vote.get("bill_text") is None else bill_rejection_reason
+    reason = refuse(summary, title)
+    seen = stats.setdefault("seen_summaries", {})
+    if reason is None and duplicate_of_other_source(summary, source_key(source_text), seen):
+        reason = "duplicate"
+    if reason:
+        log.warning("Rejected %s (%s): %s", vote_id, reason, summary[:120])
+        return {"transition": REJECT, "vote_id": vote_id, "theme": theme, "reason": reason}
+    return {
+        "transition": PUBLISH,
+        "vote_id": vote_id,
+        "summary": summary,
+        "theme": theme,
+        "basis": BASIS_OFFICIAL_TEXT,
+    }
+
+
 def process_batch(
     client,
     batch: list[dict],
@@ -152,103 +281,51 @@ def process_batch(
     stats: dict,
     changed_ids_out: str | None = None,
 ) -> None:
-    from rag.chain.prompts import (
-        SUMMARY_PROMPT_AMENDMENT,
-        SUMMARY_PROMPT_ARTICLE,
-        SUMMARY_PROMPT_BILL,
-        SUMMARY_PROMPT_THEME,
-    )
-
-    updates = []
+    outcomes = []
     for vote in batch:
-        vote_id = vote["vote_id"]
-        title = vote["vote_title"]
-        kind = vote.get("scrutin_kind")
-        if kind == "amendement":
-            system, user_msg = SUMMARY_PROMPT_AMENDMENT, amendment_user_message(vote)
-            source_text = vote["dispositif"]
-        elif kind == "article":
-            system, user_msg = SUMMARY_PROMPT_ARTICLE, article_user_message(vote)
-            source_text = vote["article_text"]
-        elif vote.get("bill_text") and vote.get("summary_basis") is None:
-            system, user_msg = SUMMARY_PROMPT_BILL, bill_user_message(vote)
-            source_text = vote["bill_text"]
+        outcome = decide(client, vote, stats)
+        if outcome is None:
+            continue
+        transition = outcome["transition"]
+        if transition == REJECT:
+            rejected = stats.setdefault("rejected", {})
+            rejected[outcome["reason"]] = rejected.get(outcome["reason"], 0) + 1
+        elif transition == FAIL:
+            if vote.get("summary_attempts", 0) + 1 >= MAX_SUMMARY_ATTEMPTS:
+                stats.setdefault("stuck", []).append(outcome["vote_id"])
         else:
-            source_text = None
-
-        if source_text is None:
-            summary, basis = None, vote.get("summary_basis")
-            if kind == "motion":
-                summary = motion_summary(title, vote["result"])
-                basis = BASIS_PROCEDURE if summary else BASIS_REJECTED
-            theme = vote.get("theme")
-            if theme is None:
-                raw = call_groq(client, SUMMARY_PROMPT_THEME, f'Titre : "{title}"')
-                theme = parse_theme(raw) if raw else None
-                if theme is None:
-                    stats["errors"] += 1
-                    continue
-        else:
-            raw = call_groq(client, system, user_msg, max_tokens=OFFICIAL_TEXT_MAX_TOKENS)
-            if raw is None:
-                stats["errors"] += 1
-                continue
-
-            parsed = parse_response(raw)
-            if parsed is None and DECLINED_PATTERN.search(raw):
-                parsed = ("", None)
-            if parsed is None:
-                log.warning("Could not parse response for %s: %r", vote_id, raw[:120])
-                stats["errors"] += 1
-                continue
-
-            summary, theme = parsed
-            refuse = rejection_reason if vote.get("bill_text") is None else bill_rejection_reason
-            reason = refuse(summary, title)
-            seen = stats.setdefault("seen_summaries", {})
-            source = source_key(source_text)
-            if reason is None and duplicate_of_other_source(summary, source, seen):
-                reason = "duplicate"
-            if reason:
-                log.warning("Rejected %s (%s): %s", vote_id, reason, summary[:120])
-                rejected = stats.setdefault("rejected", {})
-                rejected[reason] = rejected.get(reason, 0) + 1
-                summary, basis = None, BASIS_REJECTED
-            else:
-                basis = BASIS_OFFICIAL_TEXT
-
-        if dry_run:
-            log.info("[DRY-RUN] %s | theme=%s | %s", vote_id, theme, summary)
-        else:
-            updates.append((summary, theme, basis, vote_id))
-        if basis != BASIS_REJECTED:
             stats["generated"] += 1
+        if dry_run:
+            log.info("[DRY-RUN] %s | %s", outcome["vote_id"], outcome)
+        else:
+            outcomes.append(outcome)
 
-    if updates and not dry_run:
-        with conn.cursor() as cur:
-            psycopg2.extras.execute_batch(
-                cur,
-                "UPDATE votes SET summary_plain = %s, theme = COALESCE(%s, theme), "
-                "summary_basis = %s WHERE vote_id = %s",
-                updates,
-            )
-        conn.commit()
-        log.info("Committed %d summaries", len(updates))
-        # Which scrutins to purge from the frontend cache (GH #353). Recorded
-        # here rather than rediscovered with a query because this UPDATE
-        # deliberately leaves `ingested_at` alone: that column means "the AN
-        # record changed", which is what the dbt staging layer and the change
-        # detection in run_ingestion_prod.py both read it as. A summary is our
-        # own text, not a new record from upstream.
-        stats.setdefault("summarized_vote_ids", []).extend(update[-1] for update in updates)
-        # Rewritten after every committed batch, not once at the end: a run that
-        # commits 40 summaries and then dies (a Groq 429 cascade, a job timeout)
-        # must not leave those 40 vote pages stale with nothing reporting it.
-        write_changed_ids(changed_ids_out, stats["summarized_vote_ids"])
+    if not outcomes:
+        return
+    with conn.cursor() as cur:
+        for transition, sql in SQL_TRANSITIONS.items():
+            rows = [outcome for outcome in outcomes if outcome["transition"] == transition]
+            if rows:
+                psycopg2.extras.execute_batch(cur, sql, rows)
+    conn.commit()
+    written = [outcome["vote_id"] for outcome in outcomes if outcome["transition"] != FAIL]
+    log.info("Committed %d summaries", len(written))
+    # Which scrutins to purge from the frontend cache (GH #353). Recorded
+    # here rather than rediscovered with a query because these UPDATEs
+    # deliberately leave `ingested_at` alone: that column means "the AN
+    # record changed", which is what the dbt staging layer and the change
+    # detection in run_ingestion_prod.py both read it as. A summary is our
+    # own text, not a new record from upstream.
+    stats.setdefault("summarized_vote_ids", []).extend(written)
+    # Rewritten after every committed batch, not once at the end: a run that
+    # commits 40 summaries and then dies (a Groq 429 cascade, a job timeout)
+    # must not leave those 40 vote pages stale with nothing reporting it.
+    write_changed_ids(changed_ids_out, stats["summarized_vote_ids"])
 
 
 def check_summary_yield(stats: dict) -> None:
-    """Exit 1 when the run attempted work and none of it succeeded (GH #384).
+    """Exit 1 when the run attempted work and none of it succeeded (GH #384),
+    or when a vote has now failed MAX_SUMMARY_ATTEMPTS times (#681).
 
     ``call_groq`` and ``parse_response`` swallow every per-vote failure into a
     WARNING so one bad vote cannot abort a backfill of a thousand. Correct on
@@ -257,14 +334,14 @@ def check_summary_yield(stats: dict) -> None:
     daily runs against an expired API key, with 1 243 votes sitting unsummarized,
     are what this guard turns red.
 
-    Only the unambiguous shape exits: work was attempted and nothing was
-    generated. A partial failure stays green on purpose, unlike the
+    Otherwise a partial failure stays green on purpose, unlike the
     ``SKIP_RATE_THRESHOLD`` ratio the four ingestion parsers apply (MON-220,
     MON-249). Those parse a fixed upstream export where a raised skip rate means
-    the format moved under us; this job is idempotent and self-healing - the
-    next run re-selects the same ``summary_plain IS NULL`` rows - and its daily
-    backlog is usually a handful of votes, where a single transient 429 is
-    already past 5% and would redden a run that fixes itself the next morning.
+    the format moved under us; this job is idempotent and self-healing - a failed
+    vote stays queued and the next run selects it again - and its daily backlog
+    is usually a handful of votes, where a single transient 429 is already past
+    5% and would redden a run that fixes itself the next morning. One vote failing
+    run after run does not fix itself, which is what ``summary_attempts`` counts.
     The error count is still reported by the caller either way.
     """
     if stats["errors"] > 0 and stats["generated"] == 0:
@@ -275,6 +352,21 @@ def check_summary_yield(stats: dict) -> None:
             MODEL,
         )
         sys.exit(1)
+    if stats.get("stuck"):
+        log.error(
+            "%d votes have failed %d summary attempts or more: %s",
+            len(stats["stuck"]),
+            MAX_SUMMARY_ATTEMPTS,
+            ", ".join(stats["stuck"]),
+        )
+        sys.exit(1)
+
+
+def state_counts_markdown(counts: dict[str, int]) -> str:
+    """The count of votes in each summary state, as a Markdown table, every state listed."""
+    lines = ["| Summary state | Votes |", "|---------------|-------|"]
+    lines += [f"| {state} | {counts.get(state, 0)} |" for state in SUMMARY_STATES]
+    return "\n".join(lines)
 
 
 def check_duplicate_rate(stats: dict) -> None:
@@ -309,6 +401,19 @@ def main() -> None:
         help="Print how many votes are pending, then exit. Needs no Groq key.",
     )
     parser.add_argument(
+        "--state-counts",
+        action="store_true",
+        help="Print a Markdown table of votes per summary state, then exit (#681).",
+    )
+    parser.add_argument(
+        "--retry-rejected",
+        action="store_true",
+        help=(
+            "Queue every rejected summary again, then exit (#681). Run it after a "
+            "prompt or model change; nothing else re-queues a rejected vote."
+        ),
+    )
+    parser.add_argument(
         "--clear-legacy-amendments",
         action="store_true",
         help="Clear amendment summaries written from a title alone, then exit (#630).",
@@ -341,10 +446,16 @@ def main() -> None:
         raise EnvironmentError("DATABASE_URL is not set.")
 
     clearing = args.clear_legacy_amendments or args.clear_legacy_articles or args.clear_title_only
-    if args.backlog or clearing:
+    if args.backlog or args.state_counts or args.retry_rejected or clearing:
         conn = psycopg2.connect(database_url)
         with conn.cursor() as cur:
-            if args.clear_legacy_amendments:
+            if args.retry_rejected:
+                cur.execute(SQL_RETRY_REJECTED)
+                log.info("Queued %d rejected summaries again", cur.rowcount)
+            elif args.state_counts:
+                cur.execute(SQL_STATE_COUNTS)
+                print(state_counts_markdown(dict(cur.fetchall())))
+            elif args.clear_legacy_amendments:
                 cur.execute(SQL_CLEAR_LEGACY, ("amendement",))
                 log.info("Cleared %d legacy amendment summaries", cur.rowcount)
             elif args.clear_legacy_articles:
@@ -383,7 +494,7 @@ def main() -> None:
         rows = rows[: args.limit]
 
     log.info(
-        "Found %d votes without summaries (since %s)%s",
+        "Found %d pending votes (since %s)%s",
         len(rows),
         args.since,
         " — DRY RUN" if args.dry_run else "",

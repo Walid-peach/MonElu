@@ -1842,6 +1842,7 @@ A wrong match publishes a confident summary of another amendment, so ambiguity n
 5. **Guards in code, not only in the prompt.** `rejection_reason()` refuses guesses, « Le texte » as a subject, bare paragraph references and restated titles.
 Two different texts may not share a sentence.
 A refused summary stays empty with `summary_basis = 'rejected'` and is not retried, so it costs no quota the next day.
+Since ADR-048 the refusal is stored as `summary_state = 'rejected'` with its reason, and `summary_basis` holds only the kind of a published summary.
 6. **The dispositif outranks the exposé.** The exposé is advocacy, and it can describe a different change: amendment 1359's speaks of the employer share while its dispositif excludes the employee share.
 7. **Old summaries are cleared at once and rewritten gradually.** `backfill_amendment_text.yml` clears them, and the daily runs rewrite up to 210 a day, newest first.
 Groq's free tier allows 8 000 tokens a minute and one amendment call uses about 900, and a reader losing a summary is better than a reader getting a false one.
@@ -1940,6 +1941,43 @@ A resolution changes no law, so its summary must start with "Demander" or it is 
 - The rest keep their official title, including budget bills and texts in an older template.
 - Summaries describe the text as examined, so a change made during the sitting is not reflected.
 - A bill prompt is large, so Groq's rate limit holds a run to about 3 votes a minute. `backfill_bill_text.yml` allows 150 minutes for this, and still rebuilds the marts if it runs out.
+
+## ADR-048 - A vote summary's lifecycle is an explicit column (#681)
+
+**Status:** Accepted, 2026-11-11.
+
+### Context
+
+ADR-043, ADR-044 and ADR-046 gave a vote summary a lifecycle without a column for it.
+A vote's state was the combination of `summary_plain`, `summary_basis`, `scrutin_kind` and whether `vote_amendments`, `vote_articles` or `vote_bills` held a row.
+`summary_plain IS NULL AND summary_basis IS NULL` meant four things: no text yet, no text ever, queued, or a failed model call.
+The generator's pending query needed five `OR` branches over three joins to tell them apart.
+A refusal was `summary_basis = 'rejected'`, so a refused vote could never be selected again, even after a prompt or model change, and its reason was only in the run log.
+Nothing reported how many votes sat in each state.
+
+### Decision
+
+1. **`votes.summary_state` holds the lifecycle**: `no_source`, `queued`, `published` or `rejected` (migration 018).
+`summary_rejection_reason` holds why a summary was refused, and `summary_attempts` counts failed model calls on a queued vote.
+CHECK constraints tie them together: a basis exactly when published, a reason exactly when rejected.
+2. **`summary_basis` keeps one meaning, the kind of a published summary** (`official_text` or `procedure`).
+Its `rejected` value moves to `summary_state`, so the API, the frontends and the RAG chunker read it unchanged.
+3. **Each transition has one writer.**
+`no_source -> queued`: `ingest_amendments.py`, `ingest_articles.py` and `ingest_bills.py` when they attach a text, `ingest_votes.py` for a motion, through statements shared in `scripts/_summaries.py`.
+`queued -> published`, `queued -> rejected` and a failed attempt: `generate_vote_summaries.py`, each statement guarded on `summary_state = 'queued'`.
+4. **A rejected summary is queued again only by `generate_vote_summaries.py --retry-rejected`.**
+An operator runs it after a prompt or model change.
+A prompt version that re-queues refusals by itself was considered and left out for now: it costs quota without anyone deciding the change deserves it, and it needs a prompt version to be stored first.
+5. **A vote failing `MAX_SUMMARY_ATTEMPTS` (5) times turns the daily run red**, since that is a text or prompt problem rather than a transient 429.
+6. **The theme stays outside the lifecycle.** A theme is a classification, not a summary, so a vote in any state may still get one from its title.
+7. **`summarize_backfill.yml` prints the count of votes in each state** in its job summary.
+
+### Consequences
+
+- The pending query is `summary_state = 'queued'`, plus the theme-only branch.
+- Migration 018 derives every vote's state from the old columns; a refusal from before it carries the reason `unrecorded`.
+- A queued vote whose kind changes so it has no source any more is refused with `no_source_text` rather than left in the queue.
+- A summary is still our own text: no transition touches `ingested_at` or `changed_at` (ADR-039).
 
 ## ADR-047 - A voter's circonscription comes from their address, matched against bundled boundaries (#660)
 
@@ -2041,3 +2079,4 @@ Below that score the register's own points are often in the wrong street (5.5 % 
 30. An article summary comes from `vote_articles` or does not exist (ADR-044, #642) - never send an article title to the model as its source, and never fall back to an older reading when the newest examined text shows the article deleted
 31. A whole-text vote summary comes from `vote_bills` or does not exist, and a motion's sentence comes from `MOTION_SENTENCES` (ADR-046, #645) - never send any vote title to the model to write a summary; a title may only give a theme
 32. A voter's circonscription comes from `POST /circonscriptions/locate` over the bundled boundary file (ADR-047) - never add a country-to-seat table for the seats abroad that is not taken from tableau n° 1 ter, never send the address to MonÉlu (the device geocodes it), never put coordinates in a URL, never store or log them, and never pick one seat when a point is within the boundary tolerance of another
+33. A vote summary's lifecycle is `votes.summary_state` (ADR-048, #681) - never infer it again from `summary_plain`/`summary_basis` or the source tables, never write a transition from a script that does not own it, never let a run re-queue a rejected summary (only `--retry-rejected` does), and never give `summary_basis` a value that is not the kind of a published summary

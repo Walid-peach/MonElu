@@ -172,6 +172,7 @@ class TestProcessBatch:
             "vote_title": "l'amendement n° 1403 de M. Sansu à l'article 8",
             "result": "rejeté",
             "scrutin_kind": "amendement",
+            "summary_state": "queued",
             "is_sub_amendment": False,
             "dispositif": dispositif,
             "expose_sommaire": "Cadeaux au patronat.",
@@ -205,7 +206,9 @@ class TestProcessBatch:
             '{"summary": "Agir probablement sur les recettes de santé.", "theme": "Autre"}',
             [self.vote()],
         )
-        assert calls == [(None, "Autre", "rejected", "V1")]
+        assert calls == [
+            {"transition": "reject", "vote_id": "V1", "theme": "Autre", "reason": "guess"}
+        ]
         assert stats["rejected"] == {"guess": 1}
         assert stats["generated"] == 0
 
@@ -216,8 +219,13 @@ class TestProcessBatch:
         )
         reply = '{"summary": "Étendre la protection aux jeunes majeurs.", "theme": "Autre"}'
         self.run(reply, [self.vote("V1", "Texte A."), self.vote("V2", "Texte B.")])
-        assert calls[0][0] is not None and calls[0][2] == "official_text"
-        assert calls[1] == (None, "Autre", "rejected", "V2")
+        assert calls[0]["summary"] and calls[0]["basis"] == "official_text"
+        assert calls[1] == {
+            "transition": "reject",
+            "vote_id": "V2",
+            "theme": "Autre",
+            "reason": "duplicate",
+        }
 
     def test_identical_texts_may_share_a_sentence(self, monkeypatch):
         calls = []
@@ -226,7 +234,7 @@ class TestProcessBatch:
         )
         reply = '{"summary": "Étendre la protection aux jeunes majeurs.", "theme": "Autre"}'
         self.run(reply, [self.vote("V1"), self.vote("V2")])
-        assert [row[2] for row in calls] == ["official_text", "official_text"]
+        assert [row["basis"] for row in calls] == ["official_text", "official_text"]
 
     def test_a_stored_sentence_counts_as_seen(self, monkeypatch):
         calls = []
@@ -240,7 +248,7 @@ class TestProcessBatch:
         }
         reply = '{"summary": "Étendre la protection des majeurs.", "theme": "Autre"}'
         self.run(reply, [self.vote()], stats)
-        assert calls[0][0] is None
+        assert calls[0]["transition"] == "reject"
 
 
 def test_user_message_names_a_sub_amendment():
