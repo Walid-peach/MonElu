@@ -80,7 +80,7 @@ jobs:
             echo "::error::Summary generation failed - $errors call(s) failed and no summary was generated. The backlog is not draining."
           elif [ "$errors" != "0" ]; then
             # Partial failure stays green by design (see check_summary_yield):
-            # these votes keep summary_plain IS NULL and are retried tomorrow.
+            # these votes stay queued and are retried tomorrow.
             echo "::warning::$generated summaries generated, $errors failed - the failed votes stay in the backlog and retry on the next run."
           fi
           exit "$status"
@@ -169,6 +169,20 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo "Logged: $today | remaining=$remaining_before | generated=$generated | errors=$errors | status=$status"
+
+      - name: Report summary states
+        # Where every vote's summary stands (#681): a queue that only grows, or a
+        # pile of rejections after a prompt change, shows here before it shows on
+        # the site. Rejections are re-queued only by --retry-rejected.
+        if: ${{ !cancelled() && steps.backlog.outcome == 'success' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          {
+            echo "## Summary states"
+            echo ""
+            python -m scripts.generate_vote_summaries --state-counts
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify failure
         if: failure()

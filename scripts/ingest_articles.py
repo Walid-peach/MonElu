@@ -33,8 +33,10 @@ from dotenv import load_dotenv
 
 try:
     from scripts._http import connect_with_retry, download_with_retry
+    from scripts._summaries import queue_sourced_votes
 except ImportError:  # running as a plain file: python scripts/ingest_articles.py
     from _http import connect_with_retry, download_with_retry
+    from _summaries import queue_sourced_votes
 
 load_dotenv()
 
@@ -294,8 +296,11 @@ def main() -> None:
     check_article_yield(len(index), len(window) - len(pending) + len(rows), len(window))
     with conn.cursor() as cur:
         psycopg2.extras.execute_batch(cur, SQL_UPSERT, rows, page_size=100)
+        # A source is what a summary waits for (#681): no_source -> queued.
+        queued = queue_sourced_votes(cur, "vote_articles")
     conn.commit()
     conn.close()
+    log.info("Queued %d votes for a summary", queued)
     log.info("Done - matched %d of %d pending votes", len(rows), len(pending))
 
 

@@ -8,8 +8,9 @@ the same prompts, the same theme vocabulary and the same retry/parse logic, so
 these live in one module rather than being copy-pasted per script - the rule
 SKIP_RATE_THRESHOLD already follows in scripts/_http.py.
 
-Nothing here is agenda- or vote-specific: callers build their own user message
-and own their SQL.
+Callers build their own user message and own their SQL, with one exception: the
+statements that queue a vote summary (#681) are shared here, because four
+scripts write that transition and must agree on which votes it covers.
 """
 
 from __future__ import annotations
@@ -278,3 +279,44 @@ def parse_response(raw: str) -> tuple[str, str] | None:
         return summary, theme
     except (json.JSONDecodeError, AttributeError):
         return None
+
+
+# ── Vote summary lifecycle (#681, migration 018) ────────────────────────────
+# Where a vote's summary is, as `votes.summary_state`. Migration 018 lists the
+# transitions and their one writer each; the statements below are the
+# `no_source -> queued` ones, shared so each ingestion script queues exactly the
+# votes the generator can summarize from its table.
+SUMMARY_STATES = ("no_source", "queued", "published", "rejected")
+
+# The vote kinds each source table serves, as the generator reads them.
+SOURCE_TABLE_KINDS = {
+    "vote_amendments": ("amendement",),
+    "vote_articles": ("article",),
+    "vote_bills": ("ensemble", "autre"),
+}
+
+# Every vote of the table's kinds that has a text row and no summary started.
+# Set-based rather than per inserted id, so a run also heals a row whose text
+# landed without its transition.
+SQL_QUEUE_SOURCED = {
+    table: f"""
+UPDATE votes v SET summary_state = 'queued'
+FROM {table} s
+WHERE s.vote_id = v.vote_id
+  AND v.summary_state = 'no_source'
+  AND v.scrutin_kind IN ({", ".join(f"'{kind}'" for kind in kinds)})
+"""
+    for table, kinds in SOURCE_TABLE_KINDS.items()
+}
+
+# A motion needs no source: its sentence is written by code from its type and result.
+SQL_QUEUE_MOTIONS = """
+UPDATE votes SET summary_state = 'queued'
+WHERE scrutin_kind = 'motion' AND summary_state = 'no_source'
+"""
+
+
+def queue_sourced_votes(cur, table: str) -> int:
+    """Move the votes `table` now gives a source from no_source to queued; returns how many."""
+    cur.execute(SQL_QUEUE_SOURCED[table])
+    return cur.rowcount
