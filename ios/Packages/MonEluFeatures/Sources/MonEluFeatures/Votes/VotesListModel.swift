@@ -65,11 +65,18 @@ public final class VotesListModel {
 
     var needsReload: Bool { criteria != applied }
 
-    public init(service: any VotesService, themes: [ReferenceData.Theme] = (try? ReferenceData.themes()) ?? []) {
+    public init(
+        service: any VotesService, themes: [ReferenceData.Theme] = (try? ReferenceData.themes()) ?? [],
+        cache: LoadCache? = nil
+    ) {
         self.service = service
         self.themes = themes
         let box = ModelBox()
-        loader = Loader(isEmpty: { $0.isEmpty }, fetch: { try await box.firstPage() })
+        // One cached first page per criteria: the list opens on what it last
+        // showed, and a chip chosen before comes back at once.
+        loader = Loader(
+            cache: cache, key: { box.cacheKey }, isEmpty: { $0.isEmpty }, progressive: { _ in try await box.firstPage() }
+        )
         box.model = self
     }
 
@@ -118,6 +125,11 @@ public final class VotesListModel {
 @MainActor
 private final class ModelBox {
     weak var model: VotesListModel?
+
+    /// The model's criteria, or those it opens on while it is still being built.
+    var cacheKey: String {
+        "votes:\(model?.criteria ?? VotesListModel.Criteria(search: "", filter: .all, wholeTextsOnly: false, theme: nil))"
+    }
 
     func firstPage() async throws -> [VoteItem] {
         try await model?.firstPage() ?? []

@@ -10,7 +10,7 @@ public struct VotesListScreen: View {
     @State private var picksTheme = false
 
     public init(service: any VotesService) {
-        _model = State(initialValue: VotesListModel(service: service))
+        _model = State(initialValue: VotesListModel(service: service, cache: .shared))
     }
 
     /// Over a model already loaded, for snapshot tests.

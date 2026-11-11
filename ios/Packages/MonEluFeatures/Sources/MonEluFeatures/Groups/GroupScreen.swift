@@ -10,7 +10,9 @@ public struct GroupScreen: View {
     @Environment(\.appConfiguration) private var configuration
 
     public init(slug: String, service: any GroupsService) {
-        _loader = State(initialValue: Loader(isEmpty: { $0 == nil }) { try await service.group(slug: slug) })
+        _loader = State(initialValue: Loader(cacheKey: "group:\(slug)", isEmpty: { $0 == nil }) {
+            try await service.group(slug: slug)
+        })
     }
 
     public var body: some View {

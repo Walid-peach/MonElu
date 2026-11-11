@@ -10,7 +10,7 @@ public struct LoiScreen: View {
     @Environment(\.appConfiguration) private var configuration
 
     public init(id: String, service: any LoisService) {
-        _loader = State(initialValue: Loader(isEmpty: { $0 == nil }) {
+        _loader = State(initialValue: Loader(cacheKey: "loi:\(id)", isEmpty: { $0 == nil }) {
             try await service.page(id: id, now: .now)
         })
     }

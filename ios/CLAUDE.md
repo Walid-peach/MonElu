@@ -75,7 +75,14 @@ The work is tracked under epic #429, one phase epic at a time.
   A cancelled load is neither: `Loader` goes back to the state it had, and a cancelled refresh keeps the content without a banner, so a `.task` that runs again when its view returns loads for real (#579).
 - Navigation to a deputy or a vote goes through `Router.open(_:)` with an `AppRoute`, from any tab.
   `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
-- `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second cache.
+- `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second HTTP cache.
+- A screen reached by navigation gives its `Loader` a cache key (`Loader(cacheKey: "vote:\(id)")`), so opening it again shows what it last showed at once and fetches behind it (`LoadCache`, in memory, this launch only).
+  The key names the page and everything it was asked for; a list builds it from its criteria, one first page per criteria.
+  A model takes its `LoadCache` as a parameter, nil by default, and the screen passes `.shared`, so tests never share values.
+  Never start a load from an initializer or log from one: SwiftUI builds a view's `@State` initial value every time its parent's body runs, and throws all but the first away.
+- A page made of several requests shows its required part first: its fetch calls `partial` with the page so far (`Loader`'s `progressive` form, `profilePage(id:partial:)`), never waits for the slowest request to show the fastest.
+  Parts are shown only by a first load; a refresh keeps the whole page on screen until the whole answer is back.
+- `Loader` logs, at debug level, how long each page took to show and to complete (`fr.monelu.app.load`); launching a debug build with `MonEluNoLoadCache` turns the page cache off to compare.
 - What the app keeps about its user stays on the device (ADR-040 §6): the followed deputies and how far the user has read each one live in `UserDefaults` behind `FollowedDeputyStore`.
   Several deputies can be followed, all equal, at most `FollowedDeputies.cap` (10, the cap `GET /feed` enforces; ADR-042 amendment, #584); `follow` adds and `unfollow` removes one, and an older install's single `monelu.followedDeputyID` moves into the list on launch.
   The store is `Observable` and is the only copy: a screen reads `deputyIDs` (or `deputyID`, the first) from it rather than keeping its own, or a follow made on another screen never reaches it (#576).

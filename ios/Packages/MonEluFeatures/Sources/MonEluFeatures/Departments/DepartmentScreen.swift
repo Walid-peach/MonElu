@@ -9,7 +9,9 @@ public struct DepartmentScreen: View {
     @State private var loader: Loader<DepartmentPage?>
 
     public init(code: String, service: any DepartmentsService) {
-        _loader = State(initialValue: Loader(isEmpty: { $0 == nil }) { try await service.department(code: code) })
+        _loader = State(initialValue: Loader(cacheKey: "department:\(code)", isEmpty: { $0 == nil }) {
+            try await service.department(code: code)
+        })
     }
 
     public var body: some View {

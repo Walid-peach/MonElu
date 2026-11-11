@@ -288,6 +288,29 @@ struct LiveDeputiesServiceTests {
         #expect(page.recentVotes == nil)
     }
 
+    /// The page is handed over before it is whole: every part carries the
+    /// profile, none carries more than the page that is returned, and the
+    /// last one is short of at least a section.
+    @Test func profilePageShowsItsPartsAsTheyLand() async throws {
+        let parts = PageParts()
+        let page = try await Self.service().profilePage(id: "PA1008") { await parts.add($0) }
+        let seen = await parts.pages
+        #expect(!seen.isEmpty)
+        #expect(seen.count <= 3)
+        #expect(seen.allSatisfy { $0.profile == page.profile })
+        #expect(seen.allSatisfy { $0 != page })
+        #expect(page.scorecard != nil && page.alignment != nil && page.recentVotes != nil)
+    }
+
+    @Test func profilePageShowsNoPartWithoutTheProfile() async throws {
+        let service = LiveDeputiesService(client: operationClient(["getScorecard": try fixture("deputy_scorecard")]))
+        let parts = PageParts()
+        await #expect(throws: (any Error).self) {
+            try await service.profilePage(id: "PA1008") { await parts.add($0) }
+        }
+        #expect(await parts.pages.isEmpty)
+    }
+
     @Test func profilePageFailsWithoutTheProfile() async throws {
         let service = LiveDeputiesService(client: operationClient(["getScorecard": try fixture("deputy_scorecard")]))
         await #expect(throws: (any Error).self) { try await service.profilePage(id: "PA1008") }
@@ -302,4 +325,10 @@ struct PresidentNoteTests {
         #expect(!DeputyScorecardSection.showsPresidentNote(presenceRate: 0.0628))
         #expect(!DeputyScorecardSection.showsPresidentNote(presenceRate: 0.998))
     }
+}
+
+/// The partial pages a profile load handed over, in order.
+private actor PageParts {
+    var pages: [DeputyProfilePage] = []
+    func add(_ page: DeputyProfilePage) { pages.append(page) }
 }

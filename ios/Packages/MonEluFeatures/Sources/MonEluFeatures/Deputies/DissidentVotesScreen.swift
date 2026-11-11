@@ -8,7 +8,7 @@ public struct DissidentVotesScreen: View {
     @State private var loader: Loader<DissidentVotes>
 
     public init(deputyID: String, service: any DeputiesService) {
-        _loader = State(initialValue: Loader(isEmpty: { $0.items.isEmpty }) {
+        _loader = State(initialValue: Loader(cacheKey: "dissident-votes:\(deputyID)", isEmpty: { $0.items.isEmpty }) {
             try await service.dissidentVotes(id: deputyID)
         })
     }
