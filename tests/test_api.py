@@ -199,21 +199,24 @@ def test_list_deputies_returns_the_surname(client, mock_cursor):
     assert "last_name" in str(mock_cursor.execute.call_args_list[1].args[0])
 
 
-def test_list_deputies_active_filters_on_mandate_end(client, mock_cursor):
+def test_list_deputies_active_filters_on_the_sitting_view(client, mock_cursor):
+    # active=false is the complement of sitting (#682): departed deputies and the
+    # unconfirmed ones the latest roster no longer lists.
     mock_cursor.fetchone.return_value = {"count": 1}
     mock_cursor.fetchall.return_value = [_DEPUTY_SUMMARY]
     assert client.get("/deputies/?active=true").status_code == 200
     count_sql = str(mock_cursor.execute.call_args_list[0].args[0])
-    assert "mandate_end IS NULL" in count_sql
+    assert "SQL('deputy_id IN (SELECT deputy_id FROM sitting_deputies)')" in count_sql
     assert client.get("/deputies/?active=false").status_code == 200
-    assert "mandate_end IS NOT NULL" in str(mock_cursor.execute.call_args_list[2].args[0])
+    inactive_sql = str(mock_cursor.execute.call_args_list[2].args[0])
+    assert "NOT deputy_id IN (SELECT deputy_id FROM sitting_deputies)" in inactive_sql
 
 
 def test_list_deputies_without_active_keeps_every_mandate(client, mock_cursor):
     mock_cursor.fetchone.return_value = {"count": 1}
     mock_cursor.fetchall.return_value = [_DEPUTY_SUMMARY]
     assert client.get("/deputies/").status_code == 200
-    assert "mandate_end" not in str(mock_cursor.execute.call_args_list[0].args[0])
+    assert "sitting_deputies" not in str(mock_cursor.execute.call_args_list[0].args[0])
 
 
 def test_search_deputies(client, mock_cursor):
@@ -1173,7 +1176,7 @@ def test_list_groups_largest_first_with_slugs(client, mock_cursor):
         "party_short": "RN",
         "seat_count": 123,
     }
-    assert "mandate_end IS NULL" in mock_cursor.execute.call_args.args[0]
+    assert "FROM sitting_deputies" in mock_cursor.execute.call_args.args[0]
 
 
 def test_list_groups_short_label_comes_from_the_canonical_map(client, mock_cursor):

@@ -59,7 +59,7 @@ def get_top_deputies(n: int = 100) -> list[dict]:
                         COUNT(vp.vote_id)::numeric / NULLIF((
                             SELECT COUNT(*) FROM votes v
                             WHERE (d.mandate_start IS NULL OR v.voted_at >= d.mandate_start)
-                              AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                              AND v.voted_at <= COALESCE(d.mandate_end, 'infinity')
                         ), 0),
                         1
                     ) * 100, 1) as presence_pct
@@ -218,7 +218,7 @@ def build_notable_deputy_index(n: int = 100, table: str = "document_chunks") -> 
                                        SELECT COUNT(*) FROM votes v
                                        WHERE (d.mandate_start IS NULL
                                               OR v.voted_at >= d.mandate_start)
-                                         AND (d.mandate_end IS NULL OR v.voted_at <= d.mandate_end)
+                                         AND v.voted_at <= COALESCE(d.mandate_end, 'infinity')
                                    ), 0),
                                    1
                                ) * 100, 1) as presence_pct

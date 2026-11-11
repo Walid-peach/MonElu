@@ -27,6 +27,23 @@ sources:
           - name: department
             description: "Full department name (e.g. Yvelines)"
 
+      - name: deputy_seat_status
+        description: >
+          View from migration 019 (#682), the one definition of a sitting
+          deputy: `departed` (mandate_end set), `sitting` (listed by the latest
+          ingestion run) or `unconfirmed` (neither). No freshness check: it is
+          derived from `deputies`, whose own check covers it.
+        columns:
+          - name: deputy_id
+            tests:
+              - not_null
+              - unique
+          - name: seat_status
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['sitting', 'unconfirmed', 'departed']
+
       - name: votes
         description: "All parliamentary votes (scrutins)"
         loaded_at_field: ingested_at

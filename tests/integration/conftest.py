@@ -201,6 +201,14 @@ ON CONFLICT (deputy_id) DO UPDATE SET
 """
 
 
+# What one ingest_deputies.py run does to the roster (#682): every listed deputy
+# gets the same `last_listed_at`, which makes them the `sitting_deputies` set.
+# The seeding above inserts row by row under autocommit, so each row would get
+# its own NOW() and only the last would read as sitting. A test that runs the
+# real deputies upsert on a fixture row re-stamps the roster this way after.
+STAMP_ROSTER_SQL = "UPDATE deputies SET last_listed_at = NOW() WHERE mandate_end IS NULL"
+
+
 def _make_vote(i: int, result: str = "adopté") -> dict:
     from datetime import datetime, timezone
 
@@ -267,6 +275,7 @@ def db_conn():
     with conn.cursor() as cur:
         for deputy in (DEPUTY_A, DEPUTY_B, DEPUTY_C, DEPUTY_D):
             cur.execute(_DEPUTY_UPSERT, deputy)
+        cur.execute(STAMP_ROSTER_SQL)
 
         votes = [_make_vote(i, "adopté" if i % 3 != 0 else "rejeté") for i in range(1, 26)]
         for v in votes:

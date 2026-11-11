@@ -212,11 +212,11 @@ UPSERT_SQL = """
 INSERT INTO deputies (
     deputy_id, full_name, first_name, last_name,
     party, party_short, circonscription, department,
-    mandate_start, mandate_end, photo_url, ingested_at, changed_at
+    mandate_start, mandate_end, photo_url, ingested_at, changed_at, last_listed_at
 ) VALUES (
     %(deputy_id)s, %(full_name)s, %(first_name)s, %(last_name)s,
     %(party)s, %(party_short)s, %(circonscription)s, %(department)s,
-    %(mandate_start)s, %(mandate_end)s, %(photo_url)s, NOW(), NOW()
+    %(mandate_start)s, %(mandate_end)s, %(photo_url)s, NOW(), NOW(), NOW()
 )
 ON CONFLICT (deputy_id) DO UPDATE SET
     full_name       = EXCLUDED.full_name,
@@ -234,6 +234,12 @@ ON CONFLICT (deputy_id) DO UPDATE SET
     mandate_end     = EXCLUDED.mandate_end,
     photo_url       = EXCLUDED.photo_url,
     ingested_at     = NOW(),
+    -- Every deputy this run read from AMO10 (#682, migration 019). The whole
+    -- batch is one transaction, so they all get the same NOW(), and
+    -- MAX(last_listed_at) is the latest run: `deputy_seat_status` calls a
+    -- deputy sitting only when listed by it. Not a content change, so it stays
+    -- out of the `changed_at` comparison below.
+    last_listed_at  = NOW(),
     -- This row in particular must keep writing `ingested_at` on every run:
     -- all 577 deputies are re-upserted whether the AN changed anything or not,
     -- which is exactly why sources.yml makes this the "cron silently died"
@@ -281,8 +287,10 @@ def close_departed_mandates(
     and the upsert never touches their row again: without this they stay
     "sitting" forever, two to a seat. AMO20 is downloaded only on a run that
     finds such a row. A deputy AMO20 does not show as departed is left alone
-    and reported; the dbt test `assert_one_sitting_deputy_per_seat` then fails
-    the daily run's data-quality gate.
+    and reported: `mandate_end` stays the legal date and is never guessed.
+    Such a deputy is `unconfirmed` in the `deputy_seat_status` view (#682),
+    so the site already stops counting them as sitting, and the dbt test
+    `assert_no_unconfirmed_deputy` fails the daily run's data-quality gate.
 
     Never raises: this runs inside a critical step, and a failure here must
     not block votes ingestion (it is caught by the same dbt test instead).
@@ -307,7 +315,8 @@ def close_departed_mandates(
         unresolved = sorted(d for d, e in ends.items() if not e)
         if unresolved:
             log.error(
-                "No end date in AMO20 for deputies missing from the active export: %s",
+                "No end date in AMO20 for deputies missing from the active export, "
+                "now unconfirmed (not counted as sitting): %s",
                 unresolved,
             )
         return ends

@@ -175,10 +175,16 @@ Never guard a `DO UPDATE` with a `WHERE` that skips unchanged rows, and never ma
 The summary generators leave both AN-facing columns alone (our own text is not a new AN record) and report the ids they wrote through `--changed-ids-out`, rewritten after every committed batch so a crash mid-sweep still reports what landed.
 - `migrate.py` doubles as the Railway start hook (runs before uvicorn in `railway.json`)
 - **A deputy who leaves the Assemblée must get a `mandate_end`** (#621).
-`ingest_deputies.py` reads AMO10, which lists sitting deputies only, so a departed deputy just drops out of it and the upsert never touches their row again; `mandate_end IS NULL` is what "sitting" means everywhere (the `active` filter, `/groups` seat counts, the RAG chunks).
+`ingest_deputies.py` reads AMO10, which lists sitting deputies only, so a departed deputy just drops out of it and the upsert never touches their row again.
 After the upsert, `close_departed_mandates()` finds the rows still sitting that AMO10 no longer lists and closes them with the date AMO20 (all mandates of the legislature) records - downloaded only on a run that finds one.
 It never raises, since it runs inside a critical step; `transform/tests/assert_one_sitting_deputy_per_seat.sql` is the guard instead, failing the daily data-quality gate when a seat has two sitting deputies or the chamber more than 577.
 Fewer than 577 is normal: a seat stays vacant until a by-election.
+- **"Sitting" has one definition: the `sitting_deputies` view** (#682, migration 019).
+The upsert stamps `last_listed_at` on every deputy that run's AMO10 lists, all with the same `NOW()`, and `deputy_seat_status` derives three states: `departed` (`mandate_end` set), `sitting` (listed by the latest run, `MAX(last_listed_at)`) and `unconfirmed` (neither: dropped from AMO10 with no AMO20 end date).
+`mandate_end` stays the legal date, written from AMO20 only and never guessed.
+Every "current Assemblée" reader (the `active` filter, `/groups` seat counts, group and department rosters, the quiz, `/circonscriptions/locate`, the RAG chunks, `stg_deputies.is_active`) filters on `sitting_deputies`, so an unconfirmed deputy is not counted while their profile page stays up; `transform/tests/assert_no_unconfirmed_deputy.sql` fails the daily data-quality gate on the first run one appears.
+`last_listed_at` is a third signal beside `ingested_at` and `changed_at`, never folded into either, and stays out of the `changed_at` comparison.
+Never write `mandate_end IS NULL` in `api/` or `rag/` (`tests/unit/test_seat_status_definition.py` fails on it); a mandate window that must cover a date writes `COALESCE(mandate_end, 'infinity')`.
 - **`ingest_amendments.py` is the only source of an amendment summary** (#630, ADR-043).
 It matches amendment scrutins to `Amendements.json.zip` by number, first author and dates, stores the text of voted amendments in `vote_amendments`, and leaves a vote unmatched rather than guess between candidates.
 `generate_vote_summaries.py` makes no LLM call for an amendment vote without a row, sets `votes.summary_basis`, and leaves a summary empty when `rejection_reason()` refuses it.

@@ -596,7 +596,7 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
                 JOIN deputies d ON d.deputy_id = vp.deputy_id
                 WHERE vp.vote_id = ANY(%s)
                   AND vp.position = ANY(%s)
-                  AND d.mandate_end IS NULL
+                  AND d.deputy_id IN (SELECT deputy_id FROM sitting_deputies)
                 """,
                 (list(answers), list(EXPRESSED_POSITIONS)),
             )
@@ -611,7 +611,8 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
                     SELECT deputy_id, full_name, party, party_short,
                            department, photo_url
                     FROM deputies
-                    WHERE department = ANY(%s) AND mandate_end IS NULL
+                    WHERE department = ANY(%s)
+                      AND deputy_id IN (SELECT deputy_id FROM sitting_deputies)
                     ORDER BY last_name, first_name
                     """,
                     (db_department_values(dept_code),),

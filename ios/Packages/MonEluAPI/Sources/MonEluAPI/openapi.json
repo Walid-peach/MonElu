@@ -12,7 +12,7 @@
           "Deputies"
         ],
         "summary": "List deputies, with name / department / party filters",
-        "description": "The roster of the 17th legislature: 577 seats, past and present holders.\n\nUse this to resolve a person's name to the `deputy_id` every other deputy\nendpoint takes. `search` matches anywhere in the full name and is\naccent-sensitive, so pass the name as the Assemblée spells it.\n\n`department` and `party` want the full stored label, not a code or an\nabbreviation: `\"Rassemblement National\"`, not `\"RN\"`; `\"Nord\"`, not `\"59\"`.\n`party_short` in the response is the abbreviation.\n\nIncludes deputies whose mandate has ended (`mandate_end` is set) unless\n`active=true`, which keeps today's Assemblée only (`total` is then the\nnumber of seats filled). Sorted by surname, ignoring accents and case\n(\"Écrivain\" among the E's, \"de Courson\" among the D's). `offset` is capped\nat 2000.",
+        "description": "The roster of the 17th legislature: 577 seats, past and present holders.\n\nUse this to resolve a person's name to the `deputy_id` every other deputy\nendpoint takes. `search` matches anywhere in the full name and is\naccent-sensitive, so pass the name as the Assemblée spells it.\n\n`department` and `party` want the full stored label, not a code or an\nabbreviation: `\"Rassemblement National\"`, not `\"RN\"`; `\"Nord\"`, not `\"59\"`.\n`party_short` in the response is the abbreviation.\n\nIncludes deputies whose mandate has ended (`mandate_end` is set) unless\n`active=true`, which keeps today's Assemblée only (`total` is then the\nnumber of seats filled). `active=false` is everyone else: deputies with a\n`mandate_end`, and the rare deputy the Assemblée's latest roster no longer\nlists but who has no end date yet. Sorted by surname, ignoring accents and\ncase (\"Écrivain\" among the E's, \"de Courson\" among the D's). `offset` is\ncapped at 2000.",
         "operationId": "listDeputies",
         "parameters": [
           {
@@ -682,7 +682,7 @@
           "Groups"
         ],
         "summary": "Every parliamentary group with its current seat count",
-        "description": "The 12 groups of the Assemblée, largest first, with the slug `GET /groups/{slug}` takes.\n\n`seat_count` counts **current** deputies only (`mandate_end` not set), so\nthe counts add up to the seats filled today, at most 577. A group with no\nsitting member is left out, as `GET /groups/{slug}` answers 404 for it.\n`non-inscrits` is listed like the others but is not a group in any political\nsense: its members belong to none.",
+        "description": "The 12 groups of the Assemblée, largest first, with the slug `GET /groups/{slug}` takes.\n\n`seat_count` counts **sitting** deputies only: listed by the Assemblée's\nlatest roster and with no `mandate_end`. The counts add up to the seats\nfilled today, at most 577. A group with no sitting member is left out, as\n`GET /groups/{slug}` answers 404 for it.\n`non-inscrits` is listed like the others but is not a group in any political\nsense: its members belong to none.",
         "operationId": "listGroups",
         "responses": {
           "200": {

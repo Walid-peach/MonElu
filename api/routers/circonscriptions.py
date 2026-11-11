@@ -112,7 +112,7 @@ SQL_SITTING_DEPUTY = """
     WHERE department = ANY(%(departments)s)
       AND NULLIF(regexp_replace(circonscription, '[^0-9]', '', 'g'), '')::int
           = %(circonscription)s
-      AND mandate_end IS NULL
+      AND deputy_id IN (SELECT deputy_id FROM sitting_deputies)
     ORDER BY mandate_start DESC NULLS LAST
     LIMIT 1
 """
