@@ -238,6 +238,7 @@ def article_vote(**overrides):
         "vote_title": "l'article 19 du projet de loi",
         "result": "adopté",
         "scrutin_kind": "article",
+        "summary_state": "queued",
         "article_label": "Article 19",
         "article_text": "Le délai de prescription est porté à vingt ans pour ce délit.",
     }
@@ -264,7 +265,7 @@ class TestGeneration:
         user = client.chat.completions.create.call_args.kwargs["messages"][1]["content"]
         assert user == article_user_message(article_vote())
         assert "projet de loi" not in user
-        assert written[0][2] == "official_text"
+        assert written[0]["basis"] == "official_text"
         assert stats["generated"] == 1
 
     def test_a_refused_summary_stays_empty_and_is_not_retried(self, monkeypatch):
@@ -274,7 +275,14 @@ class TestGeneration:
         )
         reply = '{"summary": "Le texte renforce la prévention.", "theme": "Autre"}'
         _, _, stats = run_batch(reply, article_vote())
-        assert written[0][0] is None and written[0][2] == "rejected"
+        assert written == [
+            {
+                "transition": "reject",
+                "vote_id": written[0]["vote_id"],
+                "theme": "Autre",
+                "reason": "text_subject",
+            }
+        ]
         assert stats["rejected"] == {"text_subject": 1}
 
     def test_a_declined_summary_is_not_an_error_retried_every_day(self, monkeypatch):
@@ -285,10 +293,13 @@ class TestGeneration:
         _, _, stats = run_batch('{"summary": "", "theme": "Autre"}', article_vote())
         assert stats["errors"] == 0
         assert stats["rejected"] == {"declined": 1}
-        assert written[0][0] is None and written[0][2] == "rejected"
+        assert written[0]["transition"] == "reject" and written[0]["reason"] == "declined"
 
     def test_a_vote_with_no_source_row_is_never_pending(self):
-        assert "v.scrutin_kind = 'article' AND art.vote_id IS NOT NULL" in SQL_PENDING
+        """ingest_articles.py queues a vote when it attaches its text (#681), so
+        the pending query reads the state, not the source rows."""
+        assert "v.summary_state = 'queued'" in SQL_PENDING
+        assert "art.vote_id IS NOT NULL" not in SQL_PENDING
 
     def test_articles_go_before_the_amendment_backlog(self):
         order = SQL_PENDING_ROWS[SQL_PENDING_ROWS.index("ORDER BY") :]

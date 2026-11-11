@@ -152,7 +152,8 @@ def vote(**overrides):
         "result": "adopté",
         "scrutin_kind": "ensemble",
         "theme": None,
-        "summary_basis": None,
+        "summary_state": "no_source",
+        "summary_attempts": 0,
         "bill_text": None,
     }
     return {**base, **overrides}
@@ -161,59 +162,88 @@ def vote(**overrides):
 class TestGeneration:
     def test_the_model_reads_the_articles_not_the_title(self):
         reply = '{"summary": "Allonger à vingt ans la prescription.", "theme": "Autre"}'
-        client, written, stats = run_batch(vote(bill_text=BODY), reply)
+        client, written, stats = run_batch(vote(bill_text=BODY, summary_state="queued"), reply)
         user = client.chat.completions.create.call_args.kwargs["messages"][1]["content"]
         assert user == f"Type : Texte de loi\n{BODY}"
-        assert written[0][:3] == ("Allonger à vingt ans la prescription.", "Autre", "official_text")
+        assert (written[0]["summary"], written[0]["theme"], written[0]["basis"]) == (
+            "Allonger à vingt ans la prescription.",
+            "Autre",
+            "official_text",
+        )
         assert stats["generated"] == 1
 
     def test_a_refused_bill_summary_stays_empty(self):
         reply = '{"summary": "Le texte renforce probablement la justice.", "theme": "Autre"}'
-        _, written, _ = run_batch(vote(bill_text=BODY), reply)
-        assert written[0][0] is None and written[0][2] == "rejected"
+        _, written, _ = run_batch(vote(bill_text=BODY, summary_state="queued"), reply)
+        assert written[0]["transition"] == "reject" and written[0]["reason"] == "guess"
 
     def test_a_resolution_is_named_as_one_and_can_only_ask(self):
         title = "la proposition de résolution sur la commande publique."
         reply = '{"summary": "Autoriser les acheteurs publics à choisir.", "theme": "Autre"}'
-        client, written, stats = run_batch(vote(vote_title=title, bill_text=BODY), reply)
+        row = vote(vote_title=title, bill_text=BODY, summary_state="queued")
+        client, written, stats = run_batch(row, reply)
         user = client.chat.completions.create.call_args.kwargs["messages"][1]["content"]
         assert user.startswith("Type : Proposition de résolution\n")
-        assert written[0][0] is None and stats["rejected"] == {"resolution_effect": 1}
+        assert written[0]["transition"] == "reject"
+        assert stats["rejected"] == {"resolution_effect": 1}
 
     def test_a_resolution_summary_that_asks_is_kept(self):
         title = "la proposition de résolution sur la commande publique."
         reply = (
             '{"summary": "Demander au Gouvernement de privilégier l\'emploi.", "theme": "Autre"}'
         )
-        _, written, _ = run_batch(vote(vote_title=title, bill_text=BODY), reply)
-        assert written[0][2] == "official_text"
+        _, written, _ = run_batch(
+            vote(vote_title=title, bill_text=BODY, summary_state="queued"), reply
+        )
+        assert written[0]["basis"] == "official_text"
 
     def test_no_source_asks_only_for_a_theme(self):
         client, written, _ = run_batch(vote(), '{"theme": "Justice & Sécurité"}')
         system = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
         assert "N'écris aucun résumé" in system
-        assert written[0] == (None, "Justice & Sécurité", None, "V1")
+        assert written == [
+            {
+                "transition": "theme",
+                "vote_id": "V1",
+                "theme": "Justice & Sécurité",
+                "summary": None,
+                "basis": None,
+                "reason": None,
+            }
+        ]
 
     def test_a_refused_bill_still_gets_a_theme_without_a_retry(self):
-        row = vote(bill_text=BODY, summary_basis="rejected")
+        row = vote(bill_text=BODY, summary_state="rejected")
         client, written, _ = run_batch(row, '{"theme": "Autre"}')
         system = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
         assert "N'écris aucun résumé" in system
-        assert written[0] == (None, "Autre", "rejected", "V1")
+        assert [(w["transition"], w["theme"]) for w in written] == [("theme", "Autre")]
 
     def test_a_motion_needs_no_llm_call_once_it_has_a_theme(self):
         title = "la motion de censure déposée par Mme Le Pen."
-        row = vote(vote_title=title, scrutin_kind="motion", result="rejeté", theme="Institutions")
+        row = vote(
+            vote_title=title,
+            scrutin_kind="motion",
+            result="rejeté",
+            theme="Institutions",
+            summary_state="queued",
+        )
         client, written, _ = run_batch(row)
         client.chat.completions.create.assert_not_called()
-        assert written[0][2] == "procedure"
-        assert "reste en place" in written[0][0]
+        assert written[0]["basis"] == "procedure"
+        assert "reste en place" in written[0]["summary"]
 
     def test_an_unknown_motion_is_not_retried_forever(self):
-        row = vote(vote_title="la motion référendaire", scrutin_kind="motion", theme="Autre")
+        row = vote(
+            vote_title="la motion référendaire",
+            scrutin_kind="motion",
+            theme="Autre",
+            summary_state="queued",
+        )
         client, written, _ = run_batch(row)
         client.chat.completions.create.assert_not_called()
-        assert written[0][0] is None and written[0][2] == "rejected"
+        assert written[0]["transition"] == "reject"
+        assert written[0]["reason"] == "unknown_motion"
 
     def test_a_failed_theme_call_is_an_error_and_writes_nothing(self):
         _, written, stats = run_batch(vote(), "pas de json")
@@ -222,7 +252,8 @@ class TestGeneration:
 
 class TestSql:
     def test_a_whole_text_vote_with_no_source_is_pending_only_for_its_theme(self):
-        assert "b.vote_id IS NOT NULL" in SQL_PENDING
+        assert "v.summary_state = 'queued'" in SQL_PENDING
+        assert "b.vote_id IS NOT NULL" not in SQL_PENDING
         assert "v.theme IS NULL" in SQL_PENDING
         assert "AND v.summary_plain IS NULL)" not in SQL_PENDING
 

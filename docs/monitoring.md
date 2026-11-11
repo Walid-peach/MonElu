@@ -94,13 +94,33 @@ Groq key went green while 1 243 votes sat unsummarized.
 nothing at all, which is the unambiguous shape: an expired or revoked key, a
 decommissioned model (the 2026-09 outage in GH #351), or a Groq outage.
 A partial failure stays green and is surfaced as a `::warning::` with the count:
-those votes keep `summary_plain IS NULL` and are retried the next morning,
+those votes stay `summary_state = 'queued'` and are retried the next morning,
 and a ratio guard like the ingestion parsers' `SKIP_RATE_THRESHOLD` would
 redden a small daily backlog over one transient 429.
 Diagnosing a red run: open the run log, and the repeated `[WARNING] Groq error:`
 lines name the cause directly (`expired_api_key`, `model_decommissioned`, 429).
 Replacing `GROQ_API_KEY` in the repository secrets is the usual fix; the backlog
 drains on its own from the next scheduled run.
+
+Every vote carries a `summary_state` (ADR-048, #681), and the job summary ends
+with a table of votes per state.
+A queued vote whose call keeps failing gains a `summary_attempts` each run, and
+the run goes red once one reaches `MAX_SUMMARY_ATTEMPTS` (5); the error line
+names the votes.
+A rejected summary is never retried by a run.
+After changing a summary prompt or model, queue the refusals again and let the
+next run rewrite them:
+
+```bash
+python -m scripts.generate_vote_summaries --retry-rejected
+```
+
+Why each one was refused:
+
+```sql
+SELECT summary_rejection_reason, COUNT(*) FROM votes
+WHERE summary_state = 'rejected' GROUP BY 1 ORDER BY 2 DESC;
+```
 
 ### Orphaned RAG staging table (MON-256)
 

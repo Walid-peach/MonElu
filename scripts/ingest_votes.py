@@ -28,8 +28,10 @@ from dotenv import load_dotenv
 
 try:
     from scripts._http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
+    from scripts._summaries import SQL_QUEUE_MOTIONS
 except ImportError:  # running as a plain file: python scripts/ingest_votes.py
     from _http import SKIP_RATE_THRESHOLD, connect_with_retry, download_with_retry
+    from _summaries import SQL_QUEUE_MOTIONS
 
 load_dotenv()
 
@@ -341,6 +343,34 @@ def backfill_scrutin_kinds() -> int:
         conn.close()
 
 
+def queue_motion_summaries() -> int:
+    """Queue the summary of every motion that has none started (#681). Returns rows written.
+
+    A motion's sentence is written by code from its type and result, so it needs
+    no source text: it is queued as soon as it is classified. Run after
+    ``backfill_scrutin_kinds`` so a vote classified there is queued the same run.
+    Like that pass it leaves ``ingested_at`` and ``changed_at`` alone (ADR-039).
+
+    It never raises: this script is a critical step of run_ingestion_prod.py,
+    and a motion left unqueued is queued by the next run, since the statement
+    covers every motion still at ``no_source``.
+    """
+    try:
+        conn = connect_with_retry(DATABASE_URL)
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(SQL_QUEUE_MOTIONS)
+                    queued = cur.rowcount
+        finally:
+            conn.close()
+    except Exception as exc:
+        log.error("summary_state: could not queue motions (%s); next run retries.", exc)
+        return 0
+    log.info("summary_state: queued %d motions.", queued)
+    return queued
+
+
 def check_dossier_refs(raw_items: list[dict]) -> None:
     """Exit 1 when the dossier reference stops looking like a dossier reference.
 
@@ -439,6 +469,7 @@ def main() -> None:
     # never looked at, so it is a maintenance sweep over the table rather than
     # part of writing the window.
     backfill_scrutin_kinds()
+    queue_motion_summaries()
     log.info("=== Vote ingestion finished ===")
 
 
