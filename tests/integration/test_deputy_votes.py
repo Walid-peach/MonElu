@@ -2,11 +2,12 @@
 Integration test for GET /deputies/{id}/votes, through the real app against a
 live Postgres.
 
-The query walks the scrutins newest first and probes each for the deputy's
-position, so LIMIT stops early instead of reading every position the deputy
-ever cast. What a mocked cursor cannot check is that this returns the same rows
-as before: the newest scrutins the deputy has a position on, in date order,
-with `since` narrowing the items and never `total`.
+The endpoint has two queries for the same rows: a full record is served by
+walking the scrutins newest first and probing each for the deputy, a thin one
+by reading the deputy's positions directly. What a mocked cursor cannot check
+is that both return the same thing: the newest scrutins the deputy has a
+position on, in date order, with `since` narrowing the items and never `total`.
+Every test below runs once through each query.
 """
 
 from datetime import datetime, timezone
@@ -78,6 +79,14 @@ def api(db_conn):
         )
         cur.execute("DELETE FROM votes WHERE vote_id = ANY(%s)", (VOTES,))
         cur.execute("DELETE FROM deputies WHERE deputy_id IN (%s, %s)", (DEPUTY, ABSENT))
+
+
+@pytest.fixture(autouse=True, params=["walk", "direct"])
+def query(request, monkeypatch):
+    """Forces one of the endpoint's two queries, whatever the record's size."""
+    threshold = 0 if request.param == "walk" else 10**9
+    monkeypatch.setattr("api.routers.deputies.DEPUTY_VOTES_WALK_MIN_PER_ITEM", threshold)
+    return request.param
 
 
 def _ids(body: dict) -> list[str]:
