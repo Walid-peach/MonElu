@@ -30,6 +30,11 @@ except ImportError:  # running as a plain file: python scripts/run_ingestion_pro
     from _cache_scope import CacheScope, changed_ids, publish_scope, read_changed_ids
     from _http import download_with_retry
 
+# The repository root, so `api` imports when this runs as a plain file, which is
+# how ingest_prod.yml runs it.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from api.agenda_visibility import visible_agenda_predicate  # noqa: E402
+
 load_dotenv()
 
 logging.basicConfig(
@@ -108,12 +113,13 @@ def visible_agenda_count(conn) -> int:
     row-level change detection cannot see it. Comparing this count either side
     of the agenda step catches the drop - which matters because the homepage
     bakes a 7-day agenda window into a page cached for a day.
+
+    The condition is GET /agenda's own (api/agenda_visibility.py), cancelled
+    states included. Before #684 this counted cancelled items too, so dropping
+    an item the API already hid still purged the agenda pages.
     """
     with conn.cursor() as cur:
-        cur.execute(
-            "SELECT COUNT(*) FROM agenda_items "
-            "WHERE last_seen_at = (SELECT MAX(last_seen_at) FROM agenda_items)"
-        )
+        cur.execute(f"SELECT COUNT(*) FROM agenda_items WHERE {visible_agenda_predicate()}")
         return cur.fetchone()[0]
 
 

@@ -12,6 +12,9 @@ An item is visible only when both conditions hold (ADR-030 §2):
   equals the table's max — ingest_agenda.py stamps every row touched in a
   run with the same transaction-frozen NOW());
 - neither its réunion nor its own state is Annulé/Supprimé.
+
+The condition itself lives in api/agenda_visibility.py, shared with the
+summary generator and the ingestion orchestrator (#684).
 """
 
 from datetime import date, timedelta
@@ -20,6 +23,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from starlette.requests import Request
 
+from api.agenda_visibility import visible_agenda_predicate
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from api.routers.lois import lois_url
@@ -32,11 +36,9 @@ router = APIRouter()
 # week-or-month-scale window, not a full-legislature scan.
 AGENDA_MAX_SPAN_DAYS = 90
 
-_CANCELLED_STATES = ("Annulé", "Supprimé")
-
 # Module-level so integration tests can exercise the exact SQL (a mocked
 # cursor can't catch a date-vs-timestamp comparison bug).
-_AGENDA_QUERY = """
+_AGENDA_QUERY = f"""
     SELECT a.point_uid, a.sitting_start, a.sitting_end, a.objet,
            a.point_type, a.summary_plain, a.theme, a.dossier_id,
            d.titre AS dossier_title, d.has_scrutins,
@@ -57,9 +59,7 @@ _AGENDA_QUERY = """
         ORDER BY votes.voted_at ASC
         LIMIT 1
     ) v ON a.dossier_id IS NOT NULL
-    WHERE a.last_seen_at = (SELECT MAX(last_seen_at) FROM agenda_items)
-      AND a.reunion_etat NOT IN %s
-      AND (a.point_etat IS NULL OR a.point_etat NOT IN %s)
+    WHERE {visible_agenda_predicate("a")}
       AND a.sitting_start >= %s
       AND a.sitting_start < %s
     ORDER BY a.sitting_start ASC, a.point_uid ASC
@@ -141,12 +141,7 @@ def get_agenda(
         with conn.cursor() as cur:
             cur.execute(
                 _AGENDA_QUERY,
-                (
-                    _CANCELLED_STATES,
-                    _CANCELLED_STATES,
-                    from_date,
-                    to_date + timedelta(days=1),
-                ),
+                (from_date, to_date + timedelta(days=1)),
             )
             rows = cur.fetchall()
 

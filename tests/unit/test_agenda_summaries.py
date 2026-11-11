@@ -16,6 +16,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from api.agenda_visibility import visible_agenda_predicate
 from scripts.generate_agenda_summaries import (
     CANDIDATE_SQL,
     STUB_OBJET_MAX_LEN,
@@ -235,9 +236,7 @@ class TestIdempotence:
 
     def test_candidate_query_mirrors_the_api_visibility_filter(self):
         """Summarizing an item GET /agenda hides is spend with nothing to show."""
-        assert "last_seen_at = (SELECT MAX(last_seen_at) FROM agenda_items)" in CANDIDATE_SQL
-        assert "reunion_etat NOT IN" in CANDIDATE_SQL
-        assert "point_etat IS NULL OR point_etat NOT IN" in CANDIDATE_SQL
+        assert visible_agenda_predicate() in CANDIDATE_SQL
         assert "sitting_start >=" in CANDIDATE_SQL
 
 
