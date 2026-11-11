@@ -59,6 +59,46 @@ def _calls(node: ast.AST, attr: str) -> list[ast.Call]:
     ]
 
 
+_LOOPS = (
+    ast.For,
+    ast.AsyncFor,
+    ast.While,
+    ast.ListComp,
+    ast.SetComp,
+    ast.DictComp,
+    ast.GeneratorExp,
+)
+
+
+def _inside_a_loop(func: ast.FunctionDef, target: ast.AST) -> bool:
+    """Is `target` nested, at any depth inside `func`, in a loop or comprehension?"""
+
+    def visit(node: ast.AST, in_loop: bool) -> bool:
+        if node is target:
+            return in_loop
+        in_loop = in_loop or isinstance(node, _LOOPS)
+        return any(visit(child, in_loop) for child in ast.iter_child_nodes(node))
+
+    return visit(func, False)
+
+
+def test_a_transaction_entered_in_a_loop_is_caught():
+    """The check above must see the most natural way to batch an upsert."""
+    batched = ast.parse(
+        "def upsert(records):\n"
+        "    conn = connect_with_retry(URL)\n"
+        "    try:\n"
+        "        for i in range(0, len(records), 100):\n"
+        "            with conn:\n"
+        "                with conn.cursor() as cur:\n"
+        "                    execute_batch(cur, SQL, records[i:i + 100])\n"
+        "    finally:\n"
+        "        conn.close()\n"
+    ).body[0]
+    (block,) = _transaction_blocks(batched)
+    assert _inside_a_loop(batched, block)
+
+
 @pytest.mark.parametrize(("script", "name"), UPSERTS)
 def test_upsert_opens_one_connection(script, name):
     func = _function(script, name)
@@ -77,6 +117,11 @@ def test_upsert_is_one_transaction(script, name):
     func = _function(script, name)
     blocks = _transaction_blocks(func)
     assert len(blocks) == 1, f"{name}() must write inside exactly one `with conn:` block"
+    # One block in the source is not one transaction if a loop enters it once
+    # per batch: each pass commits and stamps its own NOW().
+    assert not _inside_a_loop(func, blocks[0]), (
+        f"{name}() enters its `with conn:` block inside a loop, so it commits per pass"
+    )
     assert not _calls(func, "commit"), f"{name}() must not commit part way through"
     assert not any(
         isinstance(n, ast.Assign)

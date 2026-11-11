@@ -9,12 +9,14 @@ import os
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
+import psycopg2
 import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
 from api.routers.agenda import _AGENDA_QUERY
 from scripts.ingest_agenda import upsert_agenda_items
+from scripts.run_ingestion_prod import visible_agenda_count
 
 _AGENDA_UPSERT = """
 INSERT INTO agenda_items (
@@ -282,3 +284,35 @@ def test_a_run_committed_in_two_transactions_hides_its_first_batch(agenda_api):
     shown = _shown(agenda_api, sitting.date())
     assert set(_BATCH_B) <= shown
     assert shown.isdisjoint(_BATCH_A)
+
+
+@pytest.mark.integration
+def test_visible_agenda_count_matches_what_the_feed_shows(db_conn, _cleanup_agenda):
+    """The cache scope's withdrawn-item check counts what GET /agenda shows (#684).
+
+    Before #684 it counted cancelled items too, so dropping an item the API
+    already hid still purged the agenda pages.
+    """
+    now = datetime.now(timezone.utc)
+    with db_conn.cursor() as cur:
+        for uid, etat in (("IT-AGENDA-COUNT-OK", "Confirmé"), ("IT-AGENDA-COUNT-OFF", "Annulé")):
+            cur.execute(
+                _AGENDA_UPSERT,
+                {
+                    "point_uid": uid,
+                    "reunion_uid": f"RU-{uid}",
+                    "sitting_start": now,
+                    "objet": "Texte de test",
+                    "dossier_id": None,
+                    "reunion_etat": etat,
+                    "point_etat": None,
+                    # Later than any other row, so these two alone are the latest run.
+                    "last_seen_at": now + timedelta(days=1),
+                },
+            )
+    # A plain connection, as run_ingestion_prod.py's own: db_conn returns dict rows.
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        assert visible_agenda_count(conn) == 1
+    finally:
+        conn.close()

@@ -41,6 +41,8 @@ def visible_agenda_predicate(alias: str = "agenda_items") -> str:
     `alias` is how the calling query names the table. The condition binds no
     parameters, so it can go into any query's WHERE clause as it is.
     """
+    if not alias.isidentifier():
+        raise ValueError(f"not an SQL table alias: {alias!r}")
     return (
         f"{alias}.last_seen_at = (SELECT MAX(last_seen_at) FROM agenda_items)"
         f" AND {alias}.reunion_etat NOT IN ({_CANCELLED_SQL})"
