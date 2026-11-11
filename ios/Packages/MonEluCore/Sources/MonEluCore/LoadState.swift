@@ -84,67 +84,177 @@ public enum LoadState<Value: Sendable>: Sendable {
 /// A cancelled load is not a failure: the loader goes back to the state it
 /// had, so the next `loadIfNeeded()` (a `.task` running again when its view
 /// returns) loads again instead of showing an error nobody caused (#579).
+///
+/// A loader with a cache key starts on what that page last showed
+/// (`LoadCache`) and fetches again behind it, so a page opened a second time
+/// never waits on a spinner. A progressive fetch can also show a first part of
+/// the page before the rest arrives.
 @MainActor
 @Observable
 public final class Loader<Value: Sendable> {
+    /// Shows a part of the value before the fetch returns all of it.
+    public typealias Partial = @Sendable (Value) async -> Void
+
     public private(set) var state: LoadState<Value> = .idle
     /// True while a refresh runs over content that is already on screen.
     public private(set) var isRefreshing = false
     /// Set when a refresh failed over loaded content; the content stays.
     public private(set) var refreshFailure: LoadFailure?
 
-    private let fetch: @Sendable () async throws -> Value
+    private let fetch: @Sendable (@escaping Partial) async throws -> Value
     private let isEmpty: @Sendable (Value) -> Bool
+    private let cache: LoadCache?
+    private let key: @MainActor () -> String?
+    /// The content on screen came from the cache and has not been fetched yet.
+    private var isStale = false
+    /// Counts loads, so a part published by an abandoned one is dropped.
+    private var generation = 0
+    private let trace = LoadTrace()
 
-    public init(
+    /// A loader that keeps nothing between screens.
+    public convenience init(
         isEmpty: @escaping @Sendable (Value) -> Bool = { _ in false },
         fetch: @escaping @Sendable () async throws -> Value
     ) {
-        self.fetch = fetch
+        self.init(cache: nil, key: { nil }, isEmpty: isEmpty, progressive: { _ in try await fetch() })
+    }
+
+    /// A loader whose value is kept under `cacheKey` for the next screen that
+    /// asks for the same page.
+    public convenience init(
+        cacheKey: String,
+        cache: LoadCache = .shared,
+        isEmpty: @escaping @Sendable (Value) -> Bool = { _ in false },
+        fetch: @escaping @Sendable () async throws -> Value
+    ) {
+        self.init(cache: cache, key: { cacheKey }, isEmpty: isEmpty, progressive: { _ in try await fetch() })
+    }
+
+    /// The full form. `key` is read when the loader is created, before each
+    /// load and after each fetch, so a list whose criteria change keeps one
+    /// value per criteria; nil keeps nothing. `progressive` may call its
+    /// argument with a part of the value to show it while the rest loads; the
+    /// parts are shown only by a load that started without content, never over
+    /// a page already on screen.
+    public init(
+        cache: LoadCache?,
+        key: @escaping @MainActor () -> String?,
+        isEmpty: @escaping @Sendable (Value) -> Bool = { _ in false },
+        progressive: @escaping @Sendable (@escaping Partial) async throws -> Value
+    ) {
+        self.fetch = progressive
         self.isEmpty = isEmpty
+        self.cache = cache
+        self.key = key
+        if let cached = cachedValue() {
+            state = settle(cached)
+            isStale = true
+        }
     }
 
     /// Loads once; later calls do nothing while content or a load is present.
+    /// Content that came from the cache is fetched again, once, behind it.
     public func loadIfNeeded() async {
+        if isStale {
+            // On screen since the view's first frame, before this task ran.
+            trace.shownAtOnce(key())
+            return await revalidate()
+        }
         guard case .idle = state else { return }
         await load()
     }
 
-    /// Loads from scratch, showing the loading state (the retry action).
+    /// Loads from scratch (the retry action, and a list whose criteria
+    /// changed). Shows what the cache holds for the current key while the
+    /// fetch runs, and the loading state when it holds nothing.
     public func load() async {
+        refreshFailure = nil
+        if let cached = cachedValue() {
+            state = settle(cached)
+            trace.restart()
+            trace.shownAtOnce(key())
+            return await revalidate()
+        }
         let previous = state
         state = .loading
-        refreshFailure = nil
+        isStale = false
+        let (generation, key) = begin()
+        trace.restart()
         do {
-            state = settle(try await fetch())
-        } catch let error where LoadFailure.isCancellation(error) {
-            state = previous
+            let value = try await fetch { [weak self] part in await self?.show(part, of: generation) }
+            finish(value, of: generation, for: key)
         } catch {
-            state = .failed(LoadFailure(error))
+            // A newer load owns the screen now; this one has nothing to say.
+            guard generation == self.generation else { return }
+            state = LoadFailure.isCancellation(error) ? previous : .failed(LoadFailure(error))
         }
     }
 
     /// Reloads for pull-to-refresh, keeping loaded content visible.
     public func refresh() async {
         guard case .loaded = state else { return await load() }
-        isRefreshing = true
-        defer { isRefreshing = false }
-        do {
-            state = settle(try await fetch())
-            refreshFailure = nil
-        } catch let error where LoadFailure.isCancellation(error) {
-            // The content stays, and nothing failed that the user should hear of.
-        } catch {
-            refreshFailure = LoadFailure(error)
-        }
+        await revalidate()
     }
 
     /// Changes the loaded content in place, for a list appending its next
-    /// page. Does nothing unless content is loaded.
+    /// page. Does nothing unless content is loaded. The cache keeps what the
+    /// fetch returned, not the appended pages.
     public func update(_ transform: (inout Value) -> Void) {
         guard case .loaded(var value) = state else { return }
         transform(&value)
         state = .loaded(value)
+    }
+
+    /// Fetches over the content on screen: it stays whatever happens, and a
+    /// failure is reported beside it.
+    private func revalidate() async {
+        isStale = false
+        isRefreshing = true
+        let (generation, key) = begin()
+        defer { if generation == self.generation { isRefreshing = false } }
+        do {
+            let value = try await fetch { _ in }
+            finish(value, of: generation, for: key)
+            if generation == self.generation { refreshFailure = nil }
+        } catch {
+            guard generation == self.generation else { return }
+            if LoadFailure.isCancellation(error) {
+                // The content stays, and nothing failed that the user should
+                // hear of; it is still unfetched, so the next visit tries again.
+                isStale = true
+            } else {
+                refreshFailure = LoadFailure(error)
+            }
+        }
+    }
+
+    /// Starts a fetch: its number, which only the newest one keeps, and the
+    /// key it is fetching for. The key is read now, not when the answer is
+    /// back: a list whose criteria changed meanwhile must not file this answer
+    /// under the new criteria.
+    private func begin() -> (generation: Int, key: String?) {
+        generation += 1
+        return (generation, key())
+    }
+
+    private func show(_ part: Value, of generation: Int) {
+        guard generation == self.generation else { return }
+        state = settle(part)
+        trace.shown(key(), from: "network, first part")
+    }
+
+    /// Keeps the answer under the key it was fetched for, and shows it unless
+    /// a newer load has started since: that one owns the screen.
+    private func finish(_ value: Value, of generation: Int, for key: String?) {
+        if let key { cache?.store(value, for: key) }
+        guard generation == self.generation else { return }
+        state = settle(value)
+        trace.complete(key)
+    }
+
+    private func cachedValue() -> Value? {
+        guard let cache, let key = key() else { return nil }
+        return cache.value(for: key)
     }
 
     private func settle(_ value: Value) -> LoadState<Value> {

@@ -344,23 +344,31 @@ def get_deputy_votes(
                 )
                 total = cur.fetchone()["count"]
 
-                conditions = [sql.SQL("vp.deputy_id = %s")]
-                params: list = [deputy_id]
-                if since:
-                    conditions.append(sql.SQL("v.voted_at > %s"))
-                    params.append(since)
-                where = sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
+                # Newest scrutins first, each probed for this deputy's position
+                # through the (deputy_id, vote_id) index, so LIMIT stops after a
+                # handful of probes. Starting from the deputy's positions
+                # instead reads every one of them, thousands of heap pages
+                # scattered across the table, to keep ten: over a second on a
+                # deputy nobody has opened since the last restart.
+                recent = sql.SQL("WHERE voted_at > %s") if since else sql.SQL("")
+                params: list = ([since] if since else []) + [deputy_id, limit]
 
                 cur.execute(
                     sql.SQL("""
                         SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
                                v.summary_plain, raw.summary_basis, raw.scrutin_kind
-                        FROM vote_positions vp
-                        JOIN analytics_marts.mart_vote_summary v ON v.vote_id = vp.vote_id
-                        LEFT JOIN votes raw ON raw.vote_id = vp.vote_id
-                        {} ORDER BY v.voted_at DESC NULLS LAST LIMIT %s
-                    """).format(where),
-                    params + [limit],
+                        FROM (
+                            SELECT vote_id, voted_at, vote_title, result, summary_plain
+                            FROM analytics_marts.mart_vote_summary
+                            {}
+                            ORDER BY voted_at DESC NULLS LAST
+                        ) v
+                        JOIN vote_positions vp
+                          ON vp.vote_id = v.vote_id AND vp.deputy_id = %s
+                        LEFT JOIN votes raw ON raw.vote_id = v.vote_id
+                        ORDER BY v.voted_at DESC NULLS LAST LIMIT %s
+                    """).format(recent),
+                    params,
                 )
                 rows = cur.fetchall()
     except psycopg2.errors.UndefinedTable:

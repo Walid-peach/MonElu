@@ -44,7 +44,7 @@ private struct CompareLoadedView: View {
         deputyID: String, otherID: String?, deputies: any DeputiesService, compare: any CompareService,
         choose: @escaping () -> Void
     ) {
-        _loader = State(initialValue: Loader {
+        _loader = State(initialValue: Loader(cacheKey: "compare:\(deputyID):\(otherID ?? "-")") {
             try await compare.page(first: deputyID, other: otherID, deputies: deputies)
         })
         self.choose = choose

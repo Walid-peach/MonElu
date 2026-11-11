@@ -465,10 +465,11 @@ def test_get_deputy_votes_since_filter(client, mock_cursor):
     # this endpoint); only items are narrowed by since.
     assert data["total"] == 5
     assert len(data["items"]) == 1
-    # The SELECT (last execute call) must carry deputy_id, the decoded since
-    # timestamp, and the limit — in that order.
+    # The SELECT (last execute call) must carry the decoded since timestamp,
+    # deputy_id, and the limit - in that order: `since` narrows the scrutins
+    # the query walks, before each is probed for the deputy's position.
     select_params = mock_cursor.execute.call_args_list[-1].args[1]
-    assert select_params == ["PA1", datetime(2026, 7, 1, 0, 0, 0), 5]
+    assert select_params == [datetime(2026, 7, 1, 0, 0, 0), "PA1", 5]
 
 
 def test_get_deputy_votes_since_in_the_future_returns_no_items(client, mock_cursor):

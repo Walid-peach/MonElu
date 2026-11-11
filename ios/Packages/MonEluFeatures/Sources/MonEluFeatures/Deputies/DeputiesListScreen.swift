@@ -10,7 +10,9 @@ public struct DeputiesListScreen: View {
     @State private var picksGroup = false
 
     public init(service: any DeputiesService, followedDeputyID: String?) {
-        _model = State(initialValue: DeputiesListModel(service: service, followedDeputyID: followedDeputyID))
+        _model = State(initialValue: DeputiesListModel(
+            service: service, followedDeputyID: followedDeputyID, cache: .shared
+        ))
     }
 
     /// Over a model already loaded, for snapshot tests.

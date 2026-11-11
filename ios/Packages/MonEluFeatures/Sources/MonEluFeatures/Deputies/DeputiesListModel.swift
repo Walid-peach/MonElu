@@ -59,13 +59,17 @@ public final class DeputiesListModel {
 
     public init(
         service: any DeputiesService, groups: [ReferenceData.Group] = (try? ReferenceData.groups()) ?? [],
-        followedDeputyID: String? = nil
+        followedDeputyID: String? = nil, cache: LoadCache? = nil
     ) {
         self.service = service
         self.groups = groups
         self.followedDeputyID = followedDeputyID
         let box = ModelBox()
-        loader = Loader(isEmpty: { $0.isEmpty }, fetch: { try await box.firstPage() })
+        // One cached first page per criteria: the list opens on what it last
+        // showed, and a chip chosen before comes back at once.
+        loader = Loader(
+            cache: cache, key: { box.cacheKey }, isEmpty: { $0.isEmpty }, progressive: { _ in try await box.firstPage() }
+        )
         box.model = self
     }
 
@@ -126,6 +130,12 @@ public final class DeputiesListModel {
 @MainActor
 private final class ModelBox {
     weak var model: DeputiesListModel?
+
+    /// The model's criteria, or those it opens on while it is still being built.
+    var cacheKey: String {
+        let opening = DeputiesListModel.Criteria(search: "", groupSlug: nil, department: nil, inMandateOnly: true)
+        return "deputies:\(model?.criteria ?? opening)"
+    }
 
     func firstPage() async throws -> [DeputyItem] {
         try await model?.firstPage() ?? []

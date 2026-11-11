@@ -33,14 +33,69 @@ public struct DeputyNotFound: Error, Equatable {
 }
 
 extension DeputiesService {
-    /// The profile and, in parallel, its scorecard and recent votes. Only the
-    /// profile itself is required.
-    public func profilePage(id: String) async throws -> DeputyProfilePage {
-        async let scorecard = try? self.scorecard(id: id)
-        async let votes = try? self.recentVotes(id: id)
-        async let alignment = try? self.alignment(id: id)
-        let profile = try await profile(id: id)
-        return await DeputyProfilePage(profile: profile, scorecard: scorecard, recentVotes: votes, alignment: alignment)
+    /// The profile and, in parallel, its scorecard, alignment and recent
+    /// votes. Only the profile itself is required.
+    ///
+    /// `partial` receives the page as soon as the profile is known, and again
+    /// each time a section lands, so the screen opens on who the deputy is
+    /// without waiting for the slowest of the four requests.
+    public func profilePage(
+        id: String, partial: @escaping @Sendable (DeputyProfilePage) async -> Void = { _ in }
+    ) async throws -> DeputyProfilePage {
+        try await withThrowingTaskGroup(of: ProfilePart.self) { group in
+            group.addTask { .profile(try await self.profile(id: id)) }
+            group.addTask { .scorecard(try? await self.scorecard(id: id)) }
+            group.addTask { .alignment(try? await self.alignment(id: id)) }
+            group.addTask { .recentVotes(try? await self.recentVotes(id: id)) }
+
+            var page: DeputyProfilePage?
+            var sections = DeputyProfilePage.Sections()
+            var remaining = 4
+            // A failed profile throws here, which cancels the sections.
+            for try await part in group {
+                remaining -= 1
+                switch part {
+                case .profile(let profile): page = DeputyProfilePage(profile: profile, sections: sections)
+                case .scorecard(let scorecard): sections.scorecard = scorecard
+                case .alignment(let alignment): sections.alignment = alignment
+                case .recentVotes(let votes): sections.recentVotes = votes
+                }
+                page?.apply(sections)
+                if let page, remaining > 0 { await partial(page) }
+            }
+            guard let page else { throw CancellationError() }
+            return page
+        }
+    }
+}
+
+/// One of the four requests behind a profile page, as it lands.
+private enum ProfilePart: Sendable {
+    case profile(DeputyProfile)
+    case scorecard(DeputyScorecard?)
+    case alignment(DeputyAlignment?)
+    case recentVotes([DeputyVote]?)
+}
+
+extension DeputyProfilePage {
+    /// The sections that have landed so far.
+    struct Sections: Sendable {
+        var scorecard: DeputyScorecard?
+        var alignment: DeputyAlignment?
+        var recentVotes: [DeputyVote]?
+    }
+
+    init(profile: DeputyProfile, sections: Sections) {
+        self.init(
+            profile: profile, scorecard: sections.scorecard, recentVotes: sections.recentVotes,
+            alignment: sections.alignment
+        )
+    }
+
+    mutating func apply(_ sections: Sections) {
+        scorecard = sections.scorecard
+        alignment = sections.alignment
+        recentVotes = sections.recentVotes
     }
 }
 

@@ -15,7 +15,11 @@ public struct DeputyProfileScreen: View {
     public init(id: String, service: any DeputiesService, followedDeputy: (any FollowedDeputyStore)? = nil) {
         self.id = id
         self.followedDeputy = followedDeputy
-        _loader = State(initialValue: Loader { try await service.profilePage(id: id) })
+        // Progressive: the page opens on the profile and each section joins
+        // it as it lands. Cached: a deputy opened again shows at once.
+        _loader = State(initialValue: Loader(cache: .shared, key: { "deputy:\(id)" }) { partial in
+            try await service.profilePage(id: id, partial: partial)
+        })
     }
 
     /// Read from the store on every render, never copied: the deputy can be
@@ -44,6 +48,8 @@ public struct DeputyProfileScreen: View {
                     }
                 )
                 .padding(Spacing.m)
+                // The sections join the page as they land.
+                .animation(.easeOut(duration: 0.2), value: page)
             }
         }
         .navigationTitle("Député")
