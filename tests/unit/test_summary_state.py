@@ -283,3 +283,14 @@ class TestStateCounts:
         step = next(s for s in steps if s.get("name") == "Report summary states")
         assert "--state-counts" in step["run"] and "GITHUB_STEP_SUMMARY" in step["run"]
         assert "cancelled()" in step["if"]
+
+
+def test_queueing_motions_never_aborts_vote_ingestion(monkeypatch):
+    """ingest_votes.py is a critical step of the daily run: a failed queue must not stop it."""
+    from scripts import ingest_votes
+
+    def refuse(_url):
+        raise RuntimeError("connection refused")
+
+    monkeypatch.setattr(ingest_votes, "connect_with_retry", refuse)
+    assert ingest_votes.queue_motion_summaries() == 0

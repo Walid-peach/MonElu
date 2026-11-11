@@ -350,17 +350,25 @@ def queue_motion_summaries() -> int:
     no source text: it is queued as soon as it is classified. Run after
     ``backfill_scrutin_kinds`` so a vote classified there is queued the same run.
     Like that pass it leaves ``ingested_at`` and ``changed_at`` alone (ADR-039).
+
+    It never raises: this script is a critical step of run_ingestion_prod.py,
+    and a motion left unqueued is queued by the next run, since the statement
+    covers every motion still at ``no_source``.
     """
-    conn = connect_with_retry(DATABASE_URL)
     try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(SQL_QUEUE_MOTIONS)
-                queued = cur.rowcount
-        log.info("summary_state: queued %d motions.", queued)
-        return queued
-    finally:
-        conn.close()
+        conn = connect_with_retry(DATABASE_URL)
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(SQL_QUEUE_MOTIONS)
+                    queued = cur.rowcount
+        finally:
+            conn.close()
+    except Exception as exc:
+        log.error("summary_state: could not queue motions (%s); next run retries.", exc)
+        return 0
+    log.info("summary_state: queued %d motions.", queued)
+    return queued
 
 
 def check_dossier_refs(raw_items: list[dict]) -> None:
