@@ -1,18 +1,18 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { track } from '@vercel/analytics/react'
 import { api } from '@/lib/api'
-import type { QuizAnswerPosition, QuizMatchResponse, QuizQuestion, QuizShareResult } from '@/lib/api'
+import type { QuizAnswerPosition } from '@/lib/api'
 import { resolvePostalCodeToDepartments } from '@/lib/postal'
 import { FindMyDeputy } from '@/components/FindMyDeputy'
-import type { ResolvedDepartment } from '@/lib/postal'
 import { CANONICAL_GROUP_LABELS } from '@/lib/groups'
 import { partyHex } from '@/lib/utils'
 import { pctLabel, card, QuizResultSections } from './QuizResultSections'
 import { QuizResultCard } from './QuizResultCard'
 import { QuizDeck } from './QuizDeck'
+import { comparisonShare, initialQuizFlow, MIN_ANSWERS, reduce } from '@/lib/quizFlow'
 
 const NAVY = 'var(--dp-text)'
 const CREAM = 'var(--dp-page-bg)'
@@ -20,11 +20,6 @@ const LINE = 'var(--dp-border)'
 const ACCENT = 'var(--dp-cta-bg)'
 const RED = 'var(--dp-red)'
 const GRAY = 'var(--dp-text-secondary)'
-
-// Mirrors MIN_ANSWERS in api/routers/quiz.py — the backend rejects fewer.
-const MIN_ANSWERS = 3
-
-type Phase = 'intro' | 'questions' | 'group' | 'postal' | 'results'
 
 const kicker: React.CSSProperties = {
   fontWeight: 700,
@@ -201,27 +196,15 @@ export function QuizClient() {
   const focusDeputyId = searchParams.get('deputy') || undefined
   const compareId = searchParams.get('compare')
 
-  const [phase, setPhase] = useState<Phase>('intro')
-  const [questions, setQuestions] = useState<QuizQuestion[] | null>(null)
-  const [questionsVersion, setQuestionsVersion] = useState<string | null>(null)
-  const [questionsError, setQuestionsError] = useState(false)
-  const [index, setIndex] = useState(0)
+  // Where the flow is lives in one state, moved only by the reducer (#683).
+  const [state, dispatch] = useReducer(
+    reduce,
+    { deputyId: focusDeputyId, compareId },
+    initialQuizFlow
+  )
+  const { step, questions } = state
   const [answers, setAnswers] = useState<Record<string, QuizAnswerPosition>>({})
-  const [predictedGroup, setPredictedGroup] = useState<string | null>(null)
-  const [focusDeputyName, setFocusDeputyName] = useState<string | null>(null)
-
   const [postalInput, setPostalInput] = useState('')
-  const [resolving, setResolving] = useState(false)
-  const [postalError, setPostalError] = useState<string | null>(null)
-  const [resolved, setResolved] = useState<ResolvedDepartment | null>(null)
-  const [postalChoices, setPostalChoices] = useState<ResolvedDepartment[] | null>(null)
-
-  const [matching, setMatching] = useState(false)
-  const [matchError, setMatchError] = useState(false)
-  const [result, setResult] = useState<QuizMatchResponse | null>(null)
-
-  // Friend comparison (ADR-028, MON-184): the share fetched from ?compare=<id>.
-  const [compareShare, setCompareShare] = useState<QuizShareResult | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -229,12 +212,11 @@ export function QuizClient() {
       .questions()
       .then(res => {
         if (!cancelled) {
-          setQuestions(res.questions)
-          setQuestionsVersion(res.version)
+          dispatch({ type: 'questionsLoaded', questions: res.questions, version: res.version })
         }
       })
       .catch(() => {
-        if (!cancelled) setQuestionsError(true)
+        if (!cancelled) dispatch({ type: 'questionsFailed' })
       })
     return () => {
       cancelled = true
@@ -242,7 +224,7 @@ export function QuizClient() {
   }, [])
 
   // MON-183: personalizes the intro when arriving from a deputy's profile
-  // page ("Votez-vous comme X ?"). Only fetches the deputy's name for copy —
+  // page ("Votez-vous comme X ?"). Only fetches the deputy's name for copy -
   // focus_deputy_id itself is sent to /quiz/match at submit time.
   useEffect(() => {
     if (!focusDeputyId) return
@@ -250,38 +232,59 @@ export function QuizClient() {
     api.deputies
       .get(focusDeputyId)
       .then(d => {
-        if (!cancelled) setFocusDeputyName(d.full_name)
+        if (!cancelled) {
+          dispatch({ type: 'focusDeputyLoaded', deputyId: focusDeputyId, name: d.full_name })
+        }
       })
       .catch(() => {
-        // Unknown/invalid id — fall back to the plain, unpersonalized quiz.
+        // Unknown/invalid id - fall back to the plain, unpersonalized quiz.
       })
     return () => {
       cancelled = true
     }
   }, [focusDeputyId])
 
+  // Friend comparison (ADR-028, MON-184): the share fetched from ?compare=<id>.
   useEffect(() => {
     if (!compareId) return
     let cancelled = false
     api.quiz
       .getShare(compareId)
       .then(share => {
-        if (!cancelled && share.result.answers) setCompareShare(share)
+        if (!cancelled) dispatch({ type: 'compareShareLoaded', compareId, share })
       })
       .catch(() => {
-        // Invalid or missing share id — fall back to the plain quiz silently.
+        // Invalid or missing share id - fall back to the plain quiz silently.
       })
     return () => {
       cancelled = true
     }
   }, [compareId])
 
+  // The match runs whenever the reducer enters `matching`, whichever way it got
+  // there (a skip, a department, an address, a postal code with one department).
+  useEffect(() => {
+    if (step.name !== 'matching') return
+    let cancelled = false
+    const payload = Object.entries(answers).map(([vote_id, position]) => ({ vote_id, position }))
+    api.quiz
+      .match(payload, step.department?.code, step.focusDeputyId)
+      .then(result => {
+        if (cancelled) return
+        dispatch({ type: 'matchSucceeded', result })
+        track('quiz_complete')
+      })
+      .catch(() => {
+        if (!cancelled) dispatch({ type: 'matchFailed' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [step, answers])
+
   // Question-set version mismatch degrades to the plain flow with a notice
-  // (ADR-028): answers are keyed to a specific question-set version. Derived
-  // at render time rather than via an effect, so no cascading setState.
-  const versionMismatch =
-    compareShare !== null && questionsVersion !== null && compareShare.result.version !== questionsVersion
-  const effectiveCompareShare = versionMismatch ? null : compareShare
+  // (ADR-028): answers are keyed to a specific question-set version.
+  const { share: effectiveCompareShare, versionMismatch } = comparisonShare(state)
   const compareNotice = versionMismatch
     ? 'Ce lien de comparaison correspond à une version précédente du quiz - voici le quiz actuel, sans comparaison.'
     : null
@@ -292,12 +295,13 @@ export function QuizClient() {
       : null
 
   const answeredCount = Object.keys(answers).length
+  const focusDeputyName = state.focus?.name ?? null
 
   // MON-186: answering advances immediately - the swipe deck has no blocking
   // reveal step; the scrutin outcome lives behind the card's details toggle.
   function answer(voteId: string, position: QuizAnswerPosition) {
     setAnswers(prev => ({ ...prev, [voteId]: position }))
-    advance()
+    dispatch({ type: 'advanced' })
   }
 
   function skip(voteId: string) {
@@ -306,82 +310,29 @@ export function QuizClient() {
       delete next[voteId]
       return next
     })
-    advance()
-  }
-
-  function advance() {
-    if (questions && index < questions.length - 1) setIndex(index + 1)
-    else setPhase('group')
+    dispatch({ type: 'advanced' })
   }
 
   function back() {
-    if (index > 0) setIndex(index - 1)
-    else setPhase('intro')
-  }
-
-  // `focusOverride`: the deputy found from the visitor's address (ADR-047), which
-  // takes the place of a ?deputy= focus for this one computation.
-  async function submit(department: string | null, focusOverride?: string) {
-    setMatching(true)
-    setMatchError(false)
-    try {
-      const payload = Object.entries(answers).map(([vote_id, position]) => ({
-        vote_id,
-        position,
-      }))
-      const res = await api.quiz.match(
-        payload,
-        department ?? undefined,
-        focusOverride ?? (focusDeputyName ? focusDeputyId : undefined)
-      )
-      setResult(res)
-      setPhase('results')
-      track('quiz_complete')
-    } catch {
-      setMatchError(true)
-    } finally {
-      setMatching(false)
-    }
+    dispatch({ type: 'wentBack' })
   }
 
   async function confirmPostal() {
-    setPostalError(null)
-    setResolving(true)
+    dispatch({ type: 'postalLookupStarted' })
     const departments = await resolvePostalCodeToDepartments(postalInput.trim())
-    setResolving(false)
-    if (departments.length === 0) {
-      setPostalError('Code postal introuvable - vérifiez les 5 chiffres, ou passez cette étape.')
-      return
-    }
-    if (departments.length > 1) {
-      // A postal code can cover several departments (ADR-047 §6): let the visitor say which.
-      setPostalChoices(departments)
-      return
-    }
-    await chooseDepartment(departments[0]!)
-  }
-
-  async function chooseDepartment(dept: ResolvedDepartment) {
-    setPostalChoices(null)
-    setResolved(dept)
-    await submit(dept.code)
+    dispatch({ type: 'postalLookupResolved', departments })
   }
 
   function restart() {
-    setPhase('intro')
-    setIndex(0)
+    dispatch({ type: 'restarted' })
     setAnswers({})
-    setPredictedGroup(null)
     setPostalInput('')
-    setPostalError(null)
-    setPostalChoices(null)
-    setResolved(null)
-    setResult(null)
-    setMatchError(false)
   }
 
   // ------------------------------------------------------------------ intro
-  if (phase === 'intro') {
+  // `loading` and `loadFailed` are the intro too: its button waits for the
+  // question set, or gives way to the error.
+  if (step.name === 'loading' || step.name === 'loadFailed' || step.name === 'intro') {
     // One tree for both widths, so the page keeps a single h1 and each notice
     // once. Below md it follows the canvas "Quiz": left-aligned, the three
     // steps spelled out instead of the paragraph, and a full-width button.
@@ -434,7 +385,7 @@ export function QuizClient() {
           {compareNotice && (
             <p className="md:mx-auto md:mt-[18px]" style={{ maxWidth: 520, fontSize: 13.5, color: RED }}>{compareNotice}</p>
           )}
-          {questionsError ? (
+          {step.name === 'loadFailed' ? (
             <p className="md:mt-7" style={{ fontSize: 15, color: RED }}>
               Impossible de charger le questionnaire pour le moment. Réessayez dans un instant.
             </p>
@@ -442,7 +393,7 @@ export function QuizClient() {
             <button
               onClick={() => {
                 track('quiz_start')
-                setPhase('questions')
+                dispatch({ type: 'started' })
                 // The intro is taller than the deck on a phone: without this
                 // the deck opens scrolled past its counter, under the top bar.
                 window.scrollTo({ top: 0 })
@@ -474,12 +425,12 @@ export function QuizClient() {
   // MON-186/187: swipe deck - one card per scrutin, gestures + circular
   // buttons + keyboard share one commit path inside QuizDeck, which also
   // owns the header (undo, progress, theme) to match the approved mockup.
-  if (phase === 'questions' && questions) {
+  if (step.name === 'questions' && questions) {
     return (
       <Shell>
         <QuizDeck
           questions={questions}
-          index={index}
+          index={step.index}
           onAnswer={answer}
           onSkip={skip}
           onBack={back}
@@ -489,7 +440,7 @@ export function QuizClient() {
   }
 
   // ------------------------------------------------------------------ group
-  if (phase === 'group') {
+  if (step.name === 'group') {
     return (
       <Shell>
         <div style={{ ...kicker, marginBottom: 16 }}>Encore une chose</div>
@@ -509,10 +460,7 @@ export function QuizClient() {
             return (
               <button
                 key={label}
-                onClick={() => {
-                  setPredictedGroup(label)
-                  setPhase('postal')
-                }}
+                onClick={() => dispatch({ type: 'groupAnswered', group: label, answeredCount })}
                 style={{
                   padding: '13px 18px',
                   borderRadius: 10,
@@ -532,10 +480,7 @@ export function QuizClient() {
         </div>
         <div style={{ marginTop: 22, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
-            onClick={() => {
-              setPredictedGroup(null)
-              setPhase('postal')
-            }}
+            onClick={() => dispatch({ type: 'groupAnswered', group: null, answeredCount })}
             style={{
               background: ACCENT, color: '#fff', padding: '12px 26px', borderRadius: 9,
               fontWeight: 600, fontSize: 15, border: 'none', cursor: 'pointer',
@@ -544,10 +489,7 @@ export function QuizClient() {
             Je préfère ne pas dire / passer
           </button>
           <button
-            onClick={() => {
-              setPhase('questions')
-              if (questions) setIndex(questions.length - 1)
-            }}
+            onClick={back}
             style={{ fontSize: 14.5, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
           >
             ← Retour
@@ -558,12 +500,16 @@ export function QuizClient() {
   }
 
   // ----------------------------------------------------------------- postal
-  if (phase === 'postal') {
-    const enough = answeredCount >= MIN_ANSWERS
+  // `notEnough` takes the postal step's place when too few answers were
+  // expressed; `matching` is the postal step with its buttons busy.
+  if (step.name === 'notEnough' || step.name === 'postal' || step.name === 'matching') {
+    const lookup = step.name === 'notEnough' ? null : step.lookup
+    const busy = step.name === 'matching'
+    const resolving = lookup?.kind === 'resolving'
     return (
       <Shell>
         <div style={{ ...kicker, marginBottom: 16 }}>Dernière étape</div>
-        {!enough ? (
+        {step.name === 'notEnough' ? (
           <>
             <h2
               className="font-newsreader text-[clamp(24px,3.5vw,34px)]"
@@ -576,10 +522,7 @@ export function QuizClient() {
               vous en avez donné {answeredCount}.
             </p>
             <button
-              onClick={() => {
-                setIndex(0)
-                setPhase('questions')
-              }}
+              onClick={() => dispatch({ type: 'resumed' })}
               style={{
                 background: ACCENT, color: '#fff', padding: '12px 26px', borderRadius: 9,
                 fontWeight: 600, fontSize: 15, border: 'none', cursor: 'pointer',
@@ -602,13 +545,15 @@ export function QuizClient() {
             </p>
             <FindMyDeputy
               actionLabel="Comparer avec ce député"
-              busy={matching}
+              busy={busy}
               onChoose={seat => {
                 if (!seat.deputy) return
                 // The department the results show, and that a share carries.
-                setPostalChoices(null)
-                setResolved({ code: seat.department_code, nom: seat.department_name })
-                submit(seat.department_code, seat.deputy.deputy_id)
+                dispatch({
+                  type: 'matchRequested',
+                  department: { code: seat.department_code, nom: seat.department_name },
+                  addressDeputyId: seat.deputy.deputy_id,
+                })
               }}
             />
             <p style={{ margin: '28px 0 10px', fontSize: 15, lineHeight: 1.6, color: 'var(--dp-text-secondary)' }}>
@@ -631,7 +576,7 @@ export function QuizClient() {
                 value={postalInput}
                 onChange={e => {
                   setPostalInput(e.target.value)
-                  setPostalChoices(null)
+                  dispatch({ type: 'postalInputChanged' })
                 }}
                 aria-label="Code postal"
                 style={{
@@ -641,29 +586,33 @@ export function QuizClient() {
               />
               <button
                 type="submit"
-                disabled={resolving || matching || !/^\d{5}$/.test(postalInput.trim())}
+                disabled={resolving || busy || !/^\d{5}$/.test(postalInput.trim())}
                 style={{
                   background: ACCENT, color: '#fff', padding: '12px 26px', borderRadius: 9,
                   fontWeight: 600, fontSize: 15, border: 'none',
-                  cursor: resolving || matching ? 'wait' : 'pointer',
-                  opacity: resolving || matching || !/^\d{5}$/.test(postalInput.trim()) ? 0.6 : 1,
+                  cursor: resolving || busy ? 'wait' : 'pointer',
+                  opacity: resolving || busy || !/^\d{5}$/.test(postalInput.trim()) ? 0.6 : 1,
                 }}
               >
-                {resolving || matching ? 'Calcul…' : 'Voir mes résultats'}
+                {resolving || busy ? 'Calcul…' : 'Voir mes résultats'}
               </button>
             </form>
-            {postalError && <p style={{ marginTop: 12, fontSize: 14, color: RED }}>{postalError}</p>}
-            {postalChoices && (
+            {lookup?.kind === 'notFound' && (
+              <p style={{ marginTop: 12, fontSize: 14, color: RED }}>
+                Code postal introuvable - vérifiez les 5 chiffres, ou passez cette étape.
+              </p>
+            )}
+            {lookup?.kind === 'choices' && (
               <div style={{ marginTop: 14 }}>
                 <p style={{ margin: '0 0 10px', fontSize: 14.5, color: 'var(--dp-text-secondary)' }}>
                   Ce code postal couvre plusieurs départements. Lequel est le vôtre ?
                 </p>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  {postalChoices.map(d => (
+                  {lookup.choices.map(d => (
                     <button
                       key={d.code}
-                      onClick={() => chooseDepartment(d)}
-                      disabled={matching}
+                      onClick={() => dispatch({ type: 'matchRequested', department: d })}
+                      disabled={busy}
                       style={{
                         background: 'var(--dp-card-bg)', color: NAVY, padding: '10px 18px', borderRadius: 9,
                         fontWeight: 600, fontSize: 14.5, border: `1px solid ${LINE}`, cursor: 'pointer',
@@ -675,25 +624,22 @@ export function QuizClient() {
                 </div>
               </div>
             )}
-            {matchError && (
+            {step.name === 'postal' && step.matchFailed && (
               <p style={{ marginTop: 12, fontSize: 14, color: RED }}>
                 Le calcul a échoué. Réessayez dans un instant.
               </p>
             )}
             <div style={{ marginTop: 22, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
               <button
-                onClick={() => submit(null)}
-                disabled={matching}
+                onClick={() => dispatch({ type: 'matchRequested', department: null })}
+                disabled={busy}
                 style={{ fontSize: 14.5, color: NAVY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
               >
-                {matching ? 'Calcul…' : 'Passer cette étape et voir mes résultats'}
+                {busy ? 'Calcul…' : 'Passer cette étape et voir mes résultats'}
               </button>
               <button
-                onClick={() => {
-                  if (questions) setIndex(questions.length - 1)
-                  setPhase('questions')
-                }}
-                disabled={matching}
+                onClick={back}
+                disabled={busy}
                 style={{ fontSize: 14.5, color: GRAY, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 4 }}
               >
                 ← Revenir aux questions
@@ -706,7 +652,8 @@ export function QuizClient() {
   }
 
   // ---------------------------------------------------------------- results
-  if (phase === 'results' && result) {
+  if (step.name === 'results') {
+    const { result, predictedGroup, department } = step
     const answerPayload = Object.entries(answers).map(([vote_id, position]) => ({
       vote_id,
       position,
@@ -788,7 +735,7 @@ export function QuizClient() {
 
         <QuizResultSections
           result={result}
-          resolvedNom={resolved?.nom}
+          resolvedNom={department?.nom}
           questions={questions ?? undefined}
           answers={answers}
         />
@@ -799,7 +746,7 @@ export function QuizClient() {
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             {result.top_matches.length > 0 && (
-              <ShareResultButton answers={answerPayload} department={resolved?.code} />
+              <ShareResultButton answers={answerPayload} department={department?.code} />
             )}
             <Link
               href="/mon-depute"
