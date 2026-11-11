@@ -5,11 +5,16 @@ Exercises the real query against a live Postgres — a mocked cursor can't
 catch a date-vs-timestamp comparison bug or IN-clause tuple binding.
 """
 
+import os
 from datetime import date, datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
+from fastapi.testclient import TestClient
 
-from api.routers.agenda import _AGENDA_QUERY, _CANCELLED_STATES
+from api.main import app
+from api.routers.agenda import _AGENDA_QUERY
+from scripts.ingest_agenda import upsert_agenda_items
 
 _AGENDA_UPSERT = """
 INSERT INTO agenda_items (
@@ -38,7 +43,7 @@ ON CONFLICT (vote_id) DO UPDATE SET
 def _run_query(cur, from_date: date, to_date: date) -> list[dict]:
     cur.execute(
         _AGENDA_QUERY,
-        (_CANCELLED_STATES, _CANCELLED_STATES, from_date, to_date + timedelta(days=1)),
+        (from_date, to_date + timedelta(days=1)),
     )
     return cur.fetchall()
 
@@ -202,3 +207,78 @@ def test_item_carries_its_dossier_title(db_conn, _cleanup_agenda):
         rows = {r["point_uid"]: r for r in _run_query(cur, now.date(), now.date())}
         assert rows["IT-AGENDA-TITLED"]["dossier_title"] == "Fraudes sociales et fiscales"
         assert rows["IT-AGENDA-NOTITLE"]["dossier_title"] is None
+
+
+# --- The single-transaction rule (#684) ------------------------------------
+#
+# Visibility is "last_seen_at equals the table's max", and ingest_agenda.py
+# stamps last_seen_at with NOW(), the transaction's start time. The rule
+# therefore holds only while one run's upsert is one transaction. These two
+# tests run the real upsert through the real endpoint, once as it is and once
+# split in two commits, so that dependency is pinned rather than implied.
+
+
+def _agenda_record(point_uid: str, sitting_start: datetime) -> dict:
+    return {
+        "point_uid": point_uid,
+        "reunion_uid": f"RU-{point_uid}",
+        "sitting_start": sitting_start,
+        "sitting_end": None,
+        "objet": f"Discussion du texte de test {point_uid}",
+        "point_type": "Discussion",
+        "travaux_nature": None,
+        "procedure_label": None,
+        "dossier_id": None,
+        "reunion_etat": "Confirmé",
+        "point_etat": None,
+        "published_at": None,
+        "cancelled_at": None,
+        "objet_hash": f"hash-{point_uid}",
+    }
+
+
+@pytest.fixture
+def agenda_api(db_conn, _cleanup_agenda):
+    with (
+        patch("scripts.ingest_agenda.DATABASE_URL", os.environ["DATABASE_URL"]),
+        patch("api.main._warm_sql_pool"),
+        TestClient(app) as client,
+    ):
+        yield client
+
+
+def _shown(client, day: date) -> set[str]:
+    resp = client.get("/agenda", params={"from": day.isoformat(), "to": day.isoformat()})
+    assert resp.status_code == 200
+    return {i["point_uid"] for d in resp.json()["days"] for i in d["items"]}
+
+
+_BATCH_A = ("IT-AGENDA-BATCH-A1", "IT-AGENDA-BATCH-A2")
+_BATCH_B = ("IT-AGENDA-BATCH-B1",)
+
+
+@pytest.mark.integration
+def test_one_transaction_run_shows_every_item(agenda_api):
+    """Both halves of a run written in one upsert are all on the feed."""
+    sitting = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
+    upsert_agenda_items([_agenda_record(uid, sitting) for uid in _BATCH_A + _BATCH_B])
+
+    assert set(_BATCH_A + _BATCH_B) <= _shown(agenda_api, sitting.date())
+
+
+@pytest.mark.integration
+def test_a_run_committed_in_two_transactions_hides_its_first_batch(agenda_api):
+    """Why ingest_agenda.py must never commit in batches.
+
+    Each commit stamps its own NOW(), so only the last batch carries the
+    table's latest last_seen_at and every earlier batch of the same run
+    disappears from GET /agenda. If this test ever fails, visibility no longer
+    hangs on one transaction and api/agenda_visibility.py's docstring is stale.
+    """
+    sitting = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
+    upsert_agenda_items([_agenda_record(uid, sitting) for uid in _BATCH_A])
+    upsert_agenda_items([_agenda_record(uid, sitting) for uid in _BATCH_B])
+
+    shown = _shown(agenda_api, sitting.date())
+    assert set(_BATCH_B) <= shown
+    assert shown.isdisjoint(_BATCH_A)

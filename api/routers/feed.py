@@ -27,7 +27,7 @@ from starlette.requests import Request
 from api.an_links import AN_SCRUTINS_INDEX_URL, an_scrutin_url
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
-from api.routers.agenda import _AGENDA_QUERY, _CANCELLED_STATES, _dossier_url
+from api.routers.agenda import _AGENDA_QUERY, _dossier_url
 from api.routers.lois import lois_url
 from api.schemas import (
     AgendaItem,
@@ -358,12 +358,7 @@ def resolve_themes(slugs: Optional[list[str]]) -> tuple[list[str], set[str]]:
 def _agenda_rows(cur, today: date) -> list[AgendaItem]:
     cur.execute(
         _AGENDA_QUERY,
-        (
-            _CANCELLED_STATES,
-            _CANCELLED_STATES,
-            today,
-            today + timedelta(days=AGENDA_DAYS_AHEAD + 1),
-        ),
+        (today, today + timedelta(days=AGENDA_DAYS_AHEAD + 1)),
     )
     return [
         AgendaItem(

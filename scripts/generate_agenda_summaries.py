@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import sys
 import time
 from datetime import date
 
@@ -62,6 +63,10 @@ except ImportError:  # running as a plain file: python scripts/generate_agenda_s
         parse_response,
     )
 
+# The repository root, so `api` imports when this runs as a plain file too.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from api.agenda_visibility import visible_agenda_predicate  # noqa: E402
+
 load_dotenv()
 
 logging.basicConfig(
@@ -78,18 +83,14 @@ STUB_OBJET_MAX_LEN = 30
 # only restate it or pad it (#633). The frontend shows the objet instead.
 CLEAR_OBJET_MAX_LEN = 120
 
-_CANCELLED_STATES = ("Annulé", "Supprimé")
-
-# Mirrors api/routers/agenda.py's visibility filter: summarizing an item the
-# API hides is spend with nothing to show for it.
-CANDIDATE_SQL = """
+# GET /agenda's visibility filter, from the same definition: summarizing an
+# item the API hides is spend with nothing to show for it.
+CANDIDATE_SQL = f"""
     SELECT point_uid, objet, point_type
     FROM agenda_items
     WHERE summary_plain IS NULL
       AND objet IS NOT NULL
-      AND last_seen_at = (SELECT MAX(last_seen_at) FROM agenda_items)
-      AND reunion_etat NOT IN %s
-      AND (point_etat IS NULL OR point_etat NOT IN %s)
+      AND {visible_agenda_predicate()}
       AND sitting_start >= %s
     ORDER BY sitting_start ASC, point_uid ASC
 """
@@ -263,7 +264,7 @@ def main() -> None:
         if not args.dry_run:
             cur.execute(SQL_CLEAR_PADDED)
             conn.commit()
-        cur.execute(CANDIDATE_SQL, (_CANCELLED_STATES, _CANCELLED_STATES, args.since))
+        cur.execute(CANDIDATE_SQL, (args.since,))
         rows = [dict(r) for r in cur.fetchall()]
         cur.execute(SQL_KNOWN_SUMMARIES)
         known = {r["objet"]: (r["summary_plain"], r["theme"]) for r in cur.fetchall()}
