@@ -178,16 +178,15 @@ public final class Loader<Value: Sendable> {
         let previous = state
         state = .loading
         isStale = false
-        generation += 1
-        let generation = generation
+        let (generation, key) = begin()
         trace.restart()
         do {
             let value = try await fetch { [weak self] part in await self?.show(part, of: generation) }
-            finish(value)
-        } catch let error where LoadFailure.isCancellation(error) {
-            state = previous
+            finish(value, of: generation, for: key)
         } catch {
-            state = .failed(LoadFailure(error))
+            // A newer load owns the screen now; this one has nothing to say.
+            guard generation == self.generation else { return }
+            state = LoadFailure.isCancellation(error) ? previous : .failed(LoadFailure(error))
         }
     }
 
@@ -211,18 +210,31 @@ public final class Loader<Value: Sendable> {
     private func revalidate() async {
         isStale = false
         isRefreshing = true
-        generation += 1
-        defer { isRefreshing = false }
+        let (generation, key) = begin()
+        defer { if generation == self.generation { isRefreshing = false } }
         do {
-            finish(try await fetch { _ in })
-            refreshFailure = nil
-        } catch let error where LoadFailure.isCancellation(error) {
-            // The content stays, and nothing failed that the user should hear
-            // of; it is still unfetched, so the next visit tries again.
-            isStale = true
+            let value = try await fetch { _ in }
+            finish(value, of: generation, for: key)
+            if generation == self.generation { refreshFailure = nil }
         } catch {
-            refreshFailure = LoadFailure(error)
+            guard generation == self.generation else { return }
+            if LoadFailure.isCancellation(error) {
+                // The content stays, and nothing failed that the user should
+                // hear of; it is still unfetched, so the next visit tries again.
+                isStale = true
+            } else {
+                refreshFailure = LoadFailure(error)
+            }
         }
+    }
+
+    /// Starts a fetch: its number, which only the newest one keeps, and the
+    /// key it is fetching for. The key is read now, not when the answer is
+    /// back: a list whose criteria changed meanwhile must not file this answer
+    /// under the new criteria.
+    private func begin() -> (generation: Int, key: String?) {
+        generation += 1
+        return (generation, key())
     }
 
     private func show(_ part: Value, of generation: Int) {
@@ -231,10 +243,13 @@ public final class Loader<Value: Sendable> {
         trace.shown(key(), from: "network, first part")
     }
 
-    private func finish(_ value: Value) {
+    /// Keeps the answer under the key it was fetched for, and shows it unless
+    /// a newer load has started since: that one owns the screen.
+    private func finish(_ value: Value, of generation: Int, for key: String?) {
+        if let key { cache?.store(value, for: key) }
+        guard generation == self.generation else { return }
         state = settle(value)
-        if let key = key() { cache?.store(value, for: key) }
-        trace.complete(key())
+        trace.complete(key)
     }
 
     private func cachedValue() -> Value? {

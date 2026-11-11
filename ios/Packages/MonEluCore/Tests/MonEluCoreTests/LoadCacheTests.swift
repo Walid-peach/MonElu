@@ -155,6 +155,34 @@ struct CachedLoaderTests {
         #expect(cache.value(for: "adopted", as: [Int].self) == [2])
     }
 
+    /// The user changes a chip while a page is still loading: the answer for
+    /// the old criteria is kept under the old key and never shown over the
+    /// new criteria's page.
+    @Test func anAnswerOvertakenByANewerLoadIsFiledUnderItsOwnKeyAndNotShown() async {
+        let cache = LoadCache()
+        let key = Key("all")
+        let gate = Gate()
+        let loader = Loader<[Int]>(cache: cache, key: { key.value }, isEmpty: { $0.isEmpty }, progressive: { _ in
+            // The first fetch waits; the second answers at once.
+            if await gate.isFirst() {
+                await gate.wait()
+                return [1]
+            }
+            return [2]
+        })
+        let first = Task { await loader.load() }
+        await gate.entered()
+        key.value = "adopted"
+        await loader.load()
+        #expect(loader.state.value == [2])
+
+        await gate.open()
+        await first.value
+        #expect(loader.state.value == [2])
+        #expect(cache.value(for: "all", as: [Int].self) == [1])
+        #expect(cache.value(for: "adopted", as: [Int].self) == [2])
+    }
+
     @Test func appendedPagesAreNotCached() async {
         let cache = LoadCache()
         let loader = loader(Script([.success([1])]), cache: cache)
@@ -224,4 +252,39 @@ private final class LoaderBox: Sendable {
 private actor Seen {
     var values: [[Int]?] = []
     func add(_ value: [Int]?) { values.append(value) }
+}
+
+/// Holds the first fetch until the test lets it go.
+private actor Gate {
+    private var calls = 0
+    private var isOpen = false
+    private var hasEntered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var entries: [CheckedContinuation<Void, Never>] = []
+
+    func isFirst() -> Bool {
+        calls += 1
+        return calls == 1
+    }
+
+    /// Called by the held fetch.
+    func wait() async {
+        hasEntered = true
+        entries.forEach { $0.resume() }
+        entries = []
+        guard !isOpen else { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    /// Returns once the first fetch is being held.
+    func entered() async {
+        guard !hasEntered else { return }
+        await withCheckedContinuation { entries.append($0) }
+    }
+
+    func open() {
+        isOpen = true
+        waiters.forEach { $0.resume() }
+        waiters = []
+    }
 }
