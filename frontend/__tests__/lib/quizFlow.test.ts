@@ -1,4 +1,5 @@
 import type { QuizMatchResponse, QuizQuestion, QuizShareResult } from '@/lib/api'
+import type { ResolvedDepartment } from '@/lib/postal'
 import {
   comparisonShare,
   initialQuizFlow,
@@ -45,14 +46,21 @@ const postal = (over: Partial<Extract<QuizStep, { name: 'postal' }>> = {}): Quiz
   ...over,
 })
 
-const matching = (over: Partial<Extract<QuizStep, { name: 'matching' }>> = {}): QuizStep => ({
-  name: 'matching',
-  predictedGroup: null,
-  lookup: { kind: 'idle' },
-  department: null,
-  focusDeputyId: undefined,
-  ...over,
-})
+const matching = (
+  over: Partial<Omit<Extract<QuizStep, { name: 'matching' }>, 'request'>> & {
+    department?: ResolvedDepartment | null
+    focusDeputyId?: string
+  } = {}
+): QuizStep => {
+  const { department = null, focusDeputyId, ...rest } = over
+  return {
+    name: 'matching',
+    predictedGroup: null,
+    lookup: { kind: 'idle' },
+    request: { department, focusDeputyId },
+    ...rest,
+  }
+}
 
 const results: QuizStep = { name: 'results', predictedGroup: null, department: null, result: RESULT }
 
@@ -265,6 +273,14 @@ describe('quizFlow reduce', () => {
       expect(reduce(from, event as QuizFlowEvent)).not.toBe(from)
     }
   )
+
+  it('keeps the same match request while the lookup beside it changes', () => {
+    const state = at(matching({ lookup: { kind: 'choices', choices: [GIRONDE, LANDES] } }))
+    const next = reduce(state, { type: 'postalInputChanged' })
+    expect(next.step).not.toBe(state.step)
+    const request = (s: QuizStep) => (s.name === 'matching' ? s.request : null)
+    expect(request(next.step)).toBe(request(state.step))
+  })
 
   it('cannot start before the question set has loaded', () => {
     const state = { ...initialQuizFlow({}), step: { name: 'intro' } as QuizStep }

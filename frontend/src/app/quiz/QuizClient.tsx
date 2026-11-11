@@ -263,12 +263,15 @@ export function QuizClient() {
 
   // The match runs whenever the reducer enters `matching`, whichever way it got
   // there (a skip, a department, an address, a postal code with one department).
+  // It depends on the step's `request`, which stays the same object for the
+  // whole step, so it runs once per match.
+  const matchRequest = step.name === 'matching' ? step.request : null
   useEffect(() => {
-    if (step.name !== 'matching') return
+    if (!matchRequest) return
     let cancelled = false
     const payload = Object.entries(answers).map(([vote_id, position]) => ({ vote_id, position }))
     api.quiz
-      .match(payload, step.department?.code, step.focusDeputyId)
+      .match(payload, matchRequest.department?.code, matchRequest.focusDeputyId)
       .then(result => {
         if (cancelled) return
         dispatch({ type: 'matchSucceeded', result })
@@ -280,7 +283,7 @@ export function QuizClient() {
     return () => {
       cancelled = true
     }
-  }, [step, answers])
+  }, [matchRequest, answers])
 
   // Question-set version mismatch degrades to the plain flow with a notice
   // (ADR-028): answers are keyed to a specific question-set version.

@@ -66,6 +66,13 @@ export type PostalLookup =
   /** The code covers several departments (ADR-047 §6): the visitor picks one. */
   | { kind: 'choices'; choices: ResolvedDepartment[] }
 
+export type MatchRequest = {
+  /** The department sent to /quiz/match, if any. */
+  department: ResolvedDepartment | null
+  /** The deputy sent as `focus_deputy_id`, if any. */
+  focusDeputyId: string | undefined
+}
+
 export type QuizStep =
   | { name: 'loading' }
   | { name: 'loadFailed' }
@@ -85,10 +92,12 @@ export type QuizStep =
       predictedGroup: string | null
       /** Kept so the postal screen shows the same thing while the match runs. */
       lookup: PostalLookup
-      /** The department sent to /quiz/match, if any. */
-      department: ResolvedDepartment | null
-      /** The deputy sent as `focus_deputy_id`, if any. */
-      focusDeputyId: string | undefined
+      /**
+       * What is sent to /quiz/match. The same object for the whole step, so
+       * the component's request effect runs once per match even when the
+       * lookup shown beside it changes.
+       */
+      request: MatchRequest
     }
   | {
       name: 'results'
@@ -251,8 +260,10 @@ export function reduce(state: QuizFlowState, event: QuizFlowEvent): QuizFlowStat
         name: 'matching',
         predictedGroup: step.predictedGroup,
         lookup,
-        department: event.department,
-        focusDeputyId: event.addressDeputyId ?? focusDeputyForMatch(state),
+        request: {
+          department: event.department,
+          focusDeputyId: event.addressDeputyId ?? focusDeputyForMatch(state),
+        },
       })
     }
 
@@ -261,7 +272,7 @@ export function reduce(state: QuizFlowState, event: QuizFlowEvent): QuizFlowStat
       return withStep(state, {
         name: 'results',
         predictedGroup: step.predictedGroup,
-        department: step.department,
+        department: step.request.department,
         result: event.result,
       })
 
