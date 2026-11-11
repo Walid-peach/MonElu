@@ -17,6 +17,8 @@ from fastapi.testclient import TestClient
 
 from api.main import app
 
+pytestmark = pytest.mark.integration
+
 DEPUTY = "PA-DV-1"
 ABSENT = "PA-DV-2"
 # Dated after every other fixture, so "newest first" is about these alone.
