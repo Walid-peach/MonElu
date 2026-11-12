@@ -412,7 +412,7 @@ def test_get_deputy_stats_scoped_to_party(client, mock_cursor):
 
 
 def test_get_deputy_votes_includes_summary_plain(client, mock_cursor):
-    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchone.return_value = {"total": 1}
     mock_cursor.fetchall.return_value = [
         {
             "vote_id": "VTANR5L17V1",
@@ -430,7 +430,7 @@ def test_get_deputy_votes_includes_summary_plain(client, mock_cursor):
 
 
 def test_get_deputy_votes_includes_scrutin_kind(client, mock_cursor):
-    mock_cursor.fetchone.return_value = {"count": 1}
+    mock_cursor.fetchone.return_value = {"total": 1}
     mock_cursor.fetchall.return_value = [
         {
             "vote_id": "VTANR5L17V1",
@@ -450,7 +450,7 @@ def test_get_deputy_votes_includes_scrutin_kind(client, mock_cursor):
 
 
 def test_get_deputy_votes_since_filter(client, mock_cursor):
-    mock_cursor.fetchone.return_value = {"count": 5}
+    mock_cursor.fetchone.return_value = {"total": 5}
     mock_cursor.fetchall.return_value = [
         {
             "vote_id": "VTANR5L17V2",
@@ -477,7 +477,7 @@ def test_get_deputy_votes_since_filter(client, mock_cursor):
 def test_get_deputy_votes_walks_the_scrutins_for_a_full_record(client, mock_cursor):
     # 2 000 positions on record: the scrutins are walked newest first, `since`
     # narrowing them before each is probed for the deputy.
-    mock_cursor.fetchone.return_value = {"count": 2000}
+    mock_cursor.fetchone.return_value = {"total": 2000}
     mock_cursor.fetchall.return_value = []
     resp = client.get("/deputies/PA1/votes?since=2026-07-01T00:00:00&limit=5")
     assert resp.status_code == 200
@@ -487,16 +487,28 @@ def test_get_deputy_votes_walks_the_scrutins_for_a_full_record(client, mock_curs
 
 
 def test_get_deputy_votes_runs_no_select_for_an_empty_record(client, mock_cursor):
-    mock_cursor.fetchone.return_value = {"count": 0}
+    mock_cursor.fetchone.return_value = {"total": 0}
     resp = client.get("/deputies/PA1/votes")
     assert resp.status_code == 200
     assert resp.json() == {"deputy_id": "PA1", "total": 0, "items": []}
-    # Only the count ran.
-    assert mock_cursor.execute.call_count == 1
+    # The stored total, then the live count that confirms it: no SELECT of votes.
+    assert mock_cursor.execute.call_count == 2
+    assert "COUNT(*)" in mock_cursor.execute.call_args_list[-1].args[0]
+
+
+def test_get_deputy_votes_takes_its_total_from_the_scorecard(client, mock_cursor):
+    mock_cursor.fetchone.return_value = {"total": 2000}
+    mock_cursor.fetchall.return_value = []
+    resp = client.get("/deputies/PA1/votes")
+    assert resp.json()["total"] == 2000
+    statements = [str(call.args[0]) for call in mock_cursor.execute.call_args_list]
+    assert "mart_deputy_scorecard" in statements[0]
+    # A deputy's positions are never counted when the scorecard has the figure.
+    assert not any("COUNT(*)" in statement for statement in statements)
 
 
 def test_get_deputy_votes_since_in_the_future_returns_no_items(client, mock_cursor):
-    mock_cursor.fetchone.return_value = {"count": 5}
+    mock_cursor.fetchone.return_value = {"total": 5}
     mock_cursor.fetchall.return_value = []
     resp = client.get("/deputies/PA1/votes?since=2099-01-01T00:00:00")
     assert resp.status_code == 200
