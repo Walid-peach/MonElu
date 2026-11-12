@@ -127,3 +127,42 @@ def test_a_deputy_with_no_position_gets_an_empty_list(api):
     body = api.get(f"/deputies/{ABSENT}/votes").json()
     assert body["items"] == []
     assert body["total"] == 0
+
+
+def test_the_total_is_the_scorecards_and_the_items_are_live(api, db_conn):
+    # A stored total that differs from the live count shows which one is served.
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO analytics_marts.mart_deputy_scorecard (deputy_id, total_votes_cast) "
+            "VALUES (%s, 9)",
+            (DEPUTY,),
+        )
+    try:
+        body = api.get(f"/deputies/{DEPUTY}/votes", params={"limit": 50}).json()
+    finally:
+        with db_conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM analytics_marts.mart_deputy_scorecard WHERE deputy_id = %s",
+                (DEPUTY,),
+            )
+    assert body["total"] == 9
+    assert len(body["items"]) == 10
+
+
+def test_a_scorecard_reporting_no_position_is_checked_against_the_record(api, db_conn):
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO analytics_marts.mart_deputy_scorecard (deputy_id, total_votes_cast) "
+            "VALUES (%s, 0)",
+            (DEPUTY,),
+        )
+    try:
+        body = api.get(f"/deputies/{DEPUTY}/votes", params={"limit": 50}).json()
+    finally:
+        with db_conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM analytics_marts.mart_deputy_scorecard WHERE deputy_id = %s",
+                (DEPUTY,),
+            )
+    assert body["total"] == 10
+    assert len(body["items"]) == 10

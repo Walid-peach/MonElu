@@ -327,8 +327,9 @@ def get_deputy_votes(
     not cast at all. Do not merge them.
 
     `total` counts every scrutin the deputy has a recorded position on, ignoring
-    `since`; `items` is capped by `limit` (max 50) and is the only part `since`
-    filters. There is no offset here - narrow with `since` rather than paging, or
+    `since`, as of the last ingestion run - the same figure as the scorecard's
+    `total_votes`; `items` is capped by `limit` (max 50) and is the only part
+    `since` filters. There is no offset here - narrow with `since` rather than paging, or
     use the CSV export for the whole record.
 
     `result` is the scrutin's outcome, not the deputy's: a deputy can vote
@@ -341,11 +342,7 @@ def get_deputy_votes(
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT COUNT(*) FROM vote_positions WHERE deputy_id = %s",
-                    (deputy_id,),
-                )
-                total = cur.fetchone()["count"]
+                total = _deputy_votes_total(cur, deputy_id)
 
                 if total == 0:
                     rows = []
@@ -509,6 +506,35 @@ def get_scorecard(request: Request, deputy_id: str):
 # immediate. So the walk is used only when the record holds at least this many
 # positions per row asked for.
 DEPUTY_VOTES_WALK_MIN_PER_ITEM = 40
+
+
+def _deputy_votes_total(cur, deputy_id: str) -> int:
+    """How many scrutins the deputy has a recorded position on.
+
+    Read from the scorecard mart, which holds that count for every deputy and is
+    rebuilt after each ingestion run. Counting `vote_positions` instead reads
+    every one of the deputy's positions, pages no other request keeps in memory:
+    measured on production, that count was what made a deputy's first open take
+    over a second.
+
+    A deputy the mart does not list, or lists with no position, is counted live:
+    that count reads next to nothing, and it keeps a record ingested since the
+    last mart build from being reported as empty.
+    """
+    cur.execute(
+        "SELECT total_votes_cast AS total FROM analytics_marts.mart_deputy_scorecard "
+        "WHERE deputy_id = %s",
+        (deputy_id,),
+    )
+    stored = cur.fetchone()
+    if stored and stored["total"]:
+        return stored["total"]
+    cur.execute(
+        "SELECT COUNT(*) AS total FROM vote_positions WHERE deputy_id = %s",
+        (deputy_id,),
+    )
+    return cur.fetchone()["total"]
+
 
 _DEPUTY_VOTES_WALK_SQL = sql.SQL("""
     SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
