@@ -2,12 +2,9 @@
 Integration test for GET /deputies/{id}/votes, through the real app against a
 live Postgres.
 
-The endpoint has two queries for the same rows: a full record is served by
-walking the scrutins newest first and probing each for the deputy, a thin one
-by reading the deputy's positions directly. What a mocked cursor cannot check
-is that both return the same thing: the newest scrutins the deputy has a
-position on, in date order, with `since` narrowing the items and never `total`.
-Every test below runs once through each query.
+What a mocked cursor cannot check is what the query returns: the newest
+scrutins the deputy has a position on, in date order, with `since` narrowing the
+items and never `total`. The last test holds the index the query depends on.
 """
 
 from datetime import datetime, timezone
@@ -79,14 +76,6 @@ def api(db_conn):
         )
         cur.execute("DELETE FROM votes WHERE vote_id = ANY(%s)", (VOTES,))
         cur.execute("DELETE FROM deputies WHERE deputy_id IN (%s, %s)", (DEPUTY, ABSENT))
-
-
-@pytest.fixture(autouse=True, params=["walk", "direct"])
-def query(request, monkeypatch):
-    """Forces one of the endpoint's two queries, whatever the record's size."""
-    threshold = 0 if request.param == "walk" else 10**9
-    monkeypatch.setattr("api.routers.deputies.DEPUTY_VOTES_WALK_MIN_PER_ITEM", threshold)
-    return request.param
 
 
 def _ids(body: dict) -> list[str]:
@@ -166,3 +155,18 @@ def test_a_scorecard_reporting_no_position_is_checked_against_the_record(api, db
             )
     assert body["total"] == 10
     assert len(body["items"]) == 10
+
+
+def test_a_deputys_positions_are_readable_from_the_index_alone(db_conn):
+    # Migration 020: without `position` in the index, every row costs a visit
+    # to the table, which is what made a deputy's first open take over a second.
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "SELECT indexname, indexdef FROM pg_indexes "
+            "WHERE schemaname = 'public' AND tablename = 'vote_positions'"
+        )
+        indexes = {row["indexname"]: row["indexdef"] for row in cur.fetchall()}
+    covering = indexes["idx_positions_deputy_covering"]
+    assert "(deputy_id, vote_id) INCLUDE" in covering
+    assert "position" in covering.split("INCLUDE")[1]
+    assert "idx_positions_deputy" not in indexes

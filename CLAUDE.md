@@ -327,7 +327,7 @@ The endpoint validates the caller's `url` against that allowlist before building
 - Modeled an Airflow+Spark architecture never built, with no compute for the actual FastAPI app — archived rather than fixed (MON-46). See Phase 5 and decision 1 in the decisions log.
 - `networking`, `s3`, `rds` modules are the only parts worth salvaging if an AWS migration ever happens; `ec2` does not survive that design.
 
-**`data/migrations/`** - 18 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
+**`data/migrations/`** - 20 sequential migration files applied by `migrate.py`'s ledger; `001_init.sql` is the core four-table baseline
 - `001_init.sql`: `deputies`, `votes`, `vote_positions`, `document_chunks`
 - All `CREATE TABLE IF NOT EXISTS` — safe to re-run
 - `migrate.py` keeps a `schema_migrations` ledger: each file is applied once and skipped on later deploys
@@ -340,6 +340,7 @@ The endpoint validates the caller's `url` against that allowlist before building
   `monelu_app_user` is created `NOLOGIN` so no credential for it is in the repository; an operator sets a password out of band (`ALTER ROLE monelu_app_user WITH LOGIN PASSWORD …`). The migration verifies `rolsuper`/`rolbypassrls` and raises rather than running `ALTER ROLE … NOSUPERUSER`, which needs a real superuser and would fail on Supabase while passing locally. `tests/integration/test_account_rls.py` proves the isolation against a live database, and `tests/unit/test_account_schema.py` pins the invariants without one (including that the `theme_slug` CHECK still matches `api/themes_data.py`).
 - `011_changed_at.sql` adds the `changed_at` column the cache-invalidation scope reads (GH #353) — see the scripts section for why it is not `ingested_at`
 - `012_dossiers.sql` adds `dossiers`, `dossier_actes` and `votes.scrutin_kind` (MON-243, ADR-035). `dossier_actes` is keyed on `PRIMARY KEY (dossier_uid, acte_uid)`, never on `acte_uid` alone: 43 acte uids belong to two different dossiers each (merged dossiers sharing one procedural event), so a single-column key fails on first ingestion. The issue text calls this migration `011`; it is `012` because GH #353 took that prefix first
+- `020_positions_covering_index.sql` replaces `idx_positions_deputy` with `idx_positions_deputy_covering (deputy_id, vote_id) INCLUDE (position)`, so `GET /deputies/{id}/votes` reads a deputy's positions from the index alone, and lowers the table's autovacuum threshold so the pages the daily ingestion rewrites are marked all-visible again after each run. Do not drop `position` from that index: each row then costs a visit to the table, about 11 ms from disk on production
 - Numeric prefixes must be unique (`assert_unique_numeric_prefixes`, MON-226) — the duplicate `005` pair is grandfathered and that set must never grow
 
 ### Database

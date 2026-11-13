@@ -468,22 +468,10 @@ def test_get_deputy_votes_since_filter(client, mock_cursor):
     # this endpoint); only items are narrowed by since.
     assert data["total"] == 5
     assert len(data["items"]) == 1
-    # A thin record (5 positions) is read directly: the SELECT (last execute
-    # call) carries deputy_id, the decoded since timestamp, and the limit.
+    # The SELECT (last execute call) carries deputy_id, the decoded since
+    # timestamp, and the limit.
     select_params = mock_cursor.execute.call_args_list[-1].args[1]
     assert select_params == ["PA1", datetime(2026, 7, 1, 0, 0, 0), 5]
-
-
-def test_get_deputy_votes_walks_the_scrutins_for_a_full_record(client, mock_cursor):
-    # 2 000 positions on record: the scrutins are walked newest first, `since`
-    # narrowing them before each is probed for the deputy.
-    mock_cursor.fetchone.return_value = {"total": 2000}
-    mock_cursor.fetchall.return_value = []
-    resp = client.get("/deputies/PA1/votes?since=2026-07-01T00:00:00&limit=5")
-    assert resp.status_code == 200
-    select_sql, select_params = mock_cursor.execute.call_args_list[-1].args
-    assert "FROM analytics_marts.mart_vote_summary" in select_sql.as_string(None).split("JOIN")[0]
-    assert select_params == [datetime(2026, 7, 1, 0, 0, 0), "PA1", 5]
 
 
 def test_get_deputy_votes_runs_no_select_for_an_empty_record(client, mock_cursor):
