@@ -68,7 +68,69 @@ struct FollowedDeputiesModelTests {
         let model = FollowedDeputiesModel(service: service, store: store)
         await model.load()
         #expect(model.news == ["PA2"])
+        // Loading never moves the position: only opening the circle does.
+        #expect(store.lastSeenVote(for: "PA2") == (try APIDay.date("2026-10-01")))
+        #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-10-01")))
+    }
+
+    /// Opening a circle greys its ring and only its ring (#692).
+    @Test func openingACircleGreysItsRingAlone() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        store.follow("PA1008")
+        store.follow("PA2")
+        for id in ["PA1008", "PA2"] { store.setLastSeenVote(try APIDay.date("2026-10-01"), for: id) }
+        let service = FollowedDeputiesStub([.sample, .sampleOther])
+        service.newVotes["PA1008"] = [vote("V0", day: "2026-10-10")]
+        service.newVotes["PA2"] = [vote("V1", day: "2026-10-14")]
+        let model = FollowedDeputiesModel(service: service, store: store)
+        await model.load()
+        #expect(model.news == ["PA1008", "PA2"])
+        model.markSeen("PA2")
+        #expect(model.news == ["PA1008"])
         #expect(store.lastSeenVote(for: "PA2") == (try APIDay.date("2026-10-14")))
+        #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-10-01")))
+    }
+
+    /// An unopened ring is still red after a relaunch; an opened one is grey
+    /// until a newer vote arrives (#692).
+    @Test func aRingSurvivesRelaunchUntilOpenedThenReturnsOnANewVote() async throws {
+        let defaults = freshDefaults()
+        let store = UserDefaultsFollowedDeputyStore(defaults: defaults)
+        store.follow("PA2")
+        store.setLastSeenVote(try APIDay.date("2026-10-01"), for: "PA2")
+        let service = FollowedDeputiesStub([.sampleOther])
+        service.newVotes["PA2"] = [vote("V1", day: "2026-10-14")]
+
+        let first = FollowedDeputiesModel(service: service, store: store)
+        await first.load()
+        #expect(first.news == ["PA2"])
+
+        let relaunched = FollowedDeputiesModel(service: service, store: UserDefaultsFollowedDeputyStore(defaults: defaults))
+        await relaunched.load()
+        #expect(relaunched.news == ["PA2"])
+        relaunched.markSeen("PA2")
+
+        // The server now returns only votes after the stored position.
+        let greyStore = UserDefaultsFollowedDeputyStore(defaults: defaults)
+        service.newVotes["PA2"] = []
+        let grey = FollowedDeputiesModel(service: service, store: greyStore)
+        await grey.load()
+        #expect(grey.news.isEmpty)
+
+        service.newVotes["PA2"] = [vote("V2", day: "2026-10-20")]
+        let again = FollowedDeputiesModel(service: service, store: UserDefaultsFollowedDeputyStore(defaults: defaults))
+        await again.load()
+        #expect(again.news == ["PA2"])
+    }
+
+    @Test func openingACircleWithoutARingChangesNothing() async throws {
+        let store = UserDefaultsFollowedDeputyStore(defaults: freshDefaults())
+        store.follow("PA1008")
+        store.setLastSeenVote(try APIDay.date("2026-10-01"), for: "PA1008")
+        let model = FollowedDeputiesModel(service: FollowedDeputiesStub([.sample]), store: store)
+        await model.load()
+        model.markSeen("PA1008")
+        #expect(model.news.isEmpty)
         #expect(store.lastSeenVote(for: "PA1008") == (try APIDay.date("2026-10-01")))
     }
 
