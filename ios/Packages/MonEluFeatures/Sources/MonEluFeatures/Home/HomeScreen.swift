@@ -130,10 +130,15 @@ public struct HomeScreen: View {
         themeLatest.merge(latest) { _, new in new }
     }
 
-    /// Selecting a theme's circle shows its scrutins, which turns its ring off.
+    /// Selecting a circle shows what it holds, which turns its ring off, like
+    /// opening a story (#692). Deselecting it changes no ring.
     private func select(_ newFilter: FeedFilter) {
         filter = newFilter
-        if case .theme(let slug) = newFilter { themesStore.markSeen(slug, latest: themeLatest) }
+        switch newFilter {
+        case .theme(let slug): themesStore.markSeen(slug, latest: themeLatest)
+        case .deputy(let id): followed.markSeen(id)
+        case .all: break
+        }
     }
 
     private func unfollow(_ id: String) {

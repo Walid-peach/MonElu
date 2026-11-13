@@ -3,8 +3,14 @@ import MonEluCore
 import Observation
 
 /// What the follows row needs about each followed deputy (#585): who they are,
-/// for their circle, and whether they voted since the last visit, for its red
-/// ring. The feed itself comes from `GET /feed`; this only dresses the circles.
+/// for their circle, and whether they voted since the circle was last opened,
+/// for its red ring. The feed itself comes from `GET /feed`; this only dresses
+/// the circles.
+///
+/// A circle works like a story (#692): its ring stays red, across launches,
+/// until the user opens it with `markSeen`, which moves the reading position
+/// to the newest vote and greys the ring. A vote after that position lights it
+/// again. A first visit only sets the position, so a new follow starts grey.
 ///
 /// Each deputy costs two requests, once per launch: the profile, and either
 /// the votes since the reading position or, on a first visit, the recent
@@ -21,6 +27,9 @@ public final class FollowedDeputiesModel {
     private let service: any DeputiesService
     private let store: any FollowedDeputyStore
     private var started: Set<String> = []
+    /// Where each ringed deputy's reading position moves when their circle is
+    /// opened: the newest vote the ring stands for.
+    private var pendingPosition: [String: Date] = [:]
 
     public init(service: any DeputiesService, store: any FollowedDeputyStore) {
         self.service = service
@@ -54,6 +63,7 @@ public final class FollowedDeputiesModel {
                 case .success(let summary):
                     deputies[id] = summary.deputy
                     if summary.hasNews { news.insert(id) } else { news.remove(id) }
+                    pendingPosition[id] = summary.hasNews ? summary.position : nil
                 case .failure(let error as DeputyNotFound):
                     store.unfollow(error.id)
                 case .failure:
@@ -64,13 +74,27 @@ public final class FollowedDeputiesModel {
         }
     }
 
+    /// Opening a deputy's circle shows their votes: what the ring stood for is
+    /// now seen, so the position moves to the newest of them and the ring goes
+    /// grey. Nothing happens for a circle without a ring.
+    public func markSeen(_ id: String) {
+        guard let position = pendingPosition.removeValue(forKey: id) else { return }
+        if position > (store.lastSeenVote(for: id) ?? .distantPast) {
+            store.setLastSeenVote(position, for: id)
+        }
+        news.remove(id)
+    }
+
     struct Summary: Sendable {
         let deputy: DeputyItem
         let hasNews: Bool
+        /// Where opening the circle moves the reading position; nil without news.
+        let position: Date?
     }
 
-    /// One deputy's circle, and the reading position moved to the newest vote
-    /// it looked at, as Accueil's deputy home does (#463).
+    /// One deputy's circle. A first visit sets the reading position (#463);
+    /// after that it only moves in `markSeen`, so an unopened ring survives a
+    /// relaunch.
     nonisolated static func summary(
         id: String, service: any DeputiesService, store: any FollowedDeputyStore, now: Date
     ) async throws -> Summary {
@@ -78,11 +102,12 @@ public final class FollowedDeputiesModel {
         async let shown = shownVotes(id: id, lastSeen: lastSeen, service: service)
         let profile = try await service.profile(id: id)
         let votes = await shown
-        if let position = readingPosition(shown: votes, lastSeen: lastSeen, now: now) {
+        let position = readingPosition(shown: votes, lastSeen: lastSeen, now: now)
+        if lastSeen == nil, let position {
             store.setLastSeenVote(position, for: id)
         }
         let hasNews = lastSeen != nil && !(votes ?? []).isEmpty
-        return Summary(deputy: profile.deputy, hasNews: hasNews)
+        return Summary(deputy: profile.deputy, hasNews: hasNews, position: hasNews ? position : nil)
     }
 
     /// The votes since the reading position, or the recent ones on a first
