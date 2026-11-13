@@ -346,20 +346,10 @@ def get_deputy_votes(
 
                 if total == 0:
                     rows = []
-                elif total >= DEPUTY_VOTES_WALK_MIN_PER_ITEM * limit:
-                    # Newest scrutins first, each probed for this deputy's
-                    # position, so LIMIT stops after a few dozen probes.
-                    recent = sql.SQL("WHERE voted_at > %s") if since else sql.SQL("")
-                    cur.execute(
-                        _DEPUTY_VOTES_WALK_SQL.format(recent),
-                        ([since] if since else []) + [deputy_id, limit],
-                    )
-                    rows = cur.fetchall()
                 else:
-                    # A thin record: read the deputy's positions themselves.
                     recent = sql.SQL("AND v.voted_at > %s") if since else sql.SQL("")
                     cur.execute(
-                        _DEPUTY_VOTES_DIRECT_SQL.format(recent),
+                        _DEPUTY_VOTES_SQL.format(recent),
                         [deputy_id] + ([since] if since else []) + [limit],
                     )
                     rows = cur.fetchall()
@@ -491,31 +481,13 @@ def get_scorecard(request: Request, deputy_id: str):
     return DeputyScorecard(**row)
 
 
-# GET /deputies/{id}/votes returns the same rows through one of two queries,
-# chosen by how many positions the deputy has on record (an index-only count).
-#
-# A deputy has a position only on the scrutins they took part in, about one in
-# four on average. Reading all of a full record to keep ten rows touches
-# thousands of heap pages scattered across the table: over a second on a
-# deputy nobody has opened since the last restart. Walking the scrutins newest
-# first and probing each for the deputy stops after a few dozen probes instead.
-#
-# The walk is the wrong tool for a thin record: with nothing to find it probes
-# every scrutin there is (2.5 s cold on a departed deputy with no position,
-# measured in production), where reading the few positions directly is
-# immediate. So the walk is used only when the record holds at least this many
-# positions per row asked for.
-DEPUTY_VOTES_WALK_MIN_PER_ITEM = 40
-
-
 def _deputy_votes_total(cur, deputy_id: str) -> int:
     """How many scrutins the deputy has a recorded position on.
 
     Read from the scorecard mart, which holds that count for every deputy and is
-    rebuilt after each ingestion run. Counting `vote_positions` instead reads
-    every one of the deputy's positions, pages no other request keeps in memory:
-    measured on production, that count was what made a deputy's first open take
-    over a second.
+    rebuilt after each ingestion run: one row of a small table every deputy page
+    reads anyway, where counting `vote_positions` reads the deputy's whole
+    index range on every request.
 
     A deputy the mart does not list, or lists with no position, is counted live:
     that count reads next to nothing, and it keeps a record ingested since the
@@ -536,21 +508,12 @@ def _deputy_votes_total(cur, deputy_id: str) -> int:
     return cur.fetchone()["total"]
 
 
-_DEPUTY_VOTES_WALK_SQL = sql.SQL("""
-    SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
-           v.summary_plain, raw.summary_basis, raw.scrutin_kind
-    FROM (
-        SELECT vote_id, voted_at, vote_title, result, summary_plain
-        FROM analytics_marts.mart_vote_summary
-        {}
-        ORDER BY voted_at DESC NULLS LAST
-    ) v
-    JOIN vote_positions vp ON vp.vote_id = v.vote_id AND vp.deputy_id = %s
-    LEFT JOIN votes raw ON raw.vote_id = v.vote_id
-    ORDER BY v.voted_at DESC NULLS LAST LIMIT %s
-""")
-
-_DEPUTY_VOTES_DIRECT_SQL = sql.SQL("""
+# Reads the deputy's (vote_id, position) pairs from the covering index alone
+# (migration 020), joins them to the scrutins and keeps the newest. Walking the
+# scrutins newest first and probing each for the deputy was tried (#687): it is
+# as fast for a deputy who votes often and slow for one who left the Assemblée,
+# since every scrutin since their last vote is probed first.
+_DEPUTY_VOTES_SQL = sql.SQL("""
     SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
            v.summary_plain, raw.summary_basis, raw.scrutin_kind
     FROM vote_positions vp
