@@ -44,6 +44,12 @@ When reviewing a pull request or branch, follow this workflow:
      - Are there migration, deployment, rollback, data, or config risks?
      - Are there edge cases that could fail in production?
 
+   - Vision
+     - Only when the PR changes what the product does: what a reader sees, what is stored or learned about a person, what is sent to them, a new data source, or new text written by a model. Skip it for refactors, tests, CI and tooling.
+     - Read `VISION.md` and check the change against its Scope section and its closing "aligns when" / "resisted when" paragraphs.
+     - A change that conflicts with it is a Must Fix that quotes the line, unless the PR or its linked issue shows the user already decided it. The fix is the user's call: drop it, reshape it, or amend the vision in the same PR.
+     - Do not cite the vision for anything it does not say, and do not raise a finding merely because a change serves no "aligns when" clause.
+
    - Testing
      - Are tests present where needed?
      - Are manual validation steps or automated checks sufficient?
