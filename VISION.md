@@ -6,7 +6,8 @@ It owns exactly one thing: the path between the Assemblée nationale's published
 
 ## The official record leads
 
-Every figure, position and title MonÉlu shows comes from data the Assemblée nationale publishes, and every scrutin links back to its official page.
+Every vote, position and title MonÉlu shows comes from data the Assemblée nationale publishes, and every scrutin links back to its official page.
+What the Assemblée does not publish, such as the boundaries of a circonscription or the location of an address, comes from a named public source.
 The official title is always the headline; anything MonÉlu wrote sits beside it, labelled as MonÉlu's.
 A generated summary is a reading aid, never evidence: it is written from the official text or it does not exist, and no answer or verdict may cite it.
 A verdict on a claim cites recorded votes or says it cannot be verified.
@@ -40,7 +41,8 @@ MonÉlu does not push: no alert, digest or notification is sent until the owner 
 The data is public data under an open licence, and its purpose is reuse.
 The API, the Markdown twins, the embeds and the files written for crawlers and agents are first-class surfaces, not afterthoughts.
 A machine reader gets the same facts and the same caveats as a human one.
-Funding is donations first and stays fully decoupled from content, ranking or access.
+Funding is donations first and stays fully decoupled from content and ranking.
+The only thing money may buy is a higher API rate limit.
 
 ## One source of truth, held by tests
 
@@ -52,12 +54,13 @@ Between two designs, the simpler and more robust one wins over the faster one to
 
 ## Scope
 
-MonÉlu covers the deputies of the Assemblée nationale and their public votes; the Sénat, local councils and the European Parliament belong to other projects.
+MonÉlu covers what the Assemblée nationale publishes about its deputies and its work: their public votes, the agenda of the séance publique, and the path of a bill, including the stages it goes through at the Sénat.
+The Sénat's own votes, local councils and the European Parliament are not covered.
 It is not a news outlet, not an opinion site and not a campaign tool.
 It is not a social network: readers do not post, comment or see each other, and what a reader shares is an unlisted snapshot, not published content.
 It is not a general political chatbot: search and verification answer from the ingested record and say so when the record is silent.
 It does not show data it does not ingest, and it does not ingest a source without a guard against that source changing shape.
-It does not sell access, attention or data.
+It does not sell the data, a reader's attention or a place in a ranking; reading is free, and only a higher API rate limit may be paid for.
 
 A change aligns when it makes the official record easier to find, read or check, when it lets a reader verify a claim by themselves, when it replaces a guess with a source or an honest gap, when it opens the data to one more kind of reuse, or when it turns a rule someone must remember into a test.
 A change should be resisted when it puts MonÉlu's words above the official ones, shows something the source does not support, takes a side, asks the reader to identify themselves to read, learns more about a person than the feature needs, optimizes for time spent instead of questions answered, or builds ahead of a trigger that has not fired.
