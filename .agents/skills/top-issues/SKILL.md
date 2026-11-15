@@ -27,6 +27,8 @@ For every open issue, read enough of the description (fetch the full issue body 
 
 **Impact** - judge from what the issue itself argues (trust, credibility, retention, distribution, correctness-visible-to-users) plus GitHub priority as a signal, not the sole input. A Low-priority issue that fixes a visible "looks broken" moment can outrank a Medium-priority nice-to-have.
 
+**Vision check** - read `VISION.md` once before scoring. An issue that clearly serves one of its "aligns when" clauses gains impact. An issue that conflicts with its Scope section or a "resisted when" clause never makes the top 10: list it under **Conflicts with the vision** instead, quoting the line, so the user can close it, reshape it, or amend the vision.
+
 **Manual-setup flag** - mark an issue as needing manual setup if it requires any of: a new external account or SaaS signup (email provider, payment processor, form service), a secret/API key that must be provisioned and added to Railway/GitHub env vars, DNS changes (domain verification), or non-code work (an audit, a legal/compliance step, a business decision) before code can start. A DB migration alone does *not* count as manual setup - that's routine.
 
 ### 2b. Verify before recommending
@@ -48,6 +50,8 @@ Two-part answer, matching the shape used in the 2026-07-13 backlog triage:
 **Higher-impact / bigger scope** (only if any made the top 10) - a short bullet list of picks that are High-impact but not trivial effort, still self-contained (no external accounts needed). Flag `epic`-labeled issues and note they need `/plan-epic <id>` before implementation.
 
 **Needs manual setup** - a bullet list of any top-10 picks (or notable near-misses worth flagging) that need an external account, secret provisioning, DNS, or non-code work first. For each: name the specific manual step (e.g. "Resend/SendGrid account + sender domain verification + API key in Railway env vars"), not just "needs setup."
+
+**Conflicts with the vision** (only if any) - a bullet list of open issues that conflict with `VISION.md`, each with the line it conflicts with. Report only; never close or edit them.
 
 End with one offer to proceed: start the top pick, or let the user redirect.
 

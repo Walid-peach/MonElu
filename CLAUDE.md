@@ -5,6 +5,9 @@ This file provides guidance to Claude Code when working with code in this reposi
 > **Before writing any code, read [`docs/decisions.md`](docs/decisions.md).**
 > It documents every real architectural decision made during the build.
 > If anything here contradicts that file, the ADRs take precedence.
+>
+> [`VISION.md`](VISION.md) says what MonÉlu is for and what it refuses to become.
+> Check a new feature or backlog item against it before proposing or building it.
 
 ## Issue workflow
 

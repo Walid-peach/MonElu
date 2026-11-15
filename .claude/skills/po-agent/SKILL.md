@@ -36,6 +36,7 @@ An invocation of sync authorizes these narrowly evidenced tracker updates, not m
 ## fill
 
 1. Parse the requested work. Split only genuinely distinct deliverables; do not expand scope.
+   Read `VISION.md` and check the request against its Scope section and its closing "aligns when" / "resisted when" paragraphs. If it conflicts, quote the line and ask whether to drop it, reshape it, or amend the vision before drafting; never create a conflicting issue unflagged, and never refuse one the user confirms.
 2. Paginate open and closed GitHub issues, compare title/content and historical reports, and check merged work. Report near-duplicates and ask whether a distinct issue is intended before creating.
 3. Draft each issue with a concise action-oriented title, context, **Scope**, and checkable **Acceptance criteria**. Apply existing layer/type labels, `status: backlog`, and a justified priority label (medium by default; high for a demonstrated break/blocker, low for explicitly deferred polish). Use an existing appropriate milestone or flag the missing mapping.
 4. Show drafts before creation; proceed within the requested fill scope unless redirected. Use `gh issue create --repo Walid-peach/MonElu` with body files.

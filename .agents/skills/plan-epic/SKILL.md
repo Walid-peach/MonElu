@@ -27,6 +27,7 @@ Before drafting anything, explore the code the epic touches:
 - Which frontend pages/components exist vs. need building (`frontend/src/`).
 - Whether ingestion needs new data the AN open data portal must provide (`scripts/ingest_*.py`) - verify the source data actually exists before planning around it.
 - Read `docs/decisions.md` - the plan must not contradict an ADR.
+- Read `VISION.md` - check the epic against its Scope section and its closing "aligns when" / "resisted when" paragraphs. A part of the epic that conflicts with it is not planned around silently: name the line it conflicts with in the step 5 review and let the user decide whether to drop it, reshape it, or amend the vision.
 
 A plan step that assumes code or data that does not exist is the main failure mode this step prevents.
 
@@ -62,7 +63,7 @@ Each sub-issue must have:
 ### 5. Review with the user
 
 Present the full plan as a numbered list (title, one-line scope, dependency) before creating anything.
-Include: which steps are decision-first ADR items, the suggested order, and anything the epic asked for that is being deferred and why.
+Include: which steps are decision-first ADR items, the suggested order, and anything the epic asked for that is being deferred and why. Include any conflict with `VISION.md` found in step 2.
 Proceed to create unless the user redirects.
 
 ### 6. Create in GitHub
