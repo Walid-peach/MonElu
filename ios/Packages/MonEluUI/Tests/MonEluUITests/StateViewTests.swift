@@ -3,6 +3,16 @@ import MonEluCore
 import Testing
 
 struct StateViewTests {
+    /// The website's MON-207 policy: nothing for 200 ms, then the placeholder;
+    /// a screen without one keeps its spinner, shown at once (#697).
+    @Test func loadingIndicatorWaitsBeforeThePlaceholder() {
+        #expect(LoadingIndicator.revealDelay == .milliseconds(200))
+        #expect(LoadingIndicator.shown(hasPlaceholder: true, delayElapsed: false) == .none)
+        #expect(LoadingIndicator.shown(hasPlaceholder: true, delayElapsed: true) == .placeholder)
+        #expect(LoadingIndicator.shown(hasPlaceholder: false, delayElapsed: false) == .spinner)
+        #expect(LoadingIndicator.shown(hasPlaceholder: false, delayElapsed: true) == .spinner)
+    }
+
     @Test func offlineAndServerFailuresReadDifferently() {
         let offline = FailureStateView.copy(for: .offline)
         let server = FailureStateView.copy(for: .server)

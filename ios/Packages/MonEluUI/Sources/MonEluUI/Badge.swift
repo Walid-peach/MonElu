@@ -5,14 +5,15 @@ struct Badge: View {
     let text: String
     let foreground: Color
     let background: Color
+    @Environment(\.isPlaceholder) private var isPlaceholder
 
     var body: some View {
         Text(text)
             .font(.caption.weight(.semibold))
-            .foregroundStyle(foreground)
+            .foregroundStyle(isPlaceholder ? Palette.textMuted : foreground)
             .fixedSize()
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(background, in: Capsule())
+            .background(isPlaceholder ? Palette.trackBackground : background, in: Capsule())
     }
 }

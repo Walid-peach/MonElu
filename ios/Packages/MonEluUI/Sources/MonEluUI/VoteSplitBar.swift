@@ -24,6 +24,7 @@ public struct VoteSplitBar: View {
     public let abstention: Int
     public let nonVotant: Int
     public let size: Size
+    @Environment(\.isPlaceholder) private var isPlaceholder
 
     public init(pour: Int, contre: Int, abstention: Int, nonVotant: Int = 0, size: Size = .compact) {
         self.pour = pour
@@ -35,7 +36,7 @@ public struct VoteSplitBar: View {
 
     public var body: some View {
         ProportionalRow(spacing: 2) {
-            ForEach(segments, id: \.position) { segment in
+            ForEach(isPlaceholder ? [] : segments, id: \.position) { segment in
                 Rectangle()
                     .fill(segment.color)
                     .layoutValue(key: SegmentWeight.self, value: Double(segment.count))

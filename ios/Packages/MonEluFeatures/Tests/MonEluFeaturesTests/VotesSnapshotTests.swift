@@ -38,6 +38,15 @@ struct VotesSnapshotTests {
         checkSnapshot(NavigationStack { VotesList(votes: votes, isLoadingMore: false) {} }, variant, height: 640)
     }
 
+    /// The loading placeholder: the list's own rows over made-up scrutins (#697).
+    @Test(arguments: Variant.all)
+    func votesListPlaceholder(_ variant: Variant) {
+        checkSnapshot(
+            NavigationStack { VotesList(votes: VoteItem.placeholders, isLoadingMore: false) {}.skeleton() },
+            variant, height: 640
+        )
+    }
+
     @Test(arguments: Variant.all)
     func votesListNextPageFailed(_ variant: Variant) {
         checkSnapshot(

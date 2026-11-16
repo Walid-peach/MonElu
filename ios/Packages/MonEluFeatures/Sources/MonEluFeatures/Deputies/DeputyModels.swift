@@ -245,3 +245,20 @@ public struct DissidentVotes: Hashable, Sendable {
         self.items = items
     }
 }
+
+extension DeputyItem {
+    /// Made-up deputies for the list's loading placeholder (#697): never shown
+    /// as text, only as the shape of the rows under `.skeleton()`. No photo
+    /// URL, so the portrait is its initials disc, which redaction greys.
+    static let placeholders: [DeputyItem] = [
+        ("Camille Martin", "Bouches-du-Rhône"), ("Jean Bernard", "Nord"), ("Léa Dubois", "Gironde"),
+        ("Nicolas Thomas", "Haute-Garonne"), ("Sophie Robert", "Rhône"), ("Pierre Richard", "Loire-Atlantique"),
+        ("Claire Petit", "Bas-Rhin"), ("Antoine Durand", "Hérault"), ("Julie Leroy", "Isère"),
+        ("Marc Moreau", "Var"),
+    ].enumerated().map { index, entry in
+        DeputyItem(
+            id: "placeholder-\(index)", name: entry.0, group: nil, groupShort: "EPR",
+            department: entry.1, circonscription: "\(index + 1)", photoURL: nil, lastName: "A"
+        )
+    }
+}

@@ -246,3 +246,31 @@ public struct GroupPositions: Identifiable, Hashable, Sendable {
         }
     }
 }
+
+extension VoteItem {
+    /// Made-up scrutins for the list's loading placeholder (#697): never
+    /// shown as text, only as the shape of two days of rows under
+    /// `.skeleton()`. Titles of realistic lengths, so rows take one to three
+    /// lines as real ones do.
+    static let placeholders: [VoteItem] = {
+        let day = Date(timeIntervalSince1970: 1_791_633_600)
+        let titles = [
+            "l'ensemble du projet de loi relatif à la simplification de la vie économique",
+            "l'amendement n° 112 à l'article 4",
+            "la motion de rejet préalable déposée sur la proposition de loi",
+            "l'article premier de la proposition de loi visant à renforcer la sécurité",
+            "l'amendement n° 27 de suppression de l'article 2",
+            "l'ensemble de la proposition de résolution européenne",
+            "l'amendement n° 8 après l'article 3",
+            "l'article 5 du projet de loi",
+        ]
+        return titles.enumerated().map { index, title in
+            VoteItem(
+                id: "placeholder-\(index)", title: title,
+                date: day.addingTimeInterval(index < 4 ? 0 : -86_400),
+                result: index.isMultiple(of: 2) ? "adopté" : "rejeté", summary: nil, theme: "Économie",
+                votesFor: 120, votesAgainst: 80, abstentions: 20
+            )
+        }
+    }()
+}

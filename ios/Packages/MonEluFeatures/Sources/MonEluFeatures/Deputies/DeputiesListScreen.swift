@@ -34,7 +34,9 @@ public struct DeputiesListScreen: View {
                     message: "Aucun député ne correspond à cette recherche.",
                     systemImage: "magnifyingglass"
                 )
-            ) { deputies in
+            ) {
+                DeputiesList(deputies: DeputyItem.placeholders, total: nil, inMandateOnly: false, isLoadingMore: false) {}
+            } content: { deputies in
                 DeputiesList(
                     deputies: deputies, total: model.total, inMandateOnly: model.inMandateOnly,
                     isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure

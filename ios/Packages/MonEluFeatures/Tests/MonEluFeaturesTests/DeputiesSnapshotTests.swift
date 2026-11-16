@@ -41,6 +41,17 @@ struct DeputiesSnapshotTests {
 
     /// The header and scorecard, from the recorded responses. They hold no
     /// link, so they need no navigation stack, which has no size of its own.
+    /// The loading placeholder: the list's own rows over made-up deputies (#697).
+    @Test(arguments: Variant.all)
+    func deputiesListPlaceholder(_ variant: Variant) {
+        checkSnapshot(
+            NavigationStack {
+                DeputiesList(deputies: DeputyItem.placeholders, total: nil, isLoadingMore: false) {}.skeleton()
+            },
+            variant, height: 640
+        )
+    }
+
     @Test(arguments: Variant.all)
     func deputyProfile(_ variant: Variant) async throws {
         let full = try await LiveDeputiesServiceTests.service().profilePage(id: "PA1008")
