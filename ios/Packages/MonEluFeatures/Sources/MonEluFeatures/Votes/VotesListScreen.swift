@@ -32,7 +32,9 @@ public struct VotesListScreen: View {
                     message: "Aucun vote ne correspond à cette recherche.",
                     systemImage: "magnifyingglass"
                 )
-            ) { votes in
+            ) {
+                VotesList(votes: VoteItem.placeholders, isLoadingMore: false) {}
+            } content: { votes in
                 VotesList(votes: votes, isLoadingMore: model.isLoadingMore, loadMoreFailure: model.loadMoreFailure) {
                     await model.loadMore()
                 }

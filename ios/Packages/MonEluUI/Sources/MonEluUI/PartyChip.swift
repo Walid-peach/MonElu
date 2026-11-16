@@ -6,6 +6,7 @@ import SwiftUI
 public struct PartyChip: View {
     public let text: String
     public let short: String?
+    @Environment(\.isPlaceholder) private var isPlaceholder
 
     /// The short code itself: "LFI".
     public init(short: String) {
@@ -23,10 +24,10 @@ public struct PartyChip: View {
         let colors = Palette.party(short)
         Text(text)
             .font(.caption.weight(.semibold))
-            .foregroundStyle(colors.text)
+            .foregroundStyle(isPlaceholder ? Palette.textMuted : colors.text)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(colors.background, in: Radius.shape(Radius.small))
+            .background(isPlaceholder ? Palette.trackBackground : colors.background, in: Radius.shape(Radius.small))
     }
 }

@@ -71,6 +71,10 @@ The work is tracked under epic #429, one phase epic at a time.
   Never use an `optional` tap for something that may not appear: it waits out a long timeout. Use `runFlow` with `when: visible`.
 - A screen gets its data through a `Loader` (`MonEluCore`) rendered by `LoadStateView` (`MonEluUI`), never by calling the client from a view.
   That one pattern gives every screen the same loading, empty, offline and error states, a retry, and pull-to-refresh; the content must be a `List` or `ScrollView`.
+- A screen gives `LoadStateView` a `placeholder:` built from its own content view over placeholder models (`VoteItem.placeholders`), never a hand-drawn skeleton, so it has the page's real shape (#697).
+  `LoadStateView` shows it under `.skeleton()` once a first load has run for `LoadingIndicator.revealDelay` (200 ms, the website's `LOADING_NO_INDICATOR_MS`), and nothing before; a screen without one keeps the spinner.
+  Placeholder models hold made-up text of realistic length, never real data or a computed figure.
+  A component with a coloured fill (a badge, a chip, a split bar) reads `isPlaceholder` from the environment and draws the neutral track instead, since redaction greys text but keeps fills.
 - Offline and server failures are different states with different wording (`LoadFailure`); a failed refresh keeps the content and shows `RefreshFailureBanner`.
   A cancelled load is neither: `Loader` goes back to the state it had, and a cancelled refresh keeps the content without a banner, so a `.task` that runs again when its view returns loads for real (#579).
 - Navigation to a deputy or a vote goes through `Router.open(_:)` with an `AppRoute`, from any tab.
@@ -124,7 +128,7 @@ The work is tracked under epic #429, one phase epic at a time.
 - Cards are 12 pt radius (`Card`); a screen built on `List(.insetGrouped)` (Votes, Députés, Départements, Réglages) keeps the system's own corner radius rather than imitating 12 (#516).
   The system list brings sections, swipe actions, VoiceOver rotors and cell reuse for hundreds of rows, and its radius follows the platform as iOS changes it; a hand-built `LazyVStack` in a `Card` would give those up for a few points of radius.
 - A scrutin's date in a list row is `MonEluFormat.listDay` ("21 juil.", the year only when it is not the current one), relative to `@Environment(\.today)`, which snapshot tests pin; a page's own header keeps the long date.
-- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, `PrimaryButtonStyle`, `CardRowDivider`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
+- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, `PrimaryButtonStyle`, `CardRowDivider`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`, and the `.skeleton()` placeholder) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
   A new component gets the same four snapshots.
   A missing reference is recorded and the test fails once: look at the new image, commit it, re-run.
   A changed reference is a visual change: re-record by deleting the old image, and say so in the PR.

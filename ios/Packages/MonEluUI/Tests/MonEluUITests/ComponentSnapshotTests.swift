@@ -101,6 +101,26 @@ struct ComponentSnapshotTests {
     }
 
     /// Every colored group, the neutral pair, and a full label.
+    /// A card of badges, chips and a split bar under `.skeleton()`: text
+    /// turns to blocks and every coloured fill to the neutral track (#697).
+    @Test(arguments: variants)
+    func skeleton(_ variant: Variant) {
+        check(Card {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    VoteResultBadge(result: "adopté")
+                    PartyChip(short: "LFI")
+                    Text("Économie").font(.footnote).foregroundStyle(Palette.textSecondary)
+                }
+                Text("Projet de loi de finances pour 2026, ensemble du texte")
+                    .font(.subheadline)
+                    .foregroundStyle(Palette.textPrimary)
+                VoteSplitBar(pour: 80, contre: 24, abstention: 24)
+            }
+        }
+        .skeleton(), variant)
+    }
+
     @Test(arguments: variants)
     func partyChip(_ variant: Variant) {
         check(VStack(alignment: .leading, spacing: 8) {
