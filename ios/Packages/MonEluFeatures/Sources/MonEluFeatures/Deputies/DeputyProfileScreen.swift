@@ -39,7 +39,11 @@ public struct DeputyProfileScreen: View {
         LoadStateView(
             loader,
             empty: EmptyStateView(title: "Député introuvable", message: "Ce député n'existe pas ou plus.")
-        ) { page in
+        ) {
+            ScrollView {
+                DeputyProfileContent(page: PagePlaceholders.deputy, configuration: configuration).padding(Spacing.m)
+            }
+        } content: { page in
             ScrollView {
                 DeputyProfileContent(
                     page: page, configuration: configuration, isFollowed: isFollowed, atFollowCap: atCap,

@@ -18,7 +18,11 @@ public struct ThemeScreen: View {
         LoadStateView(
             loader,
             empty: EmptyStateView(title: "Thème introuvable", message: "Ce thème n'existe pas.", systemImage: "tag")
-        ) { theme in
+        ) {
+            ScrollView {
+                ThemeContent(theme: PagePlaceholders.theme, configuration: configuration).padding(.vertical, Spacing.m)
+            }
+        } content: { theme in
             if let theme {
                 ScrollView {
                     ThemeContent(theme: theme, configuration: configuration)

@@ -23,7 +23,11 @@ public struct GroupScreen: View {
                 message: "Ce groupe n'existe pas ou n'a plus de député en mandat.",
                 systemImage: "person.3"
             )
-        ) { group in
+        ) {
+            ScrollView {
+                GroupContent(group: PagePlaceholders.group, configuration: configuration).padding(.vertical, Spacing.m)
+            }
+        } content: { group in
             if let group {
                 ScrollView {
                     GroupContent(group: group, configuration: configuration)

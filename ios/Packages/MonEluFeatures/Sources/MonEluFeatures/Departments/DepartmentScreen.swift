@@ -22,7 +22,11 @@ public struct DepartmentScreen: View {
                 message: "Ce code ne correspond à aucun département.",
                 systemImage: "map"
             )
-        ) { department in
+        ) {
+            ScrollView {
+                DepartmentContent(department: PagePlaceholders.department).padding(.vertical, Spacing.m)
+            }
+        } content: { department in
             if let department {
                 ScrollView {
                     DepartmentContent(department: department)
@@ -98,6 +102,7 @@ struct DepartmentContent: View {
 /// group, as wide as its count, and the counts in words.
 struct CompositionView: View {
     let composition: [DepartmentGroupCount]
+    @Environment(\.isPlaceholder) private var isPlaceholder
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -114,7 +119,7 @@ struct CompositionView: View {
                         // The group's solid color, as the design fills it (#528);
                         // the chips below carry the names.
                         Rectangle()
-                            .fill(Palette.partyFill(entry.short))
+                            .fill(isPlaceholder ? Palette.trackBackground : Palette.partyFill(entry.short))
                             .frame(width: total > 0 ? available * CGFloat(entry.count) / CGFloat(total) : 0)
                     }
                 }

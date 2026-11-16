@@ -15,7 +15,11 @@ public struct LoisListScreen: View {
         LoadStateView(
             loader,
             empty: EmptyStateView(title: "Aucun texte", message: "Aucun texte n'a encore de scrutin enregistré.")
-        ) { list in
+        ) {
+            ScrollView {
+                LoisList(list: PagePlaceholders.lois).padding(Spacing.m)
+            }
+        } content: { list in
             ScrollView {
                 LoisList(list: list).padding(Spacing.m)
             }
