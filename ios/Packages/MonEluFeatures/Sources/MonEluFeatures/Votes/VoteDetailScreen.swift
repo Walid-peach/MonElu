@@ -23,7 +23,11 @@ public struct VoteDetailScreen: View {
         LoadStateView(
             loader,
             empty: EmptyStateView(title: "Scrutin introuvable", message: "Ce scrutin n'existe pas ou plus.")
-        ) { vote in
+        ) {
+            ScrollView {
+                VoteDetailContent(vote: PagePlaceholders.vote, configuration: configuration).padding(Spacing.m)
+            }
+        } content: { vote in
             ScrollView {
                 VoteDetailContent(
                     vote: vote, configuration: configuration, followedDeputyIDs: followedDeputies?.deputyIDs ?? []
@@ -189,6 +193,7 @@ struct ThemeTag: View {
 struct ResultCard: View {
     let vote: VoteDetail
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.isPlaceholder) private var isPlaceholder
 
     var body: some View {
         Card {
@@ -242,7 +247,7 @@ struct ResultCard: View {
             Text(share.map { MonEluFormat.percent($0) } ?? value.map(MonEluFormat.count) ?? "–")
                 .font(Typography.heading(.title))
                 .monospacedDigit()
-                .foregroundStyle(color)
+                .foregroundStyle(isPlaceholder ? Palette.textMuted : color)
             Text(share != nil ? "\(value.map(MonEluFormat.count) ?? "–") \(label)" : label)
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)

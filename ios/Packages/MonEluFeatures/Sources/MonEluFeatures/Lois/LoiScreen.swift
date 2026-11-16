@@ -23,7 +23,12 @@ public struct LoiScreen: View {
                 message: "MonÉlu n'a pas de page pour ce texte : aucun de ses scrutins n'est rattaché à un dossier.",
                 systemImage: "doc.text.magnifyingglass"
             )
-        ) { page in
+        ) {
+            ScrollView {
+                LoiContent(page: PagePlaceholders.loi, configuration: configuration, today: PagePlaceholders.date)
+                    .padding(Spacing.m)
+            }
+        } content: { page in
             if let page {
                 ScrollView {
                     LoiContent(page: page, configuration: configuration, today: .now)
@@ -138,9 +143,11 @@ struct LoiOverview: View {
 /// The derived status in words, colored by outcome.
 struct LoiStatusBadge: View {
     let status: String
+    @Environment(\.isPlaceholder) private var isPlaceholder
 
     var body: some View {
-        let (foreground, background) = Self.colors(status)
+        // Neutral under a loading placeholder, as every coloured badge is (#699).
+        let (foreground, background) = isPlaceholder ? Self.colors("") : Self.colors(status)
         Text(LoiStatus.label(status))
             .font(.caption.weight(.semibold))
             .foregroundStyle(foreground)

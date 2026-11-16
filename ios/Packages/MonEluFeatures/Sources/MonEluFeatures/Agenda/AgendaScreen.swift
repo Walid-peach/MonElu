@@ -70,7 +70,11 @@ public struct AgendaScreen: View {
                     message: "Aucune séance publique n'est inscrite à l'ordre du jour de cette semaine.",
                     systemImage: "calendar"
                 )
-            ) { week in
+            ) {
+                ScrollView {
+                    AgendaWeekContent(week: PagePlaceholders.agenda, theme: .constant(nil)).padding(.vertical, Spacing.xs)
+                }
+            } content: { week in
                 ScrollViewReader { proxy in
                     ScrollView {
                         AgendaWeekContent(week: week, theme: $model.theme)
