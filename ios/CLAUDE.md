@@ -128,7 +128,7 @@ The work is tracked under epic #429, one phase epic at a time.
 - Cards are 12 pt radius (`Card`); a screen built on `List(.insetGrouped)` (Votes, Députés, Départements, Réglages) keeps the system's own corner radius rather than imitating 12 (#516).
   The system list brings sections, swipe actions, VoiceOver rotors and cell reuse for hundreds of rows, and its radius follows the platform as iOS changes it; a hand-built `LazyVStack` in a `Card` would give those up for a few points of radius.
 - A scrutin's date in a list row is `MonEluFormat.listDay` ("21 juil.", the year only when it is not the current one), relative to `@Environment(\.today)`, which snapshot tests pin; a page's own header keeps the long date.
-- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, `PrimaryButtonStyle`, `CardRowDivider`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
+- Shared components (`Card`, `SectionHeader`, `VoteResultBadge`, `VotePositionBadge`, `PrimaryButtonStyle`, `CardRowDivider`, and the design A set: `VoteSplitBar`, `StatTile`/`StatTileGrid`, `PartyChip`, `FilterChipRow`, and the `.skeleton()` placeholder) have snapshot tests in `MonEluUITests/ComponentSnapshotTests.swift`, in light and dark at the default and an accessibility text size.
   A new component gets the same four snapshots.
   A missing reference is recorded and the test fails once: look at the new image, commit it, re-run.
   A changed reference is a visual change: re-record by deleting the old image, and say so in the PR.
