@@ -30,4 +30,22 @@ struct HomeSnapshotTests {
         }
         checkSnapshot(view, variant, height: variant.size.isAccessibilityCategory ? 2600 : 900)
     }
+
+    /// The feed's loading placeholder with a followed deputy (#698): the
+    /// recap card and three scrutin cards over made-up values, as
+    /// `FeedPageView` shows them once a first load has run for 200 ms.
+    @Test(arguments: Variant.all)
+    func homeFeedPlaceholder(_ variant: Variant) {
+        let view = NavigationStack {
+            ScrollView {
+                FeedContent(
+                    page: .placeholder, tab: .pourVous, deputyIDs: ["PA1"],
+                    week: .placeholder(deputyID: "PA1")
+                )
+                .skeleton()
+                .padding(.horizontal, 16)
+            }
+        }
+        checkSnapshot(view, variant, height: variant.size.isAccessibilityCategory ? 2600 : 1100)
+    }
 }

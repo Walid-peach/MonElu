@@ -354,8 +354,15 @@ struct FeedPageView<Header: View>: View {
     @ViewBuilder private var content: some View {
         switch state {
         case .idle, .loading:
-            LoadingStateView()
-                .padding(.vertical, 48)
+            LoadingIndicatorView {
+                // The feed's own cards over made-up ones (#698), with the
+                // recap card when a deputy is followed, as the loaded page has.
+                FeedContent(
+                    page: .placeholder, tab: tab, deputyIDs: deputyIDs,
+                    week: deputyIDs.first.map(FeedWeek.placeholder(deputyID:)),
+                    showsFindDeputy: deputyIDs.isEmpty
+                )
+            }
         case .empty:
             EmptyStateView(title: "Rien cette semaine", message: "Aucun scrutin à montrer pour l'instant.")
         case .failed(let failure):

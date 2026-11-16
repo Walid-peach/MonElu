@@ -70,7 +70,8 @@ struct SkeletonModifier: ViewModifier {
 
 /// True while the view is drawn by `.skeleton()`: a component with a coloured
 /// fill (a badge, a chip, a split bar) draws it in the neutral track colour
-/// instead, since redaction greys text but keeps fills.
+/// instead, since redaction greys text but keeps fills. A screen's own
+/// coloured surface (the recap card's navy) reads it the same way.
 extension EnvironmentValues {
-    var isPlaceholder: Bool { redactionReasons.contains(.placeholder) }
+    public var isPlaceholder: Bool { redactionReasons.contains(.placeholder) }
 }

@@ -304,3 +304,37 @@ extension FeedRollup {
         )
     }
 }
+
+extension FeedPage {
+    /// A made-up week for Accueil's loading placeholder (#698): never shown as
+    /// text, only as the shape of three scrutin cards under `.skeleton()`.
+    static let placeholder = FeedPage(
+        weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false,
+        entries: [
+            "l'ensemble du projet de loi relatif à la simplification de la vie économique",
+            "la motion de censure déposée en application de l'article 49, alinéa 2",
+            "l'ensemble de la proposition de loi visant à renforcer la sécurité",
+        ].enumerated().map { index, title in
+            .scrutin(FeedScrutinCard(
+                id: "placeholder-\(index)", date: Date(timeIntervalSince1970: 1_791_633_600), kind: "ensemble",
+                title: title, summary: "Un résumé de deux lignes environ, qui tient la place du résumé du texte voté.",
+                theme: "Économie", result: index.isMultiple(of: 2) ? "adopté" : "rejeté",
+                votesFor: 300, votesAgainst: 200, abstentions: 30, isClosest: false, positions: [],
+                officialURL: nil, loiID: nil, summaryBasis: "official_text"
+            ))
+        }
+    )
+}
+
+extension FeedWeek {
+    /// A made-up recap for the loading placeholder: the shape of one deputy's
+    /// card, never shown as text.
+    static func placeholder(deputyID: String) -> FeedWeek {
+        FeedWeek(
+            weekStart: "2026-10-12", weekEnd: "2026-10-18", noSitting: false, scrutins: 40, lawsAdopted: 2,
+            lawsRejected: 1, motionsAdopted: 0, motionsRejected: 1,
+            deputies: [FeedWeekDeputy(deputyID: deputyID, cast: 30, pour: 20, contre: 8, abstention: 2, nonVotant: 1)],
+            nextAgenda: nil
+        )
+    }
+}

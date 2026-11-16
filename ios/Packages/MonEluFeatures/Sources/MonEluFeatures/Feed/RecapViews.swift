@@ -51,6 +51,9 @@ struct FeedRecapCard: View {
     /// In the pager: as tall as the tallest card beside it.
     var fillsHeight = false
     var onOpen: () -> Void = {}
+    /// Under a loading placeholder the navy surface turns into a plain card,
+    /// as every other coloured fill turns neutral (#698).
+    @Environment(\.isPlaceholder) private var isPlaceholder
 
     var body: some View {
         Button(action: onOpen) {
@@ -87,11 +90,14 @@ struct FeedRecapCard: View {
                         .accessibilityHidden(true)
                 }
             }
-            .foregroundStyle(Palette.onIdentity)
+            .foregroundStyle(isPlaceholder ? Palette.textMuted : Palette.onIdentity)
             .multilineTextAlignment(.leading)
             .padding(Spacing.m)
             .frame(maxWidth: .infinity, maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
-            .background(Palette.identityBackground, in: Radius.shape(Radius.large))
+            .surface(
+                isPlaceholder ? Palette.cardBackground : Palette.identityBackground, radius: Radius.large,
+                bordered: isPlaceholder
+            )
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -102,7 +108,7 @@ struct FeedRecapCard: View {
     private var eyebrow: some View {
         Text("Votre semaine à l'Assemblée")
             .font(.footnote.weight(.bold))
-            .foregroundStyle(Palette.onIdentityAccent)
+            .foregroundStyle(isPlaceholder ? Palette.textMuted : Palette.onIdentityAccent)
     }
 
     private var span: some View {
