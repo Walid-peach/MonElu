@@ -75,11 +75,22 @@ public struct LoadStateView<Value: Sendable, Content: View, Placeholder: View>: 
 
 /// The loading state: the spinner, or the placeholder after its delay. A view
 /// of its own so the delay starts again with each load that shows it.
-struct LoadingIndicatorView<Placeholder: View>: View {
+/// `LoadStateView` uses it; a screen that switches on its `LoadState` itself
+/// (Accueil, whose header stays above every state) uses it too (#698).
+public struct LoadingIndicatorView<Placeholder: View>: View {
     let placeholder: Placeholder?
     @State private var delayElapsed = false
 
-    var body: some View {
+    /// The placeholder, under `.skeleton()`, after `LoadingIndicator.revealDelay`.
+    public init(@ViewBuilder placeholder: () -> Placeholder) {
+        self.placeholder = placeholder()
+    }
+
+    init(placeholder: Placeholder?) {
+        self.placeholder = placeholder
+    }
+
+    public var body: some View {
         switch LoadingIndicator.shown(hasPlaceholder: placeholder != nil, delayElapsed: delayElapsed) {
         case .spinner:
             LoadingStateView()
