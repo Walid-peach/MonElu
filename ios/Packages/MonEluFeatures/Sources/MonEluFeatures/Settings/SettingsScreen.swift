@@ -34,9 +34,9 @@ public enum AppearancePreference: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// Réglages (#494, design A): what needs no account. The appearance, the
-/// data's methodology, sources and horizon, contact and version. The
-/// notification and account sections wait for accounts (#434); nothing is
-/// ever sent (#359).
+/// data's methodology, sources and horizon, contact, the privacy policy and
+/// version. The notification and account sections wait for accounts (#434);
+/// nothing is ever sent (#359).
 public struct SettingsScreen: View {
     let version: String
     @AppStorage(AppearancePreference.storageKey) private var appearance = AppearancePreference.system
@@ -110,6 +110,8 @@ struct SettingsContent: View {
 
             Section {
                 link("Contact et signalement d'erreur", path: "contact")
+                // App Review requires the policy inside the app (5.1.1(i), #703).
+                link("Politique de confidentialité", path: "confidentialite")
                 row("Version", value: version, chevron: false)
                     .accessibilityElement(children: .combine)
             } header: {
