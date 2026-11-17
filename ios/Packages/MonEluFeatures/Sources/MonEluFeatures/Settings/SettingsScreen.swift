@@ -35,9 +35,8 @@ public enum AppearancePreference: String, CaseIterable, Identifiable, Sendable {
 
 /// Réglages (#494, design A): what needs no account. The appearance, the
 /// data's methodology, sources and horizon, contact, the privacy policy and
-/// version. The
-/// notification and account sections wait for accounts (#434); nothing is
-/// ever sent (#359).
+/// version. The notification and account sections wait for accounts (#434);
+/// nothing is ever sent (#359).
 public struct SettingsScreen: View {
     let version: String
     @AppStorage(AppearancePreference.storageKey) private var appearance = AppearancePreference.system
