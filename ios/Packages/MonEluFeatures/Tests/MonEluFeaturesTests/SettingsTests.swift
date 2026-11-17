@@ -32,6 +32,11 @@ struct SettingsTests {
         #expect(SettingsContent.horizon("pas une date") == nil)
     }
 
+    /// App Review wants the privacy policy inside the app (5.1.1(i), #703).
+    @Test func thePrivacyPolicyIsTheWebsitesPage() {
+        #expect(Self.configuration.siteLink("confidentialite")?.absoluteString == "https://monelu.fr/confidentialite")
+    }
+
     @Test(arguments: Variant.all)
     func settings(_ variant: Variant) {
         checkSnapshot(

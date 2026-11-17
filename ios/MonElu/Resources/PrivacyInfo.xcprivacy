@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The app's privacy manifest (#703). App Store Connect refuses an upload that
+  calls a required-reason API without declaring it here (ITMS-91053), and the
+  App Store privacy labels must say the same thing as this file.
+
+  - No tracking, no tracking domains: the app has no analytics or ad SDK
+    (ios/CLAUDE.md rule 8).
+  - UserDefaults, reason CA92.1: the appearance, the followed deputies and
+    themes, their reading positions and the cached /app/config are written and
+    read by the app itself only, never shared through an app group.
+  - Collected: only text the user chooses to send for storage (a shared answer,
+    a verdict, a quiz share, feedback), not linked to an identity. A question,
+    an address, a postal code or a point is sent to answer the request and not
+    kept, so it is not "collected" in Apple's sense.
+
+  Update this file, the privacy labels and /confidentialite together.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

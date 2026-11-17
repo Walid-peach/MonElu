@@ -14,6 +14,10 @@ appId: ${APP_ID}
     timeout: 10000
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-settings
+# App Review requires the privacy policy inside the app (#703).
+- scrollUntilVisible:
+    element: "Politique de confidentialité"
+- assertVisible: "Politique de confidentialité"
 
 # The appearance applies to the whole app at once.
 # The screen's id masks the rows', so they are tapped by label.
