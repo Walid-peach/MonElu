@@ -34,8 +34,8 @@ public enum AppearancePreference: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// Réglages (#494, design A): what needs no account. The appearance, the
-/// data's methodology, sources and horizon, contact, the privacy policy and
-/// version. The notification and account sections wait for accounts (#434);
+/// data's methodology, sources and horizon, contact, the privacy policy,
+/// version and the line saying MonÉlu is independent of the Assemblée. The notification and account sections wait for accounts (#434);
 /// nothing is ever sent (#359).
 public struct SettingsScreen: View {
     let version: String
@@ -116,6 +116,9 @@ struct SettingsContent: View {
                     .accessibilityElement(children: .combine)
             } header: {
                 header("MonÉlu")
+            } footer: {
+                // So the official data does not read as an official app (5.2, #705).
+                footer("Service indépendant, non affilié à l'Assemblée nationale.")
             }
             .listRowBackground(Palette.cardBackground)
         }
