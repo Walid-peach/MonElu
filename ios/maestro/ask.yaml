@@ -15,6 +15,9 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: "Posez une question sur vos élus"
     timeout: 10000
+# The tab says a model writes the answers, and links to the page naming it (#705).
+- assertVisible: "Le modèle d'IA utilisé et son hébergeur"
+- waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}1-ask-intro
 
 # The fact-check mode, reachable directly; no claim is sent (verify stores
@@ -34,6 +37,7 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     notVisible: "Recherche dans les votes et profils des députés…"
     timeout: 90000
+- assertVisible: "Réponse assistée par IA"
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}2-ask-answer
 # Not centred: the actions end the conversation, so they cannot scroll to

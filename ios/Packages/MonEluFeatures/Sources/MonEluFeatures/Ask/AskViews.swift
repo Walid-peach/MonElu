@@ -63,6 +63,21 @@ struct Pill: View {
     }
 }
 
+/// Says that AI took part in what follows (App Review 5.1.2(i), EU AI Act
+/// art. 50, #705). "Assistée", not "générée": an answer routed to SQL and an
+/// unverifiable verdict with no match are written by code, not by the model.
+/// Fixed text, so it shows even before `/app/config` loads.
+struct AIGeneratedLabel: View {
+    let text: String
+
+    var body: some View {
+        Label(text, systemImage: "sparkles")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Palette.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
 /// The question, or the claim to verify, on the trailing side as in a
 /// conversation.
 struct QuestionBubble: View {
@@ -104,6 +119,7 @@ struct AnswerCard: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: 14) {
+                AIGeneratedLabel(text: "Réponse assistée par IA")
                 ChatMarkdownView(text: answer.answer)
                 if let caveat = answer.caveat, !caveat.isEmpty {
                     CaveatNote(caveat)
@@ -279,6 +295,7 @@ struct VerdictCard: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.s) {
+                AIGeneratedLabel(text: "Vérification assistée par IA")
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 10) { badge; checkedLine }
                     VStack(alignment: .leading, spacing: 6) { badge; checkedLine }
@@ -498,9 +515,11 @@ private struct FailureLine: View {
     }
 }
 
-/// What the tab says before the first question, in each mode.
+/// What the tab says before the first question, in each mode, with the
+/// notice that a model writes the answers and verdicts (#705).
 struct AskIntro: View {
     var mode: AskModel.Mode = .question
+    @Environment(\.appConfiguration) private var configuration
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -530,6 +549,20 @@ struct AskIntro: View {
                             .strokeBorder(Palette.border, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     )
                     .padding(.top, Spacing.xxs)
+            }
+            // The wording comes from /app/config (ios/CLAUDE.md rule 4).
+            CaveatNote(id: "llm_generated", in: configuration)
+                .padding(.top, Spacing.xxs)
+            // À propos names the model and the company that runs it.
+            if let url = configuration.siteLink("a-propos") {
+                Link(destination: url) {
+                    Label("Le modèle d'IA utilisé et son hébergeur", systemImage: "arrow.up.right.square")
+                        .font(.footnote.weight(.semibold))
+                        .multilineTextAlignment(.leading)
+                        .frame(minHeight: 44)
+                }
+                .tint(Palette.accent)
+                .accessibilityHint("Ouvre la page sur le site")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

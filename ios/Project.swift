@@ -48,6 +48,9 @@ let project = Project(
                     ],
                 ],
                 "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
+                // Only HTTPS through Apple's system, which is exempt: no export
+                // compliance question on every upload, no ANSSI declaration (#705).
+                "ITSAppUsesNonExemptEncryption": false,
             ]),
             sources: ["MonElu/Sources/**"],
             resources: ["MonElu/Resources/**"],

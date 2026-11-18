@@ -12,6 +12,18 @@ import Testing
 @MainActor
 @Suite(.snapshots(record: .missing))
 struct AskSnapshotTests {
+    /// The intro shows the `llm_generated` caveat and the À propos link (#705).
+    static let configuration = AppConfiguration(
+        minIOSVersion: "1.0.0",
+        features: allOn,
+        dataHorizon: "2025-07-01",
+        caveats: [.init(
+            id: "llm_generated",
+            text: "Les résumés en langage clair et les réponses de l'assistant sont générés par un LLM. Ce sont des aides à la lecture, pas des sources - le scrutin d'origine fait foi."
+        )],
+        siteURL: "https://monelu.fr"
+    )
+
     /// Sources and verdict citations are links, so the conversation sits in a
     /// stack and a scroll view as in the app.
     func conversation(_ exchanges: [ChatExchange], features: AppConfiguration.Features = allOn) -> some View {
@@ -36,13 +48,13 @@ struct AskSnapshotTests {
 
     @Test(arguments: Variant.all)
     func askIntro(_ variant: Variant) {
-        checkSnapshot(AskIntro().padding(16), variant)
+        checkSnapshot(AskIntro().padding(16).environment(\.appConfiguration, Self.configuration), variant)
     }
 
     /// "Vérifier une affirmation" before the first claim.
     @Test(arguments: Variant.all)
     func askIntroClaim(_ variant: Variant) {
-        checkSnapshot(AskIntro(mode: .claim).padding(16), variant)
+        checkSnapshot(AskIntro(mode: .claim).padding(16).environment(\.appConfiguration, Self.configuration), variant)
     }
 
     /// A claim sent in "Vérifier": the quoted claim and its verdict, no answer.
