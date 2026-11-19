@@ -11,6 +11,9 @@
 #   ios.sh flow NAME  build, install, and run maestro/NAME.yaml in each
 #                     appearance, saving its screenshots to build/screenshots/NAME/
 #   ios.sh smoke      every flow in SMOKE_FLOWS, as ios.yml runs them
+#   ios.sh store      run maestro/store.yaml on a Simulator of an accepted App
+#                     Store display size, with a clean status bar, and write
+#                     the upload set to build/screenshots/store/app-store/
 #   ios.sh device     sign, build, install and launch on the plugged-in iPhone
 #
 # IOS_SIMULATOR_ID picks a Simulator by UDID. Otherwise each checkout gets its
@@ -67,7 +70,7 @@ has_finished_first_boot() {
 # spends many minutes on that first boot, and on this runtime a clone of one
 # that has not finished it does the same work again.
 template_id() {
-    local name="MonElu template" id candidate
+    local device="${1:-$SIMULATOR_DEVICE}" name="${2:-MonElu template}" id candidate
     id="$(simulator_named "$name")"
     [[ -n "$id" ]] && { echo "$id"; return; }
     if ! xcrun simctl list runtimes | grep -q "$SIMULATOR_RUNTIME"; then
@@ -85,25 +88,25 @@ runtime, device = sys.argv[1], sys.argv[2]
 for d in json.load(sys.stdin)["devices"].get(runtime, []):
     if d["name"] == device and d["state"] == "Shutdown":
         print(d["udid"])
-' "$SIMULATOR_RUNTIME" "$SIMULATOR_DEVICE"); do
+' "$SIMULATOR_RUNTIME" "$device"); do
         if has_finished_first_boot "$candidate"; then
             id="$(xcrun simctl clone "$candidate" "$name")"
-            echo "Created the template Simulator from $SIMULATOR_DEVICE ($candidate)." >&2
+            echo "Created \"$name\" from $device ($candidate)." >&2
             echo "$id"
             return
         fi
     done
     # None: boot a new one until it reaches its home screen, once per machine.
-    id="$(xcrun simctl create "$name" "$SIMULATOR_DEVICE" "$SIMULATOR_RUNTIME")"
-    echo "Creating the template Simulator ($SIMULATOR_DEVICE); its first boot is slow, once per machine." >&2
-    echo "(Shutting down a used $SIMULATOR_DEVICE first lets it be cloned instead.)" >&2
+    id="$(xcrun simctl create "$name" "$device" "$SIMULATOR_RUNTIME")"
+    echo "Creating \"$name\" ($device); its first boot is slow, once per machine." >&2
+    echo "(Shutting down a used $device first lets it be cloned instead.)" >&2
     xcrun simctl boot "$id"
     local waited=0
     until has_finished_first_boot "$id"; do
         sleep 10
         waited=$((waited + 10))
         if [[ "$waited" -ge 1800 ]]; then
-            echo "The template Simulator did not reach its home screen in 30 minutes." >&2
+            echo "\"$name\" did not reach its home screen in 30 minutes." >&2
             exit 1
         fi
     done
@@ -116,11 +119,16 @@ simulator_id() {
         echo "$IOS_SIMULATOR_ID"
         return
     fi
-    # This checkout's own Simulator, found by name or cloned from the template.
-    local name="MonElu $CHECKOUT_KEY" id template
+    checkout_simulator "MonElu $CHECKOUT_KEY"
+}
+
+# Prints the UDID of the Simulator named $1, cloning it on first use from the
+# template of device $2 (the snapshot device by default) named $3.
+checkout_simulator() {
+    local name="$1" id template
     id="$(simulator_named "$name")"
     if [[ -z "$id" ]]; then
-        template="$(template_id)"
+        template="$(template_id "${2:-$SIMULATOR_DEVICE}" "${3:-MonElu template}")"
         # A clone needs its source shut down.
         xcrun simctl shutdown "$template" 2>/dev/null || true
         id="$(xcrun simctl clone "$template" "$name")"
@@ -403,6 +411,57 @@ smoke() {
     run_flows "$(install_app)" "${SMOKE_FLOWS[@]}"
 }
 
+# App Store screenshots (#710). App Store Connect accepts only certain pixel
+# sizes per iPhone display class, and scales the largest class down for the
+# others: the iPhone 18 Pro Max is in "iPhone with Dynamic Island (large
+# display)", whose screenshots are 1320 x 2868 (the snapshot device, 1206 x
+# 2622, is in the medium class). So the flow runs on a Simulator of its own,
+# per checkout like the others and cloned from a template of that device.
+STORE_DEVICE="${IOS_STORE_DEVICE:-iPhone 18 Pro Max}"
+# Portrait sizes Apple's screenshot specifications accept for iPhone with
+# Dynamic Island (large, then medium) and Face ID (large).
+STORE_SIZES=(1320x2868 1290x2796 1260x2736 1206x2622 1179x2556 1284x2778 1242x2688)
+
+store() {
+    local id
+    if [[ -n "${IOS_SIMULATOR_ID:-}" ]]; then
+        id="$IOS_SIMULATOR_ID"
+    else
+        id="$(checkout_simulator "MonElu store $CHECKOUT_KEY" "$STORE_DEVICE" "MonElu store template")"
+        # build, install_app and run_flows all read the Simulator from here.
+        export IOS_SIMULATOR_ID="$id"
+    fi
+    ensure_booted "$id"
+    # The status bar a store page shows: 9:41, full battery and signal, no
+    # carrier name. Cleared afterwards, even when the flow fails.
+    xcrun simctl status_bar "$id" override --time 9:41 \
+        --dataNetwork wifi --wifiMode active --wifiBars 3 \
+        --cellularMode active --cellularBars 4 --operatorName "" \
+        --batteryState discharging --batteryLevel 100
+    trap "xcrun simctl status_bar '$id' clear" EXIT
+    local status=0
+    run_flows "$(install_app)" store || status=$?
+    [[ "$status" -eq 0 ]] || return "$status"
+    # The upload set: App Store Connect refuses an image with an alpha
+    # channel, which every Simulator screenshot has, so each frame is written
+    # again as a JPEG (no alpha) at full quality, and its size checked.
+    local dir="$IOS_DIR/build/screenshots/store" out png size bad=0
+    out="$dir/app-store"
+    mkdir -p "$out"
+    for png in "$dir"/*.png; do
+        size="$(sips -g pixelWidth -g pixelHeight "$png" | awk '/pixelWidth/ {w=$2} /pixelHeight/ {h=$2} END {print w "x" h}')"
+        if [[ " ${STORE_SIZES[*]} " != *" $size "* ]]; then
+            echo "$(basename "$png") is $size, which App Store Connect does not accept for iPhone." >&2
+            bad=1
+            continue
+        fi
+        sips -s format jpeg -s formatOptions 100 "$png" --out "$out/$(basename "${png%.png}").jpg" >/dev/null
+    done
+    [[ "$bad" -eq 0 ]] || return 1
+    echo "App Store upload set ($size): $out"
+    ls "$out"
+}
+
 case "${1:-}" in
     generate) generate ;;
     build) build ;;
@@ -411,8 +470,9 @@ case "${1:-}" in
     device) device ;;
     flow) flow "${2:-}" ;;
     smoke) smoke ;;
+    store) store ;;
     *)
-        echo "usage: $0 {generate|build|test|run|device|flow NAME|smoke}" >&2
+        echo "usage: $0 {generate|build|test|run|device|flow NAME|smoke|store}" >&2
         exit 2
         ;;
 esac
