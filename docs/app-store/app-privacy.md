@@ -69,6 +69,6 @@ None is settled by this file; each needs a decision, and possibly a change to th
    The followed deputies and themes are saved only on the device, but `GET /feed` and `GET /feed/week` carry them as query parameters (`FeedService.swift`), and uvicorn's access log, on by default, records each request's path, query string and client IP in the Railway logs.
    Nothing is written to the database, so this is not collection in the database sense, but an IP next to a list of followed deputies touches the same political-opinion question as item 1.
    Turning the access log off (`--no-access-log`) or keeping the query string out of it would close it.
-5. **`/confidentialite` does not describe all of this yet.**
-   It names Groq but not OpenAI, and does not say that every checked claim is stored.
-   It must match the label before submission.
+5. **`/confidentialite` must keep matching the label.**
+   Its "Application iPhone" section (`frontend/src/app/confidentialite/AppPrivacySection.tsx`, #711) names OpenAI and Groq, says every checked claim is stored, and describes the access log and Sentry as they are today.
+   If item 1, 2 or 4 changes the manifest or the API, change that section in the same PR.
