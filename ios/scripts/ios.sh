@@ -78,8 +78,8 @@ template_id() {
         echo "Install it with: xcodebuild -downloadPlatform iOS" >&2
         exit 1
     fi
-    # Prefer a device of the snapshot model that has already been used and is
-    # shut down: a clone needs its source shut down, and one that is booted may
+    # Prefer a device of that model that has already been used and is shut
+    # down: a clone needs its source shut down, and one that is booted may
     # be in use. simctl's text listing cannot be filtered by runtime; its JSON
     # is keyed by it.
     for candidate in $(xcrun simctl list devices available -j | /usr/bin/python3 -c '
@@ -416,49 +416,62 @@ smoke() {
 # others: the iPhone 18 Pro Max is in "iPhone with Dynamic Island (large
 # display)", whose screenshots are 1320 x 2868 (the snapshot device, 1206 x
 # 2622, is in the medium class). So the flow runs on a Simulator of its own,
-# per checkout like the others and cloned from a template of that device.
+# per checkout like the others and cloned from a template of that device; both
+# names carry the model, so another IOS_STORE_DEVICE gets Simulators of its own.
 STORE_DEVICE="${IOS_STORE_DEVICE:-iPhone 18 Pro Max}"
-# Portrait sizes Apple's screenshot specifications accept for iPhone with
-# Dynamic Island (large, then medium) and Face ID (large).
-STORE_SIZES=(1320x2868 1290x2796 1260x2736 1206x2622 1179x2556 1284x2778 1242x2688)
+# Portrait sizes Apple's screenshot specifications accept for the large
+# classes, iPhone with Dynamic Island then with Face ID, which App Store
+# Connect scales down for every smaller iPhone.
+STORE_SIZES=(1320x2868 1290x2796 1260x2736 1284x2778 1242x2688)
+# Frames store.yaml takes per appearance.
+STORE_FRAMES=8
 
 store() {
     local id
     if [[ -n "${IOS_SIMULATOR_ID:-}" ]]; then
         id="$IOS_SIMULATOR_ID"
     else
-        id="$(checkout_simulator "MonElu store $CHECKOUT_KEY" "$STORE_DEVICE" "MonElu store template")"
+        id="$(checkout_simulator "MonElu store $STORE_DEVICE $CHECKOUT_KEY" "$STORE_DEVICE" "MonElu store template ($STORE_DEVICE)")"
         # build, install_app and run_flows all read the Simulator from here.
         export IOS_SIMULATOR_ID="$id"
     fi
     ensure_booted "$id"
-    # The status bar a store page shows: 9:41, full battery and signal, no
-    # carrier name. Cleared afterwards, even when the flow fails.
+    # The status bar a store page shows: 9:41 (09:41 on the French
+    # Simulator's 24-hour clock), full battery and signal, no carrier name.
+    # Cleared when the script exits, even on a failure: expanded now, since
+    # `id` is gone by then.
+    # shellcheck disable=SC2064
+    trap "xcrun simctl status_bar '$id' clear" EXIT
     xcrun simctl status_bar "$id" override --time 9:41 \
         --dataNetwork wifi --wifiMode active --wifiBars 3 \
         --cellularMode active --cellularBars 4 --operatorName "" \
         --batteryState discharging --batteryLevel 100
-    trap "xcrun simctl status_bar '$id' clear" EXIT
-    local status=0
-    run_flows "$(install_app)" store || status=$?
-    [[ "$status" -eq 0 ]] || return "$status"
+    run_flows "$(install_app)" store
     # The upload set: App Store Connect refuses an image with an alpha
     # channel, which every Simulator screenshot has, so each frame is written
     # again as a JPEG (no alpha) at full quality, and its size checked.
-    local dir="$IOS_DIR/build/screenshots/store" out png size bad=0
+    # One set has one size, and every screen in every appearance.
+    local dir="$IOS_DIR/build/screenshots/store" out png size set_size="" bad=0 appearances
     out="$dir/app-store"
+    read -r -a appearances <<< "${IOS_APPEARANCES:-light dark}"
+    local pngs=("$dir"/*.png)
+    if [[ ! -e "${pngs[0]}" || ${#pngs[@]} -ne $((STORE_FRAMES * ${#appearances[@]})) ]]; then
+        echo "Expected $STORE_FRAMES frames per appearance in $dir." >&2
+        return 1
+    fi
     mkdir -p "$out"
-    for png in "$dir"/*.png; do
+    for png in "${pngs[@]}"; do
         size="$(sips -g pixelWidth -g pixelHeight "$png" | awk '/pixelWidth/ {w=$2} /pixelHeight/ {h=$2} END {print w "x" h}')"
-        if [[ " ${STORE_SIZES[*]} " != *" $size "* ]]; then
-            echo "$(basename "$png") is $size, which App Store Connect does not accept for iPhone." >&2
+        set_size="${set_size:-$size}"
+        if [[ " ${STORE_SIZES[*]} " != *" $size "* || "$size" != "$set_size" ]]; then
+            echo "$(basename "$png") is $size: App Store Connect wants one of ${STORE_SIZES[*]}, the same for the whole set." >&2
             bad=1
             continue
         fi
         sips -s format jpeg -s formatOptions 100 "$png" --out "$out/$(basename "${png%.png}").jpg" >/dev/null
     done
     [[ "$bad" -eq 0 ]] || return 1
-    echo "App Store upload set ($size): $out"
+    echo "App Store upload set ($set_size): $out"
     ls "$out"
 }
 

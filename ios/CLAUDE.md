@@ -149,7 +149,7 @@ When a snapshot fails, the `snapshot-diffs-<shard>` artifact holds the image the
 
 Each checkout gets its own Simulator, named `MonElu <checkout hash>`, so two worktrees running tests or flows at once never install over each other's app.
 It is cloned from `MonElu template`, one per machine on the snapshot device and runtime, created and booted once: a brand-new device spends many minutes on its first boot, and a clone of a booted one does not.
-`IOS_SIMULATOR_ID` overrides it (CI sets it); `xcrun simctl delete "MonElu <hash>"` removes one you no longer need.
+`IOS_SIMULATOR_ID` overrides it (CI sets it); `xcrun simctl delete "MonElu <hash>"` removes one you no longer need, and `make ios-store` adds a second, `MonElu store <model> <hash>`, removed the same way.
 Build products are keyed by checkout the same way, under `~/Library/Caches/MonElu-ios/`.
 Expect the first build in a new worktree to be slow: nothing is shared between checkouts.
 
@@ -212,14 +212,16 @@ Maestro is pinned by version and SHA-256 in `scripts/install-maestro.sh` and nee
 
 ### App Store screenshots
 
-`make ios-store` produces the screenshots App Store Connect asks for (#710): `maestro/store.yaml` walks Accueil, a vote and its hemicycle, a deputy's profile, the quiz and its result, a Demander answer and Explorer, in light and dark (`IOS_APPEARANCES` applies).
-It runs on a Simulator of its own, `MonElu store <checkout hash>`, an iPhone 18 Pro Max cloned from `MonElu store template` (`IOS_STORE_DEVICE` picks another model, `IOS_SIMULATOR_ID` a given Simulator).
+`make ios-store` produces the screenshots App Store Connect asks for (#710): `maestro/store.yaml` walks Accueil, a vote and its hemicycle, a deputy's profile, a quiz question and how the Assemblée voted on it, a Demander answer and Explorer, in light and dark (`IOS_APPEARANCES` applies).
+It runs on a Simulator of its own, `MonElu store iPhone 18 Pro Max <checkout hash>`, cloned from `MonElu store template (iPhone 18 Pro Max)` (`IOS_STORE_DEVICE` picks another model, with Simulators of its own; `IOS_SIMULATOR_ID` a given Simulator).
 That device is in Apple's "iPhone with Dynamic Island (large display)" class, 1320 x 2868, the largest iPhone size, which App Store Connect scales down for the smaller classes; the snapshot device (iPhone 18 Pro, 1206 x 2622) is in the medium class.
 The first run creates the template and waits for its first boot, which takes minutes once per machine.
-The script overrides the status bar (9:41, full battery and signal, no carrier) for the run and clears it afterwards.
+The script overrides the status bar (9:41, shown as 09:41 by the French 24-hour clock, full battery and signal, no carrier) for the run and clears it afterwards.
 `build/screenshots/store/` holds the PNG frames; `build/screenshots/store/app-store/` holds the upload set, the same frames as JPEGs, since App Store Connect refuses an image with an alpha channel and every Simulator screenshot has one.
-The script fails when a frame's size is not one Apple accepts for iPhone (`STORE_SIZES` in `scripts/ios.sh`, from Apple's screenshot specifications).
-It is not a smoke flow: it only makes images. Beyond reading, it calls only Demander's `search` and the quiz's `match`, which store nothing.
+The script fails when a frame is missing, or when frames differ in size or have a size outside Apple's large iPhone classes (`STORE_SIZES` in `scripts/ios.sh`, from Apple's screenshot specifications).
+It is not a smoke flow: it only makes images.
+Beyond reading, it calls only Demander's `search`, which stores nothing; it never finishes the quiz, whose result would put the deputies of one group first.
+The Demander answer is live model output and differs between runs: look at it before each upload.
 `make ios-flow FLOW=store` runs the same flow on the checkout's usual Simulator, without the status bar or the upload set, to check the flow itself.
 
 ## The local loop

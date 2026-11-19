@@ -3,10 +3,10 @@
 # an accepted display size and cleans the status bar; `make ios-flow
 # FLOW=store` runs it on the snapshot device instead.
 # Never part of the smoke set: it only produces images.
-# Live data, so it asserts on fixed labels and accessibility ids only. Of the
-# calls that can write to production it makes `search` alone (Demander's
-# answer): never verify, shareAnswer, submitChatFeedback or shareResult. The
-# followed deputy is kept on the device, and the quiz match stores nothing.
+# Live data, so it asserts on fixed labels and accessibility ids only.
+# Beyond reading, it calls only Demander's `search`, which stores nothing;
+# never verify, shareAnswer, submitChatFeedback or shareResult. The followed
+# deputy is kept on the device.
 appId: ${APP_ID}
 ---
 - launchApp:
@@ -96,8 +96,10 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}4-depute
 
-# The quiz: its first card, then the result of ten answers. Matching stores
-# nothing; the flow stops before sharing.
+# The quiz: its first card, then how the Assemblée really voted on it, which
+# the first answer reveals. A finished quiz is not shown: its result names
+# the deputies and groups closest to the answers, so a fixed set of answers
+# would make the store page feature one party.
 - tapOn: "Quiz"
 - extendedWaitUntil:
     visible: "Quel député vote comme vous ?"
@@ -108,25 +110,16 @@ appId: ${APP_ID}
     timeout: 10000
 - waitForAnimationToEnd
 - takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz
-# Pour and contre in turn; each swipe starts on the card.
-- repeat:
-    times: 5
-    commands:
-      - swipe:
-          start: 25%, 50%
-          end: 90%, 50%
-          duration: 400
-      - waitForAnimationToEnd
-      - swipe:
-          start: 75%, 50%
-          end: 10%, 50%
-          duration: 400
-      - waitForAnimationToEnd
+# The swipe starts on the card: Maestro's bare directions start on the header.
+- swipe:
+    start: 25%, 50%
+    end: 90%, 50%
+    duration: 400
 - extendedWaitUntil:
-    visible: "Vos résultats"
-    timeout: 30000
+    visible: ".*L'Assemblée.*"
+    timeout: 10000
 - waitForAnimationToEnd
-- takeScreenshot: ${SCREENSHOT_PREFIX}6-quiz-resultat
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-quiz-assemblee
 
 # Demander, with an answer from `search`.
 - tapOn: "Demander"
