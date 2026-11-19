@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { CONTACT_EMAIL, canonicalUrl } from '@/lib/site'
+import { REPORT_SECTION_ID } from '@/lib/reportContent'
+import { ReportedPageNote } from '@/components/ReportedPageNote'
 
 export const metadata: Metadata = {
   title: 'Contact - MonÉlu',
@@ -72,6 +75,23 @@ export default function ContactPage() {
           écart avec le site de l&apos;Assemblée vient souvent de là. À l&apos;inverse, le résultat d&apos;un
           scrutin (adopté / rejeté) est repris tel quel et jamais recalculé : s&apos;il diffère, c&apos;est un
           vrai bug.
+        </p>
+      </LegalSection>
+
+      <LegalSection id={REPORT_SECTION_ID} title="Signaler un contenu partagé">
+        <p style={pStyle}>
+          Une réponse du chat, un verdict de vérification ou un résultat de quiz peut être partagé : il devient
+          alors une page publique, accessible à toute personne qui en a le lien, construite à partir de ce
+          qu&apos;un visiteur a saisi. Ces pages ne sont pas relues avant leur publication. Chacune porte un lien{' '}
+          <strong>« Signaler ce contenu »</strong> qui mène ici.
+        </p>
+        <Suspense fallback={null}>
+          <ReportedPageNote />
+        </Suspense>
+        <p style={{ ...pStyle, margin: '10px 0 0' }}>
+          Écrivez à <MailLink /> avec l&apos;adresse de la page et la raison du signalement (propos illicites,
+          injurieux, visant une personne, données personnelles). Le message est lu par une personne, qui peut
+          supprimer la page.
         </p>
       </LegalSection>
 

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { api, nullIfMissing } from '@/lib/api'
 import { SITE_URL, SNAPSHOT_ROBOTS } from '@/lib/seo'
 import { canonicalUrl } from '@/lib/site'
+import { ReportContentLink } from '@/components/ReportContentLink'
 import { QuizResultCard } from '../../QuizResultCard'
 import { QuizResultSections } from '../../QuizResultSections'
 
@@ -95,6 +96,7 @@ export default async function QuizSharePage({ params }: { params: Promise<{ id: 
               : 'Faites le test - quel député vote comme vous ?'}
           </Link>
         </div>
+        <ReportContentLink kind="quiz" id={id} className="mt-12 text-center" />
       </main>
     </div>
   )

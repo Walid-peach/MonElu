@@ -5,6 +5,7 @@ import { api, nullIfMissing } from '@/lib/api'
 import { VerdictCard } from '@/components/VerdictCard'
 import { SITE_URL, canonicalUrl } from '@/lib/site'
 import { SNAPSHOT_ROBOTS } from '@/lib/seo'
+import { ReportContentLink } from '@/components/ReportContentLink'
 
 // Verdicts are immutable snapshots (ADR-022): this page reads the stored
 // verdict via GET /verify/{id} — it must never trigger a new verification.
@@ -64,6 +65,7 @@ export default async function VerificationPage({ params }: { params: Promise<{ i
           Vérifier une autre affirmation
         </Link>
       </div>
+      <ReportContentLink kind="verifier" id={id} className="mt-10" />
     </main>
   )
 }
