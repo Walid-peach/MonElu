@@ -176,6 +176,7 @@ A freshly booted Simulator needs a couple of minutes to settle before runs are f
 | `scripts/ios.sh` | What the Makefile targets run |
 | `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `home.yaml`, `ask.yaml`, `quiz.yaml`, `loi.yaml`, `agenda.yaml`, `group.yaml`, `theme.yaml`, `department.yaml`, `compare.yaml`, `explore.yaml` and `settings.yaml` run on demand |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
+| [`../docs/app-store/`](../docs/app-store/README.md) | Outside `ios/`: the App Store Connect texts (review notes, privacy label, questionnaires, French and English listing); update them with the change that makes them wrong |
 
 Feature code goes in a package, not in the app target, so it can be tested on its own.
 Every package has at least one Swift Testing test (`import Testing`, `@Test`, `#expect`); do not add XCTest.
