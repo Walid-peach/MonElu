@@ -13,8 +13,13 @@
   - Collected: only text MonÉlu keeps, none of it linked to an identity: every
     claim sent to Vérifier (stored with its verdict, POST /verify/), and what
     the user chooses to share or send (an answer, a quiz result, feedback).
-    A question, an address, a postal code or a point is sent to answer the
-    request and not kept, so it is not "collected" in Apple's sense.
+  - Sensitive Info: a shared quiz result stores how the user's answers match
+    each deputy and, when they opt in, the answers themselves, which is a
+    political opinion. Declared too, not linked, for App Functionality only.
+  - A question, an address, a postal code or a point is sent to answer the
+    request and not kept, so it is not "collected" in Apple's sense: the API
+    logs no question, sends no request body or query string to Sentry, and
+    keeps query strings (the followed ids on /feed) out of its access log.
 
   Update this file, the privacy labels and /confidentialite together.
 -->
@@ -40,6 +45,18 @@
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeSensitiveInfo</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<false/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>

@@ -105,7 +105,7 @@ def search(request: Request, body: SearchRequest):
             ),
         ) from e
     except Exception:
-        logger.exception("RAG pipeline error for question %r", body.question)
+        logger.exception("RAG pipeline error")  # never the question (#716)
         raise HTTPException(
             status_code=500,
             detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
