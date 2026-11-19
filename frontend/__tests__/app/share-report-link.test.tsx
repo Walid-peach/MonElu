@@ -42,9 +42,11 @@ const PAGES = [
 
 describe('share snapshots link to a report path (#707)', () => {
   it.each(PAGES)('%s renders "Signaler ce contenu" to /contact', async (_route, Page, kind) => {
-    render(await Page({ params: Promise.resolve({ id: ID }) }))
+    const { container } = render(await Page({ params: Promise.resolve({ id: ID }) }))
     const link = screen.getByRole('link', { name: 'Signaler ce contenu' })
     expect(link).toHaveAttribute('href', `/contact?signaler=${kind}-${ID}#signaler-un-contenu`)
+    // The address lives on /contact only (MON-272).
+    expect(container.querySelector('a[href^="mailto:"]')).toBeNull()
     expect(screen.queryByText(/@/)).not.toBeInTheDocument()
   })
 })

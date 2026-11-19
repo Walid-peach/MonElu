@@ -65,7 +65,7 @@ const SECTIONS: Array<{ path: string; what: string }> = [
   { path: '/developpeurs', what: 'Documentation de l\'API REST.' },
   { path: '/licence-donnees', what: 'Conditions de réutilisation.' },
   { path: '/a-propos', what: 'Le projet, ses sources et ses partis pris.' },
-  { path: '/contact', what: 'Qui édite le site et comment le joindre : erreur de données, clé d\'API, presse et recherche.' },
+  { path: '/contact', what: 'Qui édite le site et comment le joindre : erreur de données, contenu partagé à signaler, clé d\'API, presse et recherche.' },
 ]
 
 function list(lines: string[]): string {
@@ -136,7 +136,7 @@ Une page par département ayant des députés en exercice, à \`${SITE_URL}/depa
 function contact(): string {
   return `## Contact
 
-Qui édite le site, comment signaler une erreur, comment demander une clé d'API : [/contact](${SITE_URL}/contact).
+Qui édite le site, comment signaler une erreur ou un contenu partagé, comment demander une clé d'API : [/contact](${SITE_URL}/contact).
 
 Une erreur ou une incohérence : ${CONTACT_EMAIL}, en précisant le député, le scrutin ou la page concernée.`
 }

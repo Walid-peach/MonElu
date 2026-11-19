@@ -9,7 +9,7 @@ import { ReportedPageNote } from '@/components/ReportedPageNote'
 export const metadata: Metadata = {
   title: 'Contact - MonÉlu',
   description:
-    "Qui édite MonÉlu et comment le joindre : signaler une erreur de données, demander une clé d'API, contacter le projet pour la presse ou la recherche.",
+    "Qui édite MonÉlu et comment le joindre : signaler une erreur de données ou un contenu partagé, demander une clé d'API, contacter le projet pour la presse ou la recherche.",
   alternates: { canonical: canonicalUrl('/contact') },
 }
 

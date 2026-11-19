@@ -19,10 +19,10 @@ export function ReportContentLink({
 }) {
   return (
     <p className={`text-xs text-[color:var(--dp-text-muted)] ${className}`}>
-      Page créée par un visiteur de MonÉlu.{' '}
+      Page partagée par un visiteur de MonÉlu.{' '}
       <Link
         href={reportHref(kind, id)}
-        className="underline hover:text-[color:var(--dp-text-secondary)]"
+        className="underline hover:text-navy dark:hover:text-[color:var(--dp-text)]"
       >
         Signaler ce contenu
       </Link>
