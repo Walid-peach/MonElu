@@ -1,0 +1,147 @@
+# App Store screenshots (#710): the app's best screens, one frame each, for
+# App Store Connect. Run it with `make ios-store`, which picks a Simulator of
+# an accepted display size and cleans the status bar; `make ios-flow
+# FLOW=store` runs it on the snapshot device instead.
+# Never part of the smoke set: it only produces images.
+# Live data, so it asserts on fixed labels and accessibility ids only.
+# Beyond reading, it calls only Demander's `search`, which stores nothing;
+# never verify, shareAnswer, submitChatFeedback or shareResult. The followed
+# deputy is kept on the device.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "À l'Assemblée"
+      selected: true
+    timeout: 20000
+
+# Accueil, « Pour vous » with one followed deputy: the 1st seat of Gironde,
+# found by postal code (the same steps as home.yaml).
+- tapOn: "Pour vous"
+- extendedWaitUntil:
+    visible: "Trouvez votre député.*"
+    timeout: 20000
+- tapOn: "Trouvez votre député.*"
+- extendedWaitUntil:
+    visible: "Code postal"
+    timeout: 5000
+- tapOn: "Code postal"
+- inputText: "33000"
+- tapOn: "Rechercher"
+- extendedWaitUntil:
+    visible: ".*Gironde \\(33\\).*"
+    timeout: 20000
+- tapOn: ".*1re circonscription.*"
+- tapOn: "Suivre .*"
+- extendedWaitUntil:
+    visible: ".*député suivi"
+    timeout: 20000
+- assertNotVisible: "Chargement impossible"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-accueil
+
+# A vote on a whole text, then its hemicycle.
+- tapOn: "Explorer"
+- extendedWaitUntil:
+    visible: ".*en mandat.*"
+    timeout: 20000
+- tapOn: "Votes, .*"
+- extendedWaitUntil:
+    visible:
+      id: "vote.row"
+    timeout: 20000
+- tapOn: "Textes entiers"
+- extendedWaitUntil:
+    visible:
+      id: "vote.row"
+    timeout: 20000
+- tapOn:
+    id: "vote.row"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "vote.detail"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-vote
+# The chart is one accessibility element labelled "Hémicycle"; the screen's
+# own id masks ids nested inside it.
+- scrollUntilVisible:
+    element: "Hémicycle"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-hemicycle
+
+# A deputy's profile, from Explorer's list.
+- tapOn: "Explorer"
+- tapOn: "Explorer"
+- extendedWaitUntil:
+    visible: "Députés, .*"
+    timeout: 10000
+- tapOn: "Députés, .*"
+- extendedWaitUntil:
+    visible:
+      id: "deputy.row"
+    timeout: 20000
+- tapOn:
+    id: "deputy.row"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "deputy.profile"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-depute
+
+# The quiz: its first card, then how the Assemblée really voted on it, which
+# the first answer reveals. A finished quiz is not shown: its result names
+# the deputies and groups closest to the answers, so a fixed set of answers
+# would make the store page feature one party.
+- tapOn: "Quiz"
+- extendedWaitUntil:
+    visible: "Quel député vote comme vous ?"
+    timeout: 20000
+- tapOn: "Commencer"
+- extendedWaitUntil:
+    visible: "Question 1 sur 10"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz
+# The swipe starts on the card: Maestro's bare directions start on the header.
+- swipe:
+    start: 25%, 50%
+    end: 90%, 50%
+    duration: 400
+- extendedWaitUntil:
+    visible: ".*L'Assemblée.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-quiz-assemblee
+
+# Demander, with an answer from `search`.
+- tapOn: "Demander"
+- extendedWaitUntil:
+    visible: "Posez une question sur vos élus"
+    timeout: 10000
+- tapOn: "Posez une question sur vos élus…"
+- inputText: "Quels textes sur la protection des enfants ont été votés ?"
+- tapOn: "Envoyer la question"
+- extendedWaitUntil:
+    notVisible: "Recherche dans les votes et profils des députés…"
+    timeout: 90000
+- assertVisible: "Réponse assistée par IA"
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}7-demander
+
+# Explorer's contents page, back at its top.
+- tapOn: "Explorer"
+- tapOn: "Explorer"
+- extendedWaitUntil:
+    visible: "Votes, .*"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}8-explorer

@@ -1,4 +1,4 @@
-.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start ios-generate ios-build ios-test ios-run ios-flow ios-smoke ios-device
+.PHONY: start stop migrate ingest ingest-prod api psql check-db fix-deputies portrait-ids portrait-ids-check rag-index rag-stats rag-clear rag-test rag-eval rag-notable rag-test-sql rag-laws mlflow-ui venv dbt-run dbt-test dbt-docs dbt-lineage dbt-clean frontend-dev frontend-build frontend-start ios-generate ios-build ios-test ios-run ios-flow ios-smoke ios-store ios-device
 
 start:
 	docker compose up -d
@@ -123,6 +123,12 @@ ios-flow:
 
 ios-smoke:
 	ios/scripts/ios.sh smoke
+
+# App Store screenshots (#710): ios/maestro/store.yaml on an iPhone 18 Pro Max
+# Simulator with a clean status bar; the upload set lands in
+# ios/build/screenshots/store/app-store/.
+ios-store:
+	ios/scripts/ios.sh store
 
 # Signs, builds, installs and launches on the plugged-in iPhone with the Apple
 # ID signed into Xcode; the team is saved in ios/Configs/Local.xcconfig.
