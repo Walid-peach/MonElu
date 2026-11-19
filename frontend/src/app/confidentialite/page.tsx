@@ -73,9 +73,8 @@ export default function ConfidentialitePage() {
           Les questions que vous posez à l&apos;assistant sont envoyées à notre API, qui les transmet à{' '}
           {EMBEDDING_PROVIDER} pour chercher les passages pertinents et à {LLM_PROVIDER} pour générer une
           réponse. Elles ne sont associées à aucune identité et ne sont pas enregistrées dans la base de données
-          de MonÉlu, sauf si vous partagez ou notez une réponse. Comme pour l&apos;application (voir
-          ci-dessous), une question peut figurer dans les rapports d&apos;erreurs et de performances de
-          l&apos;API.
+          de MonÉlu, sauf si vous partagez ou notez une réponse. L&apos;API ne les écrit ni dans son journal
+          technique ni dans ses rapports d&apos;erreurs et de performances.
         </p>
       </LegalSection>
 

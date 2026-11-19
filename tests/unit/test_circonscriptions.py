@@ -9,7 +9,7 @@ from shapely.geometry import box
 
 import api.routers.circonscriptions as circ
 from api.circonscriptions_data import ABROAD_SEAT_REGIONS, BOUNDARY_TOLERANCE_M
-from api.main import _drop_private_request_bodies
+from api.main import _drop_private_request_data
 
 DEPUTY = {
     "deputy_id": "PA1",
@@ -162,9 +162,7 @@ def test_sentry_events_for_locate_carry_no_body():
             "data": {"lat": 50.0, "lon": 3.0},
         }
     }
-    assert "data" not in _drop_private_request_bodies(event, None)["request"]
-    other = {"request": {"url": "https://x/search/", "data": {"question": "q"}}}
-    assert _drop_private_request_bodies(other, None)["request"]["data"] == {"question": "q"}
+    assert "data" not in _drop_private_request_data(event, None)["request"]
 
 
 # --- GET /circonscriptions/abroad --------------------------------------------

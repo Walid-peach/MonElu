@@ -23,24 +23,28 @@ const itemGap = { marginTop: '8px' }
  *   `AppearancePreference` (`@AppStorage`), `UserDefaultsAppConfigCache`, and
  *   the shared `URLCache` (`MonEluAPI.configureURLCache`); `MonEluAccount` is
  *   a stub no source file imports, so the app has no account;
- * - `GET /feed` receives the followed ids as query parameters, which
- *   uvicorn's access log on Railway prints with the client IP;
+ * - `GET /feed` receives the followed ids as query parameters; uvicorn's
+ *   access log drops every query string (`_DropQueryString` in
+ *   `api/main.py`), but Railway's own HTTP log records each request's path
+ *   and client IP (`@path`, `@srcIp`), and its docs do not say whether that
+ *   path includes the query string;
  * - portraits: `photo_url` from `scripts/ingest_deputies.py`;
  * - address and postal code: `AddressLookup` (data.geopf.fr) and
  *   `PostalCodeService` (geo.api.gouv.fr), both on ephemeral sessions; the
- *   point goes to `POST /circonscriptions/locate`, kept out of logs and of
- *   Sentry (`_SENTRY_BODYLESS_PATHS` in `api/main.py`);
+ *   point goes to `POST /circonscriptions/locate`, which neither stores nor
+ *   logs it;
  * - Demander: `POST /search/` and `POST /verify/` embed the text with
  *   OpenAI (`rag/chain/retriever.py`) and call Groq; `/verify/` inserts every
  *   verdict it returns; `/search/share`, `/quiz/share` and `/feedback/chat`
- *   store what the user sends; both chains log the text on an error;
+ *   store what the user sends; an error is logged without the text;
  * - Sentry (`sentry_sdk.init` in `api/main.py`) gets errors and a sample of
- *   requests (`SENTRY_TRACES_SAMPLE_RATE`), with the URL and the JSON body
- *   except on `/circonscriptions/locate`, and no IP (`send_default_pii` off);
+ *   requests (`SENTRY_TRACES_SAMPLE_RATE`) with the method and the path only:
+ *   no body, no query string, no frame locals, no IP
+ *   (`_drop_private_request_data`, `max_request_body_size="never"`);
  * - no analytics, advertising or crash SDK and no push (ios/CLAUDE.md rule 8).
  *
- * If the API stops sending request bodies and query strings to Sentry, or
- * drops its access log, the sentences that say so here must go too.
+ * If the API starts sending request bodies or query strings to Sentry, or
+ * logging what a visitor typed, the sentences here must change with it.
  *
  * The same facts are declared in `ios/MonElu/Resources/PrivacyInfo.xcprivacy`
  * and in the App Store privacy labels: change all three together.
@@ -65,9 +69,10 @@ export function AppPrivacySection() {
         <li style={itemGap}>
           <strong style={strong}>L&apos;accueil.</strong> Pour composer le fil « Pour vous », l&apos;application
           envoie à l&apos;API de MonÉlu les identifiants des députés et des thèmes suivis. L&apos;API s&apos;en
-          sert pour répondre et ne les enregistre pas dans sa base de données. Comme pour toute requête, le
-          journal technique de l&apos;hébergeur de l&apos;API (Railway) garde l&apos;adresse demandée, qui
-          contient ces identifiants, et l&apos;adresse IP de l&apos;appareil.
+          sert pour répondre, ne les enregistre pas dans sa base de données et ne les écrit pas dans son
+          journal. L&apos;hébergeur de l&apos;API (Railway) tient, comme pour toute requête, son propre
+          journal de l&apos;adresse demandée et de l&apos;adresse IP de l&apos;appareil, qui peut contenir ces
+          identifiants.
         </li>
         <li style={itemGap}>
           <strong style={strong}>Les portraits.</strong> Les photos des députés sont chargées directement
@@ -93,16 +98,17 @@ export function AppPrivacySection() {
           <strong style={strong}>Partages et avis.</strong> Quand vous partagez une réponse ou un résultat de
           quiz, ou notez une réponse, MonÉlu enregistre ce que vous envoyez : la question, la réponse et ses
           sources, ou les scores du quiz (vos réponses seulement si vous cochez l&apos;option qui les inclut).
-          Rien de cela n&apos;est relié à une identité.
+          Un résultat de quiz dit quelque chose de vos opinions politiques : c&apos;est pourquoi il n&apos;est
+          enregistré que si vous le partagez. Rien de cela n&apos;est relié à une identité.
         </li>
         <li style={itemGap}>
           <strong style={strong}>Erreurs et performances.</strong> L&apos;application n&apos;envoie aucun
           rapport d&apos;erreur. L&apos;API de MonÉlu, elle, signale ses erreurs à Sentry, son service de suivi
           des erreurs et des performances, et lui transmet aussi un échantillon des requêtes qu&apos;elle reçoit.
-          Ces rapports contiennent l&apos;adresse demandée et le contenu envoyé (une question, une affirmation,
-          des réponses au quiz, les identifiants suivis), sans l&apos;adresse IP et jamais les coordonnées
-          d&apos;une adresse. Une question ou une affirmation qui provoque une erreur figure aussi dans le
-          journal technique de l&apos;API.
+          Ces rapports ne contiennent que le type de requête et la page demandée, sans paramètres : ni le
+          contenu envoyé (question, affirmation, réponses au quiz, coordonnées), ni les identifiants suivis,
+          ni l&apos;adresse IP. Une erreur est inscrite dans le journal technique de l&apos;API sans la question
+          ni l&apos;affirmation qui l&apos;a provoquée.
         </li>
         <li style={itemGap}>
           <strong style={strong}>Durée de conservation.</strong> Les affirmations vérifiées, les partages et les

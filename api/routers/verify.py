@@ -136,7 +136,7 @@ def verify(request: Request, body: VerifyRequest):
             ),
         ) from e
     except Exception:
-        logger.exception("Verification pipeline error for claim %r", body.claim)
+        logger.exception("Verification pipeline error")  # never the claim (#716)
         raise HTTPException(
             status_code=500,
             detail="Service temporairement indisponible. Réessayez dans quelques secondes.",

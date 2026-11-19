@@ -41,16 +41,23 @@ def _traces_sample_rate() -> float:
         return 0.1
 
 
-# Request bodies that must never leave the API, even inside an error report:
-# POST /circonscriptions/locate carries a precise location (ADR-047 §3).
-_SENTRY_BODYLESS_PATHS = ("/circonscriptions/locate",)
+# What a visitor sends never leaves the API inside an error report or a sampled
+# trace: a request body can hold a question, a claim, quiz answers or a precise
+# location (ADR-047 §3), and a query string the followed deputies and themes
+# (GET /feed). The SDK is told not to read bodies or frame locals at all, and
+# this hook removes whatever request data an integration still attached, so an
+# event carries the method and the path only. /confidentialite says so.
+_SENTRY_PRIVATE_REQUEST_KEYS = ("data", "query_string", "cookies")
 
 
-def _drop_private_request_bodies(event, _hint):
-    request = event.get("request") or {}
-    url = request.get("url") or ""
-    if any(url.split("?", 1)[0].endswith(path) for path in _SENTRY_BODYLESS_PATHS):
-        request.pop("data", None)
+def _drop_private_request_data(event, _hint):
+    request = event.get("request")
+    if not request:
+        return event
+    for key in _SENTRY_PRIVATE_REQUEST_KEYS:
+        request.pop(key, None)
+    if request.get("url"):
+        request["url"] = request["url"].split("?", 1)[0]
     return event
 
 
@@ -58,9 +65,32 @@ sentry_sdk.init(
     dsn=os.getenv("SENTRY_DSN"),
     environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
     traces_sample_rate=_traces_sample_rate(),
-    before_send=_drop_private_request_bodies,
-    before_send_transaction=_drop_private_request_bodies,
+    max_request_body_size="never",
+    include_local_variables=False,
+    send_default_pii=False,
+    before_send=_drop_private_request_data,
+    before_send_transaction=_drop_private_request_data,
 )
+
+
+class _DropQueryString(logging.Filter):
+    """Keeps query strings out of uvicorn's access log.
+
+    GET /feed carries the followed deputies and themes as query parameters,
+    and each access log line also names the client IP; together they would
+    keep a list of followed deputies next to an address in the Railway logs.
+    The method, the path and the status stay, which is what the log is for.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        # uvicorn's format: (client_addr, method, full_path, http_version, status)
+        if isinstance(args, tuple) and len(args) == 5 and isinstance(args[2], str):
+            record.args = (args[0], args[1], args[2].split("?", 1)[0], args[3], args[4])
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(_DropQueryString())
 
 # ---------------------------------------------------------------------------
 # Startup secret validation — warn loudly if keys are missing or placeholder
