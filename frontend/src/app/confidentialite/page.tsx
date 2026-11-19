@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { CONTACT_EMAIL, canonicalUrl } from '@/lib/site'
+import { AppPrivacySection } from './AppPrivacySection'
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité - MonÉlu',
@@ -74,6 +75,8 @@ export default function ConfidentialitePage() {
           conservées de façon agrégée et anonyme à des fins de suivi de qualité du service.
         </p>
       </LegalSection>
+
+      <AppPrivacySection />
 
       <LegalSection title="Données sur les députés">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>

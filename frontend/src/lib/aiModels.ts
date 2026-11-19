@@ -6,3 +6,4 @@
 export const LLM_MODEL = 'openai/gpt-oss-120b'
 export const LLM_PROVIDER = 'Groq'
 export const EMBEDDING_MODEL = 'text-embedding-3-small'
+export const EMBEDDING_PROVIDER = 'OpenAI'
