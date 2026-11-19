@@ -61,11 +61,11 @@ LES DONNÉES
 • Données officielles de l'Assemblée nationale, réutilisées sous Licence Ouverte 2.0.
 • Mises à jour chaque jour ouvré.
 • Chaque scrutin renvoie vers sa source officielle.
-• Les résumés en langage clair sont écrits par IA à partir du texte officiel, et signalés comme tels.
+• Les résumés en langage clair sont écrits par IA à partir du texte officiel, ou par une phrase type pour les motions, et signalés comme tels.
 
 VOTRE VIE PRIVÉE
 • Aucun compte, aucune publicité, aucun traçage.
-• Les députés et les thèmes que vous suivez restent sur votre iPhone.
+• Les députés et les thèmes que vous suivez sont enregistrés seulement sur votre iPhone.
 ```
 
 ## Mots-clés (100 caractères au plus, séparés par des virgules)
@@ -76,7 +76,7 @@ Les mots du nom et du sous-titre sont déjà indexés : ils ne sont pas répét�
 assemblée,nationale,scrutin,loi,parlement,hémicycle,circonscription,élu,politique,amendement,quiz
 ```
 
-97 caractères.
+97 caractères, soit 100 octets en UTF-8 : s'il est modifié, ne pas l'allonger.
 
 ## URL
 
@@ -93,6 +93,6 @@ assemblée,nationale,scrutin,loi,parlement,hémicycle,circonscription,élu,polit
 - Résultat officiel, hémicycle, source : `VoteDetailScreen.swift` ; le résultat est repris de l'Assemblée, jamais recalculé (caveat `vote_result`).
 - Textes, agenda, thèmes, groupes, départements : les tuiles et sections d'`ExploreScreen.swift`.
 - Verdicts et mention IA : `AskModel.swift`, `AskViews.swift` (`AIGeneratedLabel`).
-- Résumés écrits par IA à partir du texte officiel : caveat `summary_official_text`, `SummaryLabel.swift`.
+- Résumés écrits par IA à partir du texte officiel, ou phrase type sans IA pour une motion : caveats `summary_official_text` et `summary_procedure`, `SummaryLabel.swift`.
 - Rien ne quitte l'iPhone pour les suivis : `FollowedDeputyStore`, `FollowedThemesStore` (`UserDefaults`), et `app-privacy.md`.
 - « Depuis le 1er juillet 2025 » est `DATA_HORIZON` : à changer ici le jour où il change.

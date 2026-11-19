@@ -20,7 +20,7 @@ The category is a choice, not a fact in the code; News as primary is the alterna
 
 - Price: free (Tier 0); no in-app purchase exists in the code.
 - Availability: every country is allowed; France is where the subject matters.
-- The app runs on iPhone only (`destinations: [.iPhone]`, `TARGETED_DEVICE_FAMILY = 1`).
+- The app runs on iPhone only (`destinations: [.iPhone]` in `ios/Project.swift`, from which Tuist sets the device family).
   Untick "Make this app available on Mac" (Apple silicon) and visionOS unless they are tested.
 
 ## Age rating
@@ -50,7 +50,7 @@ Answer every content question **None** and every capability question **No**:
 Demander's answers and verdicts are written by a language model, so its output counts as app content.
 It is held to the voting record:
 
-- the system prompt requires answers in French, factual and neutral, based exclusively on the sources retrieved from MonÉlu's database, and forbids completing them from the model's general knowledge (`build_system_prompt` in `rag/chain/prompts.py`);
+- the system prompt requires answers in French, factual and neutral, based exclusively on the sources retrieved from MonÉlu's database, and forbids completing them from the model's general knowledge (`build_system_prompt` in `rag/chain/prompts.py`, on the retrieval path; a question routed to SQL is answered from the database's rows, through `rag/chain/llm_router.py`);
 - the verifier answers only with a JSON verdict citing vote ids from the list it was given, and its citations are checked against the `votes` table in code (`rag/chain/verify.py`);
 - the temperature is 0.2 for answers and 0.0 for verdicts.
 
@@ -65,7 +65,7 @@ If Apple's form asks whether the app includes an AI assistant or generated conte
 **Do you have all necessary rights?** Yes, on these grounds:
 
 - **Votes, deputies, bills, agenda**: the Assemblée nationale's open data (data.assemblee-nationale.fr), published under the Licence Ouverte 2.0 (Etalab), which permits reuse, including commercial, with attribution.
-  The app attributes it on every vote page ("Source : Assemblée nationale · Licence Ouverte 2.0") and links to `/licence-donnees` from Réglages.
+  The app attributes it on every vote page ("Source : Assemblée nationale, scrutin n° … · Licence Ouverte 2.0") and links to `/licence-donnees` from Réglages.
 - **Deputies' portraits**: the official photos the Assemblée publishes for each deputy (`https://www.assemblee-nationale.fr/dyn/static/tribun/17/photos/carre/<id>.jpg`, built in `scripts/ingest_deputies.py`), loaded by the device from that URL and shown next to the deputy's name.
   They are published by the Assemblée alongside the open data; check the Assemblée's legal notice for their reuse terms before submitting, since this repository records no separate licence for them.
 - **Addresses and postal codes**: suggestions from the Base Adresse Nationale and geo.api.gouv.fr, public services under the Licence Ouverte; the app shows a suggestion only to let the user pick it.

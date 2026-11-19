@@ -20,17 +20,17 @@ None needed.
 
 ## Notes
 
-Paste the block below into the Notes field (limit 4,000 characters; this text is about 3,500).
+Paste the block below into the Notes field (limit 4,000 characters; this text is about 3,900).
 
 ```text
 WHAT THE APP IS
 MonÉlu shows how the deputies of the French Assemblée nationale vote, scrutin by scrutin.
 It is an independent service, not affiliated with the Assemblée nationale or any public body. Réglages says so: "Service indépendant, non affilié à l'Assemblée nationale."
-All data is the Assemblée nationale's official open data (data.assemblee-nationale.fr), reused under the French government's Licence Ouverte 2.0, which allows reuse with attribution. Every vote page cites "Source : Assemblée nationale · Licence Ouverte 2.0" and links to the official record.
+All data is the Assemblée nationale's official open data (data.assemblee-nationale.fr), reused under the French government's Licence Ouverte 2.0, which allows reuse with attribution. Every vote page cites its source and licence ("Source : Assemblée nationale, scrutin n° … · Licence Ouverte 2.0") and links to the official record when the Assemblée publishes one.
 The interface is in French.
 
 NO ACCOUNT
-Every feature works without signing in. There is no account, no purchase, no advertising and no tracking. Followed deputies and display settings stay on the device.
+Every feature works without signing in. There is no account, no purchase, no advertising and no tracking. Followed deputies and display settings are saved only on the device; the followed deputies are sent with each feed request to choose what Accueil shows, and are not stored by the server.
 
 HOW TO REACH EACH SCREEN
 The tab bar has four tabs.
@@ -44,7 +44,7 @@ The two Demander features call a third-party AI provider. So that an outage can 
 They can only remove a feature, never reveal one:
 - chat off: the Demander tab shows "Assistant indisponible" and points to the other tabs;
 - verify off: the segmented control disappears and Demander answers questions only.
-The same endpoint carries a minimum app version (1.0.0 by default; a lower installed version sees a screen asking to update) and the wording of the data caveats shown beside figures. Nothing else is configured remotely.
+The same endpoint carries a minimum app version (1.0.0 by default; a lower installed version sees a screen asking to update) the wording of the data caveats shown beside figures, the date the vote data starts from, and the website address the app's links (privacy policy, methodology, licence, sharing) open. Nothing else is configured remotely.
 
 RATE LIMITS
 Questions and claim checks are limited to 10 per minute per IP address. Over the limit the app says "Trop de questions en peu de temps. Patientez une minute et réessayez." If several testers share one network address, please wait a minute and try again.
@@ -57,7 +57,8 @@ Each claim checked in Demander is stored with its verdict, without any identity.
 ## Why each paragraph is there
 
 - **What the app is**: guideline 5.2 (the official data must not read as an official app) and 5.1.1 (where the data comes from).
-- **Remote switches**: guidelines 2.1 and 2.5.19 ask that a reviewer can reach every feature and that remote configuration does not change what the app does after review.
+- **Remote switches**: guidelines 2.1 and 2.3.1 ask that a reviewer can reach every feature and that the app has no hidden or dormant feature; the switches can only turn a reviewed feature off.
+  Check the numbering against the current App Review Guidelines on submission day.
   The switches are `FEATURE_ENV_VARS` in `api/app_config_data.py`, on by default (`feature_enabled`), and the app's behaviour when they are off is `AskScreen` and `AskUnavailable` in `Ask/AskScreen.swift` and `Ask/AskViews.swift`.
 - **Rate limits**: `tiered_limit(10)` on `POST /search/` and `POST /verify/`, keyed per IP for anonymous callers (`api/limiter.py`); App Review testers often share one address.
   The messages are `AskLabels.failure` in `Ask/AskViews.swift`.

@@ -62,11 +62,11 @@ THE DATA
 • Official open data of the Assemblée nationale, reused under the Licence Ouverte 2.0.
 • Updated every working day.
 • Every scrutin links to its official source.
-• Plain-language summaries are written by AI from the official text, and labelled as such.
+• Plain-language summaries are written by AI from the official text, or are a set sentence for motions, and are labelled as such.
 
 YOUR PRIVACY
 • No account, no ads, no tracking.
-• The deputies and themes you follow stay on your iPhone.
+• The deputies and themes you follow are saved only on your iPhone.
 ```
 
 ## Keywords (100 characters at most, comma-separated)
