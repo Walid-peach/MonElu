@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout'
 import { CONTACT_EMAIL, canonicalUrl } from '@/lib/site'
+import { EMBEDDING_PROVIDER, LLM_PROVIDER } from '@/lib/aiModels'
 import { AppPrivacySection } from './AppPrivacySection'
 
 export const metadata: Metadata = {
@@ -69,10 +70,12 @@ export default function ConfidentialitePage() {
 
       <LegalSection title="Assistant de recherche (RAG)">
         <p style={{ fontSize: '15px', lineHeight: 1.75, color: 'var(--dp-text-secondary)', margin: 0 }}>
-          Les questions que vous posez à l&apos;assistant sont envoyées à notre API, qui interroge un modèle de
-          langage hébergé par Groq pour générer une réponse. Ces requêtes ne sont pas associées à une identité -
-          aucun compte, aucune adresse IP n&apos;est journalisée à des fins de profilage. Elles peuvent être
-          conservées de façon agrégée et anonyme à des fins de suivi de qualité du service.
+          Les questions que vous posez à l&apos;assistant sont envoyées à notre API, qui les transmet à{' '}
+          {EMBEDDING_PROVIDER} pour chercher les passages pertinents et à {LLM_PROVIDER} pour générer une
+          réponse. Elles ne sont associées à aucune identité et ne sont pas enregistrées dans la base de données
+          de MonÉlu, sauf si vous partagez ou notez une réponse. Comme pour l&apos;application (voir
+          ci-dessous), une question peut figurer dans les rapports d&apos;erreurs et de performances de
+          l&apos;API.
         </p>
       </LegalSection>
 
