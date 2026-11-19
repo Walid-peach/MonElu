@@ -5,6 +5,7 @@ import { api, nullIfMissing } from '@/lib/api'
 import { ChatAnswerCard } from '@/components/ChatAnswerCard'
 import { SITE_URL, canonicalUrl } from '@/lib/site'
 import { SNAPSHOT_ROBOTS } from '@/lib/seo'
+import { ReportContentLink } from '@/components/ReportContentLink'
 
 // Chat shares are immutable snapshots (ADR-024, mirrors ADR-022 for
 // verifications): this page reads the stored answer via GET /search/share/{id}
@@ -55,6 +56,7 @@ export default async function ChatSharePage({ params }: { params: Promise<{ id: 
           Poser une autre question
         </Link>
       </div>
+      <ReportContentLink kind="chat" id={id} className="mt-10" />
     </main>
   )
 }
