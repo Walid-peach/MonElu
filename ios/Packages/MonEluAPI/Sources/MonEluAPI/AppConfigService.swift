@@ -83,7 +83,13 @@ extension AppConfiguration {
             features: Features(chat: config.features.chat ?? true, verify: config.features.verify ?? true),
             dataHorizon: config.dataHorizon,
             caveats: (config.caveats ?? []).map { Caveat(id: $0.id, text: $0.text) },
-            siteURL: config.siteUrl
+            siteURL: config.siteUrl,
+            election: config.election.map {
+                Election(
+                    firstRoundLabel: $0.firstRoundLabel, firstRoundDate: $0.firstRoundDate,
+                    secondRoundDate: $0.secondRoundDate, registrationDeadline: $0.registrationDeadline
+                )
+            }
         )
     }
 }

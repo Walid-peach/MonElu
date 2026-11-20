@@ -76,8 +76,20 @@ struct RootTabViewTests {
         #expect(controller.view.subviews.isEmpty == false)
     }
 
-    /// Accueil, Explorer, Quiz, Demander (#477).
-    @Test func showsFourTabsInOrder() {
-        #expect(AppTab.allCases == [.home, .explore, .quiz, .ask])
+    /// Accueil, Explorer, 2027 in the middle, Quiz, Demander (#477, #718).
+    @Test func showsFiveTabsWith2027InTheMiddle() {
+        #expect(AppTab.allCases == [.home, .explore, .election, .quiz, .ask])
+        #expect(AppTab.allCases[2] == .election)
+    }
+
+    /// The custom bar and the router share one selection: a tap on the
+    /// raised button is a tap on the router's own state (#718).
+    @Test func selectingTheElectionTabMovesTheRouter() {
+        let router = Router()
+        #expect(router.selection == .home)
+        router.selection = .election
+        #expect(router.selection == .election)
+        router.open(.votes)
+        #expect(router.selection == .explore, "a link still lands in Explorer")
     }
 }

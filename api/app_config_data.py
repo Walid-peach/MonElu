@@ -25,6 +25,7 @@ on the next deploy or restart.
 import logging
 import os
 import re
+from datetime import date, timedelta
 
 from api.config import frontend_base_url
 
@@ -159,6 +160,50 @@ def feature_enabled(name: str) -> bool:
     return True
 
 
+# The presidential election of 2027 (#718). The decree that fixes the date is not
+# out yet, so the code never carries one: the operator sets it on Railway when it
+# is published and the app shows it with no release.
+ELECTION_FIRST_ROUND_LABEL = "avril 2027"
+ELECTION_FIRST_ROUND_ENV = "APP_ELECTION_2027_FIRST_ROUND"
+
+# Registration closes on the sixth Friday before the first round, counting
+# Fridays strictly before it.
+REGISTRATION_FRIDAYS_BEFORE = 6
+SECOND_ROUND_DELAY = timedelta(days=14)
+
+
+def registration_deadline(first_round: date) -> date:
+    """The sixth Friday before `first_round` (itself never counted)."""
+    previous_friday = first_round - timedelta(days=(first_round.weekday() - 4) % 7 or 7)
+    return previous_friday - timedelta(weeks=REGISTRATION_FRIDAYS_BEFORE - 1)
+
+
+def election_config() -> dict:
+    """The election calendar: dates null until the operator sets the first round.
+
+    A malformed value is ignored with a warning rather than served, so a typo
+    can only hide a date, never show a wrong one.
+    """
+    config = {
+        "first_round_label": ELECTION_FIRST_ROUND_LABEL,
+        "first_round_date": None,
+        "second_round_date": None,
+        "registration_deadline": None,
+    }
+    raw = os.getenv(ELECTION_FIRST_ROUND_ENV, "").strip()
+    if not raw:
+        return config
+    try:
+        first_round = date.fromisoformat(raw)
+    except ValueError:
+        logger.warning("%s=%r is not an ISO date - serving no date", ELECTION_FIRST_ROUND_ENV, raw)
+        return config
+    config["first_round_date"] = first_round
+    config["second_round_date"] = first_round + SECOND_ROUND_DELAY
+    config["registration_deadline"] = registration_deadline(first_round)
+    return config
+
+
 def app_config() -> dict:
     """The full `GET /app/config` payload."""
     return {
@@ -167,4 +212,5 @@ def app_config() -> dict:
         "data_horizon": DATA_HORIZON,
         "caveats": [{"id": cid, "text": text} for cid, text in CAVEATS],
         "site_url": frontend_base_url(),
+        "election": election_config(),
     }

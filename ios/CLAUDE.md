@@ -77,6 +77,7 @@ The work is tracked under epic #429, one phase epic at a time.
   A component with a coloured fill (a badge, a chip, a split bar) reads `isPlaceholder` from the environment and draws the neutral track instead, since redaction greys text but keeps fills.
 - Offline and server failures are different states with different wording (`LoadFailure`); a failed refresh keeps the content and shows `RefreshFailureBanner`.
   A cancelled load is neither: `Loader` goes back to the state it had, and a cancelled refresh keeps the content without a banner, so a `.task` that runs again when its view returns loads for real (#579).
+- The 2027 tab (`Election2027/`, ADR-049, #718) is a record, never a recommendation: its figures, close votes and group grid come from `GET /election/2027`, its dates from `GET /app/config`'s `election` block (no date is invented; the countdown hides until the API sends one). A claim typed there is handed to Demander's verify mode through `PendingClaim`, never verified in the tab, and the card hides when the `verify` switch is off.
 - Navigation to a deputy or a vote goes through `Router.open(_:)` with an `AppRoute`, from any tab.
   `AppRoute(url:)` parses `monelu://deputes/<id>`, `monelu://votes/<id>` and the website's own paths, so universal links will reuse it; a new linkable screen is a new `AppRoute` case and a `RouteDestination` branch.
 - `MonEluAPI.configureURLCache()` runs at launch, so the API's `Cache-Control` is honoured on device; do not add a second HTTP cache.
@@ -115,8 +116,9 @@ The work is tracked under epic #429, one phase epic at a time.
 - Headings use `Typography.heading(_:)` (Newsreader, bundled under the OFL, scaled with Dynamic Type), and an italic word in one `Typography.headingItalic(_:)` (the bundled italic face; `.italic()` on the roman face only slants it); body text uses the system font's text styles (`.body`, `.subheadline`, …), never a fixed size.
 - Text that can grow with Dynamic Type must wrap, not truncate.
 - A Newsreader title that can run over several lines (a scrutin, a bill, a group) takes `.headingLineSpacing()`, so its lines do not touch (#519).
-- Navigation titles are styled once at launch by `NavigationBarStyle.apply()` (Newsreader large titles, `textPrimary`), and the tab bar and every control take `Palette.accent` through `.tint` on `RootTabView`; never restyle a bar per screen or replace the system bar (#516).
-- A tab root (Accueil, Explorer, Quiz, Demander) shows no title: the tab bar already names it, so it opens on its content (#657).
+- Navigation titles are styled once at launch by `NavigationBarStyle.apply()` (Newsreader large titles, `textPrimary`), and the tab bar and every control take `Palette.accent` through `.tint` on `RootTabView`; never restyle a bar per screen (#516).
+  The system tab bar is the one exception: it cannot draw the raised 2027 button, so `RootTabView` hides it and draws `MonEluTabBar` (`MonEluUI`) in its place, reading and setting the `Router`'s `selection` and naming each item "<title>, onglet, n sur 5" for VoiceOver (ADR-049, #718). A sixth tab or a change to the bar is a change to that view, with its snapshots.
+- A tab root (Accueil, Explorer, 2027, Quiz, Demander) shows no title: the tab bar already names it, so it opens on its content (#657).
   It sets its title with `.tabRootTitle(_:showsBar:)` (`MonEluUI`), which keeps it for the back button of pushed screens and hides the bar; `showsBar: true` keeps the bar, untitled, for a root with toolbar buttons (Accueil).
   The first content sits `Spacing.xs` under the bar or the status bar. Pushed screens keep their own bar and title.
   Explorer's search field is its own (`ExploreSearchField`), pinned in a top inset, because the system `.searchable` field lives in the hidden bar.
@@ -174,7 +176,7 @@ A freshly booted Simulator needs a couple of minutes to settle before runs are f
 | `Packages/MonEluFeatures` | The screens: each feature's models, its service protocol with a live implementation on the generated client, and its views. Depends on Core, API and UI |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
-| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `home.yaml`, `ask.yaml`, `quiz.yaml`, `loi.yaml`, `agenda.yaml`, `group.yaml`, `theme.yaml`, `department.yaml`, `compare.yaml`, `explore.yaml` and `settings.yaml` run on demand, and `store.yaml` makes the App Store screenshots (`make ios-store`) |
+| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `election.yaml` (the 2027 tab), `home.yaml`, `ask.yaml`, `quiz.yaml`, `loi.yaml`, `agenda.yaml`, `group.yaml`, `theme.yaml`, `department.yaml`, `compare.yaml`, `explore.yaml` and `settings.yaml` run on demand, and `store.yaml` makes the App Store screenshots (`make ios-store`) |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 | [`../docs/app-store/`](../docs/app-store/README.md) | Outside `ios/`: the App Store Connect texts (review notes, privacy label, questionnaires, French and English listing); update them with the change that makes them wrong |
 

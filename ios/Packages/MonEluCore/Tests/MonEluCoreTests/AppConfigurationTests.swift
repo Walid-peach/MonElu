@@ -152,4 +152,18 @@ struct MonEluFormatTests {
         #expect(!text.contains(" "))
         #expect(text.contains { $0 == "\u{00A0}" || $0 == "\u{202F}" })
     }
+
+    @Test func aConfigurationCachedBeforeTheElectionBlockStillDecodes() throws {
+        let old = #"{"minIOSVersion":"1.0.0","features":{"chat":true,"verify":true},"dataHorizon":"2025-07-01","caveats":[]}"#
+        let config = try JSONDecoder().decode(AppConfiguration.self, from: Data(old.utf8))
+        #expect(config.election == nil)
+    }
+
+    @Test func theElectionDatesRoundTrip() throws {
+        var config = AppConfiguration.defaults
+        config.election = .init(firstRoundLabel: "avril 2027", firstRoundDate: "2027-04-11")
+        let decoded = try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(config))
+        #expect(decoded.election?.firstRoundDate == "2027-04-11")
+        #expect(decoded.election?.secondRoundDate == nil)
+    }
 }

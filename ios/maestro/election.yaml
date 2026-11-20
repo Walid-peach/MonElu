@@ -1,0 +1,38 @@
+# The 2027 tab (#718): opens from the raised centre button, scrolls through
+# every section and checks the controls that need no live data. On demand,
+# not a smoke flow: it reads the production API, which serves
+# `GET /election/2027` only once this change is deployed.
+# Run it through `make ios-flow FLOW=election`.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Accueil"
+    timeout: 15000
+- tapOn:
+    id: "tab.election"
+- assertVisible:
+    id: "screen.election2027"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-hero
+- scrollUntilVisible:
+    element: "Les votes qui ont compté"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-votes
+- scrollUntilVisible:
+    element: "Qui a voté quoi"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-grid
+- scrollUntilVisible:
+    element: "Le calendrier"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-calendar
+# The quiz card opens the Quiz tab.
+- scrollUntilVisible:
+    element: "LE QUIZ 2027"
+    direction: UP
+- tapOn: "LE QUIZ 2027"
+- assertVisible:
+    id: "screen.quiz"

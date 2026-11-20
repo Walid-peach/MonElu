@@ -24,6 +24,10 @@ public struct AppServices: Sendable {
     public let feed: any FeedService
     /// The followed themes, on the device only (ADR-042 §2).
     public let followedThemes: any FollowedThemesStore
+    /// The 2027 tab's figures (#718).
+    public let election: any ElectionService
+    /// A claim handed from the 2027 tab to Demander's verify mode.
+    public let pendingClaim: PendingClaim
 
     public init(client: Client) {
         votes = LiveVotesService(client: client)
@@ -42,6 +46,8 @@ public struct AppServices: Sendable {
         followedDeputy = UserDefaultsFollowedDeputyStore()
         feed = LiveFeedService(client: client)
         followedThemes = UserDefaultsFollowedThemesStore()
+        election = LiveElectionService(client: client)
+        pendingClaim = PendingClaim()
     }
 
     public init(
@@ -53,7 +59,9 @@ public struct AppServices: Sendable {
         feed: any FeedService = UnavailableFeedService(),
         followedThemes: any FollowedThemesStore = EphemeralFollowedThemesStore(),
         addresses: any AddressService = UnavailableAddressService(),
-        circonscriptions: any CirconscriptionService = UnavailableCirconscriptionService()
+        circonscriptions: any CirconscriptionService = UnavailableCirconscriptionService(),
+        election: any ElectionService = UnavailableElectionService(),
+        pendingClaim: PendingClaim = PendingClaim()
     ) {
         self.votes = votes
         self.deputies = deputies
@@ -71,6 +79,8 @@ public struct AppServices: Sendable {
         self.followedDeputy = followedDeputy
         self.feed = feed
         self.followedThemes = followedThemes
+        self.election = election
+        self.pendingClaim = pendingClaim
     }
 }
 

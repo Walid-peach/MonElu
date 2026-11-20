@@ -2,10 +2,13 @@
 ///
 /// Four stable destinations, after the 04 October 2026 design review: a home
 /// that works before and after a deputy is chosen, one place to browse the
-/// records, the quiz as an invitation to take part, and the assistant.
+/// records, the quiz as an invitation to take part, and the assistant. A fifth,
+/// "2027", sits in the middle as a raised button (#718): the record before the
+/// presidential election.
 public enum AppTab: String, CaseIterable, Identifiable, Sendable {
     case home
     case explore
+    case election
     case quiz
     case ask
 
@@ -16,6 +19,7 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home: "Accueil"
         case .explore: "Explorer"
+        case .election: "2027"
         case .quiz: "Quiz"
         case .ask: "Demander"
         }
@@ -29,6 +33,8 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home: "house"
         case .explore: "safari"
+        // Only a stand-in: the tab bar draws its own ballot-box glyph.
+        case .election: "archivebox"
         case .quiz: "checklist"
         case .ask: "bubble.left"
         }

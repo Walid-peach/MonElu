@@ -32,6 +32,7 @@ from api.routers import (
     circonscriptions,
     departments,
     deputies,
+    election,
     feed,
     feedback,
     groups,
@@ -68,6 +69,7 @@ ROUTER_PREFIXES = [
     ("/install-events", install_events.router),
     ("/agenda", agenda.router),
     ("/feed", feed.router),
+    ("/election", election.router),
     ("/account", account.router),
     ("/app", app_config.router),
 ]

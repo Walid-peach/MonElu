@@ -2045,6 +2045,56 @@ Below that score the register's own points are often in the wrong street (5.5 % 
 
 **Trigger to revisit:** an official, precise boundary file or an official address-to-circonscription service; a redistricting; or the measured accuracy falling short of what a "your deputy" answer needs.
 
+## ADR-049 - The 2027 tab shows the record before the election, from one endpoint, in a custom tab bar (#718)
+
+**Status:** Accepted, 2026-11-20.
+
+### Context
+
+The presidential election of April 2027 will send many people looking for something to read about politics.
+MonÉlu is not a campaign tool (VISION.md): it reports what the Assemblée nationale voted, measured the same way for everyone, and says nothing about candidates or programmes.
+A tab placed in the middle of the iPhone app's bar can serve that moment without breaking the vision, if its angle is "the record before the ballot box".
+The date of the first round is not known: the decree that fixes it is not published.
+
+### Decision
+
+1. **The tab is a record, never a recommendation.**
+   It shows the legislature's figures, the closest whole-text and motion scrutins, how each group's majority voted on them, a claim check wired to the existing verify feature, the quiz, the followed deputy's term review and the election calendar.
+   It names no candidate, ranks no programme and says nothing about how to vote.
+2. **One endpoint computes everything the tab counts.**
+   `GET /election/2027` returns the figures, the key votes (`ensemble` and `motion` scrutins, smallest margin between pour and contre first) and the group grid.
+   The app computes nothing (ADR-041 §4), so it never counts, ranks or takes a majority.
+   "Textes adoptés" counts whole-text scrutins whose result is `adopté`: one reading is one scrutin, so the tab never calls it a number of laws.
+   The figures cover the data horizon, and the tab says so rather than claiming the whole legislature.
+3. **A group's cell is the formula every group surface uses.**
+   Plurality of the expressed positions, ties broken alphabetically (ADR-034), imported from `groups.py`; `nonVotant` never decides a cell.
+   A group with no expressed position has no cell value, which is shown as "no majority" rather than as an abstention.
+   Members are grouped by the group they sit in today, as everywhere else (`group_alignment` caveat).
+4. **No election date is invented.**
+   `GET /app/config` carries an `election` block.
+   Until the operator sets `APP_ELECTION_2027_FIRST_ROUND`, its dates are null and the app shows "avril 2027, date exacte fixée par décret".
+   Once it is set, the API derives the second round (two weeks later) and the registration deadline (the sixth Friday before the first round), and the app shows a countdown.
+   A malformed value is ignored, so a typo can hide a date but never show a wrong one.
+5. **The tab bar is custom.**
+   The system `TabView` cannot draw one item larger than the others, so the app hides the system bar and draws `MonEluTabBar` (MonEluUI): four ordinary items and, in the middle, a raised round button.
+   This replaces the rule "never replace the system bar" of #516 for the bar only: the router's `selection` stays the single source of truth, each item is an accessibility button reading "<title>, onglet, n sur 5", and every tab keeps its own `NavigationStack`.
+6. **A claim typed on the tab is verified in Demander.**
+   The 2027 card hands the sentence to the Demander tab's verify mode (`PendingClaim`) and opens it, so there is one place that shows a verdict, its states and its retry.
+   The card is hidden while the `verify` switch of `GET /app/config` is off.
+
+### Consequences
+
+- A new route, a field on `GET /app/config`, and a new case in `AppTab`; all additive (ADR-041 §5).
+- Setting `APP_ELECTION_2027_FIRST_ROUND` on Railway turns the countdown on in every installed app with no release.
+- A long-press, VoiceOver and Dynamic Type behave as for any button: the bar is plain SwiftUI.
+- The tab is the first part of the app whose content is tied to an event; it is removed or replaced after the election by a decision, not left to age.
+
+### Would reopen this
+
+The decree sets a date that is not a Sunday of April, a candidate-facing feature is requested for the tab (declined by VISION.md), or iOS adds a native way to draw a larger centre tab item.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -2080,3 +2130,4 @@ Below that score the register's own points are often in the wrong street (5.5 % 
 31. A whole-text vote summary comes from `vote_bills` or does not exist, and a motion's sentence comes from `MOTION_SENTENCES` (ADR-046, #645) - never send any vote title to the model to write a summary; a title may only give a theme
 32. A voter's circonscription comes from `POST /circonscriptions/locate` over the bundled boundary file (ADR-047) - never add a country-to-seat table for the seats abroad that is not taken from tableau n° 1 ter, never send the address to MonÉlu (the device geocodes it), never put coordinates in a URL, never store or log them, and never pick one seat when a point is within the boundary tolerance of another
 33. A vote summary's lifecycle is `votes.summary_state` (ADR-048, #681) - never infer it again from `summary_plain`/`summary_basis` or the source tables, never write a transition from a script that does not own it, never let a run re-queue a rejected summary (only `--retry-rejected` does), and never give `summary_basis` a value that is not the kind of a published summary
+34. The 2027 tab is a record, never a recommendation (ADR-049, #718) - it shows what the Assemblée voted from `GET /election/2027`, invents no election date (`APP_ELECTION_2027_FIRST_ROUND` sets it), takes group majorities from the one formula of ADR-034, and never names a candidate or a programme

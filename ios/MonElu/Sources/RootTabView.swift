@@ -3,7 +3,7 @@ import MonEluFeatures
 import MonEluUI
 import SwiftUI
 
-/// The four top-level tabs (#477), each with its own navigation stack driven
+/// The five top-level tabs (#477, #718), each with its own navigation stack driven
 /// by the `Router`.
 struct RootTabView: View {
     let services: AppServices
@@ -23,15 +23,14 @@ struct RootTabView: View {
                             RouteDestination(route: $0, services: services)
                         }
                 }
-                .tabItem {
-                    // Outlined when selected too, as the design draws them;
-                    // iOS fills a tab's symbol by default.
-                    Label(tab.title, systemImage: tab.systemImage)
-                        .environment(\.symbolVariants, .none)
-                }
                 .tag(tab)
             }
         }
+        // The system bar cannot draw one larger item, so it is hidden and
+        // `MonEluTabBar` stands in for it, reading and setting the router's
+        // selection (#718).
+        .toolbar(.hidden, for: .tabBar)
+        .safeAreaInset(edge: .bottom, spacing: 0) { MonEluTabBar(selection: $router.selection) }
         // The selected tab, back chevrons, toolbar buttons, toggles and links
         // take MonÉlu's red rather than the system blue (#516).
         .tint(Palette.accent)
@@ -62,10 +61,16 @@ struct RootTabView: View {
                 deputies: services.deputies, votes: services.votes, lois: services.lois, groups: services.groups,
                 postalCodes: services.postalCodes, store: services.followedDeputy
             )
+        case .election:
+            Election2027Screen(
+                service: services.election, deputies: services.deputies, store: services.followedDeputy,
+                postalCodes: services.postalCodes, addresses: services.addresses,
+                circonscriptions: services.circonscriptions, pendingClaim: services.pendingClaim
+            )
         case .quiz:
             QuizScreen(service: services.quiz)
         case .ask:
-            AskScreen(service: services.ask)
+            AskScreen(service: services.ask, pendingClaim: services.pendingClaim)
         }
     }
 }
