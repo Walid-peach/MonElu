@@ -138,3 +138,20 @@ def test_registration_deadline_matches_the_2022_calendar():
 def test_a_malformed_date_is_ignored(monkeypatch):
     monkeypatch.setenv(cfg.ELECTION_FIRST_ROUND_ENV, "avril")
     assert cfg.election_config()["first_round_date"] is None
+
+
+def test_absent_marts_roll_the_connection_back_and_leave_the_median_null(client, mock_cursor):
+    """An UndefinedTable must leave `get_conn()`, which rolls back before pooling."""
+    import psycopg2.errors
+
+    from api import db
+
+    mock_cursor.fetchone.side_effect = [
+        {"scrutins": 1, "adopted_texts": 0, "censure_motions": 0},
+    ]
+    mock_cursor.fetchall.side_effect = [[], []]
+    mock_cursor.execute.side_effect = [None, None, None, psycopg2.errors.UndefinedTable()]
+    body = client.get("/election/2027").json()
+    assert body["legislature"]["median_presence_rate"] is None
+    conn = db._pool.getconn.return_value
+    conn.rollback.assert_called()
