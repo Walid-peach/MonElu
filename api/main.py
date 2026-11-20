@@ -253,6 +253,14 @@ OPENAPI_TAGS = [
         ),
     },
     {
+        "name": "Election",
+        "description": (
+            "The legislature's record ahead of the 2027 presidential election (ADR-049): "
+            "headline figures, the closest whole-text and motion scrutins, and each "
+            "group's majority position on them. Facts only, nothing about candidates."
+        ),
+    },
+    {
         "name": "Feed",
         "description": (
             "The iPhone app's Accueil: ready-to-show cards for a followed deputy and "
@@ -448,6 +456,7 @@ from api.routers import (  # noqa: E402
     circonscriptions,
     departments,
     deputies,
+    election,
     feed,
     feedback,
     groups,
@@ -476,6 +485,7 @@ app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
 app.include_router(install_events.router, prefix="/install-events", tags=["Install events"])
 app.include_router(agenda.router, prefix="/agenda", tags=["Agenda"])
 app.include_router(feed.router, prefix="/feed", tags=["Feed"])
+app.include_router(election.router, prefix="/election", tags=["Election"])
 app.include_router(account.router, prefix="/account", tags=["Account"])
 app.include_router(app_config.router, prefix="/app", tags=["App"])
 

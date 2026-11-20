@@ -3,7 +3,7 @@ import Testing
 
 struct AppTabTests {
     @Test func tabsAreInTabBarOrder() {
-        #expect(AppTab.allCases.map(\.title) == ["Accueil", "Explorer", "Quiz", "Demander"])
+        #expect(AppTab.allCases.map(\.title) == ["Accueil", "Explorer", "2027", "Quiz", "Demander"])
     }
 
     @Test func identifiersAreUnique() {

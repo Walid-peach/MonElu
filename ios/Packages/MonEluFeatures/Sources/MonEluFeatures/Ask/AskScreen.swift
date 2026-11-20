@@ -11,8 +11,11 @@ public struct AskScreen: View {
     @FocusState private var inputFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    public init(service: any AskService) {
+    private let pendingClaim: PendingClaim
+
+    public init(service: any AskService, pendingClaim: PendingClaim = PendingClaim()) {
         _model = State(initialValue: AskModel(service: service, features: AppConfiguration.defaults.features))
+        self.pendingClaim = pendingClaim
     }
 
     public var body: some View {
@@ -27,12 +30,26 @@ public struct AskScreen: View {
         // Opens on the mode and the conversation (#657).
         .tabRootTitle("Demander")
         .accessibilityIdentifier("screen.ask")
-        .onAppear { model.features = configuration.features }
+        .onAppear {
+            model.features = configuration.features
+            verifyPendingClaim()
+        }
         .onChange(of: configuration.features) { model.features = $1 }
+
         .sheet(item: $model.sharedLink) { link in
             ActivitySheet(url: link.url)
                 .presentationDetents([.medium, .large])
         }
+    }
+
+    /// Verifies the claim the 2027 tab handed over, in this tab's own verify
+    /// mode, so there is one place that shows a verdict (#718). Ignored while
+    /// verification is switched off.
+    private func verifyPendingClaim() {
+        guard configuration.features.verify, !model.isWaiting, let claim = pendingClaim.take() else { return }
+        model.mode = .claim
+        model.draft = claim
+        Task { await model.send() }
     }
 
     private var conversation: some View {

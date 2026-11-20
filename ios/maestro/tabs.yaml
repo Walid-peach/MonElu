@@ -1,6 +1,7 @@
-# Smoke flow (#450, #477, #488): launch the app and visit every tab,
+# Smoke flow (#450, #477, #488, #718): launch the app and visit every tab,
 # screenshotting each, and Explorer's two lists from its contents page.
-# Tabs are tapped by their visible label and checked by the screen's
+# Tabs are tapped by their visible label (the raised 2027 button by its
+# accessibility id: "2027" is also a word on its own screen) and checked by the screen's
 # accessibility id (`screen.<name>`): the tab bar shows every label all the
 # time, so a label cannot prove the screen changed.
 # Run it through `make ios-flow FLOW=tabs` (or `make ios-smoke`), which passes
@@ -38,12 +39,19 @@ appId: ${APP_ID}
     timeout: 10000
 - takeScreenshot: ${SCREENSHOT_PREFIX}4-explorer-deputes
 
+- tapOn:
+    id: "tab.election"
+- assertVisible:
+    id: "screen.election2027"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-2027
+
 - tapOn: "Quiz"
 - assertVisible:
     id: "screen.quiz"
-- takeScreenshot: ${SCREENSHOT_PREFIX}5-quiz
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-quiz
 
 - tapOn: "Demander"
 - assertVisible:
     id: "screen.ask"
-- takeScreenshot: ${SCREENSHOT_PREFIX}6-demander
+- takeScreenshot: ${SCREENSHOT_PREFIX}7-demander

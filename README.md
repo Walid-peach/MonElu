@@ -92,6 +92,7 @@ Rate limits are per endpoint (column *rpm*) - see [Rate Limiting](#rate-limiting
 | GET | `/agenda` | 30 | Upcoming séance publique items grouped by day, `from`/`to` window (MON-212, ADR-030) |
 | GET | `/feed` | 30 | The iPhone app's Accueil feed: cards for a followed `deputy_id` and `theme`s, `tab` `pour_vous` or `assemblee`, one ISO week (#562, ADR-042) |
 | GET | `/feed/week` | 30 | The recap behind the app's « Votre semaine » card: the week's scrutin counts and the followed deputy's positions, `nonVotant` kept apart (#563, ADR-042) |
+| GET | `/election/2027` | 30 | The record before the 2027 presidential election: legislature figures, the closest whole-text and motion scrutins, each group's majority position on them (#718, ADR-049) |
 
 ### CSV exports (MON-97)
 
@@ -468,6 +469,7 @@ design.
 | `routers/search.py` | `POST /search/` - RAG query, plus chat share snapshots (ADR-024) |
 | `routers/verify.py` | `POST /verify/` + `GET /verify/{id}` - fact-check verdicts (ADR-022) |
 | `routers/quiz.py` | `/quiz/*` - questions, weekly scrutin, stateless matching, share snapshots (ADR-025) |
+| `routers/election.py` | `GET /election/2027` - the record before the 2027 election (#718, ADR-049) |
 | `routers/feedback.py` | Chat thumbs and data-page error reports (MON-70, MON-101) |
 | `routers/install_events.py` | `POST /install-events` - daily install-flow totals for the ADR-041 Android trigger (#598) |
 | `routers/lois.py` | `/lois/*` - bill parcours, headline scrutins bound to AN séance actes, amendment counts (ADR-035) |

@@ -183,32 +183,7 @@ public struct HomeScreen: View {
 
     /// The postal-code search, while the user chooses or changes deputy.
     private var picker: some View {
-        ScrollView {
-            PostalCodePickerContent(
-                address: $model.address,
-                addressSearch: model.addressSearch,
-                postalCode: $model.postalCode,
-                search: model.search,
-                notice: model.notice,
-                selection: model.selection,
-                onPickAddress: { suggestion in Task { await model.pick(suggestion) } },
-                onAbroad: { Task { await model.showAbroad() } },
-                onSearch: { Task { await model.runSearch() } },
-                onSelect: { model.select($0) }
-            )
-            // Suggestions follow the typing, a beat after the last key.
-            .task(id: model.address) {
-                guard (try? await Task.sleep(for: .milliseconds(250))) != nil else { return }
-                await model.suggestAddresses()
-            }
-            .padding(Spacing.m)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let selection = model.selection {
-                FollowSelectionBar(deputy: selection) { model.followSelection() }
-            }
-        }
+        DeputyPickerView(model: model)
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {

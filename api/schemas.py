@@ -1587,6 +1587,30 @@ class AppCaveat(_Base):
     text: str
 
 
+class AppElection(_Base):
+    """The presidential election calendar, set by the operator once a decree fixes it (#718).
+
+    No date is ever invented: until the decree is known `first_round_date` is
+    null and the app shows only `first_round_label`. The two dates derived from
+    it are computed here so the app never does calendar arithmetic.
+    """
+
+    first_round_label: str = Field(
+        description="Human wording of the first round, e.g. `avril 2027`"
+    )
+    first_round_date: Optional[date] = Field(
+        default=None, description="ISO date of the first round; null until a decree sets it"
+    )
+    second_round_date: Optional[date] = Field(
+        default=None, description="Two weeks after the first round; null with it"
+    )
+    registration_deadline: Optional[date] = Field(
+        default=None,
+        description="Last day to register online: the sixth Friday before the first round; "
+        "null with it",
+    )
+
+
 class AppConfig(_Base):
     """Configuration a native app reads at launch instead of hardcoding it."""
 
@@ -1597,6 +1621,7 @@ class AppConfig(_Base):
                 "features": {"chat": True, "verify": True},
                 "data_horizon": "2025-07-01",
                 "site_url": DEFAULT_FRONTEND_BASE_URL,
+                "election": {"first_round_label": "avril 2027"},
                 "caveats": [
                     {
                         "id": "vote_result",
@@ -1618,6 +1643,10 @@ class AppConfig(_Base):
         default=None,
         description="The public website's origin, without a trailing slash: the base of "
         "every link the app shares (`<site_url>/votes/<vote_id>`)",
+    )
+    election: Optional["AppElection"] = Field(
+        default=None,
+        description="The 2027 presidential election calendar (#718); absent from older servers",
     )
 
 
@@ -1946,3 +1975,120 @@ class FeedWeekResponse(_Base):
     next_agenda: Optional[AgendaItem] = Field(
         default=None, description="The next séance publique item within seven days"
     )
+
+
+# ---------------------------------------------------------------------------
+# The record before the 2027 election (#718, ADR-049)
+# ---------------------------------------------------------------------------
+
+
+class ElectionLegislatureFigures(_Base):
+    """The legislature's headline figures, counted over the scrutins this database holds."""
+
+    coverage_start: date = Field(description="First date the figures cover (the data horizon)")
+    scrutins: int = Field(description="Every public scrutin")
+    adopted_texts: int = Field(
+        description="Scrutins on a whole text (`ensemble`) whose result is `adopté`; one "
+        "reading is one scrutin, so this is not a count of promulgated laws"
+    )
+    censure_motions: int = Field(description="Scrutins on a motion de censure")
+    median_presence_rate: Optional[float] = Field(
+        default=None,
+        description="Median `presence_rate` (0-1) of the sitting deputies; null while the "
+        "dbt marts are absent",
+    )
+
+
+class ElectionKeyVote(_Base):
+    """A whole-text or motion scrutin, ranked by how close it was."""
+
+    vote_id: str
+    kind: str = Field(description="`Texte entier`, `Motion de censure` or `Motion`")
+    result: Optional[str] = Field(default=None, description="The Assemblée's own result")
+    voted_at: Optional[datetime] = None
+    title: str = Field(description="The official title")
+    votes_for: int
+    abstentions: int
+    votes_against: int
+    margin: int = Field(description="Votes between pour and contre, never negative")
+    official_url: Optional[str] = Field(
+        default=None, description="The scrutin's page on assemblee-nationale.fr"
+    )
+
+
+class ElectionGridCell(_Base):
+    """How one group voted on one key vote."""
+
+    vote_id: str
+    position: Optional[str] = Field(
+        default=None,
+        description="`pour`, `contre` or `abstention`: what most of the group's expressed "
+        "votes were (ties broken alphabetically, as on every group surface); null when none "
+        "was expressed",
+    )
+    pour: int
+    contre: int
+    abstention: int
+
+
+class ElectionGridRow(_Base):
+    """One parliamentary group and its cell for each key vote, in the key votes' order."""
+
+    slug: Optional[str] = Field(default=None, description="The `/groups/{slug}` slug")
+    label: str
+    party_short: Optional[str] = None
+    seats: int = Field(description="Sitting members today")
+    cells: list[ElectionGridCell]
+
+
+class Election2027Response(_Base):
+    """Payload of `GET /election/2027`."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "legislature": {
+                    "coverage_start": "2025-07-01",
+                    "scrutins": 2300,
+                    "adopted_texts": 120,
+                    "censure_motions": 6,
+                    "median_presence_rate": 0.62,
+                },
+                "key_votes": [
+                    {
+                        "vote_id": "VTANR5L17V8433",
+                        "kind": "Texte entier",
+                        "result": "adopté",
+                        "voted_at": "2026-07-21T00:00:00Z",
+                        "title": "l'ensemble du projet de loi de finances pour 2027",
+                        "votes_for": 290,
+                        "abstentions": 4,
+                        "votes_against": 288,
+                        "margin": 2,
+                        "official_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433",
+                    }
+                ],
+                "grid": [
+                    {
+                        "slug": "rassemblement-national",
+                        "label": "Rassemblement National",
+                        "party_short": "RN",
+                        "seats": 123,
+                        "cells": [
+                            {
+                                "vote_id": "VTANR5L17V8433",
+                                "position": "contre",
+                                "pour": 2,
+                                "contre": 110,
+                                "abstention": 1,
+                            }
+                        ],
+                    }
+                ],
+            }
+        }
+    )
+
+    legislature: ElectionLegislatureFigures
+    key_votes: list[ElectionKeyVote] = []
+    grid: list[ElectionGridRow] = []

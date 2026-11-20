@@ -1,0 +1,165 @@
+{
+  "legislature": {
+    "coverage_start": "2025-07-01",
+    "scrutins": 2314,
+    "adopted_texts": 118,
+    "censure_motions": 6,
+    "median_presence_rate": 0.6234
+  },
+  "key_votes": [
+    {
+      "vote_id": "VTANR5L17V8433",
+      "kind": "Texte entier",
+      "result": "adopté",
+      "voted_at": "2026-07-21T00:00:00Z",
+      "title": "l'ensemble du projet de loi de finances pour 2027",
+      "votes_for": 290,
+      "abstentions": 4,
+      "votes_against": 288,
+      "margin": 2,
+      "official_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8433"
+    },
+    {
+      "vote_id": "VTANR5L17V8120",
+      "kind": "Motion de censure",
+      "result": "rejeté",
+      "voted_at": "2026-05-12T00:00:00Z",
+      "title": "la motion de censure déposée en application de l'article 49, alinéa 2, de la Constitution",
+      "votes_for": 271,
+      "abstentions": 0,
+      "votes_against": 277,
+      "margin": 6,
+      "official_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/8120"
+    },
+    {
+      "vote_id": "VTANR5L17V7710",
+      "kind": "Texte entier",
+      "result": "adopté",
+      "voted_at": "2026-03-03T00:00:00Z",
+      "title": "l'ensemble de la proposition de loi visant à renforcer la sécurité du quotidien",
+      "votes_for": 330,
+      "abstentions": 12,
+      "votes_against": 205,
+      "margin": 125,
+      "official_url": "https://www.assemblee-nationale.fr/dyn/17/scrutins/7710"
+    }
+  ],
+  "grid": [
+    {
+      "slug": "rassemblement-national",
+      "label": "Rassemblement National",
+      "party_short": "RN",
+      "seats": 123,
+      "cells": [
+        {
+          "vote_id": "VTANR5L17V8433",
+          "position": "contre",
+          "pour": 0,
+          "contre": 120,
+          "abstention": 0
+        },
+        {
+          "vote_id": "VTANR5L17V8120",
+          "position": "pour",
+          "pour": 120,
+          "contre": 0,
+          "abstention": 0
+        },
+        {
+          "vote_id": "VTANR5L17V7710",
+          "position": null,
+          "pour": 0,
+          "contre": 0,
+          "abstention": 0
+        }
+      ]
+    },
+    {
+      "slug": "ensemble-pour-la-republique",
+      "label": "Ensemble pour la République",
+      "party_short": "EPR",
+      "seats": 91,
+      "cells": [
+        {
+          "vote_id": "VTANR5L17V8433",
+          "position": "pour",
+          "pour": 88,
+          "contre": 0,
+          "abstention": 0
+        },
+        {
+          "vote_id": "VTANR5L17V8120",
+          "position": "contre",
+          "pour": 0,
+          "contre": 88,
+          "abstention": 0
+        },
+        {
+          "vote_id": "VTANR5L17V7710",
+          "position": "pour",
+          "pour": 88,
+          "contre": 0,
+          "abstention": 0
+        }
+      ]
+    },
+    {
+      "slug": "lfi-nfp",
+      "label": "La France insoumise - Nouveau Front Populaire",
+      "party_short": "LFI",
+      "seats": 71,
+      "cells": [
+        {
+          "vote_id": "VTANR5L17V8433",
+          "position": "contre",
+          "pour": 0,
+          "contre": 68,
+          "abstention": 0
+        },
+        {
+          "vote_id": "VTANR5L17V8120",
+          "position": "pour",
+          "pour": 68,
+          "contre": 0,
+          "abstention": 0
+        },
+        {
+          "vote_id": "VTANR5L17V7710",
+          "position": "abstention",
+          "pour": 0,
+          "contre": 0,
+          "abstention": 68
+        }
+      ]
+    },
+    {
+      "slug": "droite-republicaine",
+      "label": "Droite Républicaine",
+      "party_short": "DR",
+      "seats": 47,
+      "cells": [
+        {
+          "vote_id": "VTANR5L17V8433",
+          "position": "pour",
+          "pour": 44,
+          "contre": 0,
+          "abstention": 0
+        },
+        {
+          "vote_id": "VTANR5L17V8120",
+          "position": "contre",
+          "pour": 0,
+          "contre": 44,
+          "abstention": 0
+        },
+        {
+          "vote_id": "VTANR5L17V7710",
+          "position": "pour",
+          "pour": 44,
+          "contre": 0,
+          "abstention": 0
+        }
+      ]
+    }
+  ]
+}

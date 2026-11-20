@@ -33,6 +33,17 @@ struct ComponentSnapshotTests {
         Typography.registerFonts()
     }
 
+    /// The tab bar with the raised 2027 button, selected and not (#718).
+    @Test(arguments: variants)
+    func tabBarWithElectionSelected(_ variant: Variant) {
+        check(MonEluTabBar(selection: .constant(.election)).padding(.top, 36), variant)
+    }
+
+    @Test(arguments: variants)
+    func tabBarWithHomeSelected(_ variant: Variant) {
+        check(MonEluTabBar(selection: .constant(.home)).padding(.top, 36), variant)
+    }
+
     @Test(arguments: variants)
     func voteResultBadge(_ variant: Variant) {
         check(HStack(spacing: 8) {

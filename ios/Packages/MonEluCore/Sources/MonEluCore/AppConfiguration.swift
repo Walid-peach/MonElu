@@ -29,6 +29,31 @@ public struct AppConfiguration: Codable, Hashable, Sendable {
         }
     }
 
+    /// The presidential election's calendar (#718). Every date is the API's
+    /// (`YYYY-MM-DD`), computed there from the first round, and nil until a
+    /// decree fixes it: the app never invents one.
+    public struct Election: Codable, Hashable, Sendable {
+        /// How the first round is worded while its date is unknown.
+        public var firstRoundLabel: String
+        public var firstRoundDate: String?
+        public var secondRoundDate: String?
+        /// The last day to register online.
+        public var registrationDeadline: String?
+
+        public init(
+            firstRoundLabel: String, firstRoundDate: String? = nil, secondRoundDate: String? = nil,
+            registrationDeadline: String? = nil
+        ) {
+            self.firstRoundLabel = firstRoundLabel
+            self.firstRoundDate = firstRoundDate
+            self.secondRoundDate = secondRoundDate
+            self.registrationDeadline = registrationDeadline
+        }
+
+        /// Before the API has answered: the month, and no date.
+        public static let undecided = Election(firstRoundLabel: "avril 2027")
+    }
+
     /// The oldest app version the API still serves, as the API sent it.
     public var minIOSVersion: String
     public var features: Features
@@ -39,15 +64,19 @@ public struct AppConfiguration: Codable, Hashable, Sendable {
     /// shares. Nil before the API sent it: the app then shares nothing
     /// rather than guess a host.
     public var siteURL: String?
+    /// Nil in a configuration cached before #718 and on an older API.
+    public var election: Election?
 
     public init(
-        minIOSVersion: String, features: Features, dataHorizon: String, caveats: [Caveat], siteURL: String? = nil
+        minIOSVersion: String, features: Features, dataHorizon: String, caveats: [Caveat], siteURL: String? = nil,
+        election: Election? = nil
     ) {
         self.minIOSVersion = minIOSVersion
         self.features = features
         self.dataHorizon = dataHorizon
         self.caveats = caveats
         self.siteURL = siteURL
+        self.election = election
     }
 
     /// `<site_url>/<path>`, or nil while the site's origin is unknown.
