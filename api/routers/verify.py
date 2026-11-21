@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Mirrors the startup check in api.main — the chain needs both providers.
 _PLACEHOLDER_PREFIXES = ("sk-...", "gsk_...", "your-", "changeme")
 
 
@@ -118,8 +117,6 @@ def verify(request: Request, body: VerifyRequest):
     and readable at `/verifier/v/<id>`. Costs an LLM call; 10/min; 503 when the
     server has no LLM credentials.
     """
-    # Plain `def` on purpose: the chain does blocking psycopg2 + OpenAI + Groq
-    # I/O, so FastAPI must run it in the threadpool, not on the event loop.
     if _is_placeholder(os.getenv("GROQ_API_KEY")) or _is_placeholder(os.getenv("OPENAI_API_KEY")):
         raise HTTPException(
             status_code=503,
@@ -136,7 +133,7 @@ def verify(request: Request, body: VerifyRequest):
             ),
         ) from e
     except Exception:
-        logger.exception("Verification pipeline error")  # never the claim (#716)
+        logger.exception("Verification pipeline error")
         raise HTTPException(
             status_code=500,
             detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
@@ -172,9 +169,6 @@ def verify(request: Request, body: VerifyRequest):
     response_model=VerifyResponse,
     summary="Relisez un verdict enregistré (aucun appel IA)",
 )
-# Immutable public snapshot behind an unguessable UUID (MON-173): OG scrapers
-# (X, WhatsApp, Facebook, Telegram) and Vercel edge egress funnel through few
-# IPs, so the base per-IP limit was tripping during viral spikes.
 @limiter.limit(tiered_limit(300))
 def get_verification(request: Request, verification_id: uuid.UUID):
     """Read back a stored verdict by id. No LLM call, no re-verification.

@@ -205,6 +205,8 @@ Health check: `GET /health` — returns DB status, record counts, `last_ingestio
 
 ## Code Style
 
+**Code carries no comments** (ADR-050): decisions go to `docs/decisions.md`, hacks to GitHub issues. `python3 scripts/comments.py check` enforces a ratchet over `comment-baseline.json`; the `delete-comment` skill clears one area at a time.
+
 Ruff is the single tool for lint and formatting (`ruff.toml`):
 - Line length: 100
 - `print()` allowed in `scripts/` and `rag/` (T201 ignored there), blocked elsewhere

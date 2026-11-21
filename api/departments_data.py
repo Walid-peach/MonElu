@@ -113,7 +113,6 @@ DEPT_NAMES = {
     "974": "La Réunion",
     "975": "Saint-Pierre-et-Miquelon",
     "976": "Mayotte",
-    # Single AN constituency covering both collectivities
     "977": "Saint-Barthélemy et Saint-Martin",
     "986": "Wallis-et-Futuna",
     "987": "Polynésie française",
@@ -131,8 +130,6 @@ def normalize_code(raw: str) -> str | None:
     upper = raw.strip().upper()
     if not upper or len(upper) > 3:
         return None
-    # Strip the AN zero-padding ("099" → "99") but keep real 3-digit
-    # overseas codes ("971") intact.
     if len(upper) == 3 and upper.startswith("0"):
         upper = upper[1:]
     return upper if upper in DEPT_NAMES else None

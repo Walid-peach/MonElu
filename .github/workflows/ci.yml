@@ -104,6 +104,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Comment ratchet (ADR-050)
+        working-directory: .
+        run: python3 scripts/comments.py check
+
       - name: Type check
         run: npx tsc --noEmit
 

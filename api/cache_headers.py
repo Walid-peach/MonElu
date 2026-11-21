@@ -25,7 +25,6 @@ from starlette.requests import Request
 
 PUBLIC_CACHE_CONTROL = "public, max-age=300"
 
-# Path prefixes whose responses depend on the caller or on live state.
 UNCACHEABLE_PREFIXES = ("/account", "/keys", "/health")
 
 

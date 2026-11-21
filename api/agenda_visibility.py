@@ -26,10 +26,6 @@ run id would remove the dependency; that is the open half of #684.
 
 CANCELLED_STATES = ("Annulé", "Supprimé")
 
-# Written into the SQL as literals rather than bound as parameters, so a caller
-# cannot get the parameter order wrong. They are constants of this module, never
-# input; the check keeps a quote, or a `%` psycopg2 would read as a
-# placeholder, from ever reaching the SQL.
 if any("'" in state or "%" in state for state in CANCELLED_STATES):
     raise ValueError("CANCELLED_STATES must not contain ' or %")
 _CANCELLED_SQL = ", ".join(f"'{state}'" for state in CANCELLED_STATES)

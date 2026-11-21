@@ -15,9 +15,6 @@ before touching this list.
 
 QUIZ_VERSION = "2026-Q3"
 
-# Each entry: the scrutin, a neutral plain-French question, a one-line context
-# sentence, and a short theme tag for the UI. Question phrasing must stay
-# descriptive of what the text does — no leading or evaluative wording.
 QUIZ_QUESTIONS: list[dict] = [
     {
         "vote_id": "VTANR5L17V8280",

@@ -71,8 +71,6 @@ def get_theme(
             if agg["total"] == 0:
                 raise HTTPException(status_code=404, detail="No votes for this theme yet")
 
-            # Smallest absolute pour/contre margin among votes with at least
-            # one expressed position — the vote that split the chamber most.
             cur.execute(
                 """
                 SELECT vote_id, voted_at, vote_title, votes_for, votes_against, result
@@ -85,10 +83,6 @@ def get_theme(
             )
             most_divided_row = cur.fetchone()
 
-            # Deputies not yet resolved by scripts/update_party.py carry the
-            # raw AN organe ID ("PO838901") in party_short — fold those into
-            # the same NULL ("Non inscrit") bucket as genuinely unaffiliated
-            # deputies instead of showing them as standalone garbled groups.
             cur.execute(
                 """
                 SELECT CASE WHEN d.party_short ~ '^PO[0-9]+$' THEN NULL ELSE d.party_short END

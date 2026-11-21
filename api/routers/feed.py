@@ -47,23 +47,16 @@ router = APIRouter()
 
 PARIS = ZoneInfo("Europe/Paris")
 
-# ADR-042 §3: a non-headline scrutin earns its own card only when it was this
-# close. A constant, not a parameter, so the app cannot drift from it.
 CLOSE_MARGIN = 20
 
 HEADLINE_KINDS = ("ensemble", "motion")
 
-# ADR-042 amendment §2: the most deputies one request may follow. The app
-# enforces the same cap before it sends anything.
 MAX_FOLLOWED_DEPUTIES = 10
 
-# Agenda items shown: from today through the next seven days.
 AGENDA_DAYS_AHEAD = 7
 
 Tab = Literal["pour_vous", "assemblee"]
 
-# One week of scrutins, each with the followed deputies' positions as a
-# {deputy_id: position} object (empty when nothing is followed or recorded).
 SQL_WEEK_SCRUTINS = """
     SELECT v.vote_id, v.voted_at, v.vote_title, v.result,
            v.votes_for, v.votes_against, v.abstentions,
@@ -82,16 +75,9 @@ SQL_WEEK_SCRUTINS = """
     ORDER BY v.voted_at DESC, v.vote_id DESC
 """
 
-# The latest scrutin before the end of the requested week: the fallback week
-# when the requested one has no sitting (ADR-042 §5).
 SQL_LATEST_BEFORE = "SELECT MAX(voted_at) AS latest FROM votes WHERE voted_at < %(end)s"
 
 SQL_DEPUTIES_EXIST = "SELECT deputy_id FROM deputies WHERE deputy_id = ANY(%s::text[])"
-
-
-# ---------------------------------------------------------------------------
-# Week arithmetic (ADR-042 §5): ISO week, Monday to Sunday, Europe/Paris
-# ---------------------------------------------------------------------------
 
 
 def paris_today() -> date:
@@ -107,11 +93,6 @@ def week_bounds(day: date) -> tuple[date, date]:
 def paris_midnight(day: date) -> datetime:
     """Start of `day` in Paris, as an aware datetime for a timestamptz comparison."""
     return datetime(day.year, day.month, day.day, tzinfo=PARIS)
-
-
-# ---------------------------------------------------------------------------
-# The noise rule and the feed itself (ADR-042 §3-4) - pure functions
-# ---------------------------------------------------------------------------
 
 
 def kind_of(row: dict) -> str:
@@ -143,7 +124,6 @@ def closest_scrutin(rows: list[dict]) -> Optional[dict]:
     candidates = [r for r in rows if r.get("result") is not None and margin_of(r) is not None]
     if not candidates:
         return None
-    # min() keeps the first of equal keys, and newest_first() set that order.
     return min(newest_first(candidates), key=margin_of)
 
 
@@ -249,7 +229,6 @@ def build_items(
                 rollups.append(rollup)
         for row in rows:
             if row.get("theme") in theme_names and kind_of(row) in HEADLINE_KINDS:
-                # A vote in both keeps the deputies' positions: it is the same row.
                 picked.setdefault(row["vote_id"], row)
         cards = newest_first(list(picked.values()))
         agenda = [a for a in agenda if a.theme in theme_names]
@@ -334,11 +313,6 @@ def week_recap_counts(rows: list[dict], *, deputy_ids: list[str]) -> dict:
         "deputy": deputy,
         "deputies": deputies,
     }
-
-
-# ---------------------------------------------------------------------------
-# Validation and database reads
-# ---------------------------------------------------------------------------
 
 
 def resolve_themes(slugs: Optional[list[str]]) -> tuple[list[str], set[str]]:

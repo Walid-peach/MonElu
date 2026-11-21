@@ -40,8 +40,6 @@ InstallEvent = Literal[
 
 Platform = Literal["android", "ios", "other"]
 
-# Mirrored by the CHECKs in data/migrations/014_install_events.sql and by
-# INSTALL_EVENTS / Platform in frontend/src/lib/installEvents.ts.
 INSTALL_EVENTS: tuple[str, ...] = get_args(InstallEvent)
 PLATFORMS: tuple[str, ...] = get_args(Platform)
 

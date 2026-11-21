@@ -15,9 +15,6 @@ from api.schemas import AppConfig
 
 router = APIRouter()
 
-# The app calls this at every launch, phones behind a carrier's NAT share one
-# address, and the handler touches no database - so it sits on the 300/min tier
-# the snapshot reads use, not the 30/min tier of the database-backed reads.
 APP_CONFIG_RPM = 300
 
 

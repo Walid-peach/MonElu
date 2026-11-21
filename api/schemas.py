@@ -24,18 +24,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from api.config import DEFAULT_FRONTEND_BASE_URL
 
-# ---------------------------------------------------------------------------
-# Shared config — all response models are read from DB rows (dicts/mappings)
-# ---------------------------------------------------------------------------
-
 
 class _Base(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
-
-# ---------------------------------------------------------------------------
-# Deputies
-# ---------------------------------------------------------------------------
 
 
 class DeputySummary(_Base):
@@ -168,9 +159,6 @@ class DeputyScorecard(_Base):
 class DeputyScorecardRow(DeputyScorecard):
     """Scorecard plus party/department context — one row of the dense table (MON-97)."""
 
-    # Explicit rather than inherited: Pydantic would otherwise carry
-    # DeputyScorecard's example down here, and it has none of the three
-    # fields this model adds.
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -430,11 +418,6 @@ class DeputyListResponse(_Base):
     items: list[DeputyListItem]
 
 
-# ---------------------------------------------------------------------------
-# Departments (MON-107)
-# ---------------------------------------------------------------------------
-
-
 class DepartmentDeputy(DeputySummary):
     """Deputy row on a department page — summary plus scorecard highlights.
 
@@ -442,8 +425,6 @@ class DepartmentDeputy(DeputySummary):
     degrades gracefully instead of failing).
     """
 
-    # Explicit rather than inherited from DeputySummary, which has none of
-    # the four rate fields below.
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -505,11 +486,6 @@ class DepartmentDetail(_Base):
         "alignment mart is unavailable or the department is empty.",
     )
     split_votes: list[DepartmentSplitVote]
-
-
-# ---------------------------------------------------------------------------
-# Circonscriptions (ADR-047, #662)
-# ---------------------------------------------------------------------------
 
 
 class LocateRequest(BaseModel):
@@ -579,11 +555,6 @@ class AbroadSeat(Seat):
     region: str
 
 
-# ---------------------------------------------------------------------------
-# Themes (MON-106)
-# ---------------------------------------------------------------------------
-
-
 class ThemeVoteItem(_Base):
     vote_id: str
     voted_at: Optional[datetime] = None
@@ -637,11 +608,6 @@ class ThemeDetail(_Base):
     votes: list[ThemeVoteItem]
 
 
-# ---------------------------------------------------------------------------
-# Groups (parliamentary groups — MON-150)
-# ---------------------------------------------------------------------------
-
-
 class GroupMember(DeputySummary):
     """A group's current deputy — summary plus scorecard highlights.
 
@@ -649,8 +615,6 @@ class GroupMember(DeputySummary):
     degrades gracefully instead of failing), mirroring DepartmentDeputy.
     """
 
-    # Explicit rather than inherited from DeputySummary, which has neither
-    # of the two rate fields below.
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -757,11 +721,6 @@ class GroupDetail(_Base):
         default_factory=list,
         description="The group's most recent scrutins with its aggregate position, newest first.",
     )
-
-
-# ---------------------------------------------------------------------------
-# Votes (scrutins)
-# ---------------------------------------------------------------------------
 
 
 class VoteDossierRef(_Base):
@@ -995,11 +954,6 @@ class VoteListResponse(_Base):
     )
 
 
-# ---------------------------------------------------------------------------
-# API keys (MON-98)
-# ---------------------------------------------------------------------------
-
-
 class ApiKeyUsageDay(_Base):
     endpoint: str
     day: date
@@ -1010,11 +964,6 @@ class ApiKeyUsageResponse(_Base):
     label: str
     rate_limit_multiplier: int
     items: list[ApiKeyUsageDay]
-
-
-# ---------------------------------------------------------------------------
-# Agenda (MON-212, ADR-030)
-# ---------------------------------------------------------------------------
 
 
 class AgendaItem(_Base):
@@ -1090,10 +1039,6 @@ class AgendaResponse(_Base):
     to_date: date
     days: list[AgendaDay]
 
-
-# ---------------------------------------------------------------------------
-# Bills - "où en est cette loi ?" (#369, ADR-035)
-# ---------------------------------------------------------------------------
 
 _LOI_SCRUTIN_EXAMPLE = {
     "vote_id": "VTANR5L17V7894",
@@ -1347,11 +1292,6 @@ class LoiAmendementsResponse(_Base):
     items: list[LoiAmendementScrutin]
 
 
-# ---------------------------------------------------------------------------
-# Accounts (#413, ADR-040)
-# ---------------------------------------------------------------------------
-
-
 class AccountProfile(_Base):
     """The signed-in caller's own profile, read through the restricted role.
 
@@ -1563,14 +1503,10 @@ class AccountExport(_Base):
     followed_deputies: list[AccountExportFollowedDeputy] = []
     followed_themes: list[AccountExportFollowedTheme] = []
     bookmarks: list[AccountExportBookmark] = []
-    # None when the caller never saved a preference: nothing is stored, so
-    # nothing is exported.
-    notification_preferences: Optional[AccountExportNotificationPreferences] = None
-
-
-# ---------------------------------------------------------------------------
-# Native app configuration (ADR-041 §5, #438)
-# ---------------------------------------------------------------------------
+    notification_preferences: Optional[AccountExportNotificationPreferences] = Field(
+        None,
+        description="Null when no preference was ever saved: nothing stored, nothing exported.",
+    )
 
 
 class AppFeatures(_Base):
@@ -1649,10 +1585,6 @@ class AppConfig(_Base):
         description="The 2027 presidential election calendar (#718); absent from older servers",
     )
 
-
-# ---------------------------------------------------------------------------
-# The app's Accueil feed (#562, ADR-042)
-# ---------------------------------------------------------------------------
 
 _FEED_SCRUTIN_EXAMPLE = {
     "vote_id": "VTANR5L17V8433",
@@ -1975,11 +1907,6 @@ class FeedWeekResponse(_Base):
     next_agenda: Optional[AgendaItem] = Field(
         default=None, description="The next séance publique item within seven days"
     )
-
-
-# ---------------------------------------------------------------------------
-# The record before the 2027 election (#718, ADR-049)
-# ---------------------------------------------------------------------------
 
 
 class ElectionLegislatureFigures(_Base):

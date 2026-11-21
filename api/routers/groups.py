@@ -26,7 +26,6 @@ from api.schemas import (
     GroupVoteBreakdown,
 )
 
-# Not a group in any political sense: not ranked among the groups (#526).
 NON_INSCRITS = "Non inscrit"
 
 router = APIRouter()
@@ -161,8 +160,6 @@ def get_group(
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Sitting members only (the `sitting_deputies` view, #682) - the page answers
-            # "who sits in this group now", not the historical roster.
             cur.execute(
                 """
                 SELECT deputy_id, full_name, party, party_short,
@@ -178,9 +175,6 @@ def get_group(
             if not member_rows:
                 raise HTTPException(status_code=404, detail="No active deputies for this group")
 
-            # The group's place by current seats (#526): 1 is the largest, equal
-            # seat counts share a rank, and the non-inscrits, who are not a
-            # group, are neither ranked nor counted.
             cur.execute(
                 """
                 SELECT seat_rank FROM (
@@ -198,11 +192,6 @@ def get_group(
 
             deputy_ids = [r["deputy_id"] for r in member_rows]
 
-            # Every vote at least one current member expressed a position on,
-            # with the group's pour/contre/abstention split. Raw tables only —
-            # works even when the dbt marts are missing. ~1,200 votes total at
-            # current scale, so one unbounded query plus in-Python sorting
-            # (below) is cheaper than two round trips.
             cur.execute(
                 """
                 SELECT v.vote_id, v.voted_at, v.vote_title, v.result,
@@ -220,8 +209,6 @@ def get_group(
             )
             vote_rows = cur.fetchall()
 
-    # Mart highlights on a fresh connection: an UndefinedTable error aborts
-    # the whole transaction, which would poison the queries above if shared.
     rates: dict[str, dict] = {}
     try:
         with get_conn() as conn:

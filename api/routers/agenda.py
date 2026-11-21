@@ -31,13 +31,8 @@ from api.schemas import AgendaDay, AgendaItem, AgendaResponse
 
 router = APIRouter()
 
-# A "sane maximum" per the issue's acceptance criteria — the agenda feed's
-# forward coverage is limited (MON-208 spike) and every real use case is a
-# week-or-month-scale window, not a full-legislature scan.
 AGENDA_MAX_SPAN_DAYS = 90
 
-# Module-level so integration tests can exercise the exact SQL (a mocked
-# cursor can't catch a date-vs-timestamp comparison bug).
 _AGENDA_QUERY = f"""
     SELECT a.point_uid, a.sitting_start, a.sitting_end, a.objet,
            a.point_type, a.summary_plain, a.theme, a.dossier_id,

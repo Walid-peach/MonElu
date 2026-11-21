@@ -26,10 +26,6 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Error tracking (MON-99) — no-ops safely when SENTRY_DSN is unset, so this
-# is safe to leave in place before the Sentry project/DSN exists.
-# ---------------------------------------------------------------------------
 def _traces_sample_rate() -> float:
     raw = os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")
     try:
@@ -41,12 +37,6 @@ def _traces_sample_rate() -> float:
         return 0.1
 
 
-# What a visitor sends never leaves the API inside an error report or a sampled
-# trace: a request body can hold a question, a claim, quiz answers or a precise
-# location (ADR-047 §3), and a query string the followed deputies and themes
-# (GET /feed). The SDK is told not to read bodies or frame locals at all, and
-# this hook removes whatever request data an integration still attached, so an
-# event carries the method and the path only. /confidentialite says so.
 _SENTRY_PRIVATE_REQUEST_KEYS = ("data", "query_string", "cookies")
 
 
@@ -84,7 +74,6 @@ class _DropQueryString(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         args = record.args
-        # uvicorn's format: (client_addr, method, full_path, http_version, status)
         if isinstance(args, tuple) and len(args) == 5 and isinstance(args[2], str):
             record.args = (args[0], args[1], args[2].split("?", 1)[0], args[3], args[4])
         return True
@@ -92,9 +81,6 @@ class _DropQueryString(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(_DropQueryString())
 
-# ---------------------------------------------------------------------------
-# Startup secret validation — warn loudly if keys are missing or placeholder
-# ---------------------------------------------------------------------------
 _PLACEHOLDER_PREFIXES = ("sk-...", "gsk_...", "your-", "changeme")
 
 
@@ -135,19 +121,13 @@ from rag.chain.sql_router import warm_pool as _warm_sql_pool  # noqa: E402
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_pool()
-    init_account_pool()  # restricted role for /account (#413); opens nothing at startup
-    _warm_sql_pool()  # establish the SQL router connection pool at startup
+    init_account_pool()
+    _warm_sql_pool()
     yield
     close_account_pool()
     close_pool()
 
 
-# The spec at /openapi.json is what ChatGPT Actions, MCP-over-OpenAPI bridges
-# and generic tool-calling frameworks read to decide whether and how to call
-# this API (MON-260). Everything below is written for that reader: the four
-# things a model gets wrong unaided are the data horizon, the nonVotant vs
-# abstention distinction, what presence_rate actually counts, and the offset
-# ceiling. State them here rather than assuming an endpoint description will.
 API_DESCRIPTION = """\
 The complete voting record of every deputy in the French Assemblée nationale,
 17th legislature (elected 2024-07-07). Data comes from the Assemblée's own open
@@ -192,8 +172,6 @@ Methodology, definitions and known caveats: __FRONTEND__/methodologie
 Data licence: Licence Ouverte / Open Licence 2.0 (Etalab 2.0), attribution required.
 """
 
-# One entry per include_router() tag below. Order here is the order the spec
-# renders in, so the endpoints an agent reaches for first come first.
 OPENAPI_TAGS = [
     {
         "name": "Deputies",
@@ -344,8 +322,6 @@ def _operation_id(route: APIRoute) -> str:
 
 app = FastAPI(
     title="MonÉlu API",
-    # str.replace, not str.format: the text names paths like /themes/{slug},
-    # and format() would read those braces as placeholders and raise.
     description=API_DESCRIPTION.replace("__FRONTEND__", frontend_base_url()),
     version="0.1.0",
     openapi_tags=OPENAPI_TAGS,
@@ -355,9 +331,6 @@ app = FastAPI(
     generate_unique_id_function=_operation_id,
 )
 
-# ---------------------------------------------------------------------------
-# Rate limiting
-# ---------------------------------------------------------------------------
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
@@ -402,35 +375,20 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 app.add_exception_handler(Exception, _unhandled_exception_handler)
 
 
-# ---------------------------------------------------------------------------
-# API key usage logging (MON-98) — only keyed requests touch the DB; anonymous
-# traffic is unaffected. Both the key lookup (which can hit the DB on a cache
-# miss) and the usage write run in the threadpool so neither ever blocks the
-# event loop.
-# ---------------------------------------------------------------------------
 @app.middleware("http")
 async def _log_api_key_usage(request: Request, call_next):
     response = await call_next(request)
     record = await run_in_threadpool(resolve_api_key, request.headers.get(API_KEY_HEADER))
     if record:
-        # Route template ("/deputies/{deputy_id}") once routing has resolved, so usage
-        # aggregates per endpoint rather than fragmenting per resource id.
         route = request.scope.get("route")
         endpoint = route.path if route is not None else request.url.path
         await run_in_threadpool(record_usage, record.id, endpoint)
     return response
 
 
-# ---------------------------------------------------------------------------
-# Cache-Control on public reads (ADR-041 §5, #438) - see api/cache_headers.py
-# for what is excluded and why.
-# ---------------------------------------------------------------------------
 app.middleware("http")(add_public_cache_control)
 
 
-# ---------------------------------------------------------------------------
-# CORS
-# ---------------------------------------------------------------------------
 ALLOWED_ORIGINS = [o for o in os.getenv("CORS_ORIGINS", "").split(",") if o]
 if not ALLOWED_ORIGINS:
     logger.warning(
@@ -446,9 +404,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------------------------
-# Routers
-# ---------------------------------------------------------------------------
 from api.routers import (  # noqa: E402
     account,
     agenda,
@@ -490,12 +445,7 @@ app.include_router(account.router, prefix="/account", tags=["Account"])
 app.include_router(app_config.router, prefix="/app", tags=["App"])
 
 
-# ---------------------------------------------------------------------------
-# Cached DB stats — COUNT(*) is a full scan and the data changes once a day,
-# so /health reads one snapshot refreshed at most every 60s.
-# ---------------------------------------------------------------------------
 _STATS_TTL_SECONDS = 60.0
-# MON-225: Supabase free tier caps the DB at 500 MB; warn with headroom to act.
 _DB_SIZE_WARN_MB = 400
 _stats_lock = threading.Lock()
 _stats_cache: dict | None = None
@@ -534,7 +484,6 @@ def _get_db_stats() -> dict:
                     "votes": row["votes"],
                     "positions": row["positions"],
                     "last_ingestion": row["last_vote"].isoformat() if row["last_vote"] else None,
-                    # MON-225: Supabase free tier caps the DB at 500 MB.
                     "db_size_mb": round(row["db_size_bytes"] / (1024 * 1024), 1),
                 }
             )
@@ -550,11 +499,6 @@ def _get_db_stats() -> dict:
             conn.rollback()
             logger.warning("Stats mart check error: %s", exc)
 
-        # MON-256: document_chunks_staging exists only while a full RAG rebuild
-        # is in flight. A count here on an ordinary read is an orphan left by a
-        # rebuild that was killed (a job timeout's SIGKILL) - tens of MB of
-        # vectors held against the 500 MB tier, otherwise indistinguishable
-        # from organic growth in db_size_mb.
         try:
             with conn.cursor() as cur:
                 cur.execute("SELECT to_regclass('public.document_chunks_staging') AS oid")
@@ -576,9 +520,6 @@ def landing() -> RedirectResponse:
     return RedirectResponse(url=frontend_base_url(), status_code=307)
 
 
-# ---------------------------------------------------------------------------
-# Health check
-# ---------------------------------------------------------------------------
 @app.get(
     "/health",
     tags=["Health"],
@@ -618,8 +559,6 @@ def health() -> JSONResponse:
     services: dict[str, str] = {}
     stats: dict = {}
     try:
-        # Liveness stays uncached so a dead DB is reported immediately; the
-        # COUNT(*) snapshot comes from the shared 60s cache.
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
@@ -636,13 +575,8 @@ def health() -> JSONResponse:
     if _is_placeholder(groq_key):
         services["groq"], groq_detail = "degraded", "GROQ_API_KEY is missing or a placeholder"
     else:
-        # GH #385: a cached catalog probe, not key presence - see api/groq_health.py.
         services["groq"], groq_detail = groq_health.groq_status(groq_key)
 
-    # all_ok excludes dbt_marts — marts are absent on every fresh deploy and
-    # degrade gracefully; their absence should not trip Railway's health check.
-    # A groq "unknown" is an inconclusive probe, not an outage, so it is
-    # reported without flipping the status.
     all_ok = all(
         v == "ok" or (k == "groq" and v == groq_health.UNKNOWN)
         for k, v in services.items()
@@ -657,11 +591,8 @@ def health() -> JSONResponse:
                 "deputies": stats["deputies"],
                 "votes": stats["votes"],
                 "positions": stats["positions"],
-                # MON-225: Supabase free tier caps the DB at 500 MB; the daily
-                # ingestion workflow polls this to alert before writes start failing.
                 "db_size_mb": stats["db_size_mb"],
                 "db_size_warning": stats["db_size_mb"] >= _DB_SIZE_WARN_MB,
-                # MON-256: null unless a RAG rebuild is running or left an orphan.
                 "rag_staging_chunks": stats["rag_staging_chunks"],
             }
         )

@@ -8,9 +8,6 @@ words; this is the one copy of those words, exported to
 app (ADR-041 §4) by `scripts/export_reference_data.py`.
 """
 
-# The citizen-facing label of each derived status, in ADR-035 §5's rule order.
-# Keys are exactly api.routers.lois.DOSSIER_STATUSES (pinned by
-# tests/unit/test_reference_data.py).
 DOSSIER_STATUS_LABELS: dict[str, str] = {
     "promulguee": "Promulguée",
     "conseil_constitutionnel": "Devant le Conseil constitutionnel",
@@ -21,10 +18,6 @@ DOSSIER_STATUS_LABELS: dict[str, str] = {
     "en_navette": "En navette parlementaire",
 }
 
-# A top-level codeActe -> (the step of the AN, Sénat, CMP, loi sequence it
-# belongs to, a short label for it). Only codes that are a step of that
-# sequence: AN20 and AN21 (a debate, not a reading) are left out, and a client
-# shows no stage strip for them.
 DOSSIER_STAGES: dict[str, tuple[str, str]] = {
     "AN1": ("an", "1re lecture"),
     "AN2": ("an", "2e lecture"),
