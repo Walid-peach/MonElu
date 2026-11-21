@@ -2125,7 +2125,7 @@ Agents read comments as instructions and copy their patterns, so an excuse sprea
    `comment-baseline.json` holds each file's allowance.
    `python scripts/comments.py check` fails when a file has more comment lines than its allowance, which bans every new comment, and also when it has fewer, so the baseline is lowered with `python scripts/comments.py update` in the same change and the allowance never grows back.
    `update` refuses to raise an allowance.
-   The check runs in pre-commit, in `ci.yml` and, for `ios/`, in `ios.yml`.
+   Pre-commit checks the staged files, so it needs Node only when a JavaScript or TypeScript file is staged; `ci.yml` checks every tracked file, which also catches a deleted file whose allowance was left behind, and `ios.yml` checks `ios/`.
 4. **The cleanup repeats with `/delete-comment`.**
    The skill takes one area, classifies every comment in it, applies the fates above and tightens the baseline.
 

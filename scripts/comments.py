@@ -6,7 +6,8 @@ name, a test, a docstring an API consumer reads, or an ADR in docs/decisions.md.
 when the ban landed; `check` fails when a file goes above its allowance or
 stays below it without the baseline being lowered, so the debt only shrinks.
 
-    python scripts/comments.py check [--only PREFIX]   # CI and pre-commit
+    python scripts/comments.py check [--only PREFIX]   # CI: every tracked file
+    python scripts/comments.py check FILE ...          # pre-commit: the staged files
     python scripts/comments.py update                  # lower the baseline after deleting
     python scripts/comments.py list [PATH ...]         # every comment, for /delete-comment
     python scripts/comments.py strip PATH ...          # delete every comment under PATH
@@ -299,17 +300,20 @@ def write_baseline(counts: dict[str, int]) -> None:
     BASELINE.write_text(json.dumps(dict(sorted(counts.items())), indent=2) + "\n")
 
 
-def selected(prefix: str | None) -> list[str]:
-    files = tracked_files()
-    return [path for path in files if not prefix or path.startswith(prefix)]
-
-
-def check(prefix: str | None) -> int:
+def check(prefix: str | None, paths: list[str] | None = None) -> int:
     baseline = load_baseline()
-    counts = {path: len(comments) for path, comments in scan(selected(prefix)).items()}
-    paths = set(counts) | {p for p in baseline if not prefix or p.startswith(prefix)}
+    tracked = tracked_files()
+    if paths:
+        wanted = set(paths)
+        chosen = [p for p in tracked if p in wanted]
+        expected = {p for p in baseline if p in wanted}
+    else:
+        chosen = [p for p in tracked if not prefix or p.startswith(prefix)]
+        expected = {p for p in baseline if not prefix or p.startswith(prefix)}
+    counts = {path: len(comments) for path, comments in scan(chosen).items()}
+    paths = sorted(set(counts) | expected)
     grew, shrank = [], []
-    for path in sorted(paths):
+    for path in paths:
         allowed, actual = baseline.get(path, 0), counts.get(path, 0)
         if actual > allowed:
             grew.append(f"  {path}: {actual} comment lines, {allowed} allowed")
@@ -402,6 +406,7 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     check_parser = sub.add_parser("check")
     check_parser.add_argument("--only", help="limit the check to paths under this prefix")
+    check_parser.add_argument("paths", nargs="*", help="check only these files (pre-commit)")
     sub.add_parser("update")
     list_parser = sub.add_parser("list")
     list_parser.add_argument("paths", nargs="*")
@@ -410,7 +415,7 @@ def main() -> int:
     sub.add_parser("stats")
     args = parser.parse_args()
     if args.command == "check":
-        return check(args.only)
+        return check(args.only, args.paths)
     if args.command == "update":
         return update()
     if args.command == "list":

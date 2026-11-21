@@ -94,6 +94,14 @@ def test_check_fails_on_a_new_comment_and_on_a_stale_allowance(ratchet, capsys):
     assert "comments.py update" in capsys.readouterr().out
 
 
+def test_check_on_named_files_ignores_the_others(ratchet):
+    baseline, found = ratchet
+    baseline.write_text(json.dumps({"a.py": 1}))
+    found.update({"a.py": 1, "b.py": 2})
+    assert comments.check(None, ["a.py"]) == 0
+    assert comments.check(None, ["b.py"]) == 1
+
+
 def test_update_lowers_but_never_raises_an_allowance(ratchet):
     baseline, found = ratchet
     baseline.write_text(json.dumps({"a.py": 2}))

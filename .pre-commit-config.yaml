@@ -40,4 +40,3 @@ repos:
         name: comment ratchet (ADR-050)
         entry: python3 scripts/comments.py check
         language: system
-        pass_filenames: false
