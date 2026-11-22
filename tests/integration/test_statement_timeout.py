@@ -77,3 +77,18 @@ def test_autocommit_is_refused(public_pool):
                     cur.execute("SELECT 1")
             finally:
                 conn.autocommit = False
+
+
+def test_named_cursor_is_timed(public_pool):
+    with pytest.raises(psycopg2.errors.QueryCanceled):
+        with _db.get_conn() as conn:
+            with conn.cursor(name="slow") as cur:
+                cur.execute("SELECT pg_sleep(2)")
+                cur.fetchall()
+
+
+def test_executemany_is_timed(public_pool):
+    with pytest.raises(psycopg2.errors.QueryCanceled):
+        with _db.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.executemany("SELECT pg_sleep(%s)", [(2,)])

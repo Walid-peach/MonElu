@@ -29,7 +29,8 @@ class _TimedCursor(psycopg2.extras.RealDictCursor):
     rejects startup options, and a session `SET` would outlive the request on a
     pooled server connection. Applying it whenever a statement is about to begin a
     new transaction covers the first query, and every query after a caller's own
-    `commit()` or `rollback()`.
+    `commit()` or `rollback()`. It covers only cursors the pool's factory builds, so
+    code on `get_conn()` never passes a `cursor_factory` of its own.
     """
 
     def execute(self, query, vars=None):
@@ -45,7 +46,8 @@ class _TimedCursor(psycopg2.extras.RealDictCursor):
         if conn.autocommit:
             raise RuntimeError("the public pool runs in transactions; autocommit drops the timeout")
         if conn.info.transaction_status == psycopg2.extensions.TRANSACTION_STATUS_IDLE:
-            super().execute("SET LOCAL statement_timeout = %s", (_STATEMENT_TIMEOUT,))
+            with conn.cursor(cursor_factory=psycopg2.extensions.cursor) as cur:
+                cur.execute("SET LOCAL statement_timeout = %s", (_STATEMENT_TIMEOUT,))
 
 
 def init_pool(minconn: int = 2, maxconn: int = 10) -> None:
