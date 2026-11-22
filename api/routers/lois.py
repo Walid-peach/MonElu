@@ -42,9 +42,6 @@ from api.schemas import (
 
 router = APIRouter()
 
-# The seven values ADR-035 §5 derives, in rule order. Mirrors
-# scripts/ingest_dossiers.STATUS_VALUES; tests/unit/test_lois_router.py fails
-# if the two drift, so the API cannot filter on a value ingestion never writes.
 DOSSIER_STATUSES = (
     "promulguee",
     "conseil_constitutionnel",
@@ -55,29 +52,12 @@ DOSSIER_STATUSES = (
     "en_navette",
 )
 
-# Scrutin kinds that are collapsed into counts rather than listed (ADR-035 §4).
-# Everything else - `ensemble`, `motion`, `autre`, and a NULL kind that the
-# classifier never reached - is a headline scrutin.
 COLLAPSED_KINDS = ("amendement", "article")
 
-# First scrutin the Assemblée systematically tagged with its dossier. Measured
-# over the full legislature-17 export: one stray tagged scrutin on 2026-01-29,
-# then every scrutin from 2026-03-26 onward (ADR-035 §1 calls it "March
-# 2026"). Before this date a bill's parcours has dated actes but no scrutin can
-# be attached to them - that is an upstream gap, not missing data here.
 SCRUTIN_COVERAGE_START = date(2026, 3, 26)
 
-# Actes a scrutin can bind to: the Assemblée's own séance-publique steps, dated.
-# Scrutins are AN votes, so they belong under an AN séance or decision - the
-# reading stages (AN1, AN2, ANNLEC, ANLDEF, ANLUNI, AN20, AN21) and the AN side
-# of a CMP reading. A date-only rule would attach a vote to whatever acte
-# happens to share its date, which on a navette day is often a Sénat deposit.
 _BINDABLE_ACTE_PATTERN = r"^(AN[A-Z0-9]*-DEBATS-(SEANCE|DEC)|CMP-DEBATS-AN-(SEANCE|DEC))$"
 
-# Visible actes only: an acte that vanished from the export keeps its stale
-# last_seen_at while its dossier moves on, and is filtered out here rather than
-# deleted (ADR-035 §3, the ADR-030 §2 pattern). Ingestion stamps a dossier and
-# its actes in one transaction, so a current acte's stamp equals its dossier's.
 SQL_DOSSIER = """
     SELECT dossier_uid, titre, procedure_label, initiateur, status, status_label,
            current_stage, parcours_start, parcours_end
@@ -117,10 +97,6 @@ SQL_COLLAPSED_SCRUTINS = """
     ORDER BY voted_at, vote_id
 """
 
-# One row per page-carrying dossier with its scrutin aggregates. `theme` is the
-# most frequent theme across the dossier's scrutins (ties broken
-# alphabetically) - dossiers carry no theme of their own, and seven of them
-# have no headline scrutin, so amendments count too.
 _LISTED_CTE = """
     WITH listed AS (
         SELECT d.dossier_uid, d.titre, d.status, d.status_label, d.current_stage,
@@ -340,8 +316,6 @@ def get_loi(request: Request, dossier_uid: str):
                 params = {"dossier_uid": dossier_uid, "collapsed": COLLAPSED_KINDS}
                 cur.execute(SQL_COLLAPSED_SCRUTINS, params)
                 collapsed = cur.fetchall()
-                # Last: an absent mart raises UndefinedTable and aborts the
-                # transaction, so nothing may run on this cursor after it.
                 cur.execute(SQL_HEADLINE_SCRUTINS, params)
                 headline = cur.fetchall()
     except psycopg2.errors.UndefinedTable:

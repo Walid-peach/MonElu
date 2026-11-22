@@ -28,14 +28,9 @@ def init_pool(minconn: int = 2, maxconn: int = 10) -> None:
             maxconn=maxconn,
             dsn=os.getenv("DATABASE_URL"),
             cursor_factory=psycopg2.extras.RealDictCursor,
-            # Cap query time so a pathological query can't hold a pooled
-            # connection indefinitely.
             options="-c statement_timeout=5000",
         )
     except psycopg2.OperationalError:
-        # PgBouncer in transaction mode (e.g. Supabase pooler, port 6543)
-        # rejects startup parameters like options=. Fall back to a pool
-        # without the timeout rather than failing the deploy.
         logger.warning(
             "DB rejected startup options (statement_timeout) — likely a transaction-mode "
             "pooler DSN; initializing pool without statement_timeout"
@@ -62,9 +57,6 @@ def get_conn():
     try:
         yield conn
     except (psycopg2.OperationalError, psycopg2.InterfaceError):
-        # Connection-level failure (severed socket, server restart, closed connection):
-        # always discard. rollback() can return successfully on a dead socket, so we
-        # cannot rely on it raising to detect a broken connection here.
         broken = True
         try:
             conn.rollback()
@@ -81,35 +73,6 @@ def get_conn():
         _pool.putconn(conn, close=broken)
 
 
-# ---------------------------------------------------------------------------
-# The restricted-role pool for account routes (#413, ADR-040 §5)
-# ---------------------------------------------------------------------------
-# The pool above connects as the table owner, which bypasses row level
-# security. Account data lives in `app_private` behind RLS policies keyed on the
-# `app.user_id` GUC, and those policies only apply to a role that is neither the
-# owner nor BYPASSRLS - `monelu_app_user` from migration 013. This second pool
-# connects as that role, and only the account routes use it. Public routes keep
-# the owner pool above, unchanged.
-#
-# Its DSN is ACCOUNT_DATABASE_URL. The role is created NOLOGIN, so an operator
-# sets its password out of band (`ALTER ROLE monelu_app_user WITH LOGIN
-# PASSWORD …`) before this pool can connect.
-#
-# Created lazily, on the first account request, never at startup: a missing or
-# not yet enabled account role must not stop the public API (and /health) from
-# booting. A failed creation leaves the pool absent and is retried by the next
-# request, so enabling the role later needs no restart.
-#
-# minconn must stay >= 1. psycopg2's pool keeps at most `minconn` idle
-# connections and *closes* every other one it is handed back, so minconn=0
-# would open a fresh connection - a TLS handshake to Supabase - per request.
-# Connecting is retried briefly for the proxy drops PgBouncer produces (the
-# lesson of MON-255). That retry only covers *opening* a connection: the idle
-# one the pool keeps is handed back unchecked, so a pooler that dropped it
-# overnight is only discovered at the first statement. `account_transaction`
-# therefore treats a failure at `SET LOCAL` - before anything of the caller's
-# has run - as a dead connection and retries once on a fresh one.
-
 _account_pool: psycopg2.pool.ThreadedConnectionPool | None = None
 _account_pool_lock = threading.Lock()
 
@@ -117,16 +80,9 @@ _ACCOUNT_POOL_MINCONN = 1
 _ACCOUNT_POOL_MAXCONN = 5
 _ACCOUNT_CONNECT_ATTEMPTS = 3
 _ACCOUNT_CONNECT_BACKOFF_SECONDS = 0.25
-# A dead pooled connection is replaced once; a second failure at `SET LOCAL`
-# on a freshly opened connection is an outage, not staleness.
 _ACCOUNT_BEGIN_ATTEMPTS = 2
-# libpq waits forever by default. Pool creation runs under a lock, so a stalled
-# pooler would otherwise queue every account request behind it and, through the
-# shared threadpool, starve the public sync routes too.
 _ACCOUNT_CONNECT_TIMEOUT_SECONDS = 5
 
-# Applied per transaction rather than as a startup `options=` parameter, which
-# Supabase's transaction-mode pooler rejects (see init_pool's fallback above).
 _ACCOUNT_STATEMENT_TIMEOUT = "5s"
 
 
@@ -145,10 +101,7 @@ def _with_connect_retry(connect):
             return connect()
         except psycopg2.OperationalError as exc:
             if attempt == _ACCOUNT_CONNECT_ATTEMPTS - 1:
-                # `from None`: the libpq message can quote the DSN, and this
-                # exception may reach Sentry from a future caller.
                 raise AccountStoreUnavailable("cannot connect as the account role") from None
-            # Class name only: a libpq connection error can quote the DSN.
             logger.warning("Account DB connection failed (%s), retrying", type(exc).__name__)
             time.sleep(_ACCOUNT_CONNECT_BACKOFF_SECONDS * 2**attempt)
     raise AssertionError("unreachable")
@@ -172,9 +125,6 @@ def _get_account_pool() -> psycopg2.pool.ThreadedConnectionPool:
             dsn = os.getenv("ACCOUNT_DATABASE_URL")
             if not dsn:
                 raise AccountStoreUnavailable("ACCOUNT_DATABASE_URL is not set")
-            # No register_uuid(): UUID columns come back as strings, exactly as
-            # the owner pool returns the share tables' ids, and ids are passed
-            # in as strings. One convention across both pools.
             _account_pool = _with_connect_retry(
                 lambda: psycopg2.pool.ThreadedConnectionPool(
                     minconn=_ACCOUNT_POOL_MINCONN,
@@ -209,9 +159,6 @@ def _begin_account_transaction(pool: psycopg2.pool.ThreadedConnectionPool, profi
     for attempt in range(_ACCOUNT_BEGIN_ATTEMPTS):
         conn = _get_account_conn(pool)
         try:
-            # psycopg2 opens a transaction implicitly on the first statement
-            # when autocommit is off; with autocommit on, SET LOCAL would be a
-            # no-op warning and every statement would run with no identity.
             conn.autocommit = False
             cur = conn.cursor()
             cur.execute("SET LOCAL app.user_id = %s", (str(profile_id),))
@@ -221,7 +168,6 @@ def _begin_account_transaction(pool: psycopg2.pool.ThreadedConnectionPool, profi
             pool.putconn(conn, close=True)
             if attempt == _ACCOUNT_BEGIN_ATTEMPTS - 1:
                 raise AccountStoreUnavailable("account connection unusable") from None
-            # Class name only: a libpq connection error can quote the DSN.
             logger.warning("Stale account DB connection (%s), reconnecting", type(exc).__name__)
         except BaseException:
             try:
@@ -252,8 +198,6 @@ def account_transaction(profile_id: uuid.UUID):
     `profile_id` is MonÉlu's own profile id (`app_private.profiles.id`), not the
     token's `sub` - the policies key on the former (ADR-040 §5, identity keys).
     """
-    # Normalise and validate before anything reaches SQL: an empty or malformed
-    # id must never become the GUC, even though the policies would fail closed.
     profile_id = uuid.UUID(str(profile_id))
 
     pool = _get_account_pool()
@@ -264,10 +208,6 @@ def account_transaction(profile_id: uuid.UUID):
             yield cur
         conn.commit()
     except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
-        # A severed socket, or a `statement_timeout` cancellation
-        # (QueryCanceledError is an OperationalError). Not retried: the
-        # caller's statements may already have run. Always discard, since
-        # rollback() can succeed on a dead socket.
         broken = True
         try:
             conn.rollback()

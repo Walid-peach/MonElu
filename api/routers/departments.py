@@ -86,8 +86,6 @@ def get_department(
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Sitting deputies only (the `sitting_deputies` view, #682) - the page answers
-            # "who represents me now", not the historical roster.
             cur.execute(
                 """
                 SELECT deputy_id, full_name, party, party_short,
@@ -111,9 +109,6 @@ def get_department(
 
             deputy_ids = [r["deputy_id"] for r in deputy_rows]
 
-            # Recent votes where the department's deputies expressed opposing
-            # positions (at least one pour and one contre). Raw tables only —
-            # this works even when the dbt marts are missing.
             cur.execute(
                 """
                 SELECT v.vote_id, v.voted_at, v.vote_title, v.result,
@@ -134,8 +129,6 @@ def get_department(
             )
             split_rows = cur.fetchall()
 
-    # Mart highlights on a fresh connection: an UndefinedTable error aborts
-    # the whole transaction, which would poison the queries above if shared.
     rates: dict[str, dict] = {}
     try:
         with get_conn() as conn:

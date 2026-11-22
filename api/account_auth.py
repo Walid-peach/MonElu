@@ -50,12 +50,8 @@ from api.db import get_conn
 
 logger = logging.getLogger(__name__)
 
-# Supabase signs user access tokens for this audience; the anon/service keys and
-# any other token the project mints do not carry it.
 SUPABASE_AUDIENCE = "authenticated"
 
-# Pinned rather than read from the token header, so a token cannot choose its own
-# verification algorithm (`none`, or HS256 against a public key).
 ALLOWED_ALGORITHMS = ["ES256", "RS256"]
 _ASYMMETRIC_KEY_TYPES = {"EC", "RSA"}
 
@@ -65,15 +61,10 @@ _CLOCK_SKEW_SECONDS = 30
 
 _UNAUTHENTICATED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
-# Generous on purpose: one dashboard render in the Next layer reads several
-# account routes, and the limit exists to stop a runaway client, not to ration
-# a person. In-process storage, like slowapi's, which fits one Railway instance.
 ACCOUNT_RATE_LIMIT = parse("120/minute")
 _rate_limit_storage = MemoryStorage()
 _rate_limiter = MovingWindowRateLimiter(_rate_limit_storage)
 
-# auto_error=False: FastAPI's own error for a missing header has been a 403 in
-# some versions, and a protected route must answer 401 (the issue's criterion).
 _bearer = HTTPBearer(
     auto_error=False,
     description="Supabase access token, forwarded by the Next.js server (ADR-040).",
@@ -109,9 +100,6 @@ def supabase_issuer() -> str | None:
 
 @functools.lru_cache(maxsize=4)
 def _jwks_client(jwks_url: str) -> jwt.PyJWKClient:
-    # Cached per URL so the key set is fetched once and reused; PyJWKClient
-    # refetches on its own when a token names a key id it has not seen, which is
-    # what makes a Supabase key rotation work without a restart.
     return jwt.PyJWKClient(
         jwks_url,
         cache_jwk_set=True,
@@ -132,17 +120,6 @@ def verify_access_token(token: str) -> VerifiedUser:
 
     client = _jwks_client(f"{issuer}/.well-known/jwks.json")
 
-    # Two failure classes that must not be confused. A key set that cannot be
-    # fetched, parsed, or holds no usable key - which is exactly what a project
-    # still on the legacy HS256 secret publishes - means verification cannot
-    # run: 503. Only a token naming a key the set does not hold is the
-    # caller's fault: 401. Answering 401 to the first would sign every visitor
-    # out over a misconfiguration.
-    #
-    # Checked before anything is read from the token, so that guarantee does
-    # not depend on the token's shape: a legacy-secret project may issue
-    # tokens with no `kid`, and those must still answer 503, not "no kid".
-    # The set is cached, so this costs nothing per request.
     try:
         client.get_jwk_set()
     except (jwt.PyJWKClientError, jwt.PyJWKSetError, ValueError) as exc:
@@ -156,18 +133,12 @@ def verify_access_token(token: str) -> VerifiedUser:
         raise InvalidAccessToken("no kid")
 
     try:
-        # An unknown kid forces at most one refetch per cooldown window
-        # (PyJWT >= 2.15), so random kids cannot turn this into a JWKS
-        # fetch per request.
         signing_key = client.get_signing_key(kid)
     except (jwt.PyJWKClientConnectionError, ValueError) as exc:
         raise AuthUnavailable(type(exc).__name__) from None
     except jwt.PyJWTError as exc:
         raise InvalidAccessToken(type(exc).__name__) from None
 
-    # The key set is the project's, not the caller's, so a symmetric key in it
-    # is a misconfiguration rather than a bad token - and decoding with one
-    # would raise outside PyJWT's error hierarchy.
     if signing_key.key_type not in _ASYMMETRIC_KEY_TYPES:
         raise AuthUnavailable(f"JWKS key type {signing_key.key_type} is not asymmetric")
 
@@ -178,16 +149,12 @@ def verify_access_token(token: str) -> VerifiedUser:
             algorithms=ALLOWED_ALGORITHMS,
             audience=SUPABASE_AUDIENCE,
             issuer=issuer,
-            # Absorbs clock skew between Supabase and this host, which would
-            # otherwise reject a freshly issued token's `iat` as in the future.
             leeway=_CLOCK_SKEW_SECONDS,
             options={"require": ["exp", "iat", "sub", "aud", "iss"]},
         )
     except jwt.PyJWTError as exc:
         raise InvalidAccessToken(type(exc).__name__) from None
 
-    # Anonymous sign-ins mint `authenticated` tokens too. ADR-040 has no
-    # anonymous accounts, so one reaching the API is not a MonÉlu user.
     if claims.get("is_anonymous") is True:
         raise InvalidAccessToken("anonymous session")
 
@@ -213,8 +180,6 @@ def require_verified_user(
     try:
         user = verify_access_token(credentials.credentials)
     except InvalidAccessToken as exc:
-        # The reason is an exception class name or a fixed string, never the
-        # token or anything decoded from it.
         logger.info("Rejected access token: %s", exc)
         raise HTTPException(
             status_code=401,

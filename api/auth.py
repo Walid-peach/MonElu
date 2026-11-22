@@ -58,10 +58,6 @@ def _reload_cache() -> None:
                         rate_limit_multiplier=row["rate_limit_multiplier"],
                     )
     except Exception:
-        # Advance the timestamp even on failure (MON-229) - otherwise every
-        # keyed request repeats this blocking query on the event loop until
-        # a reload finally succeeds, stalling all concurrent requests for up
-        # to the statement timeout each time. The stale cache is kept as-is.
         with _cache_lock:
             _cache_loaded_at = time.monotonic()
         raise

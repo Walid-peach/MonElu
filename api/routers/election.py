@@ -36,14 +36,10 @@ from api.schemas import (
 
 router = APIRouter()
 
-# How many scrutins the carousel and the grid's columns show.
 KEY_VOTE_COUNT = 5
 
-# Not a group in any political sense, never a grid row (same rule as /groups, #526).
 NON_INSCRITS = "Non inscrit"
 
-# Positions that count towards a group's majority. `nonVotant` is not a position
-# taken (CLAUDE.md data quirks), so it never decides one.
 EXPRESSED = ("pour", "contre", "abstention")
 
 KIND_LABELS = {"ensemble": "Texte entier", "motion": "Motion"}
@@ -60,7 +56,6 @@ SQL_FIGURES = """
     FROM votes
 """
 
-# Closest first: the margin is |pour - contre|, ties broken by the newest scrutin.
 SQL_KEY_VOTES = """
     SELECT vote_id, voted_at, vote_title, result, scrutin_kind,
            votes_for, votes_against, abstentions

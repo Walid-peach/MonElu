@@ -25,19 +25,9 @@ from api.schemas import (
 
 router = APIRouter()
 
-# Turnout (#627). The denominator is the chamber's 577 seats rather than the
-# seats filled on the vote's date: `deputies` holds only the deputies ingested
-# since the pipeline started, so a count of mandates covering an old date comes
-# out several seats short, while a vacancy moves the rate by under a point.
 CHAMBER_SEATS = 577
-# A motion de censure needs the votes of a majority of the chamber's members
-# (Constitution, art. 49), whatever the turnout; every other scrutin needs a
-# majority of the votes cast.
 CENSURE_MAJORITY = CHAMBER_SEATS // 2 + 1
 CENSURE_VOTE_TYPE = "moc"
-# A turnout under half the typical rate for its vote type is `below`, over 1.5
-# times it `above`. Ordinary scrutins sit around a fifth of the chamber, so the
-# bands are relative rather than fixed percentages.
 BELOW_TYPICAL = 0.5
 ABOVE_TYPICAL = 1.5
 
@@ -47,9 +37,6 @@ FROM analytics_marts.mart_vote_summary
 WHERE vote_type = %(vote_type)s
 """
 
-# Group members whose mandate covered the vote's date: the same mandate window
-# ADR-019 uses as the presence denominator, so a deputy elected later is not
-# counted as absent from a group they had not joined yet.
 SQL_GROUP_MEMBERS = """
 SELECT party_short, COUNT(*) AS members
 FROM deputies
@@ -119,8 +106,6 @@ def build_participation(
     )
 
 
-# The values of votes.scrutin_kind, as classified at ingestion (ADR-035 §4).
-# Mirrors scripts.ingest_votes.SCRUTIN_KINDS; tests/test_api.py pins the two.
 SCRUTIN_KINDS = ("ensemble", "motion", "amendement", "article", "autre")
 
 
@@ -221,7 +206,6 @@ def list_votes(
     March 2026, ADR-035): `lois_url` is MonÉlu's bill page, null when the bill
     has none. Null when the scrutin names no bill.
     """
-    # Decode before opening a connection so a bad cursor fails fast with 422.
     cursor_key = _decode_cursor(before) if before else None
     kinds = _parse_kinds(kind)
 
@@ -250,9 +234,6 @@ def list_votes(
                     params.append(search)
 
                 if kinds:
-                    # The mart does not carry scrutin_kind; the raw votes table
-                    # does. An unclassified (NULL) kind counts as `autre`, as on
-                    # the bill page (lois.py).
                     conditions.append(
                         sql.SQL(
                             "vote_id IN (SELECT vote_id FROM votes"
@@ -261,7 +242,6 @@ def list_votes(
                     )
                     params.append(kinds)
 
-                # total reflects the full filtered set, independent of the cursor window.
                 count_where = (
                     sql.SQL(" WHERE ") + sql.SQL(" AND ").join(conditions)
                     if conditions
@@ -276,11 +256,6 @@ def list_votes(
                 page_conditions = list(conditions)
                 page_params = list(params)
                 if cursor_key:
-                    # NULLS LAST puts undated votes after all dated ones; coalescing
-                    # both sides to '-infinity' before comparing keeps the row
-                    # constructor total-ordered even when voted_at is NULL — a bare
-                    # (voted_at, vote_id) < (%s, %s) comparison evaluates to NULL
-                    # (and silently drops the row) whenever either side is NULL.
                     page_conditions.append(
                         sql.SQL(
                             "(COALESCE(voted_at, '-infinity'::timestamptz), vote_id) < "
@@ -295,8 +270,6 @@ def list_votes(
                     else sql.SQL("")
                 )
 
-                # Cursor paging walks the keyset directly; offset is only for shallow
-                # (cursor-less) paging and is ignored once a cursor is supplied.
                 effective_offset = 0 if cursor_key else offset
 
                 cur.execute(
@@ -316,7 +289,6 @@ def list_votes(
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
 
-    # A full page implies there may be more; hand back a cursor to the next window.
     next_cursor = (
         _encode_cursor(rows[-1]["voted_at"], rows[-1]["vote_id"]) if len(rows) == limit else None
     )
@@ -491,8 +463,6 @@ def get_vote(request: Request, vote_id: str):
     except psycopg2.errors.UndefinedTable:
         raise MART_UNAVAILABLE from None
 
-    # A dict rather than keyword arguments: the mart has its own pct_pour and
-    # pct_contre columns, and naming a key `**vote` also holds raises TypeError.
     fields = {
         **vote,
         "an_url": an_scrutin_url(vote["vote_id"]),

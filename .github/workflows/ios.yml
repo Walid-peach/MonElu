@@ -124,6 +124,10 @@ jobs:
           python -m pip install --quiet pytest pyyaml
           python -m pytest --noconftest -q tests/unit/test_ios_design_tokens.py tests/unit/test_ios_ci_paths.py
 
+      - name: Comment ratchet (ADR-050)
+        if: matrix.shard == 'app'
+        run: python scripts/comments.py check --only ios/
+
       - name: Create the Simulator
         run: |
           id=$(xcrun simctl create "CI $SIMULATOR_DEVICE" "$SIMULATOR_DEVICE" "$SIMULATOR_RUNTIME")

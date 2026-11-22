@@ -33,3 +33,10 @@ repos:
       - id: ruff                    # lint
         args: [--fix]
       - id: ruff-format             # format (black-compatible)
+
+  - repo: local
+    hooks:
+      - id: comment-ratchet
+        name: comment ratchet (ADR-050)
+        entry: python3 scripts/comments.py check
+        language: system

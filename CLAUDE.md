@@ -23,6 +23,7 @@ The four shared workflow skills and their `solve-issue/references/` resources ar
 between `.agents/skills/` and `.claude/skills/`; update both when changing common behavior.
 The `ios-run` skill (run the iPhone app through a Maestro flow and save screenshots, #450) is mirrored the same way.
 So is the `ios-device` skill (install `master` on the user's own iPhone with `make ios-device`, keeping the installed app's data).
+So is the `delete-comment` skill (clear one area's comments under ADR-050 and lower the comment ratchet).
 Preserve Claude-specific presentation instructions in `plan-epic`.
 
 ## Project Overview
@@ -108,6 +109,7 @@ make ios-device     # Sign, build, install and launch on the plugged-in iPhone (
 ruff check .        # Lint
 ruff format .       # Format
 pre-commit run --all-files  # Run all hooks
+python3 scripts/comments.py check   # Comment ratchet (ADR-050); `update` after deleting comments
 ```
 
 ---
@@ -439,6 +441,8 @@ Railway, dbt and the GitHub Actions workflows never read this file and are unaff
 ---
 
 ## Code Style
+
+**Code carries no comments** (ADR-050). A decision goes to `docs/decisions.md` (ADR-051 holds the ones recovered from `api/`), an API field's meaning to its `Field(description=...)`, a hack to a GitHub issue, and a tautology nowhere. Directives (`noqa`, `pragma: allowlist secret`, `eslint-disable`, dbt `depends_on:`) and docstrings are not comments. `scripts/comments.py check` fails a file that gains a comment line and a file whose allowance in `comment-baseline.json` was not lowered after a deletion; it runs in pre-commit, `ci.yml` and `ios.yml`. `/delete-comment <area>` clears the rest, one area at a time.
 
 Ruff is the single tool for lint and formatting (`ruff.toml`):
 - Line length: 100

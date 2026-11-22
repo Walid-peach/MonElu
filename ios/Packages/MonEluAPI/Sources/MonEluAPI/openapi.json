@@ -2820,6 +2820,7 @@
             "default": []
           },
           "notification_preferences": {
+            "description": "Null when no preference was ever saved: nothing stored, nothing exported.",
             "$ref": "#/components/schemas/AccountExportNotificationPreferences"
           }
         },
@@ -6517,6 +6518,7 @@
           },
           "agreement_pct": {
             "title": "Agreement Pct",
+            "description": "Null when the deputy has no comparable expressed position at all.",
             "type": "number"
           },
           "matches": {
@@ -6529,6 +6531,7 @@
           },
           "detail": {
             "title": "Detail",
+            "description": "Per-question breakdown (MON-181), only for the best match and the opposite; never stored in a share (ADR-025).",
             "items": {
               "$ref": "#/components/schemas/QuizVoteDetail"
             },
@@ -6631,6 +6634,7 @@
             "title": "Top Matches"
           },
           "opposite": {
+            "description": "The eligible deputy who agrees least, under the same threshold as the ranking; null when no eligible deputy differs from the best match (MON-177).",
             "$ref": "#/components/schemas/QuizDeputyMatch"
           },
           "groups": {
@@ -6644,9 +6648,11 @@
             "$ref": "#/components/schemas/QuizDepartmentResult"
           },
           "focus": {
+            "description": "Set only with focus_deputy_id (MON-183): that deputy's match, returned even below the ranking threshold.",
             "$ref": "#/components/schemas/QuizDeputyMatch"
           },
           "themes": {
+            "description": "Themes answered pour and contre (MON-203). Always set by /quiz/match; absent from shares stored before MON-203 and from shares without include_answers.",
             "$ref": "#/components/schemas/QuizThemeSummary"
           }
         },
@@ -6680,6 +6686,7 @@
           },
           "votes_for": {
             "title": "Votes For",
+            "description": "Live tally from the votes table at request time (MON-180); the question content itself is a repository file (ADR-025).",
             "type": "integer"
           },
           "votes_against": {
@@ -6818,6 +6825,7 @@
             "title": "Top Matches"
           },
           "opposite": {
+            "description": "The eligible deputy who agrees least, under the same threshold as the ranking; null when no eligible deputy differs from the best match (MON-177).",
             "$ref": "#/components/schemas/QuizDeputyMatch"
           },
           "groups": {
@@ -6831,13 +6839,16 @@
             "$ref": "#/components/schemas/QuizDepartmentResult"
           },
           "focus": {
+            "description": "Set only with focus_deputy_id (MON-183): that deputy's match, returned even below the ranking threshold.",
             "$ref": "#/components/schemas/QuizDeputyMatch"
           },
           "themes": {
+            "description": "Themes answered pour and contre (MON-203). Always set by /quiz/match; absent from shares stored before MON-203 and from shares without include_answers.",
             "$ref": "#/components/schemas/QuizThemeSummary"
           },
           "answers": {
             "title": "Answers",
+            "description": "Present only on shares created with include_answers (ADR-028), and omitted rather than null on every other share.",
             "items": {
               "$ref": "#/components/schemas/QuizAnswer"
             },
@@ -6887,6 +6898,7 @@
           },
           "deputy_position": {
             "title": "Deputy Position",
+            "description": "Null when the deputy expressed no position on this vote (nonVotant or absent): not comparable, which is not a disagreement.",
             "type": "string",
             "enum": [
               "pour",
@@ -7016,6 +7028,7 @@
           },
           "suggested_action": {
             "title": "Suggested Action",
+            "description": "\"verify\" when the input reads as a claim (ADR-023): a UI nudge only, the API never runs verification from this path.",
             "type": "string",
             "const": "verify"
           }

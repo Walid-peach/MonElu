@@ -2095,6 +2095,194 @@ The decree sets a date that is not a Sunday of April, a candidate-facing feature
 
 ---
 
+## ADR-050 - Code carries no comments; decisions live here, and a ratchet keeps the count falling (#727)
+
+**Status:** Accepted, 2026-11-21.
+
+### Context
+
+An audit on 2026-11-21 found 9,708 comment lines in 626 tracked files outside `archive/`: 9,469 on lines of their own and 239 trailing code.
+They fell into four kinds.
+A tautology restates what the code already says (section banners, `# Rate limiting` above the rate limiter).
+A stale comment describes code or numbers that have since changed (`~1,200 votes total at current scale` over a table of 5,000).
+An excuse lets a hack stand by explaining it (`Keep in sync with ...` with no test, a silent fallback that drops a timeout).
+A decision record explains a choice that the code cannot show.
+Agents read comments as instructions and copy their patterns, so an excuse spreads, and a decision record buried in one file is invisible from every other file that depends on it.
+
+### Decision
+
+1. **No comments in code.**
+   Python, Swift, TypeScript, JavaScript, CSS, SQL, YAML, shell, TOML and the Makefile carry none.
+   Directives that a tool reads are not comments and stay (`noqa`, `type: ignore`, `pragma: allowlist secret`, `eslint-disable`, `@ts-expect-error`, `swiftlint:`, dbt `depends_on:`, shebangs).
+   Python docstrings are not comments: route docstrings are the OpenAPI manual (MON-260), and a module or function docstring stays the place to say what something is for.
+2. **Each kind has one fate.**
+   A tautology or a stale comment is deleted.
+   An excuse is deleted and a GitHub issue is filed to fix what it excused.
+   A decision record moves to this file, in the ADR that owns the area or in an implementation-notes ADR such as ADR-051, naming the symbol it applies to.
+   Where the knowledge describes an API field, it moves to that field's `Field(description=...)`, which reaches `/openapi.json`.
+3. **A ratchet, not a big bang.**
+   `scripts/comments.py` counts comment lines per file with each language's own lexer (Python's `tokenize`, the TypeScript compiler through `frontend/scripts/list-comments.mjs`, small lexers for the rest).
+   `comment-baseline.json` holds each file's allowance.
+   `python scripts/comments.py check` fails when a file has more comment lines than its allowance, which bans every new comment, and also when it has fewer, so the baseline is lowered with `python scripts/comments.py update` in the same change and the allowance never grows back.
+   `update` refuses to raise an allowance.
+   Pre-commit checks the staged files, so it needs Node only when a JavaScript or TypeScript file is staged; `ci.yml` checks every tracked file, which also catches a deleted file whose allowance was left behind, and `ios.yml` checks `ios/`.
+4. **The cleanup repeats with `/delete-comment`.**
+   The skill takes one area, classifies every comment in it, applies the fates above and tightens the baseline.
+
+### Consequences
+
+- The first pass cleared `api/` (574 comment lines): 7 excuses became #720 to #726, the decision records became ADR-051 and field descriptions, and the rest were deleted.
+- About 9,100 comment lines remain under the ratchet; deleting them all removes roughly 8,900 lines, since trailing comments shorten a line rather than remove it.
+- A reader who wants the why of a constant greps this file for its name instead of reading the line above it.
+
+### Would reopen this
+
+A class of knowledge is found that has no home outside the line it explains and that a name, a test, a docstring or an ADR cannot carry.
+
+---
+
+## ADR-051 - API implementation decisions, recovered from code comments (ADR-050, #727)
+
+**Status:** Accepted, 2026-11-21.
+
+### Context
+
+The comments in `api/` held decisions that no ADR recorded at the level of the symbol they govern.
+They are kept here, grouped by module, so ADR-050 could delete them without losing the reasons.
+Each entry names the symbol, so a grep for it lands here.
+
+### Decision
+
+**`api/main.py`**
+- Sentry (MON-99) no-ops when `SENTRY_DSN` is unset, so the integration is safe to ship before the project exists.
+- `_SENTRY_PRIVATE_REQUEST_KEYS`: a request body can hold a question, a claim, quiz answers or a location (ADR-047 §3), and a query string the followed deputies and themes (`GET /feed`); the SDK reads no bodies or frame locals, and the hook removes what an integration still attached, so an event carries the method and path only (#716).
+- `_DropQueryString` relies on uvicorn's access-log record args being the 5-tuple `(client_addr, method, full_path, http_version, status)`; anything else is passed through untouched.
+- The lifespan opens no account connection at startup (`init_account_pool()`), and warms the SQL router pool.
+- `API_DESCRIPTION` is written for the model that reads `/openapi.json` (MON-260): it states the data horizon, `nonVotant` versus `abstention`, what `presence_rate` counts and the offset ceiling, rather than trusting each endpoint to.
+  It is filled with `str.replace`, never `str.format`, because it names paths like `/themes/{slug}`.
+- `OPENAPI_TAGS` order is the order the spec renders, so the endpoints an agent reaches for first come first.
+- API key usage (MON-98): only keyed requests touch the database, and both the key lookup and the usage write run in the threadpool so neither blocks the event loop; usage aggregates per route template, not per resource id.
+- `/health` reads `COUNT(*)` from one snapshot refreshed at most every 60 s (`_STATS_TTL_SECONDS`), since the data changes once a day; liveness itself is never cached.
+- `_DB_SIZE_WARN_MB = 400` leaves headroom under the Supabase free tier's 500 MB (MON-225); the daily ingestion workflow polls `db_size_mb` to alert before writes fail.
+- `rag_staging_chunks` is non-null only while a rebuild runs or after one was killed (MON-256), so an orphan is not mistaken for organic growth.
+- `status` ignores `dbt_marts` (absent on every fresh deploy) and a Groq `unknown` (an inconclusive probe, GH #385), so neither trips Railway's health check.
+
+**`api/db.py`**
+- A connection-level failure always discards the connection, since `rollback()` can succeed on a dead socket.
+- The account pool (#413, ADR-040 §5) is created lazily on the first account request, so a missing or not-yet-enabled `monelu_app_user` cannot stop the public API from booting, and a failed creation is retried by the next request.
+- Its `minconn` stays at least 1: psycopg2 closes every returned connection beyond `minconn`, so 0 means a TLS handshake per request.
+- Connecting is retried for PgBouncer's proxy drops (MON-255); an idle connection the pooler dropped overnight is only discovered at `SET LOCAL`, so `_ACCOUNT_BEGIN_ATTEMPTS = 2` retries once on a fresh connection, and a second failure is an outage.
+- `_ACCOUNT_CONNECT_TIMEOUT_SECONDS = 5`: libpq waits forever by default, and pool creation holds a lock that would otherwise queue every account request and starve the shared threadpool.
+- `_ACCOUNT_STATEMENT_TIMEOUT` is set per transaction because the transaction-mode pooler rejects startup `options=`.
+- The account pool does not call `register_uuid()`: ids travel as strings in both pools.
+- `autocommit` stays off on account connections, or `SET LOCAL` is a no-op and statements run with no identity.
+- `profile_id` is parsed as a UUID before it becomes the GUC, even though the policies fail closed.
+- A failure after `SET LOCAL` is not retried, since the caller's statements may have run; `QueryCanceledError` is an `OperationalError` and is treated the same way.
+- Connection errors are logged by class name and re-raised `from None`, because a libpq message can quote the DSN.
+
+**`api/account_auth.py`**
+- `SUPABASE_AUDIENCE = "authenticated"`: the anon and service keys do not carry it.
+- `ALLOWED_ALGORITHMS` is pinned so a token cannot choose `none` or HS256 against a public key.
+- `ACCOUNT_RATE_LIMIT = 120/minute` stops a runaway client, not a person: one dashboard render reads several account routes; storage is in-process, which fits one Railway instance.
+- `HTTPBearer(auto_error=False)`, because FastAPI answered 403 for a missing header in some versions and a protected route must answer 401.
+- The JWKS client is cached per URL; PyJWT refetches on an unknown `kid`, which is how a key rotation works without a restart, and at most once per cooldown window (PyJWT >= 2.15), so random kids cannot force a fetch per request.
+- A key set that cannot be fetched or holds no usable key (what a legacy-HS256 project publishes) is 503, checked before anything is read from the token; only a token naming a key the set lacks is 401.
+- A symmetric key in the set is a misconfiguration, not a bad token.
+- `leeway` absorbs clock skew on a freshly issued `iat`.
+- Anonymous sign-ins mint `authenticated` tokens too; ADR-040 has no anonymous accounts, so they are rejected.
+- A rejection is logged by exception class or a fixed string, never the token or a claim.
+
+**`api/auth.py`**
+- The key-cache timestamp advances even when the reload fails (MON-229), keeping the stale cache, so a database blip does not make every keyed request repeat a blocking query on the event loop.
+
+**`api/cache_headers.py`**
+- `UNCACHEABLE_PREFIXES` are the routes whose answers depend on the caller or on live state.
+
+**`api/routers/account.py`**
+- The `SQL_*` statements are module-level so the integration suite can neutralise each ownership clause and prove RLS alone isolates users (#414); `{assignments}` in `SQL_UPDATE_PROFILE` is filled only from a fixed column allowlist.
+- A circonscription is stored as a bare number ("01" becomes "1"), the form of `deputies.circonscription` and migration 013.
+- When the department changes without a new circonscription, the old number is cleared, because it names a different seat in the new department; `SET` expressions read the pre-update row, which is what makes the comparison work.
+- Clearing a display name takes an explicit `null`; a blank string is rejected as a likely client bug.
+- `ON DELETE CASCADE` on every child table makes `SQL_DELETE_PROFILE` one statement.
+- A `NULL` in `SQL_UPSERT_PREFERENCES` keeps the stored value, and an empty preferences body stores nothing, so the export never reports a choice that was not made.
+- A profile deleted between `require_account` and the transaction gets the same 401 as a deleted account; a concurrent first `POST /account/me` falls through and returns the row the other request created.
+
+**`api/routers/quiz.py`**
+- `/quiz/weekly` (MON-185) applies docs/quiz-curation.md criteria 1, 3 and 4 automatically; criterion 2 is moot because it reads whichever database it runs against. The 500-row cap is #724.
+- The weekly pick is stable for an ISO week and the candidate cutoff keeps the row set fixed, so the resolved pick, including "none", is cached per `week_start` (MON-230).
+- `WILSON_Z = 1.96` is the standard 95 % value, not tuned on this corpus.
+- A tied group plurality gives the group no line on that scrutin (ADR-034's deliberate quiz exception, rule 18).
+- A department's deputies are fetched separately so one absent from every quiz scrutin still appears, with `compared = 0`.
+- A share recomputes the result from the submitted answers (ADR-025); `detail` and `themes` re-encode the answers, so they are stored only with `include_answers` (ADR-028), and `answers` is omitted, not null, without it, keeping such a share byte-identical to a pre-ADR-028 snapshot.
+
+**Share snapshot reads (`quiz.py`, `search.py`, `verify.py`)**
+- `GET` on a snapshot is on the 300/min tier (MON-173): unfurlers and Vercel's edge egress share few addresses, and the base per-IP limit tripped during viral spikes.
+
+**`api/routers/search.py` and `api/routers/verify.py`**
+- The handlers are plain `def` because the chains do blocking psycopg2, OpenAI and Groq I/O, which must run in the threadpool.
+- A pipeline error is logged without the question or the claim (#716).
+- `_METADATA_MAX_KEYS` and the other share bounds (MON-225) cap an anonymous public write; real chunks stay under 500 tokens (`TOKEN_WARN_THRESHOLD`) and their metadata is a flat dict of scalars, so the bounds are generous, not guesses.
+
+**`api/routers/votes.py`**
+- `CHAMBER_SEATS = 577` is the turnout denominator (#627): `deputies` holds only deputies ingested since the pipeline began, so counting mandates on an old date comes out short, while a vacancy moves the rate by under a point.
+- `CENSURE_MAJORITY` is a majority of the chamber's members (Constitution, art. 49) whatever the turnout; every other scrutin needs a majority of votes cast.
+- `BELOW_TYPICAL` and its upper band are relative to the vote type's typical turnout, because ordinary scrutins sit near a fifth of the chamber.
+- `SQL_GROUP_MEMBERS` uses ADR-019's mandate window, so a deputy elected later is not absent from a group they had not joined.
+- A malformed cursor is decoded before a connection is opened, so it fails fast with 422; an unclassified `scrutin_kind` counts as `autre`, as on the bill page.
+- The keyset comparison coalesces `voted_at` to `-infinity` on both sides, because a bare row comparison is NULL, and drops the row, when either side is NULL.
+- The mart row is built as a dict, because it carries its own `pct_pour`/`pct_contre` and a repeated keyword raises `TypeError`.
+
+**`api/routers/deputies.py`**
+- `ROSTER_ORDER` uses the `fr-x-icu` collation so "Écrivain" sorts among the E's and "de Courson" among the D's whatever the database default, with `deputy_id` breaking ties so offset paging never repeats a namesake (#514).
+- `_SCORECARD_ROWS_SQL` is shared by the JSON table and the CSV export so they agree (MON-97).
+- `_DEPUTY_VOTES_SQL` reads the deputy's positions from the covering index (migration 020) and joins the scrutins; walking scrutins newest first and probing each was tried in #687 and is slow for a deputy who left.
+- A deputy missing from the scorecard mart is not proof of an unknown deputy, since the mart holds only deputies with a group (#622).
+
+**`api/routers/groups.py`, `departments.py`, `themes.py`**
+- `NON_INSCRITS` is not a group in any political sense: never ranked or counted among the groups (#526), never a row of the 2027 grid.
+- Group and department rosters read `sitting_deputies` (#682): they answer who sits now.
+- A group's rank shares places on equal seat counts.
+- The split-vote and divided-vote lists read raw tables, so they work without the marts; the second connection for mart reads is #723, the unbounded group query #722 and the organe-id fold in `themes.py` #721.
+- A theme's most divided vote is the smallest absolute pour/contre margin among votes with an expressed position.
+
+**`api/routers/lois.py` and `api/lois_data.py`**
+- `COLLAPSED_KINDS` are counted, not listed (ADR-035 §4); `ensemble`, `motion`, `autre` and a NULL kind are headline scrutins.
+- `SCRUTIN_COVERAGE_START = 2026-03-26`: one stray tagged scrutin on 2026-01-29, then every scrutin from that date (ADR-035 §1's "March 2026").
+- `_BINDABLE_ACTE_PATTERN` is the AN's own séance and decision actes, since a date-only rule attaches a vote to a Sénat deposit on a navette day.
+- `SQL_DOSSIER` hides actes whose `last_seen_at` is stale (ADR-035 §3); ingestion stamps a dossier and its actes in one transaction.
+- `_LISTED_CTE`'s `theme` is the most frequent theme of the dossier's scrutins, amendments included, ties alphabetical, because dossiers have no theme and seven have no headline scrutin.
+- `DOSSIER_STAGES` leaves out AN20 and AN21 (a debate, not a reading), and clients show no stage strip for them.
+
+**`api/routers/feed.py`**
+- `CLOSE_MARGIN` is a constant, not a parameter, so the app cannot drift from ADR-042 §3; `MAX_FOLLOWED_DEPUTIES` is enforced by the app too.
+- The closest scrutin keeps the newest of equal margins (`min` over `newest_first`), and a vote in both lists keeps the row carrying the deputies' positions.
+
+**`api/routers/election.py`, `agenda.py`, `app_config.py`, `circonscriptions.py`, `install_events.py`**
+- `EXPRESSED` excludes `nonVotant`, which is not a position taken; key votes are closest first, ties broken by the newest.
+- `AGENDA_MAX_SPAN_DAYS = 90`: the agenda feed's forward coverage is short (MON-208) and every use is a week- or month-scale window; `_AGENDA_QUERY` is module-level so integration tests run the exact SQL.
+- `APP_CONFIG_RPM = 300`: every launch calls it, phones behind carrier NAT share an address, and it touches no database.
+- `MAX_SEAT_LATITUDE` bounds the degree-based pre-filter; the query box is sized by the shorter degree of longitude, so it may return seats slightly too far but never misses a close one.
+- `INSTALL_EVENTS` is mirrored by migration 014's CHECKs and `frontend/src/lib/installEvents.ts`.
+
+**`api/agenda_visibility.py`, `api/app_config_data.py`, `api/circonscriptions_data.py`, `api/departments_data.py`, `api/groq_health.py`, `api/quiz_data.py`**
+- `CANCELLED_STATES` are SQL literals, not parameters, so no caller can misorder them; the guard keeps a quote or a `%` out of the SQL.
+- `DATA_HORIZON` is the Supabase free-tier horizon (CLAUDE.md decision 7); the legislature began on 2024-07-07.
+- `_VERSION` has no pre-release suffix because the app compares components numerically; `CAVEATS` keep their Markdown because SwiftUI renders it.
+- The election date is never in code: `ELECTION_FIRST_ROUND_LABEL` shows until the operator sets the decree's date; registration closes on the sixth Friday strictly before the first round.
+- `BOUNDARY_SOURCE` was chosen by `scripts/measure_circonscription_accuracy.py` (#661): 99.81 % of 3.8 million addresses land in their seat, against 99.71 % for the "p10" variant and 99.20 % for INSEE's file.
+- `BOUNDARY_TOLERANCE_M = 50`: with no tolerance 0.080 % of addresses get a wrong seat; at 50 m 0.011 % do and 1.1 % are asked to choose; at 100 m 0.010 % and 2.1 %; at 500 m 0.012 % and 11.6 %. Past 50 m the remaining errors are not boundary errors.
+- `SEATS_WITHOUT_SHAPE` covers the 11 seats abroad and the collectivités the source lacks (ADR-047 §7); `ABROAD_SEAT_REGIONS` has no country table, whose only authority is tableau n° 1 ter.
+- "977" is one AN constituency for Saint-Barthélemy and Saint-Martin.
+- Groq's `UNKNOWN` (timeout, 5xx, rate limit) is deliberately not `FAILING`, because a health check that flaps teaches people to ignore it; it is re-probed after 60 s, a verdict after 600 s, and the cache is keyed on the key so a rotation re-probes.
+- Quiz questions stay descriptive of what the text does, never leading or evaluative.
+
+### Consequences
+
+- These reasons no longer sit beside their code; a change to one of these symbols checks this ADR first, as any change checks this file.
+- An entry that stops being true is edited here in the same change that makes it untrue.
+
+---
+
 ## Rules for future development sessions
 
 1. Read this file before writing any code
@@ -2131,3 +2319,4 @@ The decree sets a date that is not a Sunday of April, a candidate-facing feature
 32. A voter's circonscription comes from `POST /circonscriptions/locate` over the bundled boundary file (ADR-047) - never add a country-to-seat table for the seats abroad that is not taken from tableau n° 1 ter, never send the address to MonÉlu (the device geocodes it), never put coordinates in a URL, never store or log them, and never pick one seat when a point is within the boundary tolerance of another
 33. A vote summary's lifecycle is `votes.summary_state` (ADR-048, #681) - never infer it again from `summary_plain`/`summary_basis` or the source tables, never write a transition from a script that does not own it, never let a run re-queue a rejected summary (only `--retry-rejected` does), and never give `summary_basis` a value that is not the kind of a published summary
 34. The 2027 tab is a record, never a recommendation (ADR-049, #718) - it shows what the Assemblée voted from `GET /election/2027`, invents no election date (`APP_ELECTION_2027_FIRST_ROUND` sets it), takes group majorities from the one formula of ADR-034, and never names a candidate or a programme
+35. Code carries no comments (ADR-050, #727) - a decision goes to this file, an excuse becomes an issue, a tautology is deleted; directives and docstrings are not comments; never raise an allowance in `comment-baseline.json`, and lower it in the change that deletes comments (`python scripts/comments.py update`)

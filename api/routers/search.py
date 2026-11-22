@@ -46,9 +46,11 @@ class SearchResponse(BaseModel):
     confidence: str = "medium"
     data_source: str = "RAG"
     caveat: str | None = None
-    # ADR-023: "verify" when the input looks like a claim to fact-check -
-    # a UI nudge only; the API never runs verification from this path.
-    suggested_action: Literal["verify"] | None = None
+    suggested_action: Literal["verify"] | None = Field(
+        None,
+        description='"verify" when the input reads as a claim (ADR-023): a UI nudge only, '
+        "the API never runs verification from this path.",
+    )
 
 
 @router.post(
@@ -77,8 +79,6 @@ def search(request: Request, body: SearchRequest):
     against the record. Nothing is verified here. 503 when the server has no LLM
     credentials configured.
     """
-    # Plain `def` on purpose: ask() does blocking psycopg2 + Groq I/O, so FastAPI
-    # must run it in the threadpool, not on the event loop.
     try:
         result = ask(
             question=body.question,
@@ -105,19 +105,13 @@ def search(request: Request, body: SearchRequest):
             ),
         ) from e
     except Exception:
-        logger.exception("RAG pipeline error")  # never the question (#716)
+        logger.exception("RAG pipeline error")
         raise HTTPException(
             status_code=500,
             detail="Service temporairement indisponible. Réessayez dans quelques secondes.",
         ) from None
 
 
-# MON-225: a share row is an anonymous public write with no per-field size
-# limit before this - the JSONB `sources` column could carry megabytes of
-# arbitrary content on a single request. Chunk content stays well under 500
-# tokens (rag/pipeline/chunker.py TOKEN_WARN_THRESHOLD) and metadata is a flat
-# dict of scalars (see chunker.py chunk_* functions), so these bounds are
-# generous relative to real payloads, not a guess.
 _METADATA_MAX_KEYS = 20
 _METADATA_MAX_BYTES = 2000
 
@@ -225,9 +219,6 @@ def share_answer(request: Request, body: ShareRequest):
     response_model=ShareResponse,
     summary="Relisez une réponse partagée (aucun appel IA)",
 )
-# Immutable public snapshot behind an unguessable UUID (MON-173): OG scrapers
-# (X, WhatsApp, Facebook, Telegram) and Vercel edge egress funnel through few
-# IPs, so the base per-IP limit was tripping during viral spikes.
 @limiter.limit(tiered_limit(300))
 def get_chat_share(request: Request, share_id: uuid.UUID):
     """Read back a stored chat answer by id. No LLM call.

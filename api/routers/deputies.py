@@ -28,19 +28,10 @@ from api.schemas import (
 
 router = APIRouter()
 
-# The roster's order, by surname then first name (#514). The app heads each run
-# of one surname initial with a letter, so "Écrivain" must sort among the E's and
-# "de Courson" among the D's whatever the database's default collation: under
-# "C" both land after "Z" and the letter appears twice. The ICU collation pins
-# that independently of how the database was created; deputy_id breaks ties so
-# offset paging never repeats or skips a namesake.
 ROSTER_ORDER = sql.SQL('last_name COLLATE "fr-x-icu", first_name COLLATE "fr-x-icu", deputy_id')
 
-# The `active` filter: sitting means what migration 019's view says (#682).
 SITTING = "deputy_id IN (SELECT deputy_id FROM sitting_deputies)"
 
-# One scorecard row per deputy with party/department context — shared by the
-# JSON table endpoint and the CSV export so both always agree (MON-97).
 _SCORECARD_ROWS_SQL = """
     SELECT
         s.deputy_id,
@@ -508,11 +499,6 @@ def _deputy_votes_total(cur, deputy_id: str) -> int:
     return cur.fetchone()["total"]
 
 
-# Reads the deputy's (vote_id, position) pairs from the covering index alone
-# (migration 020), joins them to the scrutins and keeps the newest. Walking the
-# scrutins newest first and probing each for the deputy was tried (#687): it is
-# as fast for a deputy who votes often and slow for one who left the Assemblée,
-# since every scrutin since their last vote is probed first.
 _DEPUTY_VOTES_SQL = sql.SQL("""
     SELECT vp.vote_id, v.voted_at, v.vote_title, v.result, vp.position,
            v.summary_plain, raw.summary_basis, raw.scrutin_kind
@@ -580,8 +566,6 @@ def get_alignment(request: Request, deputy_id: str):
         raise MART_UNAVAILABLE from None
 
     if not row:
-        # The mart holds only deputies with a group, so a missing row is not
-        # proof the deputy is unknown (#622).
         raise HTTPException(
             status_code=404,
             detail=NO_ALIGNMENT_DETAIL if known else "Deputy not found",

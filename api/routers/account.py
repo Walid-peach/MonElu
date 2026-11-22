@@ -88,18 +88,8 @@ _UNAUTHENTICATED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
 DISPLAY_NAME_MAX_LEN = 80
 
-# Circonscriptions are numbered from 1 within a department; the largest
-# (Nord, Paris, Bouches-du-Rhône) stay well under 30. Stored as a bare number,
-# the convention deputies.circonscription and migration 013 both follow.
 _CIRCONSCRIPTION = re.compile(r"[0-9]{1,2}")
 
-
-# ---------------------------------------------------------------------------
-# SQL
-# ---------------------------------------------------------------------------
-# Module-level on purpose: the integration suite neutralises the ownership
-# clause in each of these to prove RLS is enforcing on its own (see the module
-# docstring). Every constant is plain text with named placeholders.
 
 _PROFILE_COLUMNS = (
     "id::text AS id, display_name, preferred_language, "
@@ -123,7 +113,6 @@ SQL_INSERT_PROFILE = f"""
     RETURNING {_PROFILE_COLUMNS}
 """
 
-# `{assignments}` is filled by psycopg2.sql from a fixed column allowlist.
 SQL_UPDATE_PROFILE = f"""
     UPDATE app_private.profiles
     SET {{assignments}}
@@ -131,8 +120,6 @@ SQL_UPDATE_PROFILE = f"""
     RETURNING {_PROFILE_COLUMNS}
 """
 
-# Appended to the SET list when the department changes without a new
-# circonscription (see update_my_profile).
 SQL_CLEAR_STALE_CIRCONSCRIPTION = """
     circonscription = CASE
         WHEN department_code IS DISTINCT FROM %(department_code)s THEN NULL
@@ -140,8 +127,6 @@ SQL_CLEAR_STALE_CIRCONSCRIPTION = """
     END
 """
 
-# ON DELETE CASCADE on every child table (migration 013) makes this one
-# statement remove the follows, bookmarks and preferences with the profile.
 SQL_DELETE_PROFILE = """
     DELETE FROM app_private.profiles
     WHERE id = %(profile_id)s
@@ -216,7 +201,6 @@ SQL_SELECT_PREFERENCES = f"""
     WHERE profile_id = %(profile_id)s
 """
 
-# A NULL parameter keeps the stored value (or the default, on first save).
 SQL_UPSERT_PREFERENCES = f"""
     INSERT INTO app_private.notification_preferences
         (profile_id, followed_deputy_votes, followed_theme_votes, weekly_digest)
@@ -269,11 +253,6 @@ SQL_EXPORT_BOOKMARKS = """
 """
 
 
-# ---------------------------------------------------------------------------
-# Request bodies
-# ---------------------------------------------------------------------------
-
-
 class ProfileFields(BaseModel):
     """Editable profile fields. Omit a field to leave it unchanged; send `null`
     to clear it (except `preferred_language`, which always has a value)."""
@@ -302,8 +281,6 @@ class ProfileFields(BaseModel):
             return None
         value = value.strip()
         if not value:
-            # Clearing is explicit (`null`); a blank string is more likely a
-            # client bug than a request to erase the name.
             raise ValueError("must not be blank; send null to clear it")
         if len(value) > DISPLAY_NAME_MAX_LEN:
             raise ValueError(f"at most {DISPLAY_NAME_MAX_LEN} characters")
@@ -329,7 +306,7 @@ class ProfileFields(BaseModel):
         value = value.strip()
         if not _CIRCONSCRIPTION.fullmatch(value) or int(value) == 0:
             raise ValueError("must be a circonscription number, e.g. '1'")
-        return str(int(value))  # "01" -> "1", deputies.circonscription's form
+        return str(int(value))
 
     @model_validator(mode="after")
     def _language_is_never_cleared(self):
@@ -355,11 +332,6 @@ class NotificationPreferencesUpdate(BaseModel):
     weekly_digest: Optional[bool] = None
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
 @contextmanager
 def _transaction(profile_id: uuid.UUID):
     """`account_transaction`, with an unavailable account store answered as 503."""
@@ -377,8 +349,6 @@ def _params(account: Account, **extra) -> dict:
 
 
 def _gone() -> HTTPException:
-    # The profile was deleted between require_account's lookup and this
-    # transaction: the same answer require_account gives a deleted account.
     return HTTPException(
         status_code=401,
         detail="No MonÉlu account for this identity",
@@ -410,11 +380,6 @@ def _read_profile(profile_id: uuid.UUID) -> dict | None:
     with _transaction(profile_id) as cur:
         cur.execute(SQL_SELECT_PROFILE, {"profile_id": str(profile_id)})
         return cur.fetchone()
-
-
-# ---------------------------------------------------------------------------
-# Profile
-# ---------------------------------------------------------------------------
 
 
 @router.get(
@@ -486,7 +451,6 @@ def create_my_profile(
                 cur.execute(SQL_INSERT_PROFILE, params)
                 return AccountProfile(**cur.fetchone())
         except psycopg2.errors.UniqueViolation:
-            # A concurrent first request created it; fall through and return it.
             existing = account_auth.resolve_profile_id(user.auth_user_id)
             if existing is None:
                 raise
@@ -528,17 +492,12 @@ def update_my_profile(body: ProfileFields, account: Account = Depends(require_ac
             for name in sorted(changes)
         ]
         if "department_code" in changes and "circonscription" not in changes:
-            # Circonscription numbers are per department, so one carried over
-            # from the old department names a different seat - or none at all.
-            # SET expressions read the pre-update row, so this compares the
-            # stored department with the new one.
             assignments.append(sql.SQL(SQL_CLEAR_STALE_CIRCONSCRIPTION))
         query = sql.SQL(SQL_UPDATE_PROFILE).format(assignments=sql.SQL(", ").join(assignments))
         with _transaction(account.profile_id) as cur:
             cur.execute(query, _params(account, **changes))
             row = cur.fetchone()
             if row is not None:
-                # Raising inside the transaction rolls the update back.
                 _check_territory(row)
     if row is None:
         raise _gone()
@@ -622,11 +581,6 @@ def export_my_data(account: Account = Depends(require_account)):
     )
 
 
-# ---------------------------------------------------------------------------
-# Followed deputies
-# ---------------------------------------------------------------------------
-
-
 @router.get(
     "/follows/deputies",
     response_model=list[AccountFollowedDeputy],
@@ -683,11 +637,6 @@ def unfollow_deputy(deputy_id: str, account: Account = Depends(require_account))
     with _transaction(account.profile_id) as cur:
         cur.execute(SQL_UNFOLLOW_DEPUTY, _params(account, deputy_id=deputy_id))
     return Response(status_code=204)
-
-
-# ---------------------------------------------------------------------------
-# Followed themes
-# ---------------------------------------------------------------------------
 
 
 @router.get(
@@ -752,11 +701,6 @@ def unfollow_theme(slug: str, account: Account = Depends(require_account)):
     return Response(status_code=204)
 
 
-# ---------------------------------------------------------------------------
-# Bookmarks
-# ---------------------------------------------------------------------------
-
-
 @router.get(
     "/bookmarks",
     response_model=list[AccountBookmark],
@@ -812,10 +756,6 @@ def remove_bookmark(vote_id: str, account: Account = Depends(require_account)):
     return Response(status_code=204)
 
 
-# ---------------------------------------------------------------------------
-# Notification preferences - stored, never acted on
-# ---------------------------------------------------------------------------
-
 _DEFAULT_PREFERENCES = AccountNotificationPreferences(
     followed_deputy_votes=False, followed_theme_votes=False, weekly_digest=False
 )
@@ -858,8 +798,6 @@ def update_preferences(
     Returns the stored preferences. 401 without a valid access token or profile.
     """
     if not body.model_fields_set:
-        # Nothing to store: an empty body must not create a row the export
-        # would then report as a saved choice.
         return get_preferences(account)
     with _transaction(account.profile_id) as cur:
         cur.execute(SQL_UPSERT_PREFERENCES, _params(account, **body.model_dump()))

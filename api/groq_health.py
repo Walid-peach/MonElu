@@ -26,25 +26,16 @@ from rag.constants import CLASSIFIER_MODEL, LLM_MODEL
 logger = logging.getLogger(__name__)
 
 OK = "ok"
-# Key rejected, or a configured model is gone: every LLM endpoint is down.
 FAILING = "failing"
-# The probe itself could not reach a verdict (timeout, Groq 5xx, rate limit).
-# Deliberately not a failure: a blip on the catalog endpoint says nothing about
-# whether inference works, and a health check that flaps teaches people to
-# ignore it.
 UNKNOWN = "unknown"
 
 REQUIRED_MODELS = (LLM_MODEL, CLASSIFIER_MODEL)
 
-# A decommission is caught within this window; between probes a cache hit
-# costs nothing, so /health latency is unchanged in the common case.
 _PROBE_TTL_SECONDS = 600.0
-# An inconclusive probe is retried sooner, so a transient blip clears quickly.
 _UNKNOWN_TTL_SECONDS = 60.0
 _PROBE_TIMEOUT_SECONDS = 3.0
 
 _lock = threading.Lock()
-# (api_key, status, detail, probed_at) - keyed on the key so a rotation re-probes.
 _cache: tuple[str, str, str | None, float] | None = None
 
 

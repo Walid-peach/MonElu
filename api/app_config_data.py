@@ -31,18 +31,12 @@ from api.config import frontend_base_url
 
 logger = logging.getLogger(__name__)
 
-# Production holds scrutins from this date onward (Supabase free tier, CLAUDE.md
-# decision 7). The legislature itself began on 2024-07-07.
 DATA_HORIZON = "2025-07-01"
 
 DEFAULT_MIN_IOS_VERSION = "1.0.0"
 
-# Semantic version without pre-release or build suffixes: the comparison the app
-# does is numeric, component by component.
 _VERSION = re.compile(r"\d+\.\d+\.\d+")
 
-# Features that depend on a third party the API does not control. Each maps to
-# the env var that switches it off.
 FEATURE_ENV_VARS = {
     "chat": "APP_FEATURE_CHAT",
     "verify": "APP_FEATURE_VERIFY",
@@ -51,8 +45,6 @@ FEATURE_ENV_VARS = {
 _FALSE = {"0", "false", "no", "off"}
 _TRUE = {"1", "true", "yes", "on"}
 
-# (id, text), in the order the website lists them. Markdown emphasis and code
-# spans are kept as written: SwiftUI renders inline Markdown natively.
 CAVEATS: list[tuple[str, str]] = [
     (
         "non_votant",
@@ -160,14 +152,9 @@ def feature_enabled(name: str) -> bool:
     return True
 
 
-# The presidential election of 2027 (#718). The decree that fixes the date is not
-# out yet, so the code never carries one: the operator sets it on Railway when it
-# is published and the app shows it with no release.
 ELECTION_FIRST_ROUND_LABEL = "avril 2027"
 ELECTION_FIRST_ROUND_ENV = "APP_ELECTION_2027_FIRST_ROUND"
 
-# Registration closes on the sixth Friday before the first round, counting
-# Fridays strictly before it.
 REGISTRATION_FRIDAYS_BEFORE = 6
 SECOND_ROUND_DELAY = timedelta(days=14)
 

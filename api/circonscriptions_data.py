@@ -15,19 +15,18 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 
-# Ministère de l'Intérieur letter codes for the overseas départements and collectivités.
 INTERIOR_OVERSEAS_CODES = {
-    "ZA": "971",  # Guadeloupe
-    "ZB": "972",  # Martinique
-    "ZC": "973",  # Guyane
-    "ZD": "974",  # La Réunion
-    "ZM": "976",  # Mayotte
-    "ZS": "975",  # Saint-Pierre-et-Miquelon
-    "ZX": "977",  # Saint-Barthélemy et Saint-Martin
-    "ZW": "986",  # Wallis-et-Futuna
-    "ZP": "987",  # Polynésie française
-    "ZN": "988",  # Nouvelle-Calédonie
-    "ZZ": "99",  # Français établis hors de France
+    "ZA": "971",
+    "ZB": "972",
+    "ZC": "973",
+    "ZD": "974",
+    "ZM": "976",
+    "ZS": "975",
+    "ZX": "977",
+    "ZW": "986",
+    "ZP": "987",
+    "ZN": "988",
+    "ZZ": "99",
 }
 
 
@@ -41,10 +40,6 @@ def seat_key_from_source(department: str, circonscription: str) -> tuple[str, in
 
 BOUNDARY_FILE = Path(__file__).resolve().parent.parent / "data" / "geo" / "circonscriptions.geojson"
 
-# The source of data/geo/circonscriptions.geojson (ADR-047 §1). Chosen over the more
-# simplified "p10" variant of the same dataset and over INSEE's official file by
-# scripts/measure_circonscription_accuracy.py (#661): 99.81 % of 3.8 million addresses
-# in communes wholly inside one seat land in it, against 99.71 % and 99.20 %.
 BOUNDARY_SOURCE = {
     "name": "Contours géographiques des circonscriptions législatives (p20, simplifié)",
     "producer": "Jérôme Desboeufs, à partir des contours de bureaux de vote (INSEE) "
@@ -57,29 +52,18 @@ BOUNDARY_SOURCE = {
 
 TOTAL_SEATS = 577
 
-# A point within this distance of a second seat is answered with both (ADR-047 §5).
-# Measured by scripts/measure_circonscription_accuracy.py over 3.8 million addresses
-# (#661): with no tolerance 0.080 % get one wrong seat; at 50 m 0.011 % do and 1.1 % are
-# asked to choose; at 100 m 0.010 % and 2.1 %; at 500 m 0.012 % and 11.6 %. Beyond 50 m
-# the wrong answers left are mostly not boundary errors, so a wider net only asks more
-# people to choose.
 BOUNDARY_TOLERANCE_M = 50
 
-# Seats the boundary file has no shape for (ADR-047 §7): the 11 seats abroad, and the
-# overseas collectivités the source does not cover. Their visitors use the list of the
-# department's seats instead.
 SEATS_WITHOUT_SHAPE: dict[str, tuple[int, ...]] = {
-    "977": (1,),  # Saint-Barthélemy et Saint-Martin
-    "986": (1,),  # Wallis-et-Futuna
-    "987": (1, 2, 3),  # Polynésie française
-    "988": (1, 2),  # Nouvelle-Calédonie
-    "99": tuple(range(1, 12)),  # Français établis hors de France
+    "977": (1,),
+    "986": (1,),
+    "987": (1, 2, 3),
+    "988": (1, 2),
+    "99": tuple(range(1, 12)),
 }
 
 ABROAD_DEPARTMENT = "99"
 
-# Region of each seat abroad, in the words commonly used for them (ADR-047 §7). No
-# country-to-seat table: its only authority is tableau n° 1 ter of the Code électoral.
 ABROAD_SEAT_REGIONS: dict[int, str] = {
     1: "Canada et États-Unis",
     2: "Amérique latine et Caraïbes",

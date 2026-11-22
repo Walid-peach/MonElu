@@ -71,30 +71,22 @@ EXPRESSED_POSITIONS = ("pour", "contre", "abstention")
 MIN_ANSWERS = 3
 TOP_MATCHES_LIMIT = 10
 
-# --- /quiz/weekly selection thresholds (MON-185) — same rule as docs/quiz-curation.md
-# criteria 1, 3, 4 for the curated question set, applied automatically here instead
-# of by hand. Criterion 2 (must exist in prod) is moot: this endpoint only ever
-# reads from whichever DB it's running against.
-# If no qualifying scrutin exists among the 500 most recent, older qualifying
-# ones are never surfaced — an acceptable tradeoff at current data volume
-# (qualifying scrutins are a small fraction of the total, per docs/quiz-curation.md).
 WEEKLY_CANDIDATE_LIMIT = 500
 WEEKLY_MIN_VOTERS = 400
 WEEKLY_MIN_MINORITY_SHARE = 0.35
 WHOLE_TEXT_RE = re.compile(r"^l['’]ensemble", re.IGNORECASE)
 
 
-# ---------------------------------------------------------------------------
-# Models
-# ---------------------------------------------------------------------------
 class QuizQuestion(BaseModel):
     vote_id: str
     theme: str
     question: str
     context: str
-    # Live aggregates joined from the votes table at request time (MON-180) —
-    # the question content stays a repo file (ADR-025), only these are DB-backed.
-    votes_for: Optional[int] = None
+    votes_for: Optional[int] = Field(
+        None,
+        description="Live tally from the votes table at request time (MON-180); the question "
+        "content itself is a repository file (ADR-025).",
+    )
     votes_against: Optional[int] = None
     abstentions: Optional[int] = None
     result: Optional[str] = None
@@ -156,9 +148,11 @@ class QuizMatchRequest(BaseModel):
 
 class QuizVoteDetail(BaseModel):
     vote_id: str
-    # None when the deputy has no expressed position on this vote (nonVotant
-    # or absent) — the frontend renders that as "non comparable", not disagreement.
-    deputy_position: Optional[Literal["pour", "contre", "abstention"]] = None
+    deputy_position: Optional[Literal["pour", "contre", "abstention"]] = Field(
+        None,
+        description="Null when the deputy expressed no position on this vote (nonVotant or "
+        "absent): not comparable, which is not a disagreement.",
+    )
 
 
 class QuizDeputyMatch(BaseModel):
@@ -168,13 +162,16 @@ class QuizDeputyMatch(BaseModel):
     party_short: Optional[str] = None
     department: Optional[str] = None
     photo_url: Optional[str] = None
-    # None when the deputy has no comparable expressed position at all.
-    agreement_pct: Optional[float] = None
+    agreement_pct: Optional[float] = Field(
+        None, description="Null when the deputy has no comparable expressed position at all."
+    )
     matches: int
     compared: int
-    # Per-question breakdown (MON-181) — populated only for the best match and
-    # the opposite; never persisted in quiz_shares (ADR-025 — see share_result).
-    detail: Optional[list[QuizVoteDetail]] = None
+    detail: Optional[list[QuizVoteDetail]] = Field(
+        None,
+        description="Per-question breakdown (MON-181), only for the best match and the "
+        "opposite; never stored in a share (ADR-025).",
+    )
 
 
 class QuizGroupAlignment(BaseModel):
@@ -211,29 +208,25 @@ class QuizMatchResponse(BaseModel):
     answered: int
     eligible_deputies: int
     top_matches: list[QuizDeputyMatch]
-    # The eligible deputy who agrees with you the least — same threshold as
-    # the ranking, so a 0% on two shared votes never headlines the card.
-    # None when there's no eligible deputy distinct from top_matches[0]
-    # (MON-177) — with only one eligible deputy, this would otherwise echo
-    # the best match.
-    opposite: Optional[QuizDeputyMatch] = None
+    opposite: Optional[QuizDeputyMatch] = Field(
+        None,
+        description="The eligible deputy who agrees least, under the same threshold as the "
+        "ranking; null when no eligible deputy differs from the best match (MON-177).",
+    )
     groups: list[QuizGroupAlignment]
     my_department: Optional[QuizDepartmentResult] = None
-    # Set only when the request carries focus_deputy_id (MON-183) — the
-    # requested deputy's match, returned even below the ranking threshold
-    # (a personalized entry answers "how well do I match *this* deputy?",
-    # not "who ranks in my top matches").
-    focus: Optional[QuizDeputyMatch] = None
-    # The themes voted for / against (MON-203), feeding the share card's
-    # centre block. Optional so shares stored before MON-203 — whose result
-    # JSONB has no "themes" key — still deserialize; /match and every new
-    # share always populate it.
-    themes: Optional[QuizThemeSummary] = None
+    focus: Optional[QuizDeputyMatch] = Field(
+        None,
+        description="Set only with focus_deputy_id (MON-183): that deputy's match, returned "
+        "even below the ranking threshold.",
+    )
+    themes: Optional[QuizThemeSummary] = Field(
+        None,
+        description="Themes answered pour and contre (MON-203). Always set by /quiz/match; "
+        "absent from shares stored before MON-203 and from shares without include_answers.",
+    )
 
 
-# ---------------------------------------------------------------------------
-# Pure computation helpers — no DB, unit-testable in isolation
-# ---------------------------------------------------------------------------
 def eligibility_threshold(answered: int) -> int:
     return max(2, ceil(answered / 2))
 
@@ -283,7 +276,7 @@ def build_weekly_question(vote_title: str) -> str:
     return f"Auriez-vous voté pour ou contre : {base} ?"
 
 
-WILSON_Z = 1.96  # 95% confidence — standard default, not tuned for this corpus
+WILSON_Z = 1.96
 
 
 def ranking_score(matches: int, compared: int) -> float:
@@ -395,7 +388,6 @@ def compute_group_alignment(
     on a genuine tie there is no line to agree or disagree with, so the
     scrutin is excluded rather than assigned an arbitrary winner.
     """
-    # (party, vote_id) -> Counter of expressed positions
     votes_by_group: dict[tuple[str, str], Counter] = defaultdict(Counter)
     members_by_group: dict[str, set[str]] = defaultdict(set)
     short_by_party: dict[str, Optional[str]] = {}
@@ -411,7 +403,7 @@ def compute_group_alignment(
     for (party, vote_id), counter in votes_by_group.items():
         ranked = counter.most_common(2)
         if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
-            continue  # tied plurality — the group has no line on this scrutin
+            continue
         majority_position = ranked[0][0]
         tallies[party]["compared"] += 1
         if majority_position == answers[vote_id]:
@@ -433,9 +425,6 @@ def compute_group_alignment(
     return groups
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 @router.get(
     "/questions",
     response_model=QuizQuestionsResponse,
@@ -490,11 +479,6 @@ def get_questions(request: Request) -> QuizQuestionsResponse:
     )
 
 
-# The pick is deliberately stable for a whole ISO week (see week_start), and the
-# candidate query's cutoff means the eligible row set never changes mid-week either
-# — so the resolved pick (including "none qualified") is cached per week_start,
-# skipping the 500-row scan on every request (MON-230). Same lock-guarded
-# read-then-recompute-then-store shape as the /health stats cache (api/main.py).
 _weekly_lock = threading.Lock()
 _weekly_cache_key: Optional[date] = None
 _weekly_cache_value: Optional[QuizWeeklyQuestion] = None
@@ -602,8 +586,6 @@ def _compute_match(body: QuizMatchRequest) -> QuizMatchResponse:
             )
             rows = cur.fetchall()
 
-            # A department's deputies can be absent from every quiz scrutin;
-            # fetch the roster separately so they still appear (compared=0).
             dept_rows: list[dict] = []
             if dept_code is not None:
                 cur.execute(
@@ -717,9 +699,6 @@ def match(request: Request, body: QuizMatchRequest) -> QuizMatchResponse:
     return _compute_match(body)
 
 
-# ---------------------------------------------------------------------------
-# Shares — immutable snapshots (MON-139, ADR-025)
-# ---------------------------------------------------------------------------
 class QuizShareRequest(QuizMatchRequest):
     include_answers: bool = Field(
         False,
@@ -729,10 +708,11 @@ class QuizShareRequest(QuizMatchRequest):
 
 
 class QuizShareResult(QuizMatchResponse):
-    # Present only on shares created with include_answers=True (ADR-028).
-    # Omitted entirely (not null) on every other share, so a share created
-    # without the opt-in stays byte-identical to a pre-ADR-028 snapshot.
-    answers: Optional[list[QuizAnswer]] = None
+    answers: Optional[list[QuizAnswer]] = Field(
+        None,
+        description="Present only on shares created with include_answers (ADR-028), and "
+        "omitted rather than null on every other share.",
+    )
 
 
 class QuizShareResponse(BaseModel):
@@ -789,22 +769,11 @@ def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
     otherwise re-encode the answers. Leave it off and the snapshot carries only
     the aggregate scores.
     """
-    # Same input shape as /match: the result is recomputed here, never taken
-    # from the client (ADR-025) — a share can only contain server-computed
-    # numbers. Nothing else about the request is persisted.
     result = _compute_match(body)
     stored_result = _strip_detail(result.model_dump())
     if not body.include_answers:
-        # `themes` (MON-203) names the themes answered pour / contre. The
-        # curated set carries one question per theme, so that list is a 1:1
-        # re-encoding of the sharer's answers — the same reason `detail` is
-        # stripped above. It is therefore published only on shares whose
-        # author opted into publishing their answers (ADR-028); on every
-        # other share the card's centre block is simply absent.
         stored_result.pop("themes", None)
     if body.include_answers:
-        # The already-validated answers used for the computation above — never
-        # a separate client-supplied payload (ADR-028).
         stored_result["answers"] = [a.model_dump() for a in body.answers]
     try:
         with get_conn() as conn:
@@ -833,9 +802,6 @@ def share_result(request: Request, body: QuizShareRequest) -> QuizShareResponse:
     response_model=QuizShareResponse,
     summary="Relisez un résultat partagé (aucun recalcul)",
 )
-# Immutable public snapshot behind an unguessable UUID (MON-173): OG scrapers
-# (X, WhatsApp, Facebook, Telegram) and Vercel edge egress funnel through few
-# IPs, so the base per-IP limit was tripping during viral spikes.
 @limiter.limit(tiered_limit(300))
 def get_quiz_share(request: Request, share_id: uuid.UUID) -> QuizShareResponse:
     """Read back a stored quiz result by id. Nothing is recomputed.

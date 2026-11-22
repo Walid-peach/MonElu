@@ -41,8 +41,6 @@ router = APIRouter()
 
 EARTH_RADIUS_M = 6_371_000
 METRES_PER_DEGREE = 111_320
-# Beyond this latitude a degree of longitude is too short for the degree-based
-# pre-filter to be cheap; no seat is anywhere near it.
 MAX_SEAT_LATITUDE = 60.0
 
 
@@ -84,8 +82,6 @@ def locate_point(lat: float, lon: float) -> list[tuple[str, int]]:
     index = _index()
     point = Point(lon, lat)
     containing = [int(i) for i in index.tree.query(point, predicate="intersects")]
-    # A degree of longitude is shorter than a degree of latitude, so size the query
-    # by longitude: it may return seats slightly too far, never miss a close one.
     degrees = BOUNDARY_TOLERANCE_M / (METRES_PER_DEGREE * math.cos(math.radians(lat)))
     nearby = [int(i) for i in index.tree.query(point, predicate="dwithin", distance=degrees)]
 
