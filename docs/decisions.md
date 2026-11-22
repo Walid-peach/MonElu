@@ -2174,6 +2174,8 @@ Each entry names the symbol, so a grep for it lands here.
 - Connecting is retried for PgBouncer's proxy drops (MON-255); an idle connection the pooler dropped overnight is only discovered at `SET LOCAL`, so `_ACCOUNT_BEGIN_ATTEMPTS = 2` retries once on a fresh connection, and a second failure is an outage.
 - `_ACCOUNT_CONNECT_TIMEOUT_SECONDS = 5`: libpq waits forever by default, and pool creation holds a lock that would otherwise queue every account request and starve the shared threadpool.
 - `_ACCOUNT_STATEMENT_TIMEOUT` is set per transaction because the transaction-mode pooler rejects startup `options=`.
+- The public pool's `_STATEMENT_TIMEOUT` (5 s) follows the same rule (#720): `_TimedCursor` runs `SET LOCAL statement_timeout` before any statement that begins a transaction, so the timeout also covers the queries a caller runs after its own `commit()` or `rollback()`.
+  The pool used to ask for a startup `options=` and, when the pooler refused it, fell back to a pool with no timeout at all; there is no such fallback now, and an autocommit connection, which `SET LOCAL` cannot reach, raises instead of running untimed.
 - The account pool does not call `register_uuid()`: ids travel as strings in both pools.
 - `autocommit` stays off on account connections, or `SET LOCAL` is a no-op and statements run with no identity.
 - `profile_id` is parsed as a UUID before it becomes the GUC, even though the policies fail closed.
