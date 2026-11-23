@@ -2210,7 +2210,7 @@ Each entry names the symbol, so a grep for it lands here.
 - A profile deleted between `require_account` and the transaction gets the same 401 as a deleted account; a concurrent first `POST /account/me` falls through and returns the row the other request created.
 
 **`api/routers/quiz.py`**
-- `/quiz/weekly` (MON-185) applies docs/quiz-curation.md criteria 1, 3 and 4 automatically; criterion 2 is moot because it reads whichever database it runs against. The 500-row cap is #724.
+- `/quiz/weekly` (MON-185) applies docs/quiz-curation.md criteria 1, 3 and 4 automatically; criterion 2 is moot because it reads whichever database it runs against. The criteria run in SQL, so the latest qualifying scrutin before the cutoff is found however old it is (#724).
 - The weekly pick is stable for an ISO week and the candidate cutoff keeps the row set fixed, so the resolved pick, including "none", is cached per `week_start` (MON-230).
 - `WILSON_Z = 1.96` is the standard 95 % value, not tuned on this corpus.
 - A tied group plurality gives the group no line on that scrutin (ADR-034's deliberate quiz exception, rule 18).

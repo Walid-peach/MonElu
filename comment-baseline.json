@@ -576,7 +576,7 @@
   "tests/unit/test_openapi_snapshot.py": 2,
   "tests/unit/test_party_labels.py": 18,
   "tests/unit/test_pr_screenshots.py": 6,
-  "tests/unit/test_quiz.py": 70,
+  "tests/unit/test_quiz.py": 67,
   "tests/unit/test_readme_endpoints.py": 11,
   "tests/unit/test_seat_status_definition.py": 3,
   "tests/unit/test_sql_router_intents.py": 18,
