@@ -44,28 +44,45 @@ def fetch_mart_rows(cur, query, params=None) -> list[dict] | None:
 
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 
+_STATEMENT_TIMEOUT = "5s"
+
+
+class _TimedCursor(psycopg2.extras.RealDictCursor):
+    """A RealDictCursor that opens every transaction with `SET LOCAL statement_timeout`.
+
+    The timeout cannot ride on the connection: Supabase's transaction-mode pooler
+    rejects startup options, and a session `SET` would outlive the request on a
+    pooled server connection. Applying it whenever a statement is about to begin a
+    new transaction covers the first query, and every query after a caller's own
+    `commit()` or `rollback()`. It covers only cursors the pool's factory builds, so
+    code on `get_conn()` never passes a `cursor_factory` of its own.
+    """
+
+    def execute(self, query, vars=None):
+        self._apply_timeout()
+        return super().execute(query, vars)
+
+    def executemany(self, query, vars_list):
+        self._apply_timeout()
+        return super().executemany(query, vars_list)
+
+    def _apply_timeout(self) -> None:
+        conn = self.connection
+        if conn.autocommit:
+            raise RuntimeError("the public pool runs in transactions; autocommit drops the timeout")
+        if conn.info.transaction_status == psycopg2.extensions.TRANSACTION_STATUS_IDLE:
+            with conn.cursor(cursor_factory=psycopg2.extensions.cursor) as cur:
+                cur.execute("SET LOCAL statement_timeout = %s", (_STATEMENT_TIMEOUT,))
+
 
 def init_pool(minconn: int = 2, maxconn: int = 10) -> None:
     global _pool
-    try:
-        _pool = psycopg2.pool.ThreadedConnectionPool(
-            minconn=minconn,
-            maxconn=maxconn,
-            dsn=os.getenv("DATABASE_URL"),
-            cursor_factory=psycopg2.extras.RealDictCursor,
-            options="-c statement_timeout=5000",
-        )
-    except psycopg2.OperationalError:
-        logger.warning(
-            "DB rejected startup options (statement_timeout) — likely a transaction-mode "
-            "pooler DSN; initializing pool without statement_timeout"
-        )
-        _pool = psycopg2.pool.ThreadedConnectionPool(
-            minconn=minconn,
-            maxconn=maxconn,
-            dsn=os.getenv("DATABASE_URL"),
-            cursor_factory=psycopg2.extras.RealDictCursor,
-        )
+    _pool = psycopg2.pool.ThreadedConnectionPool(
+        minconn=minconn,
+        maxconn=maxconn,
+        dsn=os.getenv("DATABASE_URL"),
+        cursor_factory=_TimedCursor,
+    )
 
 
 def close_pool() -> None:
