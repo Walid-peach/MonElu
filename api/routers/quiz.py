@@ -84,7 +84,7 @@ WHERE voted_at IS NOT NULL
   AND vote_title ~* %(whole_text_pattern)s
   AND votes_for > 0
   AND votes_against > 0
-  AND LEAST(votes_for, votes_against)::numeric / (votes_for + votes_against)
+  AND LEAST(votes_for, votes_against)::numeric / NULLIF(votes_for + votes_against, 0)
       >= %(min_minority_share)s
 ORDER BY voted_at DESC
 LIMIT 1

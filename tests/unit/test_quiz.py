@@ -105,6 +105,7 @@ from api.routers.quiz import (  # noqa: E402
     SQL_WEEKLY_VOTE,
     WEEKLY_MIN_MINORITY_SHARE,
     WEEKLY_MIN_VOTERS,
+    WEEKLY_WHOLE_TEXT_PATTERN,
     build_weekly_question,
     week_start,
 )
@@ -157,7 +158,7 @@ def test_get_weekly_sends_the_thresholds_to_the_query(client, mock_cursor):
     client.get("/quiz/weekly")
     sql, params = mock_cursor.execute.call_args.args
     assert sql == SQL_WEEKLY_VOTE
-    assert "LIMIT 1" in sql
+    assert params["whole_text_pattern"] == WEEKLY_WHOLE_TEXT_PATTERN
     assert params["min_voters"] == WEEKLY_MIN_VOTERS
     assert params["min_minority_share"] == WEEKLY_MIN_MINORITY_SHARE
     assert set(params["excluded_ids"]) == QUIZ_VOTE_IDS

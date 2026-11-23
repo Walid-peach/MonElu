@@ -106,9 +106,13 @@ def test_each_threshold_is_applied_and_the_latest_qualifying_wins(api, seed):
     day = datetime(2000, 1, 9, tzinfo=timezone.utc)
     seed(
         [
-            _vote(f"{PREFIX}AFTER", datetime(2000, 1, 10, 9, tzinfo=timezone.utc)),
+            _vote(f"{PREFIX}AFTER", datetime(2000, 1, 11, tzinfo=timezone.utc)),
             _vote(QUIZ_ID, day),
             _vote(f"{PREFIX}AMDT", day - timedelta(hours=1), vote_title="l'article 3"),
+            _vote(f"{PREFIX}NOVOTERS", day - timedelta(minutes=90), voters=None),
+            _vote(
+                f"{PREFIX}NOEXPRESSED", day - timedelta(minutes=100), votes_for=0, votes_against=0
+            ),
             _vote(f"{PREFIX}TURNOUT", day - timedelta(hours=2), voters=399),
             _vote(f"{PREFIX}LOPSIDED", day - timedelta(hours=3), votes_for=66, votes_against=34),
             _vote(
@@ -127,6 +131,20 @@ def test_each_threshold_is_applied_and_the_latest_qualifying_wins(api, seed):
 
     assert response.status_code == 200
     assert response.json()["vote_id"] == f"{PREFIX}CURLY"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "title",
+    ["l'ensemble du texte", "L'ENSEMBLE DU TEXTE", "l’ensemble du texte", "  l'ensemble du texte"],
+)
+def test_every_spelling_of_a_whole_text_title_qualifies(api, seed, title):
+    seed([_vote(f"{PREFIX}TITLE", datetime(2000, 1, 9, tzinfo=timezone.utc), vote_title=title)])
+
+    response = api.get("/quiz/weekly")
+
+    assert response.status_code == 200
+    assert response.json()["vote_id"] == f"{PREFIX}TITLE"
 
 
 @pytest.mark.integration
