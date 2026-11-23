@@ -865,7 +865,7 @@ The staging filter is unchanged: a vote with no date is not something the API, m
 - **Tiebreak (MON-24):** when two or more positions tie for the top count, the tie resolves alphabetically — `abstention` < `contre` < `pour`. This is arbitrary but deterministic, which is the property that matters: the same tied scrutin must not resolve differently depending on which code path answers the question.
 
 **Where it lives:** `transform/models/intermediate/int_party_vote_majority.sql` is the reference implementation (`select distinct on (party, vote_id) ... order by party, vote_id, position_count desc, position`) — it feeds `mart_party_alignment`, dissident counts, and `/deputies/{id}/dissident-votes`.
-`api/routers/groups.py`'s `_majority_position` replicates the same formula and tiebreak in Python, over raw tables, rather than reading the mart — per ADR-026, group pages must keep working when the dbt marts are absent, and at current scale (~1,200 votes) a raw-table query plus in-Python sort is cheap enough that adding a mart dependency here isn't worth the Railway/dbt deploy-race risk (ADR-020).
+`api/routers/groups.py`'s `_majority_position` replicates the same formula and tiebreak in Python, over raw tables, rather than reading the mart — per ADR-026, group pages must keep working when the dbt marts are absent, and adding a mart dependency here isn't worth the Railway/dbt deploy-race risk (ADR-020). The ranking and the limits run in SQL (`SQL_GROUP_VOTES`, #722), so the query returns only the votes the page lists; the Python sort over those rows keeps the same order and tiebreak.
 
 **Quiz is a deliberate exception, not a bug:** `api/routers/quiz.py`'s `compute_group_alignment` (MON-183/MON-228) skips scrutins where the group's top two positions tie, rather than picking one via the tiebreak. A quiz "you agree with group X on this vote" is a claim about a real stance; on a genuine tie there is no line to agree or disagree with, so asserting one via an arbitrary tiebreak would misrepresent the group's actual position. This means quiz agreement percentages and the group page's majority-line badges can legitimately disagree on a tied scrutin — that is intended, not the MON-228 bug (the bug was groups.py and dbt each using a *different, undocumented* tiebreak; quiz's skip was always intentional, just previously undocumented).
 
@@ -2242,7 +2242,9 @@ Each entry names the symbol, so a grep for it lands here.
 - `NON_INSCRITS` is not a group in any political sense: never ranked or counted among the groups (#526), never a row of the 2027 grid.
 - Group and department rosters read `sitting_deputies` (#682): they answer who sits now.
 - A group's rank shares places on equal seat counts.
-- The split-vote and divided-vote lists read raw tables, so they work without the marts; the second connection for mart reads is #723, the unbounded group query #722 and the organe-id fold in `themes.py` #721.
+- The split-vote and divided-vote lists read raw tables, so they work without the marts; the organe-id fold in `themes.py` is #721.
+- A mart read that a page can do without goes through `api.db.fetch_mart_rows` (#723): it runs inside a savepoint, so an absent mart rolls back that statement alone and the request keeps its one connection. A route whose primary data is the mart (`/votes`, the deputy scorecards) answers `MART_UNAVAILABLE` instead.
+- `GET /groups/{slug}` ranks and limits its two vote lists in SQL (#722): divided votes by the smaller of pour and contre, then newest, then `vote_id`; recent votes newest first, then `vote_id`.
 - A theme's most divided vote is the smallest absolute pour/contre margin among votes with an expressed position.
 
 **`api/routers/lois.py` and `api/lois_data.py`**
@@ -2251,6 +2253,7 @@ Each entry names the symbol, so a grep for it lands here.
 - `_BINDABLE_ACTE_PATTERN` is the AN's own séance and decision actes, since a date-only rule attaches a vote to a Sénat deposit on a navette day.
 - `SQL_DOSSIER` hides actes whose `last_seen_at` is stale (ADR-035 §3); ingestion stamps a dossier and its actes in one transaction.
 - `_LISTED_CTE`'s `theme` is the most frequent theme of the dossier's scrutins, amendments included, ties alphabetical, because dossiers have no theme and seven have no headline scrutin.
+- The bill page reads no mart: its headline scrutins come from raw `votes`, like the collapsed ones (#723), so it answers before `dbt run` finishes.
 - `DOSSIER_STAGES` leaves out AN20 and AN21 (a debate, not a reading), and clients show no stage strip for them.
 
 **`api/routers/feed.py`**

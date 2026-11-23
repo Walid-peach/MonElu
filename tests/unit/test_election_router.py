@@ -80,14 +80,16 @@ def test_grid_has_one_cell_per_key_vote_in_order_and_never_counts_non_votants():
 
 
 def test_endpoint_returns_figures_votes_and_grid(client, mock_cursor):
-    mock_cursor.fetchone.side_effect = [
-        {"scrutins": 2300, "adopted_texts": 120, "censure_motions": 6},
-        {"median": 0.6234567},
-    ]
+    mock_cursor.fetchone.return_value = {
+        "scrutins": 2300,
+        "adopted_texts": 120,
+        "censure_motions": 6,
+    }
     mock_cursor.fetchall.side_effect = [
         [_vote("A")],
         [{"party": "Rassemblement National", "seats": 120}],
         [{"vote_id": "A", "party": "Rassemblement National", "position": "contre", "n": 100}],
+        [{"median": 0.6234567}],
     ]
     body = client.get("/election/2027").json()
     assert body["legislature"]["scrutins"] == 2300
@@ -98,11 +100,8 @@ def test_endpoint_returns_figures_votes_and_grid(client, mock_cursor):
 
 
 def test_endpoint_without_scrutins_is_empty_not_an_error(client, mock_cursor):
-    mock_cursor.fetchone.side_effect = [
-        {"scrutins": 0, "adopted_texts": 0, "censure_motions": 0},
-        None,
-    ]
-    mock_cursor.fetchall.side_effect = [[], []]
+    mock_cursor.fetchone.return_value = {"scrutins": 0, "adopted_texts": 0, "censure_motions": 0}
+    mock_cursor.fetchall.side_effect = [[], [], [{"median": None}]]
     body = client.get("/election/2027").json()
     assert body["key_votes"] == [] and body["grid"] == []
     assert body["legislature"]["median_presence_rate"] is None
@@ -140,18 +139,17 @@ def test_a_malformed_date_is_ignored(monkeypatch):
     assert cfg.election_config()["first_round_date"] is None
 
 
-def test_absent_marts_roll_the_connection_back_and_leave_the_median_null(client, mock_cursor):
-    """An UndefinedTable must leave `get_conn()`, which rolls back before pooling."""
+def test_absent_marts_leave_the_median_null_on_the_same_connection(client, mock_cursor):
+    """The mart read rolls back to its savepoint, not the whole transaction (#723)."""
     import psycopg2.errors
 
     from api import db
 
-    mock_cursor.fetchone.side_effect = [
-        {"scrutins": 1, "adopted_texts": 0, "censure_motions": 0},
-    ]
-    mock_cursor.fetchall.side_effect = [[], []]
-    mock_cursor.execute.side_effect = [None, None, None, psycopg2.errors.UndefinedTable()]
+    mock_cursor.fetchone.return_value = {"scrutins": 1, "adopted_texts": 0, "censure_motions": 0}
+    mock_cursor.fetchall.side_effect = [[], [], psycopg2.errors.UndefinedTable()]
     body = client.get("/election/2027").json()
     assert body["legislature"]["median_presence_rate"] is None
-    conn = db._pool.getconn.return_value
-    conn.rollback.assert_called()
+    statements = [c.args[0] for c in mock_cursor.execute.call_args_list]
+    assert "ROLLBACK TO SAVEPOINT mart_read" in statements
+    assert db._pool.getconn.call_count == 1
+    db._pool.getconn.return_value.rollback.assert_not_called()
