@@ -44,7 +44,6 @@ Denominator rules (consistent with ADR-019's presence framing):
 """
 
 import logging
-import re
 import threading
 import uuid
 from collections import Counter, defaultdict
@@ -71,10 +70,25 @@ EXPRESSED_POSITIONS = ("pour", "contre", "abstention")
 MIN_ANSWERS = 3
 TOP_MATCHES_LIMIT = 10
 
-WEEKLY_CANDIDATE_LIMIT = 500
 WEEKLY_MIN_VOTERS = 400
 WEEKLY_MIN_MINORITY_SHARE = 0.35
-WHOLE_TEXT_RE = re.compile(r"^l['’]ensemble", re.IGNORECASE)
+WEEKLY_WHOLE_TEXT_PATTERN = r"^\s*l['’]ensemble"
+SQL_WEEKLY_VOTE = """
+SELECT vote_id, vote_title, votes_for, votes_against,
+       abstentions, result, voted_at, total_voters
+FROM votes
+WHERE voted_at IS NOT NULL
+  AND voted_at < %(cutoff)s
+  AND vote_id <> ALL(%(excluded_ids)s::text[])
+  AND total_voters >= %(min_voters)s
+  AND vote_title ~* %(whole_text_pattern)s
+  AND votes_for > 0
+  AND votes_against > 0
+  AND LEAST(votes_for, votes_against)::numeric / NULLIF(votes_for + votes_against, 0)
+      >= %(min_minority_share)s
+ORDER BY voted_at DESC
+LIMIT 1
+"""
 
 
 class QuizQuestion(BaseModel):
@@ -238,36 +252,6 @@ def week_start(today: date) -> date:
     ISO week never changes as new votes get ingested mid-week.
     """
     return today - timedelta(days=today.weekday())
-
-
-def is_whole_text_vote(vote_title: str) -> bool:
-    return bool(WHOLE_TEXT_RE.match(vote_title.strip()))
-
-
-def is_divisive_vote(votes_for: Optional[int], votes_against: Optional[int]) -> bool:
-    if not votes_for or not votes_against:
-        return False
-    expressed = votes_for + votes_against
-    if expressed <= 0:
-        return False
-    return (min(votes_for, votes_against) / expressed) >= WEEKLY_MIN_MINORITY_SHARE
-
-
-def select_weekly_vote(candidates: list[dict]) -> Optional[dict]:
-    """First candidate (latest-first order) passing the quiz-curation thresholds,
-    never one from the curated question set (MON-185).
-    """
-    for row in candidates:
-        if row["vote_id"] in QUIZ_VOTE_IDS:
-            continue
-        if (row.get("total_voters") or 0) < WEEKLY_MIN_VOTERS:
-            continue
-        if not is_whole_text_vote(row.get("vote_title") or ""):
-            continue
-        if not is_divisive_vote(row.get("votes_for"), row.get("votes_against")):
-            continue
-        return row
-    return None
 
 
 def build_weekly_question(vote_title: str) -> str:
@@ -501,8 +485,9 @@ def get_weekly(request: Request) -> QuizWeeklyQuestion:
     week, not necessarily one held this week.
 
     Cached for the ISO week, so it is stable between calls and rotates on Monday.
-    404 when nothing in the recent window qualifies, which happens after a
-    recess; that is a normal response, not a failure.
+    The thresholds run in SQL, so every scrutin before the cutoff is considered,
+    however far back the latest qualifying one is (#724). 404 only when no
+    scrutin before the cutoff qualifies; that is a normal response, not a failure.
     """
     global _weekly_cache_key, _weekly_cache_value
     cutoff = week_start(date.today())
@@ -519,19 +504,17 @@ def get_weekly(request: Request) -> QuizWeeklyQuestion:
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT vote_id, vote_title, votes_for, votes_against,
-                       abstentions, result, voted_at, total_voters
-                FROM votes
-                WHERE voted_at IS NOT NULL AND voted_at < %s
-                ORDER BY voted_at DESC
-                LIMIT %s
-                """,
-                (cutoff, WEEKLY_CANDIDATE_LIMIT),
+                SQL_WEEKLY_VOTE,
+                {
+                    "cutoff": cutoff,
+                    "excluded_ids": sorted(QUIZ_VOTE_IDS),
+                    "min_voters": WEEKLY_MIN_VOTERS,
+                    "whole_text_pattern": WEEKLY_WHOLE_TEXT_PATTERN,
+                    "min_minority_share": WEEKLY_MIN_MINORITY_SHARE,
+                },
             )
-            candidates = cur.fetchall()
+            row = cur.fetchone()
 
-    row = select_weekly_vote(candidates)
     result = None
     if row is not None:
         voted_at = row["voted_at"]

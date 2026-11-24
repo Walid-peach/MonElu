@@ -95,12 +95,14 @@ The endpoint has no frontend consumer at the moment: the homepage widget it was 
 for was removed from the landing page. The endpoint itself stays live and supported —
 it is still the intended surface for a future "scrutin de la semaine" placement.
 
-Selection rule (`api/routers/quiz.py`, `select_weekly_vote`):
+Selection rule (`api/routers/quiz.py`, `SQL_WEEKLY_VOTE`):
 
 - Candidates are every scrutin with `voted_at` strictly before the Monday of the
   current ISO week (`week_start()`), most recent first — the cutoff, not "now",
   is what makes the pick stable for every visitor for the rest of the week.
-- The first candidate passing all of these qualifies:
+- The most recent candidate passing all of these qualifies, however far back it is.
+  The criteria run in the SQL query itself, so no row cap can hide an older
+  qualifying scrutin behind recent ones that fail them (#724):
   1. **Whole-text vote** — title matches criterion 1 above (`l'ensemble ...`, straight
      or curly apostrophe).
   2. **High participation** — `total_voters >= 400` (criterion 3 above).
@@ -111,14 +113,13 @@ Selection rule (`api/routers/quiz.py`, `select_weekly_vote`):
 - Criterion 2 ("in production") doesn't apply here — the endpoint only ever reads
   from whichever database it's running against, so there's nothing to verify against
   a separate prod check.
-- If no candidate qualifies (a recess week, or too early in the legislature to have
+- If no scrutin before the cutoff qualifies (too early in the legislature to have
   400-voter whole-text scrutins yet), the endpoint returns `404` — there is no manual
   override or fallback question, so any consumer must handle the empty case.
 
-The question text is generated, not curated: `build_weekly_question()` takes
-`summary_plain` (already generated per-vote by `scripts/generate_vote_summaries.py`)
-and wraps it as `"Auriez-vous voté pour ou contre : <summary> ?"`, falling back to the
-raw `vote_title` when no summary exists. Nothing is written to any table by this
+The question text is generated, not curated: `build_weekly_question()` wraps the
+official `vote_title` as `"Auriez-vous voté pour ou contre : <title> ?"`, since a
+generated summary is never the headline (#634). Nothing is written to any table by this
 endpoint — the visitor's answer stays client-side, exactly like the full quiz
 (ADR-025).
 

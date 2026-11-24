@@ -871,7 +871,7 @@
           "Quiz"
         ],
         "summary": "Le scrutin de la semaine — un scrutin qualifiant, choisi automatiquement",
-        "description": "This week's featured scrutin, as a single ready-made question.\n\nPicked by rule rather than curated: the most recent scrutin held **before**\nthe current week that clears the curation thresholds - a vote on a whole\ntext, enough voters, and a genuinely divided outcome - excluding anything\nalready in the `/quiz/questions` set. So it is a recent scrutin surfaced this\nweek, not necessarily one held this week.\n\nCached for the ISO week, so it is stable between calls and rotates on Monday.\n404 when nothing in the recent window qualifies, which happens after a\nrecess; that is a normal response, not a failure.",
+        "description": "This week's featured scrutin, as a single ready-made question.\n\nPicked by rule rather than curated: the most recent scrutin held **before**\nthe current week that clears the curation thresholds - a vote on a whole\ntext, enough voters, and a genuinely divided outcome - excluding anything\nalready in the `/quiz/questions` set. So it is a recent scrutin surfaced this\nweek, not necessarily one held this week.\n\nCached for the ISO week, so it is stable between calls and rotates on Monday.\nThe thresholds run in SQL, so every scrutin before the cutoff is considered,\nhowever far back the latest qualifying one is (#724). 404 only when no\nscrutin before the cutoff qualifies; that is a normal response, not a failure.",
         "operationId": "getWeekly",
         "responses": {
           "200": {

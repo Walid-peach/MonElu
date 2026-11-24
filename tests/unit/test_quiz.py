@@ -102,10 +102,11 @@ def test_get_questions_formats_vote_date(client, mock_cursor):
 import datetime as _dt  # noqa: E402
 
 from api.routers.quiz import (  # noqa: E402
+    SQL_WEEKLY_VOTE,
+    WEEKLY_MIN_MINORITY_SHARE,
+    WEEKLY_MIN_VOTERS,
+    WEEKLY_WHOLE_TEXT_PATTERN,
     build_weekly_question,
-    is_divisive_vote,
-    is_whole_text_vote,
-    select_weekly_vote,
     week_start,
 )
 
@@ -150,65 +151,18 @@ def _weekly_row(
     }
 
 
-def test_is_whole_text_vote_accepts_straight_and_curly_apostrophe():
-    assert is_whole_text_vote("l'ensemble du projet de loi X")
-    assert is_whole_text_vote("l’ensemble du projet de loi X")
-    assert is_whole_text_vote("L'ENSEMBLE DU PROJET DE LOI X")
+def test_get_weekly_sends_the_thresholds_to_the_query(client, mock_cursor):
+    from api.quiz_data import QUIZ_VOTE_IDS
 
-
-def test_is_whole_text_vote_rejects_amendment_titles():
-    assert not is_whole_text_vote("l'amendement n°42 à l'article 3")
-    assert not is_whole_text_vote("l'article 3 du projet de loi X")
-
-
-def test_is_divisive_vote_threshold():
-    # minority share exactly 35% qualifies
-    assert is_divisive_vote(65, 35)
-    assert not is_divisive_vote(70, 30)
-    assert not is_divisive_vote(0, 0)
-    assert not is_divisive_vote(None, 40)
-    assert not is_divisive_vote(40, None)
-
-
-def test_select_weekly_vote_enforces_participation_threshold():
-    low_turnout = _weekly_row(total_voters=399)
-    ok = _weekly_row(vote_id="VTANR5L17V8888", total_voters=400)
-    assert select_weekly_vote([low_turnout, ok])["vote_id"] == ok["vote_id"]
-
-
-def test_select_weekly_vote_enforces_divisiveness_threshold():
-    lopsided = _weekly_row(votes_for=550, votes_against=10)
-    ok = _weekly_row(vote_id="VTANR5L17V8888", votes_for=300, votes_against=200)
-    assert select_weekly_vote([lopsided, ok])["vote_id"] == ok["vote_id"]
-
-
-def test_select_weekly_vote_enforces_whole_text_pattern():
-    amendment = _weekly_row(vote_title="l'amendement n°12 au projet de loi X")
-    ok = _weekly_row(vote_id="VTANR5L17V8888", vote_title="l'ensemble du projet de loi X")
-    assert select_weekly_vote([amendment, ok])["vote_id"] == ok["vote_id"]
-
-
-def test_select_weekly_vote_excludes_quiz_set_ids():
-    from_quiz_set = _weekly_row(vote_id=QUIZ_QUESTIONS[0]["vote_id"])
-    ok = _weekly_row(vote_id="VTANR5L17V8888")
-    assert select_weekly_vote([from_quiz_set, ok])["vote_id"] == ok["vote_id"]
-
-
-def test_select_weekly_vote_returns_none_when_nothing_qualifies():
-    assert select_weekly_vote([_weekly_row(total_voters=100)]) is None
-    assert select_weekly_vote([]) is None
-
-
-def test_select_weekly_vote_picks_latest_qualifying_first():
-    older = _weekly_row(
-        vote_id="VTANR5L17V1111", voted_at=_dt.datetime(2026, 6, 1, tzinfo=_dt.timezone.utc)
-    )
-    newer = _weekly_row(
-        vote_id="VTANR5L17V2222", voted_at=_dt.datetime(2026, 7, 1, tzinfo=_dt.timezone.utc)
-    )
-    # Candidates arrive latest-first (matches the SQL ORDER BY voted_at DESC) —
-    # selection just returns the first qualifying row, doesn't re-sort.
-    assert select_weekly_vote([newer, older])["vote_id"] == "VTANR5L17V2222"
+    mock_cursor.fetchone.return_value = None
+    client.get("/quiz/weekly")
+    sql, params = mock_cursor.execute.call_args.args
+    assert sql == SQL_WEEKLY_VOTE
+    assert params["whole_text_pattern"] == WEEKLY_WHOLE_TEXT_PATTERN
+    assert params["min_voters"] == WEEKLY_MIN_VOTERS
+    assert params["min_minority_share"] == WEEKLY_MIN_MINORITY_SHARE
+    assert set(params["excluded_ids"]) == QUIZ_VOTE_IDS
+    assert params["cutoff"] == week_start(_dt.date.today())
 
 
 def test_week_start_is_the_monday_of_the_iso_week():
@@ -228,7 +182,7 @@ def test_build_weekly_question_uses_the_official_title():
 
 
 def test_get_weekly_returns_qualifying_scrutin(client, mock_cursor):
-    mock_cursor.fetchall.return_value = [_weekly_row()]
+    mock_cursor.fetchone.return_value = _weekly_row()
     resp = client.get("/quiz/weekly")
     assert resp.status_code == 200
     body = resp.json()
@@ -239,26 +193,20 @@ def test_get_weekly_returns_qualifying_scrutin(client, mock_cursor):
 
 
 def test_get_weekly_404_when_no_scrutin_qualifies(client, mock_cursor):
-    mock_cursor.fetchall.return_value = []
-    resp = client.get("/quiz/weekly")
-    assert resp.status_code == 404
-
-
-def test_get_weekly_never_returns_a_curated_quiz_question(client, mock_cursor):
-    mock_cursor.fetchall.return_value = [_weekly_row(vote_id=QUIZ_QUESTIONS[0]["vote_id"])]
+    mock_cursor.fetchone.return_value = None
     resp = client.get("/quiz/weekly")
     assert resp.status_code == 404
 
 
 def test_get_weekly_caches_the_pick_for_the_week(client, mock_cursor):
     """MON-230 — a second request within the same ISO week must not re-scan."""
-    mock_cursor.fetchall.return_value = [_weekly_row()]
+    mock_cursor.fetchone.return_value = _weekly_row()
     first = client.get("/quiz/weekly")
     assert first.status_code == 200
     calls_after_first = mock_cursor.execute.call_count
 
     # Even if the DB would now answer differently, the cached pick wins.
-    mock_cursor.fetchall.return_value = [_weekly_row(vote_id="VTANR5L17V8888", votes_for=999)]
+    mock_cursor.fetchone.return_value = _weekly_row(vote_id="VTANR5L17V8888", votes_for=999)
     second = client.get("/quiz/weekly")
     assert second.status_code == 200
     assert second.json() == first.json()
@@ -266,12 +214,12 @@ def test_get_weekly_caches_the_pick_for_the_week(client, mock_cursor):
 
 
 def test_get_weekly_caches_the_404_for_the_week(client, mock_cursor):
-    mock_cursor.fetchall.return_value = []
+    mock_cursor.fetchone.return_value = None
     first = client.get("/quiz/weekly")
     assert first.status_code == 404
     calls_after_first = mock_cursor.execute.call_count
 
-    mock_cursor.fetchall.return_value = [_weekly_row()]
+    mock_cursor.fetchone.return_value = _weekly_row()
     second = client.get("/quiz/weekly")
     assert second.status_code == 404
     assert mock_cursor.execute.call_count == calls_after_first
