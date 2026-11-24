@@ -6,6 +6,7 @@ import uuid
 from contextlib import contextmanager
 
 import psycopg2
+import psycopg2.errors
 import psycopg2.extras
 import psycopg2.pool
 from fastapi import HTTPException
@@ -16,6 +17,30 @@ MART_UNAVAILABLE = HTTPException(
 )
 
 logger = logging.getLogger(__name__)
+
+_MART_SAVEPOINT = "mart_read"
+
+
+def fetch_mart_rows(cur, query, params=None) -> list[dict] | None:
+    """Run one read on a dbt mart; None when the mart is absent (#723).
+
+    The marts are absent on every fresh deploy until `dbt run` finishes. A read
+    on a missing relation raises `UndefinedTable`, which aborts the whole
+    transaction, so the read runs inside a savepoint: rolling back to it undoes
+    that statement alone, and the caller's queries before and after it on the
+    same cursor keep working. Callers turn None into their own degraded value;
+    a route whose primary data is the mart answers `MART_UNAVAILABLE` instead.
+    """
+    cur.execute(f"SAVEPOINT {_MART_SAVEPOINT}")
+    try:
+        cur.execute(query, params)
+        rows = cur.fetchall()
+    except psycopg2.errors.UndefinedTable:
+        cur.execute(f"ROLLBACK TO SAVEPOINT {_MART_SAVEPOINT}")
+        return None
+    cur.execute(f"RELEASE SAVEPOINT {_MART_SAVEPOINT}")
+    return rows
+
 
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 

@@ -73,9 +73,11 @@ STALE_ACTE = _acte("IT-A-STALE", "AN1-COM-FOND-REUNION", "2025-04-01", 5)
 
 _VOTE_SQL = """
 INSERT INTO votes (vote_id, voted_at, vote_title, result, votes_for, votes_against,
-                   abstentions, total_voters, dossier_id, scrutin_kind, theme)
+                   abstentions, total_voters, dossier_id, scrutin_kind, theme,
+                   summary_plain, summary_basis, summary_state)
 VALUES (%(vote_id)s, %(voted_at)s, %(vote_title)s, %(result)s, 10, 5, 1, 16,
-        %(dossier_id)s, %(scrutin_kind)s, %(theme)s)
+        %(dossier_id)s, %(scrutin_kind)s, %(theme)s,
+        'Résumé de test.', 'official_text', 'published')
 ON CONFLICT (vote_id) DO UPDATE SET dossier_id = EXCLUDED.dossier_id
 """
 

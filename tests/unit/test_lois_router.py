@@ -4,13 +4,12 @@ Unit tests for api/routers/lois.py (#369, ADR-035) - no database.
 The acte/scrutin binding is the one piece of logic the SQL does not do, so it
 is pinned here against the parcours shapes it has to survive: several actes on
 one date, a Sénat step sharing the AN decision's day, and a vote no acte
-precedes. The HTTP-level 404 and 503 paths run against a mocked cursor.
+precedes. The HTTP-level 404 paths run against a mocked cursor.
 """
 
 import re
 from datetime import date, datetime, timezone
 
-import psycopg2.errors
 import pytest
 from fastapi import HTTPException
 
@@ -188,24 +187,11 @@ def test_unknown_dossier_is_404(client, mock_cursor):
     assert client.get("/lois/DLR5L17N0/amendements").status_code == 404
 
 
-def test_missing_mart_is_503(client, mock_cursor):
-    mock_cursor.fetchone.return_value = {
-        "dossier_uid": "DLR5L17N51670",
-        "titre": "Fin de vie",
-        "procedure_label": None,
-        "initiateur": None,
-        "status": "promulguee",
-        "status_label": "adoptée",
-        "current_stage": "PROM",
-        "parcours_start": date(2025, 3, 11),
-        "parcours_end": date(2026, 8, 18),
-    }
-    mock_cursor.fetchall.side_effect = [
-        [],  # actes
-        [],  # collapsed scrutins
-        psycopg2.errors.UndefinedTable("mart missing"),
-    ]
-    assert client.get("/lois/DLR5L17N51670").status_code == 503
+def test_bill_page_reads_no_mart():
+    """The page is served from raw tables, so it works before `dbt run` (ADR-035, #723)."""
+    for name in dir(lois):
+        if name.startswith("SQL_") or name == "_LISTED_CTE":
+            assert "analytics_" not in getattr(lois, name), name
 
 
 def test_list_rejects_an_unknown_status(client, mock_cursor):

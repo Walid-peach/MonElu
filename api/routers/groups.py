@@ -8,14 +8,13 @@ from the hardcoded api/groups_data.GROUP_SLUGS map over the 12 canonical
 `deputies.party` labels.
 
 Mart-derived fields (presence, dissidence) degrade to None when the dbt
-marts are absent, mirroring api/routers/departments.py.
+marts are absent, read through `api.db.fetch_mart_rows` (#723).
 """
 
-import psycopg2.errors
 from fastapi import APIRouter, HTTPException, Query
 from starlette.requests import Request
 
-from api.db import get_conn
+from api.db import fetch_mart_rows, get_conn
 from api.groups_data import CANONICAL_SHORT_LABELS, GROUP_SLUGS, normalize_slug
 from api.limiter import limiter, tiered_limit
 from api.schemas import (
@@ -28,28 +27,43 @@ from api.schemas import (
 
 NON_INSCRITS = "Non inscrit"
 
-router = APIRouter()
+SQL_MART_RATES = """
+    SELECT s.deputy_id,
+           s.presence_rate,
+           a.dissident_rate
+    FROM analytics_marts.mart_deputy_scorecard s
+    LEFT JOIN analytics_marts.mart_party_alignment a
+        ON a.deputy_id = s.deputy_id
+    WHERE s.deputy_id = ANY(%(deputy_ids)s)
+"""
 
-
-def _fetch_mart_rates(cur, deputy_ids: list[str]) -> dict[str, dict]:
-    """Per-deputy presence + dissident rates, {} when the marts are absent.
-
-    Runs in its own savepoint-free branch: an UndefinedTable aborts the
-    transaction, so callers must run this on a dedicated connection.
-    """
-    cur.execute(
-        """
-        SELECT s.deputy_id,
-               s.presence_rate,
-               a.dissident_rate
-        FROM analytics_marts.mart_deputy_scorecard s
-        LEFT JOIN analytics_marts.mart_party_alignment a
-            ON a.deputy_id = s.deputy_id
-        WHERE s.deputy_id = ANY(%s)
-        """,
-        (deputy_ids,),
+SQL_GROUP_VOTES = """
+    WITH tallies AS (
+        SELECT v.vote_id, v.voted_at, v.vote_title, v.result,
+               COUNT(*) FILTER (WHERE vp.position = 'pour')       AS pour,
+               COUNT(*) FILTER (WHERE vp.position = 'contre')     AS contre,
+               COUNT(*) FILTER (WHERE vp.position = 'abstention') AS abstention
+        FROM vote_positions vp
+        JOIN votes v ON v.vote_id = vp.vote_id
+        WHERE vp.deputy_id = ANY(%(deputy_ids)s)
+          AND vp.position IN ('pour', 'contre', 'abstention')
+        GROUP BY v.vote_id, v.voted_at, v.vote_title, v.result
+    ), divided AS (
+        SELECT vote_id FROM tallies
+        WHERE pour > 0 AND contre > 0
+        ORDER BY LEAST(pour, contre) DESC, voted_at DESC NULLS LAST, vote_id DESC
+        LIMIT %(divided_limit)s
+    ), recent AS (
+        SELECT vote_id FROM tallies
+        ORDER BY voted_at DESC NULLS LAST, vote_id DESC
+        LIMIT %(recent_limit)s
     )
-    return {r["deputy_id"]: r for r in cur.fetchall()}
+    SELECT * FROM tallies
+    WHERE vote_id IN (SELECT vote_id FROM divided UNION SELECT vote_id FROM recent)
+    ORDER BY voted_at DESC NULLS LAST, vote_id DESC
+"""
+
+router = APIRouter()
 
 
 def _rate(rates: dict[str, dict], deputy_id: str, key: str) -> float | None:
@@ -193,29 +207,18 @@ def get_group(
             deputy_ids = [r["deputy_id"] for r in member_rows]
 
             cur.execute(
-                """
-                SELECT v.vote_id, v.voted_at, v.vote_title, v.result,
-                       COUNT(*) FILTER (WHERE vp.position = 'pour')       AS pour,
-                       COUNT(*) FILTER (WHERE vp.position = 'contre')     AS contre,
-                       COUNT(*) FILTER (WHERE vp.position = 'abstention') AS abstention
-                FROM vote_positions vp
-                JOIN votes v ON v.vote_id = vp.vote_id
-                WHERE vp.deputy_id = ANY(%s)
-                  AND vp.position IN ('pour', 'contre', 'abstention')
-                GROUP BY v.vote_id, v.voted_at, v.vote_title, v.result
-                ORDER BY v.voted_at DESC NULLS LAST
-                """,
-                (deputy_ids,),
+                SQL_GROUP_VOTES,
+                {
+                    "deputy_ids": deputy_ids,
+                    "divided_limit": divided_votes_limit,
+                    "recent_limit": recent_scrutins_limit,
+                },
             )
             vote_rows = cur.fetchall()
 
-    rates: dict[str, dict] = {}
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                rates = _fetch_mart_rates(cur, deputy_ids)
-    except psycopg2.errors.UndefinedTable:
-        rates = {}
+            rate_rows = fetch_mart_rows(cur, SQL_MART_RATES, {"deputy_ids": deputy_ids})
+
+    rates = {r["deputy_id"]: r for r in rate_rows or []}
 
     members = [
         GroupMember(

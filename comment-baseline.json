@@ -572,7 +572,7 @@
   "tests/unit/test_ios_deploy_isolation.py": 1,
   "tests/unit/test_ios_design_tokens.py": 58,
   "tests/unit/test_llm_router.py": 27,
-  "tests/unit/test_lois_router.py": 11,
+  "tests/unit/test_lois_router.py": 9,
   "tests/unit/test_openapi_snapshot.py": 2,
   "tests/unit/test_party_labels.py": 18,
   "tests/unit/test_pr_screenshots.py": 6,

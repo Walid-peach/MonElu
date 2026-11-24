@@ -23,12 +23,11 @@ Three rules this router exists to enforce:
 from datetime import date, datetime
 from typing import Optional
 
-import psycopg2.errors
 from fastapi import APIRouter, HTTPException, Query
 from starlette.requests import Request
 
 from api.config import frontend_base_url
-from api.db import MART_UNAVAILABLE, get_conn
+from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from api.schemas import (
     LoiActe,
@@ -78,14 +77,13 @@ SQL_ACTES = f"""
 """
 
 SQL_HEADLINE_SCRUTINS = """
-    SELECT m.vote_id, m.voted_at, m.vote_title, v.scrutin_kind, m.result,
-           m.votes_for, m.votes_against, m.abstentions, m.total_voters,
-           m.summary_plain, m.theme, v.summary_basis
-    FROM votes v
-    JOIN analytics_marts.mart_vote_summary m ON m.vote_id = v.vote_id
-    WHERE v.dossier_id = %(dossier_uid)s
-      AND COALESCE(v.scrutin_kind, 'autre') NOT IN %(collapsed)s
-    ORDER BY m.voted_at, m.vote_id
+    SELECT vote_id, voted_at, vote_title, scrutin_kind, result,
+           votes_for, votes_against, abstentions, total_voters,
+           summary_plain, theme, summary_basis
+    FROM votes
+    WHERE dossier_id = %(dossier_uid)s
+      AND COALESCE(scrutin_kind, 'autre') NOT IN %(collapsed)s
+    ORDER BY voted_at, vote_id
 """
 
 SQL_COLLAPSED_SCRUTINS = """
@@ -309,17 +307,14 @@ def get_loi(request: Request, dossier_uid: str):
     returned verbatim alongside it. 404 for an unknown uid and for a dossier
     with no scrutin at all, which has no page.
     """
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                dossier, actes = _load_dossier(cur, dossier_uid)
-                params = {"dossier_uid": dossier_uid, "collapsed": COLLAPSED_KINDS}
-                cur.execute(SQL_COLLAPSED_SCRUTINS, params)
-                collapsed = cur.fetchall()
-                cur.execute(SQL_HEADLINE_SCRUTINS, params)
-                headline = cur.fetchall()
-    except psycopg2.errors.UndefinedTable:
-        raise MART_UNAVAILABLE from None
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            dossier, actes = _load_dossier(cur, dossier_uid)
+            params = {"dossier_uid": dossier_uid, "collapsed": COLLAPSED_KINDS}
+            cur.execute(SQL_COLLAPSED_SCRUTINS, params)
+            collapsed = cur.fetchall()
+            cur.execute(SQL_HEADLINE_SCRUTINS, params)
+            headline = cur.fetchall()
 
     by_acte: dict[str, list[LoiScrutin]] = {}
     unattached: list[LoiScrutin] = []

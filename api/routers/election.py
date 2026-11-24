@@ -16,13 +16,12 @@ a database.
 
 from typing import Optional
 
-import psycopg2.errors
 from fastapi import APIRouter
 from starlette.requests import Request
 
 from api.an_links import an_scrutin_url
 from api.app_config_data import DATA_HORIZON
-from api.db import get_conn
+from api.db import fetch_mart_rows, get_conn
 from api.groups_data import CANONICAL_SHORT_LABELS, GROUP_SLUGS
 from api.limiter import limiter, tiered_limit
 from api.routers.groups import _majority_position
@@ -171,22 +170,9 @@ def build_grid(
     return rows
 
 
-def _median_presence() -> Optional[float]:
-    """Median presence rate of the sitting deputies; None while the marts are absent.
-
-    Runs on a connection of its own, and catches the error outside `get_conn()`:
-    an UndefinedTable aborts the transaction, and only an exception leaving the
-    context manager makes it roll back before the connection returns to the pool
-    (the same arrangement `groups.py` uses).
-    """
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(SQL_MEDIAN_PRESENCE)
-                row = cur.fetchone()
-    except psycopg2.errors.UndefinedTable:
-        return None
-    value = row["median"] if row else None
+def median_presence(rows: Optional[list[dict]]) -> Optional[float]:
+    """Median presence rate of the sitting deputies; None while the marts are absent."""
+    value = rows[0]["median"] if rows else None
     return round(float(value), 4) if value is not None else None
 
 
@@ -234,7 +220,7 @@ def get_election_2027(request: Request):
             if vote_ids:
                 cur.execute(SQL_GROUP_POSITIONS, {"vote_ids": vote_ids})
                 position_rows = cur.fetchall()
-    median = _median_presence()
+            median = median_presence(fetch_mart_rows(cur, SQL_MEDIAN_PRESENCE))
 
     return Election2027Response(
         legislature=ElectionLegislatureFigures(

@@ -8,16 +8,16 @@ page needs: the department's current deputies with scorecard highlights,
 department-level aggregates, and recent votes where the deputies split.
 
 Mart-derived fields (presence, alignment) degrade to None when the dbt
-marts are absent, mirroring /health rather than failing the whole page.
+marts are absent, read through `api.db.fetch_mart_rows` (#723), rather than
+failing the whole page.
 """
 
 from collections import Counter
 
-import psycopg2.errors
 from fastapi import APIRouter, HTTPException, Query
 from starlette.requests import Request
 
-from api.db import get_conn
+from api.db import fetch_mart_rows, get_conn
 from api.departments_data import DEPT_NAMES, db_department_values, normalize_code
 from api.limiter import limiter, tiered_limit
 from api.schemas import (
@@ -30,27 +30,17 @@ from api.schemas import (
 router = APIRouter()
 
 
-def _fetch_mart_rates(cur, deputy_ids: list[str]) -> dict[str, dict]:
-    """Per-deputy scorecard + alignment rates, {} when the marts are absent.
-
-    Runs in its own savepoint-free branch: an UndefinedTable aborts the
-    transaction, so callers must run this on a dedicated connection.
-    """
-    cur.execute(
-        """
-        SELECT s.deputy_id,
-               s.presence_rate,
-               s.solennel_participation_rate,
-               a.party_alignment_rate,
-               a.dissident_rate
-        FROM analytics_marts.mart_deputy_scorecard s
-        LEFT JOIN analytics_marts.mart_party_alignment a
-            ON a.deputy_id = s.deputy_id
-        WHERE s.deputy_id = ANY(%s)
-        """,
-        (deputy_ids,),
-    )
-    return {r["deputy_id"]: r for r in cur.fetchall()}
+SQL_MART_RATES = """
+    SELECT s.deputy_id,
+           s.presence_rate,
+           s.solennel_participation_rate,
+           a.party_alignment_rate,
+           a.dissident_rate
+    FROM analytics_marts.mart_deputy_scorecard s
+    LEFT JOIN analytics_marts.mart_party_alignment a
+        ON a.deputy_id = s.deputy_id
+    WHERE s.deputy_id = ANY(%(deputy_ids)s)
+"""
 
 
 @router.get(
@@ -129,13 +119,9 @@ def get_department(
             )
             split_rows = cur.fetchall()
 
-    rates: dict[str, dict] = {}
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                rates = _fetch_mart_rates(cur, deputy_ids)
-    except psycopg2.errors.UndefinedTable:
-        rates = {}
+            rate_rows = fetch_mart_rows(cur, SQL_MART_RATES, {"deputy_ids": deputy_ids})
+
+    rates = {r["deputy_id"]: r for r in rate_rows or []}
 
     deputies = [
         DepartmentDeputy(
