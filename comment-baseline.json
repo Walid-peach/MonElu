@@ -271,7 +271,7 @@
   "frontend/src/lib/summaryLabel.ts": 8,
   "frontend/src/lib/theme.ts": 18,
   "frontend/src/lib/themes.ts": 7,
-  "frontend/src/lib/utils.ts": 17,
+  "frontend/src/lib/utils.ts": 14,
   "frontend/src/lib/vote-position.ts": 7,
   "frontend/tailwind.config.ts": 18,
   "ios/MonElu/Sources/AppEnvironment.swift": 5,

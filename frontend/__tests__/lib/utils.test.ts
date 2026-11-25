@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  formatDate, formatPct, getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyHexStatic,
+  formatDate, formatPct, getInitials, groupVotesByParty, partyHex, partyHexStatic,
   partyShort, SHORT_TO_FULL_PARTY,
 } from '@/lib/utils'
 
@@ -66,20 +66,6 @@ describe('partyShort', () => {
   })
 })
 
-describe('normalizePartyShort', () => {
-  it('returns a resolved short code as-is', () => {
-    expect(normalizePartyShort('EPR')).toBe('EPR')
-  })
-
-  it('returns null for a raw unresolved organe ID', () => {
-    expect(normalizePartyShort('PO838901')).toBeNull()
-  })
-
-  it('returns null for null input', () => {
-    expect(normalizePartyShort(null)).toBeNull()
-  })
-})
-
 describe('groupVotesByParty', () => {
   it('groups positions by party_short', () => {
     const result = groupVotesByParty([
@@ -93,10 +79,10 @@ describe('groupVotesByParty', () => {
     })
   })
 
-  it('buckets unresolved raw organe IDs under Non inscrit instead of one row per ID', () => {
+  it('buckets a deputy with no group under Non inscrit', () => {
     const result = groupVotesByParty([
-      { party_short: 'PO838901', position: 'pour' },
-      { party_short: 'PO111222', position: 'contre' },
+      { party_short: null, position: 'pour' },
+      { party_short: null, position: 'contre' },
     ])
     expect(result).toEqual({
       'Non inscrit': { pour: 1, contre: 1, abstention: 0, nonVotant: 0 },
