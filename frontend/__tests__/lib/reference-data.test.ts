@@ -44,10 +44,10 @@ describe('reference data parity', () => {
   it('abbreviates every group the way the API does (#726)', () => {
     const rows = read<Array<{ name: string; short: string }>>('groups.json')
     expect(PARTY_SHORT_LABELS).toEqual(Object.fromEntries(rows.map(({ name, short }) => [name, short])))
-    const shortToName = Object.fromEntries(rows.map(({ name, short }) => [short, name]))
-    for (const [short, name] of Object.entries(SHORT_TO_FULL_PARTY)) {
-      expect([short, shortToName[short]]).toEqual([short, name])
-    }
+    const groupsWithAColour = rows.filter(({ short }) => short !== 'NI')
+    expect(SHORT_TO_FULL_PARTY).toEqual(
+      Object.fromEntries(groupsWithAColour.map(({ name, short }) => [short, name]))
+    )
   })
 
   it('has the same ten themes, in the same order', () => {
