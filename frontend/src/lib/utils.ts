@@ -12,23 +12,24 @@ export function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 }
 
+export const PARTY_SHORT_LABELS: Record<string, string> = {
+  'Rassemblement National': 'RN',
+  'Ensemble pour la République': 'EPR',
+  'La France insoumise - Nouveau Front Populaire': 'LFI',
+  'Socialistes et apparentés': 'SOC',
+  'Droite Républicaine': 'DR',
+  'Écologiste et Social': 'ECS',
+  'Les Démocrates': 'DEM',
+  'Horizons & Indépendants': 'HOR',
+  'Libertés, Indépendants, Outre-mer et Territoires': 'LIOT',
+  'Union des droites pour la République': 'UDR',
+  'Gauche Démocrate et Républicaine': 'GDR',
+  'Non inscrit': 'NI',
+}
+
 export function partyShort(party: string | null): string {
   if (!party) return '?'
-  const map: Record<string, string> = {
-    'Rassemblement National': 'RN',
-    'Ensemble pour la République': 'EPR',
-    'La France insoumise - Nouveau Front Populaire': 'LFI',
-    'Socialistes et apparentés': 'SOC',
-    'Droite Républicaine': 'DR',
-    'Écologiste et Social': 'ECS',
-    'Les Démocrates': 'DEM',
-    'Horizons & Indépendants': 'HOR',
-    'Libertés, Indépendants, Outre-mer et Territoires': 'LIOT',
-    'Union des droites pour la République': 'UDR',
-    'Gauche Démocrate et Républicaine': 'GDR',
-    'Non inscrit': 'NI',
-  }
-  return map[party] || party.slice(0, 3).toUpperCase()
+  return PARTY_SHORT_LABELS[party] || party.slice(0, 3).toUpperCase()
 }
 
 
