@@ -22,3 +22,19 @@ def frontend_base_url() -> str:
     frontend one is inlined at build time, so it needs a rebuild.
     """
     return os.getenv("FRONTEND_BASE_URL", DEFAULT_FRONTEND_BASE_URL).rstrip("/")
+
+
+PLACEHOLDER_PREFIXES = ("sk-...", "gsk_...", "your-", "changeme")
+
+
+def is_placeholder(value: str | None) -> bool:
+    """True when a secret is unset, blank, or still holds an example value from `.env.example`.
+
+    The startup warnings and `/health` in `main.py` and the 503 guard in `routers/verify.py`
+    all read this one check, so a prefix added to `PLACEHOLDER_PREFIXES` reaches every caller.
+    """
+    return (
+        not value
+        or not value.strip()
+        or any(value.strip().startswith(p) for p in PLACEHOLDER_PREFIXES)
+    )

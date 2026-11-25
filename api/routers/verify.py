@@ -17,7 +17,7 @@ import groq
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from api.config import frontend_base_url
+from api.config import frontend_base_url, is_placeholder
 from api.db import get_conn
 from api.limiter import limiter, tiered_limit
 from rag.chain.verify import verify_claim
@@ -25,16 +25,6 @@ from rag.chain.verify import verify_claim
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-_PLACEHOLDER_PREFIXES = ("sk-...", "gsk_...", "your-", "changeme")
-
-
-def _is_placeholder(value: str | None) -> bool:
-    return (
-        not value
-        or not value.strip()
-        or any(value.strip().startswith(p) for p in _PLACEHOLDER_PREFIXES)
-    )
 
 
 class VerifyRequest(BaseModel):
@@ -117,7 +107,7 @@ def verify(request: Request, body: VerifyRequest):
     and readable at `/verifier/v/<id>`. Costs an LLM call; 10/min; 503 when the
     server has no LLM credentials.
     """
-    if _is_placeholder(os.getenv("GROQ_API_KEY")) or _is_placeholder(os.getenv("OPENAI_API_KEY")):
+    if is_placeholder(os.getenv("GROQ_API_KEY")) or is_placeholder(os.getenv("OPENAI_API_KEY")):
         raise HTTPException(
             status_code=503,
             detail="La vérification IA n'est pas configurée sur ce serveur.",
