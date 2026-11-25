@@ -51,15 +51,54 @@ def _drop_private_request_data(event, _hint):
     return event
 
 
+_SENTRY_PRIVATE_SPAN_ATTRIBUTES = (
+    "http.query",
+    "url.query",
+    "http.fragment",
+    "url.fragment",
+    "http.request.body.data",
+    "client.address",
+)
+_SENTRY_PRIVATE_SPAN_PREFIXES = ("user.", "http.request.header.cookie")
+_SENTRY_URL_ATTRIBUTES = ("url.full", "http.url")
+
+
+def _drop_private_span_attributes(span, _hint):
+    attributes = span.get("attributes")
+    if not attributes:
+        return span
+    for key in list(attributes):
+        if key in _SENTRY_PRIVATE_SPAN_ATTRIBUTES or key.startswith(_SENTRY_PRIVATE_SPAN_PREFIXES):
+            del attributes[key]
+    for key in _SENTRY_URL_ATTRIBUTES:
+        if isinstance(attributes.get(key), str):
+            attributes[key] = attributes[key].split("?", 1)[0].split("#", 1)[0]
+    return span
+
+
+_SENTRY_IP_HEADER_TERMS = ["forwarded", "-ip", "remote-", "via", "-user"]
+
+
 sentry_sdk.init(
     dsn=os.getenv("SENTRY_DSN"),
     environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
     traces_sample_rate=_traces_sample_rate(),
     max_request_body_size="never",
-    include_local_variables=False,
-    send_default_pii=False,
+    data_collection={
+        "user_info": False,
+        "cookies": {"mode": "off"},
+        "http_headers": {"request": {"mode": "denylist", "terms": _SENTRY_IP_HEADER_TERMS}},
+        "http_bodies": [],
+        "url_query_params": {"mode": "off"},
+        "graphql": {"document": False, "variables": False},
+        "gen_ai": {"inputs": False, "outputs": False},
+        "mcp": {"inputs": False, "outputs": False},
+        "database_query_data": False,
+        "queues": False,
+        "stack_frame_variables": False,
+    },
     before_send=_drop_private_request_data,
-    before_send_transaction=_drop_private_request_data,
+    before_send_span=_drop_private_span_attributes,
 )
 
 

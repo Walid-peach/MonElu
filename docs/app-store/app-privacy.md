@@ -54,7 +54,7 @@ Fixed in #716, so the answers above stay true:
 - **A shared quiz result is a political opinion.**
   It stores the user's match with each deputy and, when the user opts in, their answers and themes, so Sensitive Info is declared in the label and the manifest.
 - **A question no longer reaches the logs or Sentry.**
-  `POST /search/` and `POST /verify/` log an error without the text, and `sentry_sdk.init` in `api/main.py` reads no request body or frame locals; `_drop_private_request_data` strips the body, query string and cookies from every event and trace.
+  `POST /search/` and `POST /verify/` log an error without the text, and `sentry_sdk.init` in `api/main.py` reads no request body, frame locals, cookies, query string or client IP (`data_collection`); `_drop_private_request_data` strips the body, query string and cookies from every error event, and `_drop_private_span_attributes` from every trace span.
 - **Follows no longer reach the API's access log.**
   `_DropQueryString` in `api/main.py` drops the query string from uvicorn's access log, which carried the followed ids of `GET /feed` next to the client IP.
   Railway's own HTTP log still records each request's path and client IP (`@path`, `@srcIp`, kept for the retention of the Railway plan), and its documentation does not say whether that path includes the query string; `/confidentialite` says the log may contain the ids.

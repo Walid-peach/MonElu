@@ -2156,6 +2156,8 @@ Each entry names the symbol, so a grep for it lands here.
 **`api/main.py`**
 - Sentry (MON-99) no-ops when `SENTRY_DSN` is unset, so the integration is safe to ship before the project exists.
 - `_SENTRY_PRIVATE_REQUEST_KEYS`: a request body can hold a question, a claim, quiz answers or a location (ADR-047 §3), and a query string the followed deputies and themes (`GET /feed`); the SDK reads no bodies or frame locals, and the hook removes what an integration still attached, so an event carries the method and path only (#716).
+- `_drop_private_span_attributes`: sentry-sdk 3.x sends traces as streamed spans, which never pass through `before_send`, and has no `before_send_transaction`; `before_send_span` cannot drop a span, so the hook removes the query, body, cookie, client address and user attributes and cuts the query off every URL attribute.
+- `_SENTRY_IP_HEADER_TERMS` are the terms sentry-sdk 2.x itself denylisted for `send_default_pii=False`, so `X-Forwarded-For`, `X-Real-IP` and the like stay out of a request's headers after the 3.x move.
 - `_DropQueryString` relies on uvicorn's access-log record args being the 5-tuple `(client_addr, method, full_path, http_version, status)`; anything else is passed through untouched.
 - The lifespan opens no account connection at startup (`init_account_pool()`), and warms the SQL router pool.
 - `API_DESCRIPTION` is written for the model that reads `/openapi.json` (MON-260): it states the data horizon, `nonVotant` versus `abstention`, what `presence_rate` counts and the offset ceiling, rather than trusting each endpoint to.

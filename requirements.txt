@@ -15,7 +15,7 @@ python-dotenv==1.0.1
 httpx>=0.23.0,<0.28.0
 # Accounts (ADR-040) - Supabase access-token verification; [crypto] for ES256/RS256
 PyJWT[crypto]>=2.15.0
-sentry-sdk==2.75.0
+sentry-sdk==3.0.1
 # Phase 2 — RAG
 openai==1.40.0
 groq>=0.11.0
