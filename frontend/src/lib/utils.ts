@@ -32,22 +32,12 @@ export function partyShort(party: string | null): string {
 }
 
 
-// Deputies ingested before update_party.py has resolved their group still
-// carry the raw AN organe ID in party_short (e.g. "PO838901") — treat that
-// as unresolved rather than rendering it as a group name (MON-119).
-const RAW_ORGANE_ID = /^PO\d+$/
-
-export function normalizePartyShort(partyShortValue: string | null): string | null {
-  if (!partyShortValue || RAW_ORGANE_ID.test(partyShortValue)) return null
-  return partyShortValue
-}
-
 export function groupVotesByParty(
   positions: Array<{ party_short: string | null; position: string }>
 ): Record<string, Record<string, number>> {
   const map: Record<string, Record<string, number>> = {}
   for (const p of positions) {
-    const party = normalizePartyShort(p.party_short) || 'Non inscrit'
+    const party = p.party_short || 'Non inscrit'
     if (!map[party]) map[party] = { pour: 0, contre: 0, abstention: 0, nonVotant: 0 }
     map[party][p.position] = (map[party][p.position] || 0) + 1
   }

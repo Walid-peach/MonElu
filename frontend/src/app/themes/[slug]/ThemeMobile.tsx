@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ThemeDetail, ThemeVoteItem } from '@/lib/api'
-import { partyHex, normalizePartyShort, formatDate, themeColors } from '@/lib/utils'
+import { partyHex, formatDate, themeColors } from '@/lib/utils'
 import { THEME_ENTRIES } from '@/lib/themes'
 import { PhonePageHeader, PhoneSection, ResultBadge, StatTile, cardClass } from '@/components/phone/kit'
 import { SummaryTag } from '@/components/SummaryLabel'
@@ -52,7 +52,7 @@ export function ThemeMobile({ data, canonicalSlug }: { data: ThemeDetail; canoni
         <PhoneSection eyebrow="Positionnement par groupe" title="Qui vote pour sur ce thème ?">
           <ul className={`${cardClass} flex flex-col gap-3.5 p-4`}>
             {data.party_positions.map(p => {
-              const label = normalizePartyShort(p.party_short) ?? 'Non inscrit'
+              const label = p.party_short || 'Non inscrit'
               const hex = partyHex(label === 'Non inscrit' ? null : label)
               const pourPct = pct(p.pour_rate)
               return (

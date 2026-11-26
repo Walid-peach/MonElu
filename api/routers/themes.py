@@ -85,8 +85,7 @@ def get_theme(
 
             cur.execute(
                 """
-                SELECT CASE WHEN d.party_short ~ '^PO[0-9]+$' THEN NULL ELSE d.party_short END
-                           AS party_short,
+                SELECT d.party_short,
                        COUNT(*) FILTER (WHERE vp.position = 'pour')       AS pour,
                        COUNT(*) FILTER (WHERE vp.position = 'contre')     AS contre,
                        COUNT(*) FILTER (WHERE vp.position = 'abstention') AS abstention
@@ -95,7 +94,7 @@ def get_theme(
                 JOIN deputies d ON d.deputy_id = vp.deputy_id
                 WHERE v.theme = %s
                   AND vp.position IN ('pour', 'contre', 'abstention')
-                GROUP BY CASE WHEN d.party_short ~ '^PO[0-9]+$' THEN NULL ELSE d.party_short END
+                GROUP BY d.party_short
                 ORDER BY COUNT(*) DESC
                 """,
                 (name,),

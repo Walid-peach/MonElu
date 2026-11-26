@@ -9,8 +9,10 @@ from unittest.mock import MagicMock
 from api.departments_data import department_name
 from api.groups_data import CANONICAL_SHORT_LABELS, GROUP_SLUGS
 from scripts.update_party import (
+    CHECK_LABELS_SQL,
     RAW_DEPARTMENT_PATTERN,
     RAW_ORGANE_PATTERN,
+    check_deputy_labels,
     normalize_party_short,
 )
 
@@ -64,3 +66,21 @@ def test_normalize_party_short_writes_every_canonical_pair_and_clears_raw_uids(m
     assert "party IS NULL AND party_short ~ %s" in sql
     assert cur.execute.call_args_list[-1].args[1] == (RAW_ORGANE_PATTERN,)
     conn.commit.assert_called_once()
+
+
+def test_check_deputy_labels_reports_every_row_holding_a_raw_code():
+    stray = {"deputy_id": "PA1", "full_name": "A", "party_short": "PO838901", "department": "033"}
+    conn = MagicMock()
+    cur = conn.cursor.return_value.__enter__.return_value
+    cur.fetchall.return_value = [stray]
+    assert check_deputy_labels(conn) == [stray]
+    ((sql, params),) = [call.args for call in cur.execute.call_args_list]
+    assert sql == CHECK_LABELS_SQL
+    assert "party_short ~ %(organe)s OR department ~* %(department)s" in sql
+    assert params == {"organe": RAW_ORGANE_PATTERN, "department": RAW_DEPARTMENT_PATTERN}
+
+
+def test_check_deputy_labels_passes_a_clean_table():
+    conn = MagicMock()
+    conn.cursor.return_value.__enter__.return_value.fetchall.return_value = []
+    assert check_deputy_labels(conn) == []

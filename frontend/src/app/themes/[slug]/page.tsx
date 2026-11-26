@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { api, nullIfMissing } from '@/lib/api'
 import type { ThemePartyPosition, ThemeVoteItem } from '@/lib/api'
-import { partyHex, normalizePartyShort, formatDate, themeColors } from '@/lib/utils'
+import { partyHex, formatDate, themeColors } from '@/lib/utils'
 import { themeName, themeSlug, THEME_ENTRIES } from '@/lib/themes'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildBreadcrumbJsonLd } from '@/lib/seo'
@@ -166,7 +166,7 @@ export default async function ThemePage(
                 padding: '22px 24px', boxShadow: '0 1px 3px var(--dp-shadow-sm)',
               }}>
                 {data.party_positions.map((p: ThemePartyPosition) => {
-                  const label = normalizePartyShort(p.party_short) ?? 'Non inscrit'
+                  const label = p.party_short || 'Non inscrit'
                   const hex = partyHex(label === 'Non inscrit' ? null : label)
                   const pourPct = pct(p.pour_rate)
                   return (

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { api, nullIfMissing } from '@/lib/api'
-import { getInitials, groupVotesByParty, normalizePartyShort, partyHex, partyShort } from '@/lib/utils'
+import { getInitials, groupVotesByParty, partyHex, partyShort } from '@/lib/utils'
 import { VoteDetailClient } from './VoteDetailClient'
 import { JsonLd } from '@/components/JsonLd'
 import { SITE_URL, buildVoteJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo'
@@ -67,7 +67,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
   // Each group's turnout, keyed the way groupVotesByParty keys its rows (#627).
   const membersByParty: Record<string, number> = {}
   for (const g of vote.participation?.groups ?? []) {
-    const name = normalizePartyShort(g.party_short) || 'Non inscrit'
+    const name = g.party_short || 'Non inscrit'
     membersByParty[name] = (membersByParty[name] ?? 0) + g.members
   }
 
@@ -107,7 +107,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
     }
     for (const pos of vote.positions) {
       if (pos.position === 'nonVotant') continue
-      const party = normalizePartyShort(pos.party_short) || 'Non inscrit'
+      const party = pos.party_short || 'Non inscrit'
       const majority = majorityByParty[party]
       if (majority && pos.position !== majority && dissidents.length < 4) {
         dissidents.push({
@@ -144,7 +144,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
   const hemicycleDeputies = (vote.positions ?? []).map(p => ({
     deputy_id: p.deputy_id,
     full_name: p.full_name,
-    party: normalizePartyShort(p.party_short),
+    party: p.party_short || null,
     position: p.position,
   }))
 
@@ -169,7 +169,7 @@ export default async function VoteDetailPage({ params }: { params: Promise<{ id:
       // derived from the deputy's full party name — keeps the lookup card and
       // suggestion list visually consistent regardless of whether the deputy
       // voted on this scrutin.
-      party: normalizePartyShort(pos?.party_short ?? null) ?? partyShort(d.party),
+      party: pos?.party_short || partyShort(d.party),
       department: d.department,
       position: pos?.position ?? null,
     }
