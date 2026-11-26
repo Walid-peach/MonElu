@@ -52,9 +52,23 @@ struct FollowsSnapshotTests {
             FollowsSheet(
                 deputies: [.sample, .sampleOther], themes: themes, followed: ["justice-securite", "sante-social"],
                 onToggle: { _ in }, onChooseDeputy: {}, onDone: {}
-            ),
+            ) {
+                EmptyView()
+            },
             variant,
             height: variant.size.isAccessibilityCategory ? 2400 : 900
+        )
+    }
+
+    @Test(arguments: Variant.all)
+    func followByNameResults(_ variant: Variant) {
+        checkSnapshot(
+            FollowByNameResults(
+                results: DeputyNameResults(deputies: [.sample, .sampleOther, deputy("PA3")], total: 41),
+                followedIDs: ["PA2"]
+            ) { _ in },
+            variant,
+            height: variant.size.isAccessibilityCategory ? 1500 : 520
         )
     }
 }

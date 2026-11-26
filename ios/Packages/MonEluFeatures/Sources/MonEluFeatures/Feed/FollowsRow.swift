@@ -213,7 +213,7 @@ private struct FollowCircleFrame<Disc: View>: View {
 /// The sheet behind « Suivre »: the followed deputies, each with « Ne plus
 /// suivre », the way to add one, and the ten themes to follow or stop
 /// following. Changes apply at once and stay on the device.
-struct FollowsSheet: View {
+struct FollowsSheet<NameSearch: View>: View {
     let deputies: [DeputyItem]
     let themes: [ReferenceData.Theme]
     let followed: Set<String>
@@ -223,6 +223,8 @@ struct FollowsSheet: View {
     var onUnfollowDeputy: (String) -> Void = { _ in }
     var onChooseDeputy: () -> Void
     var onDone: () -> Void
+    @ViewBuilder var nameSearch: () -> NameSearch
+    @State private var searchesByName = false
 
     var body: some View {
         NavigationStack {
@@ -243,21 +245,18 @@ struct FollowsSheet: View {
                         }
                     }
                     if canAddDeputy {
-                        Button(action: onChooseDeputy) {
-                            HStack {
-                                Label(
-                                    deputies.isEmpty ? "Trouver votre député" : "Ajouter un député",
-                                    systemImage: "plus"
-                                )
-                                .foregroundStyle(Palette.accent)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(Palette.textMuted)
-                                    .accessibilityHidden(true)
-                            }
-                        }
+                        AddDeputyRow(
+                            title: "Trouver votre député", detail: "Avec votre adresse ou votre code postal",
+                            systemImage: "location", action: onChooseDeputy
+                        )
                         .accessibilityIdentifier("follows.sheet.deputy")
+                        AddDeputyRow(
+                            title: "Chercher par nom", detail: "N'importe quel député en mandat",
+                            systemImage: "magnifyingglass"
+                        ) {
+                            searchesByName = true
+                        }
+                        .accessibilityIdentifier("follows.sheet.byName")
                     } else {
                         Text("Vous suivez déjà \(FollowedDeputies.cap) députés : retirez-en un pour en ajouter un autre.")
                             .font(.subheadline)
@@ -287,10 +286,43 @@ struct FollowsSheet: View {
             }
             .navigationTitle("Suivre")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $searchesByName, destination: nameSearch)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK", action: onDone)
                 }
+            }
+        }
+    }
+}
+
+private struct AddDeputyRow: View {
+    let title: String
+    let detail: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .foregroundStyle(Palette.accent)
+                        Text(detail)
+                            .font(.footnote)
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(Palette.accent)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Palette.textMuted)
+                    .accessibilityHidden(true)
             }
         }
     }

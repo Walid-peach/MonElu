@@ -19,6 +19,7 @@ public struct HomeScreen: View {
     /// for that theme alone, and the other circles keep what they had.
     @State private var themeLatest: [String: Date] = [:]
     private let feed: any FeedService
+    private let deputies: any DeputiesService
     private let store: any FollowedDeputyStore
     private let themesStore: any FollowedThemesStore
     private let themes = (try? ReferenceData.themes()) ?? []
@@ -38,6 +39,7 @@ public struct HomeScreen: View {
             followsNothing: store.deputyIDs.isEmpty && themesStore.themeSlugs.isEmpty
         ))
         self.feed = feed
+        self.deputies = deputies
         self.store = store
         self.themesStore = themesStore
     }
@@ -178,7 +180,11 @@ public struct HomeScreen: View {
                 model.startChange()
             },
             onDone: { showsFollows = false }
-        )
+        ) {
+            FollowByNameScreen(service: deputies, followedIDs: Set(store.deputyIDs)) { deputy in
+                model.choose(deputy)
+            }
+        }
     }
 
     /// The postal-code search, while the user chooses or changes deputy.

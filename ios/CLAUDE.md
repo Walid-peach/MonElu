@@ -176,7 +176,7 @@ A freshly booted Simulator needs a couple of minutes to settle before runs are f
 | `Packages/MonEluFeatures` | The screens: each feature's models, its service protocol with a live implementation on the generated client, and its views. Depends on Core, API and UI |
 | `Packages/MonEluAccount` | Sign-in and account data (#434) |
 | `scripts/ios.sh` | What the Makefile targets run |
-| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `election.yaml` (the 2027 tab), `home.yaml`, `ask.yaml`, `quiz.yaml`, `loi.yaml`, `agenda.yaml`, `group.yaml`, `theme.yaml`, `department.yaml`, `compare.yaml`, `explore.yaml` and `settings.yaml` run on demand, and `store.yaml` makes the App Store screenshots (`make ios-store`) |
+| `maestro/` | Maestro flows; `tabs.yaml`, `routes.yaml`, `votes.yaml` and `deputies.yaml` are the smoke flows, `election.yaml` (the 2027 tab), `home.yaml`, `follow.yaml` (following by name), `ask.yaml`, `quiz.yaml`, `loi.yaml`, `agenda.yaml`, `group.yaml`, `theme.yaml`, `department.yaml`, `compare.yaml`, `explore.yaml` and `settings.yaml` run on demand, and `store.yaml` makes the App Store screenshots (`make ios-store`) |
 | `scripts/install-maestro.sh` | Installs the pinned Maestro CLI after checking its SHA-256 |
 | [`../docs/app-store/`](../docs/app-store/README.md) | Outside `ios/`: the App Store Connect texts (review notes, privacy label, questionnaires, French and English listing); update them with the change that makes them wrong |
 
