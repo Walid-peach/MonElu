@@ -101,7 +101,9 @@ def list_deputies(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0, le=2_000),
-    search: str = Query(None, description="Filter by name (case-insensitive)"),
+    search: str = Query(
+        None, description="Filter by name, ignoring case and accents ('nadege' finds 'Nadège')"
+    ),
     department: str = Query(None, description="Exact match on the full department name"),
     party: str = Query(
         None, description="Exact match on party name (e.g. 'Rassemblement National')"
@@ -115,8 +117,9 @@ def list_deputies(
     """The roster of the 17th legislature: 577 seats, past and present holders.
 
     Use this to resolve a person's name to the `deputy_id` every other deputy
-    endpoint takes. `search` matches anywhere in the full name and is
-    accent-sensitive, so pass the name as the Assemblée spells it.
+    endpoint takes. `search` matches anywhere in the full name, ignoring case and accents:
+    `"nadege"`, `"NADEGE"` and `"Nadège"` find the same deputies. Hyphens and
+    apostrophes still have to match as typed.
 
     `department` and `party` want the full stored label, not a code or an
     abbreviation: `"Rassemblement National"`, not `"RN"`; `"Nord"`, not `"59"`.
@@ -136,7 +139,9 @@ def list_deputies(
             params: list = []
 
             if search:
-                conditions.append(sql.SQL("full_name ILIKE %s"))
+                conditions.append(
+                    sql.SQL("public.f_unaccent(full_name) ILIKE public.f_unaccent(%s)")
+                )
                 params.append(f"%{search}%")
             if department:
                 conditions.append(sql.SQL("department = %s"))
