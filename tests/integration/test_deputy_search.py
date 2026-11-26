@@ -46,9 +46,7 @@ def _found(api, search: str) -> set[str]:
     resp = api.get("/deputies/", params={"search": search})
     assert resp.status_code == 200
     body = resp.json()
-    ids = {d["deputy_id"] for d in body["items"] if d["deputy_id"].startswith("IT-SRCH-")}
-    assert body["total"] >= len(ids)
-    return ids
+    return {d["deputy_id"] for d in body["items"] if d["deputy_id"].startswith("IT-SRCH-")}
 
 
 @pytest.mark.integration
@@ -68,6 +66,20 @@ def test_hyphens_and_apostrophes_still_match_as_typed(api):
     assert _found(api, "testrecherche abomangoli") == set()
     assert _found(api, "d'ornano") == {"IT-SRCH-3"}
     assert _found(api, "d ornano") == set()
+
+
+@pytest.mark.integration
+def test_a_typographic_apostrophe_finds_a_straight_one(api):
+    assert _found(api, "d\u2019ornano") == {"IT-SRCH-3"}
+
+
+@pytest.mark.integration
+def test_total_counts_with_the_same_filter_as_the_rows(api):
+    resp = api.get("/deputies/", params={"search": "TESTRECHERCHE"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 3
+    assert {d["deputy_id"] for d in body["items"]} == set(DEPUTIES)
 
 
 @pytest.mark.integration
