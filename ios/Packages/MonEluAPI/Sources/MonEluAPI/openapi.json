@@ -12,7 +12,7 @@
           "Deputies"
         ],
         "summary": "List deputies, with name / department / party filters",
-        "description": "The roster of the 17th legislature: 577 seats, past and present holders.\n\nUse this to resolve a person's name to the `deputy_id` every other deputy\nendpoint takes. `search` matches anywhere in the full name and is\naccent-sensitive, so pass the name as the Assemblée spells it.\n\n`department` and `party` want the full stored label, not a code or an\nabbreviation: `\"Rassemblement National\"`, not `\"RN\"`; `\"Nord\"`, not `\"59\"`.\n`party_short` in the response is the abbreviation.\n\nIncludes deputies whose mandate has ended (`mandate_end` is set) unless\n`active=true`, which keeps today's Assemblée only (`total` is then the\nnumber of seats filled). `active=false` is everyone else: deputies with a\n`mandate_end`, and the rare deputy the Assemblée's latest roster no longer\nlists but who has no end date yet. Sorted by surname, ignoring accents and\ncase (\"Écrivain\" among the E's, \"de Courson\" among the D's). `offset` is\ncapped at 2000.",
+        "description": "The roster of the 17th legislature: 577 seats, past and present holders.\n\nUse this to resolve a person's name to the `deputy_id` every other deputy\nendpoint takes. `search` matches anywhere in the full name, ignoring case and accents:\n`\"nadege\"`, `\"NADEGE\"` and `\"Nadège\"` find the same deputies. Hyphens and\napostrophes still have to match as typed.\n\n`department` and `party` want the full stored label, not a code or an\nabbreviation: `\"Rassemblement National\"`, not `\"RN\"`; `\"Nord\"`, not `\"59\"`.\n`party_short` in the response is the abbreviation.\n\nIncludes deputies whose mandate has ended (`mandate_end` is set) unless\n`active=true`, which keeps today's Assemblée only (`total` is then the\nnumber of seats filled). `active=false` is everyone else: deputies with a\n`mandate_end`, and the rare deputy the Assemblée's latest roster no longer\nlists but who has no end date yet. Sorted by surname, ignoring accents and\ncase (\"Écrivain\" among the E's, \"de Courson\" among the D's). `offset` is\ncapped at 2000.",
         "operationId": "listDeputies",
         "parameters": [
           {
@@ -45,10 +45,10 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Filter by name (case-insensitive)",
+              "description": "Filter by name, ignoring case and accents ('nadege' finds 'Nadège')",
               "title": "Search"
             },
-            "description": "Filter by name (case-insensitive)"
+            "description": "Filter by name, ignoring case and accents ('nadege' finds 'Nadège')"
           },
           {
             "name": "department",
