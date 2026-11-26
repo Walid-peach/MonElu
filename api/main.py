@@ -21,6 +21,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
 
+from api.config import frontend_base_url, is_placeholder
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -81,19 +83,9 @@ class _DropQueryString(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(_DropQueryString())
 
-_PLACEHOLDER_PREFIXES = ("sk-...", "gsk_...", "your-", "changeme")
-
-
-def _is_placeholder(value: str | None) -> bool:
-    return (
-        not value
-        or not value.strip()
-        or any(value.strip().startswith(p) for p in _PLACEHOLDER_PREFIXES)
-    )
-
 
 def _warn_if_placeholder(var: str, value: str | None, *, context: str = "RAG features") -> None:
-    if _is_placeholder(value):
+    if is_placeholder(value):
         logger.warning("⚠️  %s is not set or looks like a placeholder — %s may fail", var, context)
 
 
@@ -106,7 +98,6 @@ from starlette.concurrency import run_in_threadpool  # noqa: E402
 from api import groq_health  # noqa: E402
 from api.auth import API_KEY_HEADER, record_usage, resolve_api_key  # noqa: E402
 from api.cache_headers import add_public_cache_control  # noqa: E402
-from api.config import frontend_base_url  # noqa: E402
 from api.db import (  # noqa: E402
     close_account_pool,
     close_pool,
@@ -570,9 +561,9 @@ def health() -> JSONResponse:
         services["db"] = "degraded"
         services["dbt_marts"] = "degraded"
 
-    services["openai"] = "degraded" if _is_placeholder(os.getenv("OPENAI_API_KEY")) else "ok"
+    services["openai"] = "degraded" if is_placeholder(os.getenv("OPENAI_API_KEY")) else "ok"
     groq_key = os.getenv("GROQ_API_KEY")
-    if _is_placeholder(groq_key):
+    if is_placeholder(groq_key):
         services["groq"], groq_detail = "degraded", "GROQ_API_KEY is missing or a placeholder"
     else:
         services["groq"], groq_detail = groq_health.groq_status(groq_key)
