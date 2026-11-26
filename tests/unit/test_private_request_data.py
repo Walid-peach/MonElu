@@ -10,7 +10,11 @@ from unittest.mock import patch
 
 import pytest
 
-from api.main import _drop_private_request_data, _DropQueryString
+from api.main import (
+    _drop_private_request_data,
+    _drop_private_span_attributes,
+    _DropQueryString,
+)
 
 TYPED_TEXT = "ma question très personnelle"
 
@@ -34,13 +38,58 @@ def test_sentry_event_without_request_is_untouched():
     assert _drop_private_request_data(event, None) == {"message": "boom"}
 
 
-def test_sentry_sdk_reads_no_body_and_no_locals():
+def test_sentry_span_keeps_method_and_path_only():
+    span = {
+        "name": "GET /feed",
+        "attributes": {
+            "http.request.method": "GET",
+            "url.path": "/feed",
+            "url.full": "https://api.example/feed?deputies=PA1&theme=sante",
+            "http.query": "deputies=PA1&theme=sante",
+            "url.query": "deputies=PA1",
+            "http.request.body.data": TYPED_TEXT,
+            "http.request.header.cookie": ["a=b"],
+            "client.address": "1.2.3.4",
+            "user.ip_address": "1.2.3.4",
+        },
+    }
+    attributes = _drop_private_span_attributes(span, {})["attributes"]
+    assert attributes == {
+        "http.request.method": "GET",
+        "url.path": "/feed",
+        "url.full": "https://api.example/feed",
+    }
+
+
+def test_sentry_span_without_attributes_is_untouched():
+    assert _drop_private_span_attributes({"name": "x"}, {}) == {"name": "x"}
+
+
+def test_sentry_sdk_reads_no_body_no_locals_and_no_pii():
     import sentry_sdk
 
     options = sentry_sdk.get_client().options
     assert options["max_request_body_size"] == "never"
-    assert options["include_local_variables"] is False
-    assert options["send_default_pii"] is False
+    assert options["before_send"] is _drop_private_request_data
+    assert options["before_send_span"] is _drop_private_span_attributes
+    collection = options["data_collection"]
+    assert collection["http_bodies"] == []
+    assert collection["stack_frame_variables"] is False
+    assert collection["user_info"] is False
+    assert collection["cookies"]["mode"] == "off"
+    assert collection["url_query_params"]["mode"] == "off"
+    assert collection["gen_ai"] == {"inputs": False, "outputs": False}
+    assert collection["database_query_data"] is False
+
+
+@pytest.mark.parametrize("header", ["x-forwarded-for", "x-real-ip", "remote-addr", "via"])
+def test_sentry_sdk_filters_ip_headers(header):
+    import sentry_sdk
+    from sentry_sdk.data_collection import _apply_key_value_collection_filtering
+
+    behaviour = sentry_sdk.get_client().options["data_collection"]["http_headers"]["request"]
+    filtered = _apply_key_value_collection_filtering({header: "1.2.3.4"}, behaviour)
+    assert filtered[header] != "1.2.3.4"
 
 
 def _access_record(path: str) -> logging.LogRecord:
