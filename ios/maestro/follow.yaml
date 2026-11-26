@@ -1,0 +1,70 @@
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "À l'Assemblée"
+      selected: true
+    timeout: 20000
+- tapOn: "Suivre un député ou un thème"
+- extendedWaitUntil:
+    visible: "Chercher par nom.*"
+    timeout: 5000
+- assertVisible: "Trouver votre député.*"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}1-sheet
+
+- tapOn: "Chercher par nom.*"
+- extendedWaitUntil:
+    visible: "Tapez au moins deux lettres.*"
+    timeout: 5000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}2-prompt
+
+- tapOn: "Nom du député"
+- inputText: "zzqx"
+- extendedWaitUntil:
+    visible: "Aucun député en mandat"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}3-no-match
+
+- eraseText: 4
+- inputText: "mar"
+- extendedWaitUntil:
+    visible:
+      id: "followByName.result"
+    timeout: 20000
+- assertVisible: ".* en mandat"
+- assertNotVisible: "Chargement impossible"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}4-results
+
+- tapOn:
+    id: "followByName.result"
+    index: 0
+- extendedWaitUntil:
+    visible: "Ne plus suivre .*"
+    timeout: 5000
+- assertVisible: "Chercher par nom.*"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}5-followed-in-sheet
+
+- tapOn: "OK"
+- extendedWaitUntil:
+    visible: ".*député suivi"
+    timeout: 20000
+- assertNotVisible: "Chargement impossible"
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}6-home-circle
+
+- tapOn: "Suivre un député ou un thème"
+- tapOn: "Chercher par nom.*"
+- tapOn: "Nom du député"
+- inputText: "mar"
+- extendedWaitUntil:
+    visible: ".*déjà suivi"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SCREENSHOT_PREFIX}7-already-followed
