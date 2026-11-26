@@ -86,7 +86,7 @@ struct FollowByNameScreen: View {
                     model.loader,
                     empty: EmptyStateView(
                         title: "Aucun député en mandat",
-                        message: "Aucun nom ne correspond. Vérifiez l'orthographe, accents compris.",
+                        message: "Aucun nom ne correspond. Vérifiez l'orthographe.",
                         systemImage: "magnifyingglass"
                     )
                 ) {
