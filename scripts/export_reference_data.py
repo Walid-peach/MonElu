@@ -29,7 +29,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from api.departments_data import DEPT_NAMES  # noqa: E402
-from api.groups_data import GROUP_SLUGS  # noqa: E402
+from api.groups_data import CANONICAL_SHORT_LABELS, GROUP_SLUGS  # noqa: E402
 from api.lois_data import DOSSIER_STAGES, DOSSIER_STATUS_LABELS  # noqa: E402
 from api.themes_data import THEME_NAMES  # noqa: E402
 
@@ -41,7 +41,10 @@ def reference_tables() -> dict[str, list[dict[str, str]]]:
     decoder: Swift's `Dictionary` does not keep insertion order."""
     return {
         "departments.json": [{"code": code, "name": name} for code, name in DEPT_NAMES.items()],
-        "groups.json": [{"slug": slug, "name": name} for slug, name in GROUP_SLUGS.items()],
+        "groups.json": [
+            {"slug": slug, "name": name, "short": CANONICAL_SHORT_LABELS[name]}
+            for slug, name in GROUP_SLUGS.items()
+        ],
         "themes.json": [{"slug": slug, "name": name} for slug, name in THEME_NAMES.items()],
         "dossier_statuses.json": [
             {"status": status, "label": label} for status, label in DOSSIER_STATUS_LABELS.items()

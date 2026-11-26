@@ -17,6 +17,7 @@ import { departmentName } from '@/lib/departments'
 import { GROUP_ENTRIES } from '@/lib/groups'
 import { DOSSIER_STAGES, DOSSIER_STATUSES } from '@/lib/lois'
 import { THEME_ENTRIES } from '@/lib/themes'
+import { PARTY_SHORT_LABELS, SHORT_TO_FULL_PARTY } from '@/lib/utils'
 import { POS } from '@/lib/vote-position'
 
 const REFERENCE = join(__dirname, '..', '..', '..', 'data', 'reference')
@@ -36,7 +37,17 @@ describe('reference data parity', () => {
   })
 
   it('has the same twelve groups, in the same order', () => {
-    expect(GROUP_ENTRIES).toEqual(read('groups.json'))
+    const rows = read<Array<{ slug: string; name: string; short: string }>>('groups.json')
+    expect(GROUP_ENTRIES).toEqual(rows.map(({ slug, name }) => ({ slug, name })))
+  })
+
+  it('abbreviates every group the way the API does (#726)', () => {
+    const rows = read<Array<{ name: string; short: string }>>('groups.json')
+    expect(PARTY_SHORT_LABELS).toEqual(Object.fromEntries(rows.map(({ name, short }) => [name, short])))
+    const groupsWithAColour = rows.filter(({ short }) => short !== 'NI')
+    expect(SHORT_TO_FULL_PARTY).toEqual(
+      Object.fromEntries(groupsWithAColour.map(({ name, short }) => [short, name]))
+    )
   })
 
   it('has the same ten themes, in the same order', () => {

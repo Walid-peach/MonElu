@@ -10,6 +10,7 @@ committing the result, never by editing the JSON by hand.
 
 import json
 
+from api.groups_data import CANONICAL_SHORT_LABELS
 from scripts.export_reference_data import (
     DEFAULT_OUT_DIR,
     drifted,
@@ -84,3 +85,9 @@ def test_bill_stages_are_reading_stages_on_the_four_steps():
     known = READING_STAGE_CODES | {CONSEIL_CONSTITUTIONNEL_CODE, PROMULGATION_CODE}
     assert set(DOSSIER_STAGES) <= known
     assert {step for step, _ in DOSSIER_STAGES.values()} == {"an", "senat", "cmp", "loi"}
+
+
+def test_groups_carry_the_api_abbreviation():
+    """The website's partyShort() is checked against this field (#726)."""
+    rows = reference_tables()["groups.json"]
+    assert {row["name"]: row["short"] for row in rows} == CANONICAL_SHORT_LABELS

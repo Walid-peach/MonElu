@@ -1,50 +1,62 @@
 [
   {
     "slug": "rassemblement-national",
-    "name": "Rassemblement National"
+    "name": "Rassemblement National",
+    "short": "RN"
   },
   {
     "slug": "ensemble-pour-la-republique",
-    "name": "Ensemble pour la République"
+    "name": "Ensemble pour la République",
+    "short": "EPR"
   },
   {
     "slug": "lfi-nfp",
-    "name": "La France insoumise - Nouveau Front Populaire"
+    "name": "La France insoumise - Nouveau Front Populaire",
+    "short": "LFI"
   },
   {
     "slug": "socialistes-et-apparentes",
-    "name": "Socialistes et apparentés"
+    "name": "Socialistes et apparentés",
+    "short": "SOC"
   },
   {
     "slug": "droite-republicaine",
-    "name": "Droite Républicaine"
+    "name": "Droite Républicaine",
+    "short": "DR"
   },
   {
     "slug": "ecologiste-et-social",
-    "name": "Écologiste et Social"
+    "name": "Écologiste et Social",
+    "short": "ECS"
   },
   {
     "slug": "les-democrates",
-    "name": "Les Démocrates"
+    "name": "Les Démocrates",
+    "short": "DEM"
   },
   {
     "slug": "horizons-independants",
-    "name": "Horizons & Indépendants"
+    "name": "Horizons & Indépendants",
+    "short": "HOR"
   },
   {
     "slug": "liot",
-    "name": "Libertés, Indépendants, Outre-mer et Territoires"
+    "name": "Libertés, Indépendants, Outre-mer et Territoires",
+    "short": "LIOT"
   },
   {
     "slug": "union-des-droites",
-    "name": "Union des droites pour la République"
+    "name": "Union des droites pour la République",
+    "short": "UDR"
   },
   {
     "slug": "gauche-democrate-republicaine",
-    "name": "Gauche Démocrate et Républicaine"
+    "name": "Gauche Démocrate et Républicaine",
+    "short": "GDR"
   },
   {
     "slug": "non-inscrits",
-    "name": "Non inscrit"
+    "name": "Non inscrit",
+    "short": "NI"
   }
 ]

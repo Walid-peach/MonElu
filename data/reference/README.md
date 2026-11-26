@@ -5,7 +5,7 @@ Small tables that the API, the website and the iOS app all need (ADR-041 §4).
 | File | Source | How it stays correct |
 |------|--------|----------------------|
 | `departments.json` | `api/departments_data.py` | Generated; `tests/unit/test_reference_data.py` fails on drift |
-| `groups.json` | `api/groups_data.py` | Generated; same test |
+| `groups.json` | `api/groups_data.py` (slug, name, and the `CANONICAL_SHORT_LABELS` abbreviation) | Generated; same test |
 | `themes.json` | `api/themes_data.py` | Generated; same test |
 | `dossier_statuses.json` | `api/lois_data.py` (ADR-035 §5's labels) | Generated; same test |
 | `dossier_stages.json` | `api/lois_data.py` | Generated; same test |
