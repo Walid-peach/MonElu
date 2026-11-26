@@ -154,3 +154,41 @@ extension DeputyItem {
         groupShort: "EPR", department: "Gironde", circonscription: "1", photoURL: nil, lastName: "Dupont"
     )
 }
+
+@MainActor
+struct DeputyNameSearchModelTests {
+    @Test func asksForSittingDeputiesByTheTrimmedName() async {
+        let service = RecordingDeputiesService(pages: [
+            .success(DeputyPage(items: [.sample], total: 1, offset: 0)),
+        ])
+        let model = DeputyNameSearchModel(service: service)
+        model.query = "  Abomangoli "
+        #expect(model.needsSearch)
+        await model.run()
+        #expect(service.queries == [DeputyQuery(search: "Abomangoli", active: true)])
+        #expect(model.loader.state.value == DeputyNameResults(deputies: [.sample], total: 1))
+        #expect(!model.needsSearch)
+    }
+
+    @Test func oneLetterIsNotSearched() {
+        let model = DeputyNameSearchModel(service: RecordingDeputiesService())
+        model.query = " a "
+        #expect(!model.isSearchable)
+        #expect(!model.needsSearch)
+        model.query = "ab"
+        #expect(model.needsSearch)
+    }
+
+    @Test func noMatchIsTheEmptyState() async {
+        let model = DeputyNameSearchModel(service: RecordingDeputiesService())
+        model.query = "zzzz"
+        await model.run()
+        #expect(model.loader.state.isEmptyState)
+    }
+
+    @Test func aFirstPageShorterThanTheTotalIsTruncated() {
+        #expect(DeputyNameResults(deputies: [.sample], total: 41).isTruncated)
+        #expect(!DeputyNameResults(deputies: [.sample], total: 1).isTruncated)
+        #expect(!DeputyNameResults(deputies: [.sample], total: nil).isTruncated)
+    }
+}
